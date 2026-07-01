@@ -1,0 +1,16 @@
+{
+  "name": "vosox-front-end",
+  "version": "1.0.0",
+  "description": "Vosox Microfrontend Monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w packages/host-app\" \"npm run dev -w packages/remote-buyer\" \"npm run dev -w packages/remote-supplier\"",
+    "build": "npm run build --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
