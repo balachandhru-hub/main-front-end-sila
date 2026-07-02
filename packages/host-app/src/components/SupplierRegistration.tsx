@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@vosox/shared-ui';
 import Header from './Header';
-import './supplierRegistration.css';
+import './SupplierRegistration.css';
 import { CiMail } from "react-icons/ci";
 
 const CheckIcon = () => (
