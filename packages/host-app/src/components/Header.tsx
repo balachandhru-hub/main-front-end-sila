@@ -1,6 +1,6 @@
 import React from 'react';
 import './Header.css';
-import vosx_logo from '../../dist/assets/vosx-logo.png';
+import vosx_logo from '../assets/vosx-logo.png';
 
 const Header: React.FC = () => {
   return (
