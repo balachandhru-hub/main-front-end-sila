@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '@vosox/shared-ui';
-import vosx_logo from '../../dist/assets/vosx-logo.png'
-import supplier_logo from '../../dist/assets/Supplier.png'
-import buyer_logo from '../../dist/assets/Buyer.png'
+import vosx_logo from '../assets/vosx-logo.png'
+import supplier_logo from '../assets/Supplier.png'
+import buyer_logo from '../assets/Buyer.png'
 import Header from './Header';
 import { FaUser, FaLock } from 'react-icons/fa';
 import './Login.css';
@@ -16,7 +16,6 @@ const CheckIcon = () => (
     <path d="M4 12.5l5 5L20 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
-
 interface LoginProps {
   onLoginSuccess?: (role: Role, username: string) => void;
   onCreateAccount?: () => void;
