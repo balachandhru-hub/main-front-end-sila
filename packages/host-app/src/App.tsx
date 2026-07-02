@@ -1,7 +1,8 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import Login from './components/Login';
+import SupplierRegistration from './components/SupplierRegistration';
 import { Loader, Button } from '@vosox/shared-ui';
 
 // Lazy loading remote apps
@@ -106,11 +107,12 @@ const Sidebar = () => {
 
 const Shell = () => {
   const { isLoggedIn, userRole } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="app-container">
       {isLoggedIn && <Sidebar />}
-      <main className="main-content">
+      <main className={`main-content ${!isLoggedIn ? 'no-padding' : ''}`}>
         <React.Suspense fallback={<Loader fullScreen={true} message="Loading modules..." />}>
           <Routes>
             <Route
@@ -119,10 +121,12 @@ const Shell = () => {
                 isLoggedIn ? (
                   <Navigate to={userRole === 'buyer' ? '/buyer' : '/supplier'} replace />
                 ) : (
-                  <Login />
+                  <Login onCreateAccount={() => navigate('/supplier-registration')} />
                 )
               }
             />
+
+            <Route path="/supplier-registration" element={<SupplierRegistration />} />
 
             {/* Buyer Remote Routes */}
             <Route
