@@ -38,6 +38,14 @@ export default defineConfig(({ command, mode }) => {
         key: fs.existsSync('./localhost-key.pem') ? fs.readFileSync('./localhost-key.pem') : undefined,
         cert: fs.existsSync('./localhost.pem') ? fs.readFileSync('./localhost.pem') : undefined,
       },
+      proxy: {
+        '/vosox-api': {
+          target: 'https://vosox-api.chervicaon.com',
+          changeOrigin: true,
+          secure: true,
+          rewrite: (p: string) => p.replace(/^\/vosox-api/, ''),
+        },
+      }, // This is done for running the application locally. When our application is deployed to production we can remove this.
     },
     build: {
       target: 'esnext',
