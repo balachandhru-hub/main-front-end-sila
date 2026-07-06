@@ -4,6 +4,9 @@ import Header from './Header';
 import './SupplierRegistration.css';
 import { CiMail } from "react-icons/ci";
 import { sendOtp, verifyOtp } from '../api/authApi';
+import { useNavigate } from 'react-router-dom';
+import { createOrganization } from '../api/organizationApi';
+import { Country, State } from 'country-state-city';
 
 const CheckIcon = () => (
     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -31,6 +34,7 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
     const [secondsLeft, setSecondsLeft] = useState(OTP_DURATION);
     const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
 
+
     const [isSendingOtp, setIsSendingOtp] = useState(false);
     const [otpError, setOtpError] = useState('');
     const [isResendingOtp, setIsResendingOtp] = useState(false);
@@ -43,6 +47,7 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
     const [city, setCity] = useState('');
     const [stateVal, setStateVal] = useState('');
     const [zip, setZip] = useState('');
+    const [phone, setPhone] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [adminEmail, setAdminEmail] = useState('');
@@ -50,6 +55,10 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
     const [pw, setPw] = useState('');
     const [pw2, setPw2] = useState('');
     const [agreeTerms, setAgreeTerms] = useState(false);
+
+    const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+    const [createError, setCreateError] = useState('');
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (step !== 2) return;
@@ -130,20 +139,45 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
         }
     };
 
-    const handleCreateAccount = () => {
-        onComplete?.({
-            email,
-            companyName,
-            country,
-            addressLine1,
-            addressLine2,
-            city,
-            state: stateVal,
-            zip,
-            firstName,
-            lastName,
-            adminEmail: useEmailAsUsername ? email : adminEmail,
-        });
+    const handleCreateAccount = async () => {
+        if (!agreeTerms || isCreatingAccount) return;
+        setIsCreatingAccount(true);
+        setCreateError('');
+        try {
+            await createOrganization({
+                organizationName: companyName,
+                organizationType: 2, // 2 = Active Supplier
+                email: email,
+                phone: phone,
+                country: country,
+                addressLine1: addressLine1,
+                addressLine2: addressLine2,
+                city: city,
+                state: stateVal,
+                pinCode: zip,
+                personName: `${firstName} ${lastName}`.trim(),
+                userName: useEmailAsUsername ? email : adminEmail,
+                password: pw,
+            });
+            onComplete?.({
+                email,
+                companyName,
+                country,
+                addressLine1,
+                addressLine2,
+                city,
+                state: stateVal,
+                zip,
+                firstName,
+                lastName,
+                adminEmail: useEmailAsUsername ? email : adminEmail,
+            });
+            navigate('/');
+        } catch (error: any) {
+            setCreateError(error.response?.data?.message || error.message || 'Failed to create account');
+        } finally {
+            setIsCreatingAccount(false);
+        }
     };
 
     return (
@@ -287,18 +321,31 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                     />
                                 </div>
 
+                                <div className="vr-field vr-field--full">
+                                    <label className="vr-label vr-label--plain">Phone Number*</label>
+                                    <input
+                                        className="vr-input"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                    />
+                                </div>
+
                                 <div className="vr-field">
                                     <label className="vr-label vr-label--plain">Country / Region*</label>
                                     <select
                                         className="vr-input vr-select"
                                         value={country}
-                                        onChange={(e) => setCountry(e.target.value)}
+                                        onChange={(e) => {
+                                            setCountry(e.target.value);
+                                            setStateVal('');
+                                        }}
                                     >
                                         <option value="">Select Country</option>
-                                        <option value="IN">India</option>
-                                        <option value="US">United States</option>
-                                        <option value="GB">United Kingdom</option>
-                                        <option value="DE">Germany</option>
+                                        {Country.getAllCountries().map((c) => (
+                                            <option key={c.isoCode} value={c.isoCode}>
+                                                {c.name}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div className="vr-field">
@@ -329,8 +376,14 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                         className="vr-input vr-select"
                                         value={stateVal}
                                         onChange={(e) => setStateVal(e.target.value)}
+                                        disabled={!country}
                                     >
                                         <option value="">Select State</option>
+                                        {country && State.getStatesOfCountry(country).map((s) => (
+                                            <option key={s.isoCode} value={s.isoCode}>
+                                                {s.name}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div className="vr-field">
@@ -417,8 +470,14 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                 </a>
                             </label>
 
-                            <Button variant="primary" size="md" onClick={handleCreateAccount} disabled={!agreeTerms}>
-                                Create Account
+                            {createError && (
+                                <div className="vr-hint vr-hint--error" style={{ marginBottom: '1rem', marginTop: '1rem' }}>
+                                    {createError}
+                                </div>
+                            )}
+
+                            <Button variant="primary" size="md" onClick={handleCreateAccount} disabled={!agreeTerms || isCreatingAccount}>
+                                {isCreatingAccount ? 'Creating...' : 'Create Account'}
                             </Button>
                         </div>
                     </div>

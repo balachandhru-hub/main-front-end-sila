@@ -5,6 +5,7 @@ import supplier_logo from '../assets/Supplier.png'
 import buyer_logo from '../assets/Buyer.png'
 import Header from './Header';
 import { FaUser, FaLock } from 'react-icons/fa';
+import { login } from '../api/authApi';
 import './Login.css';
 
 
@@ -27,6 +28,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleContinue = () => {
     if (role === 'supplier') {
@@ -34,10 +37,23 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount }) => {
     }
   };
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLoginSuccess?.(role, username);
-    // setView('role-select');
+    setError(null);
+    if (!username || !password) {
+      setError('Username and password are required');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await login(username, password);
+      onLoginSuccess?.(role, username);
+      // setView('role-select');
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -90,6 +106,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount }) => {
                 <form onSubmit={handleSignIn}>
                   <h1 className="vx-title-sec">Sign In</h1>
                   <p className="vx-subtitle-sec">Enter your credentials to continue</p>
+                  {error && (
+                    <div style={{ color: '#dc2626', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '6px', marginBottom: '15px', fontSize: '0.9rem', border: '1px solid #f87171' }}>
+                      {error}
+                    </div>
+                  )}
 
                   <div className="vx-role-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
                     {(['supplier', 'buyer', 'platform-user'] as Role[]).map((r) => (
@@ -152,8 +173,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount }) => {
                     </a>
                   </div>
 
-                  <Button type="submit" variant="primary" size="lg" fullWidth>
-                    Login
+                  <Button type="submit" variant="primary" size="lg" fullWidth disabled={isLoading}>
+                    {isLoading ? 'Logging in...' : 'Login'}
                   </Button>
 
                   <p className="vx-footer-text">
