@@ -1,16 +1,23 @@
 .vx-header {
     background: #ffffff;
     border-bottom: 1px solid #e6e8ec;
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
 .vx-header-inner {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 14px 32px;
+    padding: 16px 3px;
+    display: flex;
+    align-items: center;
 }
 
 .vx-logo-img {
     height: 50px;
-    width: 100px;
+    width: auto;
+    object-fit: contain;
     display: block;
+    cursor: pointer;
 }

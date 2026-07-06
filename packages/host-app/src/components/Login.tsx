@@ -22,17 +22,22 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount }) => {
-  const [view, setView] = useState<View>('role-select');
+  const [view, setView] = useState<View>('sign-in');
   const [role, setRole] = useState<Role>('supplier');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
 
-  const handleContinue = () => setView('sign-in');
+  const handleContinue = () => {
+    if (role === 'supplier') {
+      onCreateAccount?.();
+    }
+  };
 
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
     onLoginSuccess?.(role, username);
+    // setView('role-select');
   };
 
   return (
@@ -128,13 +133,13 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount }) => {
                   </Button>
 
                   <p className="vx-footer-text">
-                    New Supplier?{' '}
+                    New User?{' '}
                     <a
                       href="#"
                       className="vx-link"
                       onClick={(e) => {
                         e.preventDefault();
-                        onCreateAccount?.();
+                        setView('role-select');
                       }}
                     >
                       Create an Account
