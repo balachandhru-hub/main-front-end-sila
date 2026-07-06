@@ -85,16 +85,15 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
         setOtpError('');
         setIsSendingOtp(true);
 
-        const result = await sendOtp(email);
-
-        setIsSendingOtp(false);
-
-        if (result.success) {
+        try {
+            await sendOtp(email);
             setOtp(Array(OTP_LENGTH).fill(''));
             setSecondsLeft(OTP_DURATION);
             setStep(2);
-        } else {
-            setOtpError(result.message);
+        } catch (error: any) {
+            setOtpError(error.message);
+        } finally {
+            setIsSendingOtp(false);
         }
     };
 
@@ -103,16 +102,15 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
         setOtpError('');
         setIsResendingOtp(true);
 
-        const result = await sendOtp(email);
-
-        setIsResendingOtp(false);
-
-        if (result.success) {
+        try {
+            await sendOtp(email);
             setOtp(Array(OTP_LENGTH).fill(''));
             setSecondsLeft(OTP_DURATION);
             otpRefs.current[0]?.focus();
-        } else {
-            setOtpError(result.message);
+        } catch (error: any) {
+            setOtpError(error.message);
+        } finally {
+            setIsResendingOtp(false);
         }
     };
 
@@ -122,14 +120,13 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
         setOtpError('');
         setIsVerifyingOtp(true);
 
-        const result = await verifyOtp(email, otpCode);
-
-        setIsVerifyingOtp(false);
-
-        if (result.success) {
+        try {
+            await verifyOtp(email, otpCode);
             setStep(3);
-        } else {
-            setOtpError(result.message);
+        } catch (error: any) {
+            setOtpError(error.message);
+        } finally {
+            setIsVerifyingOtp(false);
         }
     };
 
