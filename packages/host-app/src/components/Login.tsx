@@ -8,7 +8,7 @@ import { FaUser, FaLock } from 'react-icons/fa';
 import './Login.css';
 
 
-type Role = 'supplier' | 'buyer';
+type Role = 'supplier' | 'buyer' | 'platform-user';
 type View = 'role-select' | 'sign-in';
 
 const CheckIcon = () => (
@@ -91,6 +91,30 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount }) => {
                   <h1 className="vx-title-sec">Sign In</h1>
                   <p className="vx-subtitle-sec">Enter your credentials to continue</p>
 
+                  <div className="vx-role-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                    {(['supplier', 'buyer', 'platform-user'] as Role[]).map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setRole(r)}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          borderRadius: '6px',
+                          border: '1px solid',
+                          borderColor: role === r ? 'var(--primary-color)' : '#d8dce3',
+                          backgroundColor: role === r ? '#f2f7ff' : '#ffffff',
+                          color: role === r ? 'var(--primary-color)' : '#374151',
+                          fontWeight: '600',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {r === 'platform-user' ? 'Platform User' : r.charAt(0).toUpperCase() + r.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+
                   <div className="vx-field">
                     <label className="vx-label"><FaUser /> Username</label>
                     <input
@@ -139,6 +163,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount }) => {
                       className="vx-link"
                       onClick={(e) => {
                         e.preventDefault();
+                        if (role === 'platform-user') {
+                          setRole('supplier');
+                        }
                         setView('role-select');
                       }}
                     >

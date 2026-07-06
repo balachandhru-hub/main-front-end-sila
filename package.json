@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev -w packages/host-app\" \"npm run dev -w packages/remote-buyer\" \"npm run dev -w packages/remote-supplier\"",
+    "dev": "concurrently \"npm run dev -w packages/host-app\" \"npm run dev -w packages/remote-buyer\" \"npm run dev -w packages/remote-supplier\" \"npm run dev -w packages/remote-platform-user\"",
     "build": "npm run build --workspaces"
   },
   "devDependencies": {
