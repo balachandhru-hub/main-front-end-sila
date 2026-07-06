@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port 6002 --strictPort",
+    "dev": "vite --port 6003 --strictPort",
     "watch": "vite build --watch --emptyOutDir false",
     "build": "tsc -b && vite build",
     "preview": "vite preview"

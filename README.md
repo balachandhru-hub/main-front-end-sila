@@ -17,9 +17,10 @@ This repository uses npm workspaces to manage a monorepo setup:
 ```
 
 ### Port Assignments (Local Development)
-- **Host App**: `https://localhost:6005`
-- **Remote Buyer**: `https://localhost:6001`
-- **Remote Supplier**: `https://localhost:6002`
+- **Host App**: `https://localhost:6001`
+- **Remote Buyer**: `https://localhost:6002`
+- **Remote Supplier**: `https://localhost:6003`
+- **Remote Platform User**: `https://localhost:6004`
 
 ---
 
@@ -51,7 +52,7 @@ Start the host and remote dev servers concurrently:
 ```bash
 npm run dev
 ```
-Navigate your browser to: **`https://localhost:6005`**
+Navigate your browser to: **`https://localhost:6001`**
 
 *Note: The dev servers run on HTTPS by default. If your browser warns you about an invalid local certificate, click "Advanced" -> "Proceed to localhost (unsafe)".*
 

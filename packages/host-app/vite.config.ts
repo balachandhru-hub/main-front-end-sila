@@ -15,8 +15,9 @@ export default defineConfig(({ command, mode }) => {
       react(),
       federation({
         remotes: command === 'serve' ? {} : {
-          remoteBuyer: env.VITE_REMOTE_BUYER_URL || 'https://localhost:6001/assets/remoteEntry.js',
-          remoteSupplier: env.VITE_REMOTE_SUPPLIER_URL || 'https://localhost:6002/assets/remoteEntry.js',
+          remoteBuyer: env.VITE_REMOTE_BUYER_URL || 'https://localhost:6002/assets/remoteEntry.js',
+          remoteSupplier: env.VITE_REMOTE_SUPPLIER_URL || 'https://localhost:6003/assets/remoteEntry.js',
+          remotePlatformUser: env.VITE_REMOTE_PLATFORM_USER_URL || 'https://localhost:6004/assets/remoteEntry.js',
         },
         shared: [
           'react',
@@ -29,10 +30,11 @@ export default defineConfig(({ command, mode }) => {
       alias: command === 'serve' ? {
         'remoteBuyer/BuyerApp': path.resolve(__dirname, '../remote-buyer/src/BuyerApp.tsx'),
         'remoteSupplier/SupplierApp': path.resolve(__dirname, '../remote-supplier/src/SupplierApp.tsx'),
+        'remotePlatformUser/PlatformUserApp': path.resolve(__dirname, '../remote-platform-user/src/PlatformUserApp.tsx'),
       } : undefined,
     },
     server: {
-      port: 6005,
+      port: 6001,
       strictPort: true,
       https: {
         key: fs.existsSync('./localhost-key.pem') ? fs.readFileSync('./localhost-key.pem') : undefined,

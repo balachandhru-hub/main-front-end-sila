@@ -20,7 +20,7 @@ export default defineConfig({
     }),
   ],
   server: {
-    port: 6001,
+    port: 6002,
     strictPort: true,
     https: {
       key: fs.existsSync('../host-app/localhost-key.pem') ? fs.readFileSync('../host-app/localhost-key.pem') : undefined,
@@ -28,7 +28,7 @@ export default defineConfig({
     },
   },
   preview: {
-    port: 6001,
+    port: 6002,
     strictPort: true,
     https: {
       key: fs.existsSync('../host-app/localhost-key.pem') ? fs.readFileSync('../host-app/localhost-key.pem') : undefined,

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type UserRole = 'buyer' | 'supplier';
+export type UserRole = 'buyer' | 'supplier' | 'platform-user';
 
 export interface AuthState {
   isLoggedIn: boolean;
