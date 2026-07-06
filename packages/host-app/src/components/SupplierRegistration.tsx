@@ -3,6 +3,7 @@ import { Button } from '@vosox/shared-ui';
 import Header from './Header';
 import './SupplierRegistration.css';
 import { CiMail } from "react-icons/ci";
+import { sendOtp, verifyOtp } from '../api/authApi';
 
 const CheckIcon = () => (
     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -29,6 +30,11 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
     const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
     const [secondsLeft, setSecondsLeft] = useState(OTP_DURATION);
     const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
+
+    const [isSendingOtp, setIsSendingOtp] = useState(false);
+    const [otpError, setOtpError] = useState('');
+    const [isResendingOtp, setIsResendingOtp] = useState(false);
+    const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
     const [companyName, setCompanyName] = useState('');
     const [country, setCountry] = useState('');
@@ -74,10 +80,54 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
         }
     };
 
-    const handleResend = () => {
-        setOtp(Array(OTP_LENGTH).fill(''));
-        setSecondsLeft(OTP_DURATION);
-        otpRefs.current[0]?.focus();
+    const handleSendOtp = async () => {
+        if (!email || isSendingOtp) return;
+        setOtpError('');
+        setIsSendingOtp(true);
+
+        try {
+            await sendOtp(email);
+            setOtp(Array(OTP_LENGTH).fill(''));
+            setSecondsLeft(OTP_DURATION);
+            setStep(2);
+        } catch (error: any) {
+            setOtpError(error.message);
+        } finally {
+            setIsSendingOtp(false);
+        }
+    };
+
+    const handleResend = async () => {
+        if (isResendingOtp) return;
+        setOtpError('');
+        setIsResendingOtp(true);
+
+        try {
+            await sendOtp(email);
+            setOtp(Array(OTP_LENGTH).fill(''));
+            setSecondsLeft(OTP_DURATION);
+            otpRefs.current[0]?.focus();
+        } catch (error: any) {
+            setOtpError(error.message);
+        } finally {
+            setIsResendingOtp(false);
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        const otpCode = otp.join('');
+        if (otpCode.length !== OTP_LENGTH || isVerifyingOtp) return;
+        setOtpError('');
+        setIsVerifyingOtp(true);
+
+        try {
+            await verifyOtp(email, otpCode);
+            setStep(3);
+        } catch (error: any) {
+            setOtpError(error.message);
+        } finally {
+            setIsVerifyingOtp(false);
+        }
     };
 
     const handleCreateAccount = () => {
@@ -138,6 +188,9 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                             onChange={(e) => setEmail(e.target.value)}
                                         />
                                         <p className="vr-hint">Please use your official company email address.</p>
+                                        {otpError && (
+                                            <p className="vr-hint vr-hint--error">{otpError}</p>
+                                        )}
                                     </div>
                                 </>
                             )}
@@ -176,28 +229,41 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                         Didn&apos;t receive the code?{' '}
                                         <a
                                             href="#"
-                                            className="vr-link"
+                                            className={`vr-link ${isResendingOtp ? 'vr-link--disabled' : ''}`}
                                             onClick={(e) => {
                                                 e.preventDefault();
-                                                handleResend();
+                                                if (!isResendingOtp) handleResend();
                                             }}
                                         >
-                                            Resend OTP
+                                            {isResendingOtp ? 'Sending...' : 'Resend OTP'}
                                         </a>
                                     </p>
+                                    {otpError && (
+                                        <p className="vr-hint vr-hint--error">{otpError}</p>
+                                    )}
                                 </>
                             )}
                         </div>
 
                         <div className="vr-card-footer">
                             {step === 1 && (
-                                <Button variant="primary" size="md" onClick={() => setStep(2)}>
-                                    Continue
+                                <Button
+                                    variant="primary"
+                                    size="md"
+                                    onClick={handleSendOtp}
+                                    disabled={!email || isSendingOtp}
+                                >
+                                    {isSendingOtp ? 'Sending OTP...' : 'Continue'}
                                 </Button>
                             )}
                             {step === 2 && (
-                                <Button variant="primary" size="md" onClick={() => setStep(3)}>
-                                    Verify &amp; Continue
+                                <Button
+                                    variant="primary"
+                                    size="md"
+                                    onClick={handleVerifyOtp}
+                                    disabled={otp.join('').length !== OTP_LENGTH || isVerifyingOtp}
+                                >
+                                    {isVerifyingOtp ? 'Verifying...' : 'Verify & Continue'}
                                 </Button>
                             )}
                         </div>

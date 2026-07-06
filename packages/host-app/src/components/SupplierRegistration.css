@@ -164,6 +164,10 @@
     margin: 8px 0 0 0;
 }
 
+.vr-hint--error {
+    color: #d92d20;
+}
+
 .vr-link {
     color: var(--primary-color, #2f7cf6);
     font-weight: 600;
@@ -176,6 +180,12 @@
 
 .vr-link--static {
     cursor: default;
+}
+
+.vr-link--disabled {
+    color: #9aa2af;
+    cursor: default;
+    pointer-events: none;
 }
 
 /* ---- OTP ---- */
