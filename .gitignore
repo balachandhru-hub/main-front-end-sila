@@ -9,7 +9,6 @@ dist-ssr
 # Environment and Security
 *.local
 *.pem
-.env
 .env.local
 
 # Editor directories and files

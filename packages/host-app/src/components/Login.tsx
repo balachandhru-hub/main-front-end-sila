@@ -1,92 +1,183 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../AuthContext';
 import { Button } from '@vosox/shared-ui';
+import vosx_logo from '../assets/vosx-logo.png'
+import supplier_logo from '../assets/Supplier.png'
+import buyer_logo from '../assets/Buyer.png'
+import Header from './Header';
+import { FaUser, FaLock } from 'react-icons/fa';
+import './Login.css';
 
-export const Login: React.FC = () => {
-  const { login } = useAuth();
-  const navigate = useNavigate();
-  const [role, setRole] = useState<'buyer' | 'supplier'>('buyer');
-  const [email, setEmail] = useState('');
+
+type Role = 'supplier' | 'buyer' | 'platform-user';
+type View = 'role-select' | 'sign-in';
+
+const CheckIcon = () => (
+  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M4 12.5l5 5L20 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+interface LoginProps {
+  onLoginSuccess?: (role: Role, username: string) => void;
+  onCreateAccount?: () => void;
+}
+
+const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount }) => {
+  const [view, setView] = useState<View>('sign-in');
+  const [role, setRole] = useState<Role>('supplier');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleContinue = () => {
+    if (role === 'supplier') {
+      onCreateAccount?.();
+    }
+  };
+
+  const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
-    login(role);
-    navigate(role === 'buyer' ? '/buyer' : '/supplier');
+    onLoginSuccess?.(role, username);
+    // setView('role-select');
   };
 
   return (
-    <div className="login-wrapper">
-      <div className="glass-card login-card" style={{ textAlign: 'center' }}>
-        <h2 style={{ fontSize: '2rem', marginBottom: '8px', fontWeight: 700 }}>
-          Vosox Portal
-        </h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '32px' }}>
-          Select role and sign in to access your dashboard
-        </p>
+    <div className="vx-page" style={{ ['--primary-color' as any]: '#2f7cf6', ['--accent-color' as any]: '#1554c9' }}>
+      <Header />
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group" style={{ textAlign: 'left' }}>
-            <label className="form-label">Role</label>
-            <div className="role-selector">
-              <button
-                type="button"
-                className={`role-btn ${role === 'buyer' ? 'active' : ''}`}
-                onClick={() => setRole('buyer')}
-              >
-                Buyer
-              </button>
-              <button
-                type="button"
-                className={`role-btn ${role === 'supplier' ? 'active' : ''}`}
-                onClick={() => setRole('supplier')}
-              >
-                Supplier
-              </button>
+      <main className="vx-main">
+        <div className="vx-card">
+          <div className="vx-left">
+            <div className="vx-left-logo-box">
+              <img src={vosx_logo} alt="VOSX" className="vx-logo-img vx-logo-img--boxed" />
+            </div>
+            <h2 className="vx-left-title">Supplier Onboarding &amp; Sourcing Portal</h2>
+            <p className="vx-left-text">
+              A secure enterprise portal for supplier registration, qualification, sourcing and collaboration
+            </p>
+          </div>
+
+          <div className="vx-right">
+            <div className="vx-right-inner">
+              {view === 'role-select' ? (
+                <>
+                  <h1 className="vx-title">Welcome</h1>
+                  <p className="vx-subtitle">Select your role to continue</p>
+
+                  <div className="vx-role-grid">
+                    <button
+                      type="button"
+                      className={`vx-role-card ${role === 'supplier' ? 'vx-role-card--active' : ''}`}
+                      onClick={() => setRole('supplier')}
+                    >
+                      <span className="vx-role-icon"><img src={supplier_logo} alt="Supplier" /></span>
+                      <span className="vx-role-label">Supplier</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`vx-role-card ${role === 'buyer' ? 'vx-role-card--active' : ''}`}
+                      onClick={() => setRole('buyer')}
+                    >
+                      <span className="vx-role-icon"><img src={buyer_logo} alt="Buyer" /></span>
+                      <span className="vx-role-label">Buyer</span>
+                    </button>
+                  </div>
+
+                  <Button variant="primary" size="lg" fullWidth onClick={handleContinue}>
+                    Continue as {role === 'supplier' ? 'Supplier' : 'Buyer'}
+                  </Button>
+                </>
+              ) : (
+                <form onSubmit={handleSignIn}>
+                  <h1 className="vx-title-sec">Sign In</h1>
+                  <p className="vx-subtitle-sec">Enter your credentials to continue</p>
+
+                  <div className="vx-role-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                    {(['supplier', 'buyer', 'platform-user'] as Role[]).map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setRole(r)}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          borderRadius: '6px',
+                          border: '1px solid',
+                          borderColor: role === r ? 'var(--primary-color)' : '#d8dce3',
+                          backgroundColor: role === r ? '#f2f7ff' : '#ffffff',
+                          color: role === r ? 'var(--primary-color)' : '#374151',
+                          fontWeight: '600',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {r === 'platform-user' ? 'Platform User' : r.charAt(0).toUpperCase() + r.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="vx-field">
+                    <label className="vx-label"><FaUser /> Username</label>
+                    <input
+                      className="vx-input"
+                      type="text"
+                      placeholder="Enter your username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="vx-field">
+                    <label className="vx-label"><FaLock /> Password</label>
+                    <input
+                      className="vx-input"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="vx-row-between">
+                    <label className="vx-checkbox">
+                      <span
+                        className={`vx-checkbox-box ${rememberMe ? 'vx-checkbox-box--checked' : ''}`}
+                        onClick={() => setRememberMe(!rememberMe)}
+                      >
+                        {rememberMe && <CheckIcon />}
+                      </span>
+                      Remember me
+                    </label>
+                    <a href="#" className="vx-link" onClick={(e) => e.preventDefault()}>
+                      Forgot Password?
+                    </a>
+                  </div>
+
+                  <Button type="submit" variant="primary" size="lg" fullWidth>
+                    Login
+                  </Button>
+
+                  <p className="vx-footer-text">
+                    New User?{' '}
+                    <a
+                      href="#"
+                      className="vx-link"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (role === 'platform-user') {
+                          setRole('supplier');
+                        }
+                        setView('role-select');
+                      }}
+                    >
+                      Create an Account
+                    </a>
+                  </p>
+                </form>
+              )}
             </div>
           </div>
-
-          <div className="form-group" style={{ textAlign: 'left' }}>
-            <label className="form-label" htmlFor="email">Email Address</label>
-            <input
-              id="email"
-              type="email"
-              className="form-input"
-              placeholder="e.g. user@vosox.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="form-group" style={{ textAlign: 'left' }}>
-            <label className="form-label" htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              className="form-input"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          <Button
-            type="submit"
-            variant="primary"
-            fullWidth={true}
-            style={{ marginTop: '16px' }}
-          >
-            Sign In as {role.charAt(0).toUpperCase() + role.slice(1)}
-          </Button>
-        </form>
-
-        <div style={{ marginTop: '24px', fontSize: '0.85rem', color: 'var(--text-dark)' }}>
-          Tip: You can use any dummy email and password.
         </div>
-      </div>
+      </main>
     </div>
   );
 };

@@ -7,10 +7,10 @@ export default defineConfig({
   plugins: [
     react(),
     federation({
-      name: 'remoteSupplier',
+      name: 'remotePlatformUser',
       filename: 'remoteEntry.js',
       exposes: {
-        './SupplierApp': './src/SupplierApp.tsx',
+        './PlatformUserApp': './src/PlatformUserApp.tsx',
       },
       shared: [
         'react',
@@ -20,7 +20,7 @@ export default defineConfig({
     }),
   ],
   server: {
-    port: 6003,
+    port: 6004,
     strictPort: true,
     https: {
       key: fs.existsSync('../host-app/localhost-key.pem') ? fs.readFileSync('../host-app/localhost-key.pem') : undefined,
@@ -28,7 +28,7 @@ export default defineConfig({
     },
   },
   preview: {
-    port: 6003,
+    port: 6004,
     strictPort: true,
     https: {
       key: fs.existsSync('../host-app/localhost-key.pem') ? fs.readFileSync('../host-app/localhost-key.pem') : undefined,

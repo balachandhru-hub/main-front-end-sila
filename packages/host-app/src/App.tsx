@@ -1,14 +1,16 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import Login from './components/Login';
+import SupplierRegistration from './components/SupplierRegistration';
 import { Loader, Button } from '@vosox/shared-ui';
 
 // Lazy loading remote apps
 const BuyerApp = React.lazy(() => import('remoteBuyer/BuyerApp'));
 const SupplierApp = React.lazy(() => import('remoteSupplier/SupplierApp'));
+const PlatformUserApp = React.lazy(() => import('remotePlatformUser/PlatformUserApp'));
 
-const Protected: React.FC<{ children: React.ReactNode; allowedRole: 'buyer' | 'supplier' }> = ({
+const Protected: React.FC<{ children: React.ReactNode; allowedRole: 'buyer' | 'supplier' | 'platform-user' }> = ({
   children,
   allowedRole,
 }) => {
@@ -49,7 +51,7 @@ const Sidebar = () => {
       </div>
 
       <ul className="nav-links">
-        {userRole === 'buyer' ? (
+        {userRole === 'buyer' && (
           <>
             <li>
               <Link
@@ -68,7 +70,8 @@ const Sidebar = () => {
               </Link>
             </li>
           </>
-        ) : (
+        )}
+        {userRole === 'supplier' && (
           <>
             <li>
               <Link
@@ -84,6 +87,18 @@ const Sidebar = () => {
                 className={`nav-item ${location.pathname.includes('/supplier/quotations') ? 'active' : ''}`}
               >
                 Quotations & Bids
+              </Link>
+            </li>
+          </>
+        )}
+        {userRole === 'platform-user' && (
+          <>
+            <li>
+              <Link
+                to="/platform-user/dashboard"
+                className={`nav-item ${location.pathname.includes('/platform-user/dashboard') ? 'active' : ''}`}
+              >
+                Dashboard
               </Link>
             </li>
           </>
@@ -105,24 +120,30 @@ const Sidebar = () => {
 };
 
 const Shell = () => {
-  const { isLoggedIn, userRole } = useAuth();
+  const { isLoggedIn, userRole, login } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="app-container">
       {isLoggedIn && <Sidebar />}
-      <main className="main-content">
+      <main className={`main-content ${!isLoggedIn ? 'no-padding' : ''}`}>
         <React.Suspense fallback={<Loader fullScreen={true} message="Loading modules..." />}>
           <Routes>
             <Route
               path="/"
               element={
                 isLoggedIn ? (
-                  <Navigate to={userRole === 'buyer' ? '/buyer' : '/supplier'} replace />
+                  <Navigate to={userRole === 'buyer' ? '/buyer' : userRole === 'supplier' ? '/supplier' : '/platform-user'} replace />
                 ) : (
-                  <Login />
+                  <Login 
+                    onCreateAccount={() => navigate('/supplier-registration')} 
+                    onLoginSuccess={(role) => login(role)}
+                  />
                 )
               }
             />
+
+            <Route path="/supplier-registration" element={<SupplierRegistration />} />
 
             {/* Buyer Remote Routes */}
             <Route
@@ -144,11 +165,21 @@ const Shell = () => {
               }
             />
 
+            {/* Platform User Remote Routes */}
+            <Route
+              path="/platform-user/*"
+              element={
+                <Protected allowedRole="platform-user">
+                  <PlatformUserApp />
+                </Protected>
+              }
+            />
+
             {/* Catch-all */}
             <Route
               path="*"
               element={
-                <Navigate to={isLoggedIn ? (userRole === 'buyer' ? '/buyer' : '/supplier') : '/'} replace />
+                <Navigate to={isLoggedIn ? (userRole === 'buyer' ? '/buyer' : userRole === 'supplier' ? '/supplier' : '/platform-user') : '/'} replace />
               }
             />
           </Routes>
