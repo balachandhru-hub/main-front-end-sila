@@ -13,6 +13,7 @@ export interface CreateOrganizationPayload {
   pinCode: string;
   verificationToken?: string;
   personName: string;
+  personEmail: string;
   userName: string;
   password?: string;
 }
