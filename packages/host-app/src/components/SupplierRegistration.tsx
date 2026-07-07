@@ -100,7 +100,14 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
             setSecondsLeft(OTP_DURATION);
             setStep(2);
         } catch (error: any) {
-            setOtpError(error.message);
+            const errorMsg = error.message || '';
+            if (errorMsg.toLowerCase().includes('already been sent')) {
+                setOtp(Array(OTP_LENGTH).fill(''));
+                setSecondsLeft(OTP_DURATION);
+                setStep(2);
+            } else {
+                setOtpError(errorMsg);
+            }
         } finally {
             setIsSendingOtp(false);
         }
