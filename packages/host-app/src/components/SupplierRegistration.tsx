@@ -15,7 +15,7 @@ const CheckIcon = () => (
 );
 
 const OTP_LENGTH = 6;
-const OTP_DURATION = 90; // seconds
+const OTP_DURATION = 600; // seconds
 
 interface SupplierRegistrationProps {
     businessEmail?: string;
