@@ -5,7 +5,7 @@ import supplier_logo from '../assets/Supplier.png'
 import buyer_logo from '../assets/Buyer.png'
 import Header from './Header';
 import { FaUser, FaLock } from 'react-icons/fa';
-import { login } from '../api/authApi';
+import { login, getTokenClaims } from '../api/authApi';
 import './Login.css';
 
 
@@ -47,7 +47,25 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount }) => {
     setIsLoading(true);
     try {
       await login(username, password);
-      onLoginSuccess?.(role, username);
+      
+      // Fetch token claims to determine user role
+      let resolvedRole: Role = role;
+      try {
+        const claims = await getTokenClaims();
+        if (claims) {
+          const rawRole = claims.role || claims.userRole || claims.roles?.[0];
+          if (typeof rawRole === 'string') {
+            const normalized = rawRole.toLowerCase();
+            if (normalized.includes('supplier')) resolvedRole = 'supplier';
+            else if (normalized.includes('buyer')) resolvedRole = 'buyer';
+            else if (normalized.includes('platform') || normalized.includes('admin') || normalized.includes('staff')) resolvedRole = 'platform-user';
+          }
+        }
+      } catch (claimsError) {
+        console.error('Failed to fetch token claims, falling back to local state:', claimsError);
+      }
+
+      onLoginSuccess?.(resolvedRole, username);
       // setView('role-select');
     } catch (err: any) {
       setError(err.message || 'Login failed');
@@ -111,31 +129,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount }) => {
                       {error}
                     </div>
                   )}
-
-                  <div className="vx-role-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-                    {(['supplier', 'buyer', 'platform-user'] as Role[]).map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRole(r)}
-                        style={{
-                          flex: 1,
-                          padding: '8px',
-                          borderRadius: '6px',
-                          border: '1px solid',
-                          borderColor: role === r ? 'var(--primary-color)' : '#d8dce3',
-                          backgroundColor: role === r ? '#f2f7ff' : '#ffffff',
-                          color: role === r ? 'var(--primary-color)' : '#374151',
-                          fontWeight: '600',
-                          fontSize: '0.85rem',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {r === 'platform-user' ? 'Platform User' : r.charAt(0).toUpperCase() + r.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-
                   <div className="vx-field">
                     <label className="vx-label"><FaUser /> Username</label>
                     <input

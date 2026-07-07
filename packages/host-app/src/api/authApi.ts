@@ -60,3 +60,16 @@ export const login = async (userName: string, password: string) => {
         throw new Error('Could not reach the server. Please check your connection and try again.');
     }
 };
+
+export const getTokenClaims = async () => {
+    try {
+        const response = await axiosInstance.get('/api/v1/tokenclaim');
+        return response.data;
+    } catch (error: any) {
+        if (error?.response?.data) {
+            const data = error.response.data;
+            throw new Error(data?.message || data?.description || `Failed to fetch token claims (${error.response.status}).`);
+        }
+        throw new Error('Could not reach the server. Please check your connection and try again.');
+    }
+};
