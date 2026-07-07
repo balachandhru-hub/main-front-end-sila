@@ -50,3 +50,24 @@ export const verifyOtp = async (email: string, otp: string) => {
         throw new Error('Could not reach the server. Please check your connection and try again.');
     }
 };
+
+export const login = async (userName: string, password: string) => {
+    try {
+        const response = await axiosInstance.post('/api/v1/auth/login', {
+            userName,
+            password,
+        }, {
+            headers: {
+                Accept: 'text/plain',
+                'Content-Type': 'application/json',
+            }
+        });
+        return response.data;
+    } catch (error: any) {
+        if (error?.response?.data) {
+            const data = error.response.data;
+            throw new Error(data?.message || data?.description || `Failed to login (${error.response.status}).`);
+        }
+        throw new Error('Could not reach the server. Please check your connection and try again.');
+    }
+};
