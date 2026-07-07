@@ -1,20 +1,9 @@
-import axios from 'axios';
 import axiosInstance from './axiosInstance';
 
-async function getClientIpAddress(): Promise<string | undefined> {
-    try {
-        const res = await axios.get('https://api.ipify.org?format=json');
-        return typeof res.data?.ip === 'string' ? res.data.ip : undefined;
-    } catch {
-        return undefined;
-    }
-}
 export const sendOtp = async (email: string) => {
     try {
-        const ipAddress = await getClientIpAddress();
         const response = await axiosInstance.post('/api/v1/auth/send-otp', {
             email,
-            ...(ipAddress ? { ipAddress } : {}),
         }, {
             headers: {
                 Accept: 'text/plain',
@@ -70,4 +59,4 @@ export const login = async (userName: string, password: string) => {
         }
         throw new Error('Could not reach the server. Please check your connection and try again.');
     }
-};
+};
