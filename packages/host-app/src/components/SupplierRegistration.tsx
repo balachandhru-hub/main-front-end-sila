@@ -48,10 +48,8 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
     const [stateVal, setStateVal] = useState('');
     const [zip, setZip] = useState('');
     const [phone, setPhone] = useState('');
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
+    const [name, setName] = useState('');
     const [adminEmail, setAdminEmail] = useState('');
-    const [useEmailAsUsername, setUseEmailAsUsername] = useState(true);
     const [pw, setPw] = useState('');
     const [pw2, setPw2] = useState('');
     const [agreeTerms, setAgreeTerms] = useState(false);
@@ -153,7 +151,7 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
         try {
             await createOrganization({
                 organizationName: companyName,
-                organizationType: 2, // 2 = Active Supplier
+                organizationType: 2,
                 email: email,
                 phone: phone,
                 country: country,
@@ -162,8 +160,9 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                 city: city,
                 state: stateVal,
                 pinCode: zip,
-                personName: `${firstName} ${lastName}`.trim(),
-                userName: useEmailAsUsername ? email : adminEmail,
+                personName: name.trim(),
+                userName: email,
+                personEmail: adminEmail,
                 password: pw,
             });
             onComplete?.({
@@ -175,9 +174,8 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                 city,
                 state: stateVal,
                 zip,
-                firstName,
-                lastName,
-                adminEmail: useEmailAsUsername ? email : adminEmail,
+                name,
+                adminEmail,
             });
             navigate('/');
         } catch (error: any) {
@@ -404,19 +402,11 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                             <h2 className="vr-panel-title">Administrator Account Information</h2>
                             <div className="vr-grid">
                                 <div className="vr-field">
-                                    <label className="vr-label vr-label--plain">First Name*</label>
+                                    <label className="vr-label vr-label--plain">Name*</label>
                                     <input
                                         className="vr-input"
-                                        value={firstName}
-                                        onChange={(e) => setFirstName(e.target.value)}
-                                    />
-                                </div>
-                                <div className="vr-field">
-                                    <label className="vr-label vr-label--plain">Last Name*</label>
-                                    <input
-                                        className="vr-input"
-                                        value={lastName}
-                                        onChange={(e) => setLastName(e.target.value)}
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
                                     />
                                 </div>
 
@@ -430,17 +420,6 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                     />
                                 </div>
 
-                                <div className="vr-field vr-field--full">
-                                    <label className="vr-checkbox">
-                                        <span
-                                            className={`vr-checkbox-box ${useEmailAsUsername ? 'vr-checkbox-box--checked' : ''}`}
-                                            onClick={() => setUseEmailAsUsername(!useEmailAsUsername)}
-                                        >
-                                            {useEmailAsUsername && <CheckIcon />}
-                                        </span>
-                                        Use my email as my username
-                                    </label>
-                                </div>
 
                                 <div className="vr-field">
                                     <label className="vr-label vr-label--plain">Password*</label>
