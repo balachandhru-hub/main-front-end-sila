@@ -15,10 +15,10 @@ export interface CreateOrganizationPayload {
   personName: string;
   personEmail: string;
   userName: string;
-  password?: string;
+  password: string;
 }
 
 export const createOrganization = async (payload: CreateOrganizationPayload) => {
-  const response = await axiosInstance.post('/api/v1/organizations/create', payload);
+  const response = await axiosInstance.post('/api/v1/auth/register', payload);
   return response.data;
 };
