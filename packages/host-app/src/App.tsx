@@ -52,56 +52,34 @@ const Sidebar = () => {
 
       <ul className="nav-links">
         {userRole === 'buyer' && (
-          <>
-            <li>
-              <Link
-                to="/buyer/dashboard"
-                className={`nav-item ${location.pathname.includes('/buyer/dashboard') ? 'active' : ''}`}
-              >
-                Dashboard
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/buyer/purchase-orders"
-                className={`nav-item ${location.pathname.includes('/buyer/purchase-orders') ? 'active' : ''}`}
-              >
-                Purchase Orders
-              </Link>
-            </li>
-          </>
+          <li>
+            <Link
+              to="/buyer/dashboard"
+              className={`nav-item ${location.pathname.includes('/buyer/dashboard') ? 'active' : ''}`}
+            >
+              Dashboard
+            </Link>
+          </li>
         )}
         {userRole === 'supplier' && (
-          <>
-            <li>
-              <Link
-                to="/supplier/dashboard"
-                className={`nav-item ${location.pathname.includes('/supplier/dashboard') ? 'active' : ''}`}
-              >
-                Dashboard
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/supplier/quotations"
-                className={`nav-item ${location.pathname.includes('/supplier/quotations') ? 'active' : ''}`}
-              >
-                Quotations & Bids
-              </Link>
-            </li>
-          </>
+          <li>
+            <Link
+              to="/supplier/dashboard"
+              className={`nav-item ${location.pathname.includes('/supplier/dashboard') ? 'active' : ''}`}
+            >
+              Dashboard
+            </Link>
+          </li>
         )}
         {userRole === 'platform-user' && (
-          <>
-            <li>
-              <Link
-                to="/platform-user/dashboard"
-                className={`nav-item ${location.pathname.includes('/platform-user/dashboard') ? 'active' : ''}`}
-              >
-                Dashboard
-              </Link>
-            </li>
-          </>
+          <li>
+            <Link
+              to="/platform-user/dashboard"
+              className={`nav-item ${location.pathname.includes('/platform-user/dashboard') ? 'active' : ''}`}
+            >
+              Dashboard
+            </Link>
+          </li>
         )}
       </ul>
 
@@ -137,7 +115,7 @@ const Shell = () => {
                 ) : (
                   <Login 
                     onCreateAccount={() => navigate('/supplier-registration')} 
-                    onLoginSuccess={(role) => login(role)}
+                    onLoginSuccess={(details) => login(details)}
                   />
                 )
               }
