@@ -1,128 +1,51 @@
-import React, { useState } from 'react';
-import { Button } from '@vosox/shared-ui';
+import React from 'react';
 
 export const SupplierDashboard: React.FC = () => {
-  const [winRate, setWinRate] = useState(68);
-  const [selectedBid, setSelectedBid] = useState<string | null>(null);
-
-  const bids = [
-    { id: 'RFQ-5051', title: 'Data Center Cooling Upgrades', buyer: 'Metro Gov Office', value: '$84,000', status: 'In Review' },
-    { id: 'RFQ-5052', title: 'SaaS Customer Portal Dev', department: 'Vosox Systems Inc', value: '$120,000', status: 'Won' },
-    { id: 'RFQ-5053', title: 'Cybersecurity Network Audit', department: 'Enterprise Org', value: '$35,000', status: 'Lost' },
-    { id: 'RFQ-5054', title: 'AI Integration Proof of Concept', department: 'Tech Giant Ltd', value: '$95,000', status: 'Submitted' },
-  ];
+  const userId = sessionStorage.getItem('vosox_user_id');
+  const personId = sessionStorage.getItem('vosox_person_id');
+  const organizationId = sessionStorage.getItem('vosox_organization_id');
+  const roleId = sessionStorage.getItem('vosox_role_id');
+  const userRole = sessionStorage.getItem('vosox_user_role');
 
   return (
-    <div>
-      <div className="header-bar">
-        <div>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 700, marginBottom: '6px' }}>Supplier Dashboard</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Lead pipelines, order statuses, and performance</p>
+    <div style={{
+      maxWidth: '600px',
+      margin: '0 auto',
+      backgroundColor: '#ffffff',
+      padding: '32px',
+      borderRadius: '12px',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+      border: '1px solid #e5e7eb'
+    }}>
+      <h2 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '24px', color: '#111827' }}>
+        Supplier Dashboard
+      </h2>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
+          <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>User ID</strong>
+          <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{userId || 'N/A'}</span>
         </div>
-        <Button variant="primary" onClick={() => setWinRate(prev => Math.min(100, prev + 1))}>
-          Refresh Analytics
-        </Button>
-      </div>
-
-      {/* Metrics Grid */}
-      <div className="metrics-grid">
-        <div className="glass-card metric-card">
-          <div className="metric-title">Revenue YTD</div>
-          <div className="metric-value">$1,248,600</div>
-          <div className="metric-trend trend-up">
-            ▲ 18.2% <span style={{ color: 'var(--text-dark)' }}>vs last fiscal year</span>
-          </div>
+        
+        <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
+          <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>Person ID</strong>
+          <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{personId || 'N/A'}</span>
         </div>
-
-        <div className="glass-card metric-card">
-          <div className="metric-title">Active Bids</div>
-          <div className="metric-value">14</div>
-          <div className="metric-trend trend-up">
-            ▲ 2 new <span style={{ color: 'var(--text-dark)' }}>this week</span>
-          </div>
+        
+        <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
+          <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>Organization ID</strong>
+          <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{organizationId || 'N/A'}</span>
         </div>
-
-        <div className="glass-card metric-card">
-          <div className="metric-title">Bids Won</div>
-          <div className="metric-value">9</div>
-          <div className="metric-trend trend-up">
-            ▲ 74% win efficiency
-          </div>
+        
+        <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
+          <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>Role ID</strong>
+          <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{roleId || 'N/A'}</span>
         </div>
 
-        <div className="glass-card metric-card">
-          <div className="metric-title">Bid Win Rate</div>
-          <div className="metric-value">{winRate}%</div>
-          <div className="metric-trend trend-up" style={{ color: 'var(--accent-color)' }}>
-            ★ Premium Tier Seller
-          </div>
+        <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
+          <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>User Role</strong>
+          <span style={{ fontSize: '1rem', color: '#1f2937', fontWeight: 600 }}>{userRole || 'N/A'}</span>
         </div>
-      </div>
-
-      {/* Recent Bids Section */}
-      <div className="glass-card">
-        <h2 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '18px' }}>
-          Recent RFQ Submissions
-        </h2>
-        <div className="table-container">
-          <table className="premium-table">
-            <thead>
-              <tr>
-                <th>RFQ ID</th>
-                <th>Project Title</th>
-                <th>Client / Buyer</th>
-                <th>Bid Value</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bids.map(bid => (
-                <tr key={bid.id}>
-                  <td style={{ fontWeight: 600, color: 'var(--accent-color)' }}>{bid.id}</td>
-                  <td>{bid.title}</td>
-                  <td>{bid.buyer || bid.department}</td>
-                  <td>{bid.value}</td>
-                  <td>
-                    <span className={`badge ${
-                      bid.status === 'Won' ? 'badge-success' :
-                      bid.status === 'In Review' || bid.status === 'Submitted' ? 'badge-warning' :
-                      'badge-danger'
-                    }`}>
-                      {bid.status}
-                    </span>
-                  </td>
-                  <td>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setSelectedBid(bid.id === selectedBid ? null : bid.id)}
-                    >
-                      {selectedBid === bid.id ? 'Close Details' : 'View'}
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {selectedBid && (
-          <div 
-            className="glass-card" 
-            style={{ 
-              marginTop: '20px', 
-              background: 'rgba(168, 85, 247, 0.05)', 
-              borderColor: 'var(--accent-color)',
-              animation: 'fadeIn 0.3s ease'
-            }}
-          >
-            <h3 style={{ marginBottom: '8px' }}>Detailed View: {selectedBid}</h3>
-            <p style={{ color: 'var(--text-muted)' }}>
-              Feedback and pricing breakdown details for bid {selectedBid}. Negotiation history is confidential between the buyer organization and your authorized company representatives.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

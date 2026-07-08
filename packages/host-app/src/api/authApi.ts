@@ -46,10 +46,6 @@ export const login = async (userName: string, password: string) => {
             userName,
             password,
         }, {
-            headers: {
-                Accept: 'text/plain',
-                'Content-Type': 'application/json',
-            }
         });
         return response.data;
     } catch (error: any) {
@@ -61,9 +57,11 @@ export const login = async (userName: string, password: string) => {
     }
 };
 
-export const getTokenClaims = async () => {
+export const getTokenClaims = async (skipRefresh = false) => {
     try {
-        const response = await axiosInstance.get('/api/v1/tokenclaim');
+        const response = await axiosInstance.get('api/v1/token-claim', {
+            ...({ _skipRefresh: skipRefresh } as any)
+        });
         return response.data;
     } catch (error: any) {
         if (error?.response?.data) {

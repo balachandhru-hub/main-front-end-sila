@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from '@vosox/shared-ui';
+import { Button, Loader } from '@vosox/shared-ui';
 import vosx_logo from '../assets/vosx-logo.png'
 import supplier_logo from '../assets/Supplier.png'
 import buyer_logo from '../assets/Buyer.png'
@@ -12,13 +12,22 @@ import './Login.css';
 type Role = 'supplier' | 'buyer' | 'platform-user';
 type View = 'role-select' | 'sign-in';
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const CheckIcon = () => (
   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M4 12.5l5 5L20 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 interface LoginProps {
-  onLoginSuccess?: (role: Role, username: string) => void;
+  onLoginSuccess?: (
+    details?: {
+      userId?: string;
+      personId?: string;
+      organizationId?: string;
+      roleId?: string;
+    }
+  ) => void;
   onCreateAccount?: () => void;
 }
 
@@ -48,31 +57,54 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount }) => {
     try {
       await login(username, password);
       
-      // Fetch token claims to determine user role
-      let resolvedRole: Role = role;
+      // Introduce a 1-second delay to let the browser process and write the new cookies
+      await delay(1000);
+      
+      // Fetch token claims to retrieve IDs (mapping is now managed centrally in Zustand store)
+      let details: any = {};
       try {
-        const claims = await getTokenClaims();
-        if (claims) {
-          const rawRole = claims.role || claims.userRole || claims.roles?.[0];
-          if (typeof rawRole === 'string') {
-            const normalized = rawRole.toLowerCase();
-            if (normalized.includes('supplier')) resolvedRole = 'supplier';
-            else if (normalized.includes('buyer')) resolvedRole = 'buyer';
-            else if (normalized.includes('platform') || normalized.includes('admin') || normalized.includes('staff')) resolvedRole = 'platform-user';
-          }
+        const claims = await getTokenClaims(true);
+        if (claims && claims.roleId) {
+          details = {
+            userId: claims.userId,
+            personId: claims.personId,
+            organizationId: claims.organizationId,
+            roleId: claims.roleId,
+          };
+          onLoginSuccess?.(details);
+        } else {
+          setError('Failed to retrieve user claims. Role ID not found.');
         }
-      } catch (claimsError) {
-        console.error('Failed to fetch token claims, falling back to local state:', claimsError);
+      } catch (claimsError: any) {
+        console.error('Failed to fetch token claims:', claimsError);
+        setError(claimsError.message || 'Failed to retrieve user claims.');
       }
-
-      onLoginSuccess?.(resolvedRole, username);
-      // setView('role-select');
     } catch (err: any) {
       setError(err.message || 'Login failed');
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: '#ffffff',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 9999
+      }}>
+        <Loader color="#2f7cf6" />
+      </div>
+    );
+  }
 
   return (
     <div className="vx-page" style={{ ['--primary-color' as any]: '#2f7cf6', ['--accent-color' as any]: '#1554c9' }}>

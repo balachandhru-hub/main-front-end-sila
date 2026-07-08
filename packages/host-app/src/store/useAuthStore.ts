@@ -2,24 +2,73 @@ import { create } from 'zustand';
 
 export type UserRole = 'buyer' | 'supplier' | 'platform-user';
 
+export const ROLE_MAPPING: Record<string, UserRole> = {
+  '735bb267-fec0-489f-8249-d3d65b3857ea': 'supplier', // SUPPLIER_ADMINISTRATOR
+  'c95f5a1b-4aec-4647-9328-895a58193ec4': 'buyer',    // BUYER_ADMINISTRATOR
+  '113d8ead-40c2-425a-bc60-5989e6cdabca': 'platform-user', // PLATFORM_ADMINISTRATOR
+};
+
 export interface AuthState {
   isLoggedIn: boolean;
   userRole: UserRole | null;
-  login: (role: UserRole) => void;
+  userId: string | null;
+  personId: string | null;
+  organizationId: string | null;
+  roleId: string | null;
+  login: (
+    details?: {
+      userId?: string;
+      personId?: string;
+      organizationId?: string;
+      roleId?: string;
+    }
+  ) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  isLoggedIn: localStorage.getItem('vosox_logged_in') === 'true',
-  userRole: (localStorage.getItem('vosox_user_role') as UserRole | null) || null,
-  login: (role: UserRole) => {
-    localStorage.setItem('vosox_logged_in', 'true');
-    localStorage.setItem('vosox_user_role', role);
-    set({ isLoggedIn: true, userRole: role });
+  isLoggedIn: sessionStorage.getItem('vosox_logged_in') === 'true',
+  userRole: (sessionStorage.getItem('vosox_user_role') as UserRole | null) || null,
+  userId: sessionStorage.getItem('vosox_user_id') || null,
+  personId: sessionStorage.getItem('vosox_person_id') || null,
+  organizationId: sessionStorage.getItem('vosox_organization_id') || null,
+  roleId: sessionStorage.getItem('vosox_role_id') || null,
+  login: (details) => {
+    let resolvedRole: UserRole = 'supplier';
+    if (details?.roleId && ROLE_MAPPING[details.roleId]) {
+      resolvedRole = ROLE_MAPPING[details.roleId];
+    }
+
+    sessionStorage.setItem('vosox_logged_in', 'true');
+    sessionStorage.setItem('vosox_user_role', resolvedRole);
+    if (details?.userId) sessionStorage.setItem('vosox_user_id', details.userId);
+    if (details?.personId) sessionStorage.setItem('vosox_person_id', details.personId);
+    if (details?.organizationId) sessionStorage.setItem('vosox_organization_id', details.organizationId);
+    if (details?.roleId) sessionStorage.setItem('vosox_role_id', details.roleId);
+
+    set({
+      isLoggedIn: true,
+      userRole: resolvedRole,
+      userId: details?.userId || null,
+      personId: details?.personId || null,
+      organizationId: details?.organizationId || null,
+      roleId: details?.roleId || null,
+    });
   },
   logout: () => {
-    localStorage.removeItem('vosox_logged_in');
-    localStorage.removeItem('vosox_user_role');
-    set({ isLoggedIn: false, userRole: null });
+    sessionStorage.removeItem('vosox_logged_in');
+    sessionStorage.removeItem('vosox_user_role');
+    sessionStorage.removeItem('vosox_user_id');
+    sessionStorage.removeItem('vosox_person_id');
+    sessionStorage.removeItem('vosox_organization_id');
+    sessionStorage.removeItem('vosox_role_id');
+    set({
+      isLoggedIn: false,
+      userRole: null,
+      userId: null,
+      personId: null,
+      organizationId: null,
+      roleId: null,
+    });
   },
 }));
