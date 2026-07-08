@@ -1,128 +1,51 @@
-import React, { useState } from 'react';
-import { Button } from '@vosox/shared-ui';
+import React from 'react';
 
 export const BuyerDashboard: React.FC = () => {
-  const [vendorCount, setVendorCount] = useState(14);
-  const [selectedReq, setSelectedReq] = useState<string | null>(null);
-
-  const requisitions = [
-    { id: 'REQ-2026-001', item: 'Enterprise Cloud Subscription', department: 'IT', cost: '$45,000', status: 'Pending Approval' },
-    { id: 'REQ-2026-002', item: 'Office Workspace Hardware', department: 'HR / Operations', cost: '$12,300', status: 'Approved' },
-    { id: 'REQ-2026-003', item: 'Security Systems Integration', department: 'Security', cost: '$8,500', status: 'Rejected' },
-    { id: 'REQ-2026-004', item: 'Design Assets & Subscriptions', department: 'Marketing', cost: '$3,200', status: 'Approved' },
-  ];
+  const userId = sessionStorage.getItem('vosox_user_id');
+  const personId = sessionStorage.getItem('vosox_person_id');
+  const organizationId = sessionStorage.getItem('vosox_organization_id');
+  const roleId = sessionStorage.getItem('vosox_role_id');
+  const userRole = sessionStorage.getItem('vosox_user_role');
 
   return (
-    <div>
-      <div className="header-bar">
-        <div>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 700, marginBottom: '6px' }}>Buyer Dashboard</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Procurement insights and tracking for buyers</p>
+    <div style={{
+      maxWidth: '600px',
+      margin: '0 auto',
+      backgroundColor: '#ffffff',
+      padding: '32px',
+      borderRadius: '12px',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+      border: '1px solid #e5e7eb'
+    }}>
+      <h2 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '24px', color: '#111827' }}>
+        Buyer Dashboard
+      </h2>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
+          <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>User ID</strong>
+          <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{userId || 'N/A'}</span>
         </div>
-        <Button variant="primary" onClick={() => setVendorCount(prev => prev + 1)}>
-          Quick Invite Vendor
-        </Button>
-      </div>
-
-      {/* Metrics Grid */}
-      <div className="metrics-grid">
-        <div className="glass-card metric-card">
-          <div className="metric-title">Total Spent YTD</div>
-          <div className="metric-value">$684,200</div>
-          <div className="metric-trend trend-up">
-            ▲ 12.4% <span style={{ color: 'var(--text-dark)' }}>vs last quarter</span>
-          </div>
+        
+        <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
+          <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>Person ID</strong>
+          <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{personId || 'N/A'}</span>
         </div>
-
-        <div className="glass-card metric-card">
-          <div className="metric-title">Active POs</div>
-          <div className="metric-value">48</div>
-          <div className="metric-trend trend-up">
-            ▲ 4 new <span style={{ color: 'var(--text-dark)' }}>this week</span>
-          </div>
+        
+        <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
+          <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>Organization ID</strong>
+          <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{organizationId || 'N/A'}</span>
         </div>
-
-        <div className="glass-card metric-card">
-          <div className="metric-title">Requisitions</div>
-          <div className="metric-value">12</div>
-          <div className="metric-trend trend-down">
-            ▼ -8% <span style={{ color: 'var(--text-dark)' }}>vs last month</span>
-          </div>
+        
+        <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
+          <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>Role ID</strong>
+          <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{roleId || 'N/A'}</span>
         </div>
 
-        <div className="glass-card metric-card">
-          <div className="metric-title">Partner Vendors</div>
-          <div className="metric-value">{vendorCount}</div>
-          <div className="metric-trend trend-up">
-            ▲ Active agreements
-          </div>
+        <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
+          <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>User Role</strong>
+          <span style={{ fontSize: '1rem', color: '#1f2937', fontWeight: 600 }}>{userRole || 'N/A'}</span>
         </div>
-      </div>
-
-      {/* Requisitions Section */}
-      <div className="glass-card">
-        <h2 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '18px' }}>
-          Recent Requisitions
-        </h2>
-        <div className="table-container">
-          <table className="premium-table">
-            <thead>
-              <tr>
-                <th>Requisition ID</th>
-                <th>Requested Item</th>
-                <th>Department</th>
-                <th>Est. Cost</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {requisitions.map(req => (
-                <tr key={req.id}>
-                  <td style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{req.id}</td>
-                  <td>{req.item}</td>
-                  <td>{req.department}</td>
-                  <td>{req.cost}</td>
-                  <td>
-                    <span className={`badge ${
-                      req.status === 'Approved' ? 'badge-success' :
-                      req.status === 'Pending Approval' ? 'badge-warning' :
-                      'badge-danger'
-                    }`}>
-                      {req.status}
-                    </span>
-                  </td>
-                  <td>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setSelectedReq(req.id === selectedReq ? null : req.id)}
-                    >
-                      {selectedReq === req.id ? 'Close Details' : 'View'}
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {selectedReq && (
-          <div 
-            className="glass-card" 
-            style={{ 
-              marginTop: '20px', 
-              background: 'rgba(99, 102, 241, 0.05)', 
-              borderColor: 'var(--primary-color)',
-              animation: 'fadeIn 0.3s ease'
-            }}
-          >
-            <h3 style={{ marginBottom: '8px' }}>Detailed View: {selectedReq}</h3>
-            <p style={{ color: 'var(--text-muted)' }}>
-              Detailed auditing and approver remarks for {selectedReq} are listed here. The procurement workflow requires double sign-offs for budgets exceeding $10k.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

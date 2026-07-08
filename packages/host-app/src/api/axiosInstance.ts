@@ -35,7 +35,7 @@ axiosInstance.interceptors.response.use(
     // Exclude all auth endpoints (login, send-otp, verify-otp, refresh-token, etc.) from refresh logic
     const isAuthEndpoint = originalRequest?.url?.includes('/api/v1/auth/');
 
-    if (error.response?.status === 401 && !isAuthEndpoint && !originalRequest._retry) {
+    if (error.response?.status === 401 && !isAuthEndpoint && !originalRequest._retry && !originalRequest?._skipRefresh) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
