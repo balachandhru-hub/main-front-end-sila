@@ -29,9 +29,10 @@ interface LoginProps {
     }
   ) => void;
   onCreateAccount?: () => void;
+  onCreateBuyerAccount?: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount }) => {
+const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreateBuyerAccount }) => {
   const [view, setView] = useState<View>('sign-in');
   const [role, setRole] = useState<Role>('supplier');
   const [username, setUsername] = useState('');
@@ -43,6 +44,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount }) => {
   const handleContinue = () => {
     if (role === 'supplier') {
       onCreateAccount?.();
+    } else if (role === 'buyer') {
+      onCreateBuyerAccount?.();
     }
   };
 
