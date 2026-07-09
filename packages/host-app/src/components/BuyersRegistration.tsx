@@ -5,7 +5,7 @@ import './SupplierRegistration.css';
 import { CiMail } from "react-icons/ci";
 import { sendOtp, verifyOtp } from '../api/authApi';
 import { useNavigate } from 'react-router-dom';
-import { createOrganization } from '../api/organizationApi';
+// import { createOrganization } from '../api/organizationApi';
 import { Country, State } from 'country-state-city';
 
 const CheckIcon = () => (
@@ -17,11 +17,11 @@ const CheckIcon = () => (
 const OTP_LENGTH = 6;
 const OTP_DURATION = 600; // seconds
 
-interface SupplierRegistrationProps {
+interface BuyersRegistrationProps {
     businessEmail?: string;
 }
 
-const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
+const BuyersRegistration: React.FC<BuyersRegistrationProps> = ({
     businessEmail: initialEmail,
 }) => {
     const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -143,26 +143,26 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
     };
 
     const handleCreateAccount = async () => {
-        if (!agreeTerms || isCreatingAccount) return;
-        setIsCreatingAccount(true);
-        setCreateError('');
+        // if (!agreeTerms || isCreatingAccount) return;
+        // setIsCreatingAccount(true);
+        // setCreateError('');
         try {
-            await createOrganization({
-                organizationName: companyName,
-                organizationType: 2,
-                email: email,
-                phone: phone,
-                country: country,
-                addressLine1: addressLine1,
-                addressLine2: addressLine2,
-                city: city,
-                state: stateVal,
-                pinCode: zip,
-                personName: name.trim(),
-                userName: email,
-                personEmail: adminEmail,
-                password: pw,
-            });
+            // await createOrganization({
+            //     organizationName: companyName,
+            //     organizationType: 1, // 1 for Buyer
+            //     email: email,
+            //     phone: phone,
+            //     country: country,
+            //     addressLine1: addressLine1,
+            //     addressLine2: addressLine2,
+            //     city: city,
+            //     state: stateVal,
+            //     pinCode: zip,
+            //     personName: name.trim(),
+            //     userName: email,
+            //     personEmail: adminEmail,
+            //     password: pw,
+            // });
 
             navigate('/');
         } catch (error: any) {
@@ -183,10 +183,10 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                 {step < 3 ? (
                     <div className="vr-card">
                         <div className="vr-card-header">
-                            <h1 className="vr-title">Supplier Registration</h1>
+                            <h1 className="vr-title">Buyer Registration</h1>
                             <p className="vr-subtitle">
                                 {step === 1
-                                    ? 'Create your supplier account to access sourcing opportunities'
+                                    ? 'Create your buyer account to start sourcing opportunities'
                                     : 'Email Verification'}
                             </p>
                         </div>
@@ -201,7 +201,7 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                     <h2 className="vr-section-title">Verify Your Email Address</h2>
                                     <p className="vr-section-text">
                                         Enter your business email address. We&apos;ll send a One-Time Password (OTP) to
-                                        verify your email before creating your supplier account.
+                                        verify your email before creating your buyer account.
                                     </p>
 
                                     <div className="vr-field">
@@ -226,7 +226,7 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                     <h2 className="vr-section-title">Verify Your Email</h2>
                                     <p className="vr-section-text">
                                         Enter the 6-digit verification code sent to{' '}
-                                        <span className="vr-email-highlight">{email || 'supplier@company.com'}</span>
+                                        <span className="vr-email-highlight">{email || 'buyer@company.com'}</span>
                                     </p>
 
                                     <div className="vr-otp-row">
@@ -297,7 +297,7 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                 ) : (
                     <div className="vr-step3">
                         <div className="vr-step3-header">
-                            <h1 className="vr-title">Supplier Registration</h1>
+                            <h1 className="vr-title">Buyer Registration</h1>
                             <span className="vr-step-indicator">Step 3 of 3</span>
                         </div>
 
@@ -473,4 +473,4 @@ const Stepper: React.FC<{ current: 1 | 2 | 3 }> = ({ current }) => {
     );
 };
 
-export default SupplierRegistration;
+export default BuyersRegistration;

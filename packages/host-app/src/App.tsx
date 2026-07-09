@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, Link, useLocation, useNavigate 
 import { useAuth } from './AuthContext';
 import Login from './components/Login';
 import SupplierRegistration from './components/SupplierRegistration';
+import BuyersRegistration from './components/BuyersRegistration';
 import { Loader, Button } from '@vosox/shared-ui';
 
 // Lazy loading remote apps
@@ -115,6 +116,7 @@ const Shell = () => {
                 ) : (
                   <Login 
                     onCreateAccount={() => navigate('/supplier-registration')} 
+                    onCreateBuyerAccount={() => navigate('/buyer-registration')}
                     onLoginSuccess={(details) => login(details)}
                   />
                 )
@@ -122,6 +124,7 @@ const Shell = () => {
             />
 
             <Route path="/supplier-registration" element={<SupplierRegistration />} />
+            <Route path="/buyer-registration" element={<BuyersRegistration />} />
 
             {/* Buyer Remote Routes */}
             <Route
