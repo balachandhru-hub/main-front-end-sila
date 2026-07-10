@@ -58,9 +58,6 @@ interface Agreements {
     authorizeVerification: boolean;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Constants                                                          */
-/* ------------------------------------------------------------------ */
 
 const STEP_LABELS = [
     "Business Information",
@@ -1045,8 +1042,6 @@ export default function BuyerProfile() {
                 return null;
         }
     }
-
-    /* ------------------------------------------------------------------ */
 
     if (submitted) {
         return (
