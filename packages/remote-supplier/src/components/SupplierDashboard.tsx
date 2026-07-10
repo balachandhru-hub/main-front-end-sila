@@ -20,23 +20,23 @@ export const SupplierDashboard: React.FC = () => {
       <h2 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '24px', color: '#111827' }}>
         Supplier Dashboard
       </h2>
-      
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
           <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>User ID</strong>
           <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{userId || 'N/A'}</span>
         </div>
-        
+
         <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
           <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>Person ID</strong>
           <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{personId || 'N/A'}</span>
         </div>
-        
+
         <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
           <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>Organization ID</strong>
           <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{organizationId || 'N/A'}</span>
         </div>
-        
+
         <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
           <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>Role ID</strong>
           <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{roleId || 'N/A'}</span>
