@@ -5,7 +5,7 @@ import './SupplierRegistration.css';
 import { CiMail } from "react-icons/ci";
 import { sendOtp, verifyOtp } from '../api/authApi';
 import { useNavigate } from 'react-router-dom';
-// import { createOrganization } from '../api/organizationApi';
+import { createOrganization } from '../api/organizationApi';
 import { Country, State } from 'country-state-city';
 
 const CheckIcon = () => (
@@ -143,26 +143,26 @@ const BuyersRegistration: React.FC<BuyersRegistrationProps> = ({
     };
 
     const handleCreateAccount = async () => {
-        // if (!agreeTerms || isCreatingAccount) return;
-        // setIsCreatingAccount(true);
-        // setCreateError('');
+        if (!agreeTerms || isCreatingAccount) return;
+        setIsCreatingAccount(true);
+        setCreateError('');
         try {
-            // await createOrganization({
-            //     organizationName: companyName,
-            //     organizationType: 1, // 1 for Buyer
-            //     email: email,
-            //     phone: phone,
-            //     country: country,
-            //     addressLine1: addressLine1,
-            //     addressLine2: addressLine2,
-            //     city: city,
-            //     state: stateVal,
-            //     pinCode: zip,
-            //     personName: name.trim(),
-            //     userName: email,
-            //     personEmail: adminEmail,
-            //     password: pw,
-            // });
+            await createOrganization({
+                organizationName: companyName,
+                organizationType: 1, // 1 for Buyer
+                email: email,
+                phone: phone,
+                country: country,
+                addressLine1: addressLine1,
+                addressLine2: addressLine2,
+                city: city,
+                state: stateVal,
+                pinCode: zip,
+                personName: name.trim(),
+                userName: email,
+                personEmail: adminEmail,
+                password: pw,
+            });
 
             navigate('/');
         } catch (error: any) {
