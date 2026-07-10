@@ -1,22 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import SupplierDashboard from './components/SupplierDashboard';
-import SupplierOnboardingForm from './components/Supplieronboardingform';
-import type { Step1Data } from './components/Step1businessinfo';
-import type { Step2Data } from './components/Step2registrations';
+import SupplierOnboardingForm, {
+  type Step1Data,
+  type Step2Data,
+  type Step3Data,
+  type Step4Data,
+} from './components/Supplieronboardingform';
 
 const readIsProfileComplete = (): boolean => {
-  return sessionStorage.getItem('vosox_profile_complete') === 'true';
+  return false;
 };
 
 const OnboardingRoute: React.FC = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
-  const handleOnboardingComplete = async (_data: { step1: Step1Data; step2: Step2Data }) => {
-    sessionStorage.setItem('vosox_profile_complete', 'true');
-    navigate('dashboard', { replace: true });  // RELATIVE path
+  const handleOnboardingComplete = async (_data: {
+    step1: Step1Data;
+    step2: Step2Data;
+    step3: Step3Data;
+    step4: Step4Data;
+  }) => {
+    
   };
-
   return <SupplierOnboardingForm onComplete={handleOnboardingComplete} />;
 };
 

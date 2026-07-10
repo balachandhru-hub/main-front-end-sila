@@ -1,0 +1,474 @@
+/* Container and Page Layout */
+.vob-page {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.vob-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e9ecef;
+  padding: 0.5rem 6rem;
+}
+
+.vob-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.vob-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background-color: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.vob-step-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.vob-step-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.vob-step-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.vob-step-number--active {
+  background-color: #2196f3;
+  color: #ffffff;
+  border: 2px solid #2196f3;
+}
+
+.vob-step-number--completed {
+  background-color: #4caf50;
+  color: #ffffff;
+  border: 2px solid #4caf50;
+}
+
+.vob-step-number--pending {
+  background-color: #ffffff;
+  color: #adb5bd;
+  border: 2px solid #dee2e6;
+}
+
+.vob-step-label {
+  font-size: 13px;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.vob-step-label--active {
+  color: #2196f3;
+}
+
+.vob-step-label--completed {
+  color: #4caf50;
+}
+
+.vob-step-label--pending {
+  color: #adb5bd;
+}
+
+.vob-content {
+  flex: 1;
+}
+
+/* Card and Forms */
+.vob-card {
+  background-color: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 28px;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+}
+
+.vob-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #212529;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f3f5;
+  margin-top: 0;
+}
+
+.vob-error-banner {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background-color: #fff5f5;
+  border: 1px solid #feb2b2;
+  border-radius: 6px;
+  color: #c53030;
+  font-size: 13px;
+}
+
+.vob-validation-banner {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  color: #856404;
+  font-size: 13px;
+}
+
+.vob-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.vob-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.vob-field--full {
+  grid-column: 1 / -1;
+}
+
+.vob-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #495057;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.vob-label--required::after {
+  content: " *";
+  color: #dc3545;
+}
+
+.vob-input,
+.vob-select,
+.vob-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #212529;
+  background-color: #ffffff;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.vob-input:focus,
+.vob-select:focus,
+.vob-textarea:focus {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.vob-input--error,
+.vob-select--error,
+.vob-textarea--error {
+  border-color: #dc3545 !important;
+}
+
+.vob-error-text {
+  font-size: 11px;
+  color: #dc3545;
+  margin-top: 4px;
+}
+
+.vob-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  cursor: pointer;
+}
+
+.vob-textarea {
+  resize: none;
+  min-height: 100px;
+}
+
+/* Upload Area for Step 2 Certificate */
+.vob-upload-area {
+  width: 100%;
+  border: 2px dashed #bbdefb;
+  border-radius: 8px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: #e3f2fd;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+}
+
+.vob-upload-area:hover,
+.vob-upload-area--active {
+  border-color: #2196f3;
+  background-color: #bbdefb;
+}
+
+.vob-upload-text {
+  font-size: 13px;
+  color: #6c757d;
+}
+
+.vob-upload-filename {
+  font-size: 13px;
+  color: #2196f3;
+  font-weight: 500;
+}
+
+.vob-upload-input {
+  display: none;
+}
+
+/* Checkbox Actions / Layouts */
+.vob-action-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  grid-column: 1 / -1;
+}
+
+.vob-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.vob-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.vob-checkbox-label {
+  font-size: 13px;
+  color: #495057;
+  user-select: none;
+}
+
+/* Navigation Row */
+.vob-nav-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+/* Buttons */
+.vob-btn {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 28px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vob-btn--primary {
+  background-color: #2196f3;
+  color: #ffffff;
+}
+
+.vob-btn--primary:hover:not(:disabled) {
+  background-color: #1976d2;
+}
+
+.vob-btn--primary:disabled {
+  background-color: #90caf9;
+  color: #ffffff;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.vob-btn--secondary {
+  background-color: #ffffff;
+  color: #495057;
+  border: 1px solid #dee2e6;
+  margin-right: 12px;
+}
+
+.vob-btn--secondary:hover:not(:disabled) {
+  background-color: #f8f9fa;
+}
+
+.vob-btn--secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vob-btn--sm {
+  font-size: 13px;
+  padding: 8px 16px;
+}
+
+/* Table styles */
+.vob-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  margin-bottom: 24px;
+}
+
+.vob-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.vob-thead {
+  background-color: #f8f9fa;
+}
+
+.vob-th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.vob-td {
+  padding: 12px 14px;
+  color: #495057;
+  border-bottom: 1px solid #f1f3f5;
+  vertical-align: middle;
+}
+
+.vob-btn-icon {
+  background: none;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vob-btn-icon:hover {
+  background-color: #fff5f5;
+}
+
+/* Badges */
+.vob-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.vob-badge--primary {
+  background-color: #e3f2fd;
+  color: #1e88e5;
+}
+
+.vob-badge--success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.vob-badge--attachment {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vob-attachment-none {
+  color: #adb5bd;
+  font-size: 12px;
+}
+
+.vob-empty-state {
+  padding: 24px;
+  text-align: center;
+  color: #adb5bd;
+  font-size: 13px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px dashed #dee2e6;
+  margin-bottom: 24px;
+}
+
+/* Declarations Section (Step 4) */
+.vob-declarations {
+  border-top: 1px solid #f1f3f5;
+  padding-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vob-declaration-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.vob-declaration-checkbox {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.vob-declaration-text {
+  font-size: 13px;
+  color: #495057;
+  line-height: 1.4;
+  user-select: none;
+}
+
+.vob-link {
+  color: #2196f3;
+  text-decoration: none;
+  font-weight: 500;
+}

@@ -1,6 +1,143 @@
-import React, { useState } from 'react';
-import Step1BusinessInfo, { type Step1Data, initialStep1Data } from './Step1businessinfo';
-import Step2Registrations, { type Step2Data, initialStep2Data } from './Step2registrations';
+import React, { useState, useRef, useEffect } from 'react';
+import './Supplieronboardingform.css';
+
+// ============================================================================
+// TYPES & INITIAL STATES FOR ALL ONBOARDING STEPS
+// ============================================================================
+
+// Step 1: Business Information
+export interface Step1Data {
+  industry: string;
+  businessType: string;
+  employeeCount: string;
+  annualTurnover: string;
+  currency: string;
+  yearEstablished: string;
+  website: string;
+  companyDescription: string;
+}
+
+export const initialStep1Data: Step1Data = {
+  industry: '',
+  businessType: '',
+  employeeCount: '',
+  annualTurnover: '',
+  currency: 'INR',
+  yearEstablished: '',
+  website: '',
+  companyDescription: '',
+};
+
+// Step 2: Registrations & Certifications
+export interface RegistrationEntry {
+  id: string;
+  type: string;
+  number: string;
+  name: string;
+  expiryDate: string;
+  certificateFile: File | null;
+  certificateFileName: string | null;
+}
+
+export interface Step2Data {
+  registrations: RegistrationEntry[];
+}
+
+export const initialStep2Data: Step2Data = {
+  registrations: [],
+};
+
+// Step 3: Bank Account Information
+export interface BankAccountEntry {
+  id: string;
+  accountHolderName: string;
+  bankName: string;
+  branchName: string;
+  accountNumber: string;
+  ifscCode: string;
+  swiftCode: string;
+  iban: string;
+  currency: string;
+  isPrimary: boolean;
+}
+
+export interface Step3Data {
+  accounts: BankAccountEntry[];
+}
+
+export const initialStep3Data: Step3Data = {
+  accounts: [],
+};
+
+// Step 4: Dispatch Locations
+export interface DispatchLocationEntry {
+  id: string;
+  locationName: string;
+  contactPerson: string;
+  country: string;
+  state: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  pinCode: string;
+  contactEmail: string;
+  contactPhone: string;
+  isDefault: boolean;
+}
+
+export interface Step4Data {
+  locations: DispatchLocationEntry[];
+  certifyTrue: boolean;
+  agreeTerms: boolean;
+  authorizeVerify: boolean;
+}
+
+export const initialStep4Data: Step4Data = {
+  locations: [],
+  certifyTrue: false,
+  agreeTerms: false,
+  authorizeVerify: false,
+};
+
+// ============================================================================
+// HELPER COMPONENTS & CONSTANTS
+// ============================================================================
+
+const TrashIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M4 12.5l5 5L20 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const INDUSTRY_OPTIONS = [
+  'Manufacturing',
+  'Textiles & Apparel',
+  'Electronics',
+  'Automotive',
+  'Food & Beverage',
+  'Chemicals',
+  'Construction',
+  'Other',
+];
+
+const BUSINESS_TYPE_OPTIONS = [
+  'Manufacturer',
+  'Trader / Distributor',
+  'Service Provider',
+  'Exporter',
+  'Importer',
+];
+
+const REGISTRATION_TYPE_OPTIONS = ['GST', 'PAN', 'IEC', 'MSME / Udyam', 'ISO Certificate', 'Other'];
+const CURRENCY_OPTIONS = ['INR', 'USD', 'EUR', 'GBP'];
+const STATE_OPTIONS = ['Tamilnadu', 'Karnataka', 'Maharashtra', 'Delhi', 'Other'];
+const YEAR_OPTIONS = Array.from({ length: 60 }, (_, i) => String(new Date().getFullYear() - i));
 
 interface StepMeta {
   id: number;
@@ -14,34 +151,1089 @@ const STEPS: StepMeta[] = [
   { id: 4, label: 'Dispatch Locations' },
 ];
 
-// Logo from host app - uses current domain automatically
-const vosx_logo = `${window.location.protocol}//${window.location.host}/assets/vosx-logo.png`;
+// ============================================================================
+// STEP 1 COMPONENT: Step1BusinessInfo
+// ============================================================================
 
-interface SupplierOnboardingFormProps {
-  onComplete: (data: { step1: Step1Data; step2: Step2Data }) => Promise<void> | void;
+interface Step1BusinessInfoProps {
+  data: Step1Data;
+  onChange: (data: Step1Data) => void;
+  onValidationChange?: (isValid: boolean) => void;
 }
 
-const CheckIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M4 12.5l5 5L20 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
+const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({ data, onChange, onValidationChange }) => {
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const handleField = <K extends keyof Step1Data>(field: K, value: Step1Data[K]) => {
+    onChange({ ...data, [field]: value });
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
+
+  const errors: Record<string, string> = {};
+  if (!data.industry.trim()) errors.industry = 'Industry is required';
+  if (!data.businessType.trim()) errors.businessType = 'Business Type is required';
+
+  const isValid = Object.keys(errors).length === 0;
+
+  useEffect(() => {
+    onValidationChange?.(isValid);
+  }, [isValid, onValidationChange]);
+
+  const getFieldError = (field: string) => {
+    if (!touched[field]) return null;
+    return errors[field] || null;
+  };
+
+  const industryError = getFieldError('industry');
+  const businessTypeError = getFieldError('businessType');
+
+  return (
+    <div className="vob-card">
+      <h2 className="vob-title">Step 1: Business Information</h2>
+
+      <div className="vob-grid">
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">Industry</label>
+          <select
+            data-field="industry"
+            className={`vob-select ${industryError ? 'vob-select--error' : ''}`}
+            value={data.industry}
+            onChange={(e) => handleField('industry', e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, industry: true }))}
+          >
+            <option value="">Select Industry</option>
+            {INDUSTRY_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+          {industryError && <span className="vob-error-text">{industryError}</span>}
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">Business Type</label>
+          <select
+            data-field="businessType"
+            className={`vob-select ${businessTypeError ? 'vob-select--error' : ''}`}
+            value={data.businessType}
+            onChange={(e) => handleField('businessType', e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, businessType: true }))}
+          >
+            <option value="">Select Business Type</option>
+            {BUSINESS_TYPE_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+          {businessTypeError && <span className="vob-error-text">{businessTypeError}</span>}
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label">Employee Count</label>
+          <input
+            type="number"
+            min="0"
+            placeholder="Employee Count"
+            className="vob-input"
+            value={data.employeeCount}
+            onChange={(e) => handleField('employeeCount', e.target.value)}
+          />
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label">Annual Turnover</label>
+          <input
+            type="text"
+            placeholder="Annual Turnover"
+            className="vob-input"
+            value={data.annualTurnover}
+            onChange={(e) => handleField('annualTurnover', e.target.value)}
+          />
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label">Currency</label>
+          <select
+            className="vob-select"
+            value={data.currency}
+            onChange={(e) => handleField('currency', e.target.value)}
+          >
+            {CURRENCY_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label">Year Established</label>
+          <select
+            className="vob-select"
+            value={data.yearEstablished}
+            onChange={(e) => handleField('yearEstablished', e.target.value)}
+          >
+            <option value="">Select Year</option>
+            {YEAR_OPTIONS.map((year) => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="vob-field vob-field--full">
+          <label className="vob-label">Website</label>
+          <input
+            type="url"
+            placeholder="https://"
+            className="vob-input"
+            value={data.website}
+            onChange={(e) => handleField('website', e.target.value)}
+          />
+        </div>
+
+        <div className="vob-field vob-field--full">
+          <label className="vob-label">Company Description</label>
+          <textarea
+            rows={4}
+            placeholder="Tell buyers about your company, products, services and capabilities..."
+            className="vob-textarea"
+            value={data.companyDescription}
+            onChange={(e) => handleField('companyDescription', e.target.value)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// STEP 2 COMPONENT: Step2Registrations
+// ============================================================================
+
+interface Step2RegistrationsProps {
+  data: Step2Data;
+  onChange: (data: Step2Data) => void;
+  onValidationChange?: (isValid: boolean) => void;
+}
+
+interface Step2Draft {
+  type: string;
+  number: string;
+  name: string;
+  expiryDate: string;
+  certificateFile: File | null;
+}
+
+const emptyStep2Draft: Step2Draft = {
+  type: 'GST',
+  number: '',
+  name: '',
+  expiryDate: '',
+  certificateFile: null,
+};
+
+const Step2Registrations: React.FC<Step2RegistrationsProps> = ({ data, onChange, onValidationChange }) => {
+  const [draft, setDraft] = useState<Step2Draft>(emptyStep2Draft);
+  const [dragActive, setDragActive] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDraftField = <K extends keyof Step2Draft>(field: K, value: Step2Draft[K]) => {
+    setDraft((prev) => ({ ...prev, [field]: value }));
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    setFormError(null);
+  };
+
+  const handleFileSelect = (file: File | null) => {
+    handleDraftField('certificateFile', file);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0] ?? null;
+    if (file) handleFileSelect(file);
+  };
+
+  const handleAddRegistration = () => {
+    setFormError(null);
+    if (!draft.number.trim() || !draft.name.trim()) {
+      setFormError('Registration Number and Registration Name are required');
+      return;
+    }
+
+    const newEntry: RegistrationEntry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      type: draft.type,
+      number: draft.number.trim(),
+      name: draft.name.trim(),
+      expiryDate: draft.expiryDate,
+      certificateFile: draft.certificateFile,
+      certificateFileName: draft.certificateFile?.name ?? null,
+    };
+
+    onChange({ registrations: [...data.registrations, newEntry] });
+    setDraft(emptyStep2Draft);
+    setTouched({});
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleRemove = (id: string) => {
+    onChange({ registrations: data.registrations.filter((r) => r.id !== id) });
+  };
+
+  const isValid = data.registrations.length > 0;
+
+  useEffect(() => {
+    onValidationChange?.(isValid);
+  }, [isValid, onValidationChange]);
+
+  const numberError = touched.number && !draft.number.trim() ? 'Registration Number is required' : null;
+  const nameError = touched.name && !draft.name.trim() ? 'Registration Name is required' : null;
+
+  return (
+    <div className="vob-card">
+      <h2 className="vob-title">Step 2: Registrations & Certifications</h2>
+
+      {formError && <div className="vob-error-banner">{formError}</div>}
+
+      <div className="vob-grid">
+        <div className="vob-field">
+          <label className="vob-label">Registration Type</label>
+          <select
+            className="vob-select"
+            value={draft.type}
+            onChange={(e) => handleDraftField('type', e.target.value)}
+          >
+            {REGISTRATION_TYPE_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">Registration Number</label>
+          <input
+            data-field="number"
+            type="text"
+            placeholder="Registration Number"
+            className={`vob-input ${numberError ? 'vob-input--error' : ''}`}
+            value={draft.number}
+            onChange={(e) => handleDraftField('number', e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, number: true }))}
+          />
+          {numberError && <span className="vob-error-text">{numberError}</span>}
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">Registration Name</label>
+          <input
+            data-field="name"
+            type="text"
+            placeholder="Registration Name"
+            className={`vob-input ${nameError ? 'vob-input--error' : ''}`}
+            value={draft.name}
+            onChange={(e) => handleDraftField('name', e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
+          />
+          {nameError && <span className="vob-error-text">{nameError}</span>}
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label">Expiry Date</label>
+          <input
+            type="date"
+            className="vob-input"
+            value={draft.expiryDate}
+            onChange={(e) => handleDraftField('expiryDate', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <label className="vob-label">Upload Certificate</label>
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={`vob-upload-area ${dragActive ? 'vob-upload-area--active' : ''}`}
+      >
+        <span className={draft.certificateFile ? 'vob-upload-filename' : 'vob-upload-text'}>
+          {draft.certificateFile
+            ? draft.certificateFile.name
+            : 'Click to select file or drag and drop certificate here'}
+        </span>
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="vob-upload-input"
+        onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
+      />
+
+      <div className="vob-action-row" style={{ justifyContent: 'flex-end' }}>
+        <button
+          type="button"
+          onClick={handleAddRegistration}
+          className="vob-btn vob-btn--primary vob-btn--sm"
+        >
+          + Add Registration
+        </button>
+      </div>
+
+      {data.registrations.length === 0 && (
+        <div className="vob-empty-state">
+          No registrations added yet. Please add at least one registration to proceed.
+        </div>
+      )}
+
+      {data.registrations.length > 0 && (
+        <div className="vob-table-wrapper">
+          <table className="vob-table">
+            <thead className="vob-thead">
+              <tr>
+                <th className="vob-th">Type</th>
+                <th className="vob-th">Number</th>
+                <th className="vob-th">Name</th>
+                <th className="vob-th">Expiry Date</th>
+                <th className="vob-th">Attachments</th>
+                <th className="vob-th">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.registrations.map((reg) => (
+                <tr key={reg.id}>
+                  <td className="vob-td">{reg.type}</td>
+                  <td className="vob-td">{reg.number}</td>
+                  <td className="vob-td">{reg.name}</td>
+                  <td className="vob-td">{reg.expiryDate || '—'}</td>
+                  <td className="vob-td">
+                    {reg.certificateFileName ? (
+                      <span className="vob-badge vob-badge--attachment">
+                        {reg.certificateFileName}
+                      </span>
+                    ) : (
+                      <span className="vob-attachment-none">None</span>
+                    )}
+                  </td>
+                  <td className="vob-td">
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(reg.id)}
+                      className="vob-btn-icon"
+                      aria-label="Remove registration"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================================
+// STEP 3 COMPONENT: Step3BankInfo
+// ============================================================================
+
+interface Step3BankInfoProps {
+  data: Step3Data;
+  onChange: (data: Step3Data) => void;
+  onValidationChange?: (isValid: boolean) => void;
+}
+
+interface Step3Draft {
+  accountHolderName: string;
+  bankName: string;
+  branchName: string;
+  accountNumber: string;
+  ifscCode: string;
+  swiftCode: string;
+  iban: string;
+  currency: string;
+  isPrimary: boolean;
+}
+
+const emptyStep3Draft: Step3Draft = {
+  accountHolderName: '',
+  bankName: '',
+  branchName: '',
+  accountNumber: '',
+  ifscCode: '',
+  swiftCode: '',
+  iban: '',
+  currency: 'INR',
+  isPrimary: false,
+};
+
+const Step3BankInfo: React.FC<Step3BankInfoProps> = ({ data, onChange, onValidationChange }) => {
+  const [draft, setDraft] = useState<Step3Draft>(emptyStep3Draft);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const handleDraftField = <K extends keyof Step3Draft>(field: K, value: Step3Draft[K]) => {
+    setDraft((prev) => ({ ...prev, [field]: value }));
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    setFormError(null);
+  };
+
+  const handleAddAccount = () => {
+    setFormError(null);
+    if (
+      !draft.accountHolderName.trim() ||
+      !draft.bankName.trim() ||
+      !draft.branchName.trim() ||
+      !draft.accountNumber.trim() ||
+      !draft.ifscCode.trim()
+    ) {
+      setFormError('Account Holder Name, Bank Name, Branch Name, Account Number, and IFSC Code are required.');
+      return;
+    }
+
+    const isFirstAccount = data.accounts.length === 0;
+    const shouldBePrimary = isFirstAccount || draft.isPrimary;
+
+    const newEntry: BankAccountEntry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      accountHolderName: draft.accountHolderName.trim(),
+      bankName: draft.bankName.trim(),
+      branchName: draft.branchName.trim(),
+      accountNumber: draft.accountNumber.trim(),
+      ifscCode: draft.ifscCode.trim(),
+      swiftCode: draft.swiftCode.trim(),
+      iban: draft.iban.trim(),
+      currency: draft.currency,
+      isPrimary: shouldBePrimary,
+    };
+
+    const updatedAccounts = shouldBePrimary
+      ? data.accounts.map((acc) => ({ ...acc, isPrimary: false }))
+      : data.accounts;
+
+    onChange({ accounts: [...updatedAccounts, newEntry] });
+    setDraft(emptyStep3Draft);
+    setTouched({});
+  };
+
+  const handleRemove = (id: string) => {
+    const removedAccount = data.accounts.find((acc) => acc.id === id);
+    let remainingAccounts = data.accounts.filter((acc) => acc.id !== id);
+
+    if (removedAccount?.isPrimary && remainingAccounts.length > 0) {
+      remainingAccounts = remainingAccounts.map((acc, index) =>
+        index === 0 ? { ...acc, isPrimary: true } : acc
+      );
+    }
+
+    onChange({ accounts: remainingAccounts });
+  };
+
+  const isValid = data.accounts.length > 0;
+
+  useEffect(() => {
+    onValidationChange?.(isValid);
+  }, [isValid, onValidationChange]);
+
+  const accountHolderNameError = touched.accountHolderName && !draft.accountHolderName.trim() ? 'Account Holder Name is required' : null;
+  const bankNameError = touched.bankName && !draft.bankName.trim() ? 'Bank Name is required' : null;
+  const branchNameError = touched.branchName && !draft.branchName.trim() ? 'Branch Name is required' : null;
+  const accountNumberError = touched.accountNumber && !draft.accountNumber.trim() ? 'Account Number is required' : null;
+  const ifscCodeError = touched.ifscCode && !draft.ifscCode.trim() ? 'IFSC Code is required' : null;
+
+  return (
+    <div className="vob-card">
+      <h2 className="vob-title">Step 3: Bank Account Information</h2>
+
+      {formError && <div className="vob-error-banner">{formError}</div>}
+
+      <div className="vob-grid">
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">Account Holder Name</label>
+          <input
+            data-field="accountHolderName"
+            type="text"
+            placeholder="Account Holder Name"
+            className={`vob-input ${accountHolderNameError ? 'vob-input--error' : ''}`}
+            value={draft.accountHolderName}
+            onChange={(e) => handleDraftField('accountHolderName', e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, accountHolderName: true }))}
+          />
+          {accountHolderNameError && <span className="vob-error-text">{accountHolderNameError}</span>}
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">Bank Name</label>
+          <input
+            data-field="bankName"
+            type="text"
+            placeholder="Bank Name"
+            className={`vob-input ${bankNameError ? 'vob-input--error' : ''}`}
+            value={draft.bankName}
+            onChange={(e) => handleDraftField('bankName', e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, bankName: true }))}
+          />
+          {bankNameError && <span className="vob-error-text">{bankNameError}</span>}
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">Branch Name</label>
+          <input
+            data-field="branchName"
+            type="text"
+            placeholder="Branch Name"
+            className={`vob-input ${branchNameError ? 'vob-input--error' : ''}`}
+            value={draft.branchName}
+            onChange={(e) => handleDraftField('branchName', e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, branchName: true }))}
+          />
+          {branchNameError && <span className="vob-error-text">{branchNameError}</span>}
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">Account Number</label>
+          <input
+            data-field="accountNumber"
+            type="text"
+            placeholder="Account Number"
+            className={`vob-input ${accountNumberError ? 'vob-input--error' : ''}`}
+            value={draft.accountNumber}
+            onChange={(e) => handleDraftField('accountNumber', e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, accountNumber: true }))}
+          />
+          {accountNumberError && <span className="vob-error-text">{accountNumberError}</span>}
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">IFSC Code</label>
+          <input
+            data-field="ifscCode"
+            type="text"
+            placeholder="IFSC Code"
+            className={`vob-input ${ifscCodeError ? 'vob-input--error' : ''}`}
+            value={draft.ifscCode}
+            onChange={(e) => handleDraftField('ifscCode', e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, ifscCode: true }))}
+          />
+          {ifscCodeError && <span className="vob-error-text">{ifscCodeError}</span>}
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label">SWIFT Code</label>
+          <input
+            type="text"
+            placeholder="SWIFT Code"
+            className="vob-input"
+            value={draft.swiftCode}
+            onChange={(e) => handleDraftField('swiftCode', e.target.value)}
+          />
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label">IBAN</label>
+          <input
+            type="text"
+            placeholder="IBAN"
+            className="vob-input"
+            value={draft.iban}
+            onChange={(e) => handleDraftField('iban', e.target.value)}
+          />
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">Currency</label>
+          <select
+            className="vob-select"
+            value={draft.currency}
+            onChange={(e) => handleDraftField('currency', e.target.value)}
+          >
+            {CURRENCY_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="vob-action-row">
+          <label className="vob-checkbox-wrapper">
+            <input
+              type="checkbox"
+              className="vob-checkbox"
+              checked={draft.isPrimary}
+              onChange={(e) => handleDraftField('isPrimary', e.target.checked)}
+            />
+            <span className="vob-checkbox-label">Primary Bank Account</span>
+          </label>
+
+          <button
+            type="button"
+            onClick={handleAddAccount}
+            className="vob-btn vob-btn--primary vob-btn--sm"
+          >
+            + Add Account
+          </button>
+        </div>
+      </div>
+
+      {data.accounts.length === 0 && (
+        <div className="vob-empty-state">
+          No bank accounts added yet. Please add at least one bank account to proceed.
+        </div>
+      )}
+
+      {data.accounts.length > 0 && (
+        <div className="vob-table-wrapper">
+          <table className="vob-table">
+            <thead className="vob-thead">
+              <tr>
+                <th className="vob-th">Bank Name</th>
+                <th className="vob-th">Account Holder Name</th>
+                <th className="vob-th">Account Number</th>
+                <th className="vob-th">Currency</th>
+                <th className="vob-th">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.accounts.map((acc) => (
+                <tr key={acc.id}>
+                  <td className="vob-td">
+                    {acc.bankName}
+                    {acc.isPrimary && <span className="vob-badge vob-badge--primary">Primary</span>}
+                  </td>
+                  <td className="vob-td">{acc.accountHolderName}</td>
+                  <td className="vob-td">{acc.accountNumber}</td>
+                  <td className="vob-td">{acc.currency}</td>
+                  <td className="vob-td">
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(acc.id)}
+                      className="vob-btn-icon"
+                      aria-label="Remove bank account"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================================
+// STEP 4 COMPONENT: Step4DispatchLocations
+// ============================================================================
+
+interface Step4DispatchLocationsProps {
+  data: Step4Data;
+  onChange: (data: Step4Data) => void;
+  onValidationChange?: (isValid: boolean) => void;
+}
+
+interface Step4Draft {
+  locationName: string;
+  contactPerson: string;
+  country: string;
+  state: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  pinCode: string;
+  contactEmail: string;
+  contactPhone: string;
+  isDefault: boolean;
+}
+
+const emptyStep4Draft: Step4Draft = {
+  locationName: '',
+  contactPerson: '',
+  country: '',
+  state: '',
+  addressLine1: '',
+  addressLine2: '',
+  city: '',
+  pinCode: '',
+  contactEmail: '',
+  contactPhone: '',
+  isDefault: false,
+};
+
+const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, onChange, onValidationChange }) => {
+  const [draft, setDraft] = useState<Step4Draft>(emptyStep4Draft);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const handleDraftField = <K extends keyof Step4Draft>(field: K, value: Step4Draft[K]) => {
+    setDraft((prev) => ({ ...prev, [field]: value }));
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    setFormError(null);
+  };
+
+  const handleAddLocation = () => {
+    setFormError(null);
+    if (
+      !draft.locationName.trim() ||
+      !draft.country.trim() ||
+      !draft.state.trim() ||
+      !draft.addressLine1.trim() ||
+      !draft.city.trim() ||
+      !draft.pinCode.trim()
+    ) {
+      setFormError('Location Name, Country, State, Address Line 1, City, and PIN/ZIP Code are required.');
+      return;
+    }
+
+    const isFirstLocation = data.locations.length === 0;
+    const shouldBeDefault = isFirstLocation || draft.isDefault;
+
+    const newEntry: DispatchLocationEntry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      locationName: draft.locationName.trim(),
+      contactPerson: draft.contactPerson.trim(),
+      country: draft.country.trim(),
+      state: draft.state.trim(),
+      addressLine1: draft.addressLine1.trim(),
+      addressLine2: draft.addressLine2.trim(),
+      city: draft.city.trim(),
+      pinCode: draft.pinCode.trim(),
+      contactEmail: draft.contactEmail.trim(),
+      contactPhone: draft.contactPhone.trim(),
+      isDefault: shouldBeDefault,
+    };
+
+    const updatedLocations = shouldBeDefault
+      ? data.locations.map((loc) => ({ ...loc, isDefault: false }))
+      : data.locations;
+
+    onChange({
+      ...data,
+      locations: [...updatedLocations, newEntry],
+    });
+    setDraft(emptyStep4Draft);
+    setTouched({});
+  };
+
+  const handleRemove = (id: string) => {
+    const removedLocation = data.locations.find((loc) => loc.id === id);
+    let remainingLocations = data.locations.filter((loc) => loc.id !== id);
+
+    if (removedLocation?.isDefault && remainingLocations.length > 0) {
+      remainingLocations = remainingLocations.map((loc, index) =>
+        index === 0 ? { ...loc, isDefault: true } : loc
+      );
+    }
+
+    onChange({
+      ...data,
+      locations: remainingLocations,
+    });
+  };
+
+  const handleCheckboxChange = (field: 'certifyTrue' | 'agreeTerms' | 'authorizeVerify', val: boolean) => {
+    onChange({
+      ...data,
+      [field]: val,
+    });
+  };
+
+  const isValid = data.locations.length > 0 && data.certifyTrue && data.agreeTerms && data.authorizeVerify;
+
+  useEffect(() => {
+    onValidationChange?.(isValid);
+  }, [isValid, onValidationChange]);
+
+  const locationNameError = touched.locationName && !draft.locationName.trim() ? 'Location Name is required' : null;
+  const countryError = touched.country && !draft.country.trim() ? 'Country is required' : null;
+  const stateError = touched.state && !draft.state.trim() ? 'State is required' : null;
+  const addressLine1Error = touched.addressLine1 && !draft.addressLine1.trim() ? 'Address Line 1 is required' : null;
+  const cityError = touched.city && !draft.city.trim() ? 'City is required' : null;
+  const pinCodeError = touched.pinCode && !draft.pinCode.trim() ? 'PIN / ZIP Code is required' : null;
+
+  return (
+    <div className="vob-card">
+      <h2 className="vob-title">Step 4: Dispatch Locations</h2>
+
+      {formError && <div className="vob-error-banner">{formError}</div>}
+
+      <div className="vob-grid">
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">Location Name</label>
+          <input
+            data-field="locationName"
+            type="text"
+            placeholder="Location Name"
+            className={`vob-input ${locationNameError ? 'vob-input--error' : ''}`}
+            value={draft.locationName}
+            onChange={(e) => handleDraftField('locationName', e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, locationName: true }))}
+          />
+          {locationNameError && <span className="vob-error-text">{locationNameError}</span>}
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label">Contact Person</label>
+          <input
+            type="text"
+            placeholder="Contact Person"
+            className="vob-input"
+            value={draft.contactPerson}
+            onChange={(e) => handleDraftField('contactPerson', e.target.value)}
+          />
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">Country</label>
+          <input
+            data-field="country"
+            type="text"
+            placeholder="Country"
+            className={`vob-input ${countryError ? 'vob-input--error' : ''}`}
+            value={draft.country}
+            onChange={(e) => handleDraftField('country', e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, country: true }))}
+          />
+          {countryError && <span className="vob-error-text">{countryError}</span>}
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">State</label>
+          <select
+            data-field="state"
+            className={`vob-select ${stateError ? 'vob-select--error' : ''}`}
+            value={draft.state}
+            onChange={(e) => handleDraftField('state', e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, state: true }))}
+          >
+            <option value="">Select State</option>
+            {STATE_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+          {stateError && <span className="vob-error-text">{stateError}</span>}
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">Address Line 1</label>
+          <input
+            data-field="addressLine1"
+            type="text"
+            placeholder="Address Line 1"
+            className={`vob-input ${addressLine1Error ? 'vob-input--error' : ''}`}
+            value={draft.addressLine1}
+            onChange={(e) => handleDraftField('addressLine1', e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, addressLine1: true }))}
+          />
+          {addressLine1Error && <span className="vob-error-text">{addressLine1Error}</span>}
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label">Address Line 2</label>
+          <input
+            type="text"
+            placeholder="Address Line 2"
+            className="vob-input"
+            value={draft.addressLine2}
+            onChange={(e) => handleDraftField('addressLine2', e.target.value)}
+          />
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">City</label>
+          <input
+            data-field="city"
+            type="text"
+            placeholder="City"
+            className={`vob-input ${cityError ? 'vob-input--error' : ''}`}
+            value={draft.city}
+            onChange={(e) => handleDraftField('city', e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, city: true }))}
+          />
+          {cityError && <span className="vob-error-text">{cityError}</span>}
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label vob-label--required">PIN / ZIP Code</label>
+          <input
+            data-field="pinCode"
+            type="text"
+            placeholder="PIN / ZIP Code"
+            className={`vob-input ${pinCodeError ? 'vob-input--error' : ''}`}
+            value={draft.pinCode}
+            onChange={(e) => handleDraftField('pinCode', e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, pinCode: true }))}
+          />
+          {pinCodeError && <span className="vob-error-text">{pinCodeError}</span>}
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label">Contact Email ID</label>
+          <input
+            type="email"
+            placeholder="Contact Email ID"
+            className="vob-input"
+            value={draft.contactEmail}
+            onChange={(e) => handleDraftField('contactEmail', e.target.value)}
+          />
+        </div>
+
+        <div className="vob-field">
+          <label className="vob-label">Contact Phone Number</label>
+          <input
+            type="tel"
+            placeholder="Contact Phone Number"
+            className="vob-input"
+            value={draft.contactPhone}
+            onChange={(e) => handleDraftField('contactPhone', e.target.value)}
+          />
+        </div>
+
+        <div className="vob-action-row">
+          <label className="vob-checkbox-wrapper">
+            <input
+              type="checkbox"
+              className="vob-checkbox"
+              checked={draft.isDefault}
+              onChange={(e) => handleDraftField('isDefault', e.target.checked)}
+            />
+            <span className="vob-checkbox-label">Default Dispatch Location</span>
+          </label>
+
+          <button
+            type="button"
+            onClick={handleAddLocation}
+            className="vob-btn vob-btn--primary vob-btn--sm"
+          >
+            + Add Location
+          </button>
+        </div>
+      </div>
+
+      {data.locations.length === 0 && (
+        <div className="vob-empty-state">
+          No dispatch locations added yet. Please add at least one dispatch location to proceed.
+        </div>
+      )}
+
+      {data.locations.length > 0 && (
+        <div className="vob-table-wrapper">
+          <table className="vob-table">
+            <thead className="vob-thead">
+              <tr>
+                <th className="vob-th">Location Name</th>
+                <th className="vob-th">City</th>
+                <th className="vob-th">Contact Person</th>
+                <th className="vob-th">State</th>
+                <th className="vob-th">Phone Number</th>
+                <th className="vob-th">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.locations.map((loc) => (
+                <tr key={loc.id}>
+                  <td className="vob-td">
+                    {loc.locationName}
+                    {loc.isDefault && <span className="vob-badge vob-badge--success">Default</span>}
+                  </td>
+                  <td className="vob-td">{loc.city}</td>
+                  <td className="vob-td">{loc.contactPerson || '—'}</td>
+                  <td className="vob-td">{loc.state}</td>
+                  <td className="vob-td">{loc.contactPhone || '—'}</td>
+                  <td className="vob-td">
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(loc.id)}
+                      className="vob-btn-icon"
+                      aria-label="Remove location"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="vob-declarations">
+        <label className="vob-declaration-row">
+          <input
+            type="checkbox"
+            className="vob-declaration-checkbox"
+            checked={data.certifyTrue}
+            onChange={(e) => handleCheckboxChange('certifyTrue', e.target.checked)}
+          />
+          <span className="vob-declaration-text">I certify that the information provided is true and accurate.</span>
+        </label>
+
+        <label className="vob-declaration-row">
+          <input
+            type="checkbox"
+            className="vob-declaration-checkbox"
+            checked={data.agreeTerms}
+            onChange={(e) => handleCheckboxChange('agreeTerms', e.target.checked)}
+          />
+          <span className="vob-declaration-text">
+            I agree to the{' '}
+            <a href="#terms" onClick={(e) => e.preventDefault()} className="vob-link">
+              Terms & Conditions
+            </a>
+            .
+          </span>
+        </label>
+
+        <label className="vob-declaration-row">
+          <input
+            type="checkbox"
+            className="vob-declaration-checkbox"
+            checked={data.authorizeVerify}
+            onChange={(e) => handleCheckboxChange('authorizeVerify', e.target.checked)}
+          />
+          <span className="vob-declaration-text">I authorize CAS to verify the submitted documents.</span>
+        </label>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// SUPPLIER ONBOARDING FORM (MAIN WIZARD ORCHESTRATOR)
+// ============================================================================
+
+interface SupplierOnboardingFormProps {
+  onComplete: (data: {
+    step1: Step1Data;
+    step2: Step2Data;
+    step3: Step3Data;
+    step4: Step4Data;
+  }) => Promise<void> | void;
+}
+
+const vosx_logo = `${window.location.protocol}//${window.location.host}/assets/vosx-logo.png`;
 
 const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [step1, setStep1] = useState<Step1Data>(initialStep1Data);
   const [step2, setStep2] = useState<Step2Data>(initialStep2Data);
+  const [step3, setStep3] = useState<Step3Data>(initialStep3Data);
+  const [step4, setStep4] = useState<Step4Data>(initialStep4Data);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const [step1Valid, setStep1Valid] = useState(false);
   const [step2Valid, setStep2Valid] = useState(false);
+  const [step3Valid, setStep3Valid] = useState(false);
+  const [step4Valid, setStep4Valid] = useState(false);
+
   const [showValidationError, setShowValidationError] = useState(false);
 
   const handleNext = async () => {
     setError(null);
     setShowValidationError(false);
 
-    // Validate current step before proceeding
     if (currentStep === 1 && !step1Valid) {
       setShowValidationError(true);
       return;
@@ -52,16 +1244,25 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
       return;
     }
 
-    if (currentStep < 2) {
+    if (currentStep === 3 && !step3Valid) {
+      setShowValidationError(true);
+      return;
+    }
+
+    if (currentStep === 4 && !step4Valid) {
+      setShowValidationError(true);
+      return;
+    }
+
+    if (currentStep < 4) {
       setCurrentStep((s) => s + 1);
       setShowValidationError(false);
       return;
     }
 
-    // Last step -> submit
     setSubmitting(true);
     try {
-      await onComplete({ step1, step2 });
+      await onComplete({ step1, step2, step3, step4 });
     } catch (err: any) {
       setError(err.message || 'Failed to save details. Please try again.');
     } finally {
@@ -75,246 +1276,113 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
     if (currentStep > 1) setCurrentStep((s) => s - 1);
   };
 
-  // Determine if Next button should be disabled
-  const isNextDisabled = (currentStep === 1 && !step1Valid) || (currentStep === 2 && !step2Valid) || submitting;
+  const isNextDisabled = submitting;
 
-  // Tooltip message based on current step
   const getTooltip = () => {
     if (submitting) return '';
     if (currentStep === 1 && !step1Valid) return 'Please fill in all required fields (Industry and Business Type) first';
     if (currentStep === 2 && !step2Valid) return 'Please add at least one registration to proceed';
+    if (currentStep === 3 && !step3Valid) return 'Please add at least one bank account to proceed';
+    if (currentStep === 4 && !step4Valid) return 'Please add at least one location and certify all statements to proceed';
     return '';
   };
 
-  // --- Styles ---
-  const styles: Record<string, React.CSSProperties> = {
-    page: {
-      minHeight: '100vh',
-      backgroundColor: '#f8f9fa',
-    },
-    header: {
-      backgroundColor: '#ffffff',
-      borderBottom: '1px solid #e9ecef',
-      padding: '.5rem 6rem',
-    },
-    main: {
-      maxWidth: '1200px',
-      margin: '0 auto',
-      padding: '32px 24px',
-      display: 'flex',
-      gap: '24px',
-      alignItems: 'flex-start',
-    },
-    sidebar: {
-      width: '260px',
-      flexShrink: 0,
-      backgroundColor: '#ffffff',
-      border: '1px solid #e9ecef',
-      borderRadius: '8px',
-      padding: '20px 16px',
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-    },
-    stepList: {
-      listStyle: 'none',
-      padding: 0,
-      margin: 0,
-    },
-    stepItem: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      padding: '10px 0',
-    },
-    stepNumberBase: {
-      width: '28px',
-      height: '28px',
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '12px',
-      fontWeight: 600,
-      flexShrink: 0,
-      transition: 'all 0.2s ease',
-    },
-    stepNumberActive: {
-      backgroundColor: '#2196f3',
-      color: '#ffffff',
-      border: '2px solid #2196f3',
-    },
-    stepNumberCompleted: {
-      backgroundColor: '#4caf50',
-      color: '#ffffff',
-      border: '2px solid #4caf50',
-    },
-    stepNumberPending: {
-      backgroundColor: '#ffffff',
-      color: '#adb5bd',
-      border: '2px solid #dee2e6',
-    },
-    stepLabelBase: {
-      fontSize: '13px',
-      fontWeight: 500,
-      transition: 'color 0.2s ease',
-    },
-    stepLabelActive: {
-      color: '#2196f3',
-    },
-    stepLabelCompleted: {
-      color: '#4caf50',
-    },
-    stepLabelPending: {
-      color: '#adb5bd',
-    },
-    content: {
-      flex: 1,
-    },
-    error: {
-      marginBottom: '16px',
-      padding: '12px 16px',
-      backgroundColor: '#fff5f5',
-      border: '1px solid #feb2b2',
-      borderRadius: '6px',
-      color: '#c53030',
-      fontSize: '13px',
-    },
-    validationError: {
-      marginBottom: '16px',
-      padding: '12px 16px',
-      backgroundColor: '#fff3cd',
-      border: '1px solid #ffc107',
-      borderRadius: '6px',
-      color: '#856404',
-      fontSize: '13px',
-    },
-    nav: {
-      display: 'flex',
-      justifyContent: 'flex-end',
-      marginTop: '24px',
-    },
-    btnBase: {
-      fontSize: '14px',
-      fontWeight: 500,
-      padding: '10px 28px',
-      borderRadius: '6px',
-      border: 'none',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-    },
-    btnPrimary: {
-      backgroundColor: '#2196f3',
-      color: '#ffffff',
-    },
-    btnPrimaryDisabled: {
-      backgroundColor: '#90caf9',
-      color: '#ffffff',
-      cursor: 'not-allowed',
-      opacity: 0.8,
-    },
-    btnSecondary: {
-      backgroundColor: '#ffffff',
-      color: '#495057',
-      border: '1px solid #dee2e6',
-      marginRight: '12px',
-    },
-    btnSecondaryHover: {
-      backgroundColor: '#f8f9fa',
-    },
-    btnDisabled: {
-      opacity: 0.5,
-      cursor: 'not-allowed',
-    },
-  };
-
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
+    <div className="vob-page">
+      <header className="vob-header">
         <img src={vosx_logo} alt="VOSX" style={{ height: 32 }} />
       </header>
 
-      <main style={styles.main}>
-        <aside style={styles.sidebar}>
-          <ol style={styles.stepList}>
+      <main className="vob-main">
+        <aside className="vob-sidebar">
+          <ol className="vob-step-list">
             {STEPS.map((step, index) => {
               const isCompleted = step.id < currentStep;
               const isActive = step.id === currentStep;
 
-              const numberStyle: React.CSSProperties = {
-                ...styles.stepNumberBase,
-                ...(isCompleted ? styles.stepNumberCompleted : isActive ? styles.stepNumberActive : styles.stepNumberPending),
-              };
-
-              const labelStyle: React.CSSProperties = {
-                ...styles.stepLabelBase,
-                ...(isCompleted ? styles.stepLabelCompleted : isActive ? styles.stepLabelActive : styles.stepLabelPending),
-              };
-
               return (
                 <li
                   key={step.id}
+                  className="vob-step-item"
                   style={{
-                    ...styles.stepItem,
                     borderBottom: index < STEPS.length - 1 ? '1px solid #f1f3f5' : 'none',
                   }}
                 >
-                  <span style={numberStyle}>
+                  <span
+                    className={`vob-step-number ${
+                      isCompleted
+                        ? 'vob-step-number--completed'
+                        : isActive
+                        ? 'vob-step-number--active'
+                        : 'vob-step-number--pending'
+                    }`}
+                  >
                     {isCompleted ? <CheckIcon /> : step.id}
                   </span>
-                  <span style={labelStyle}>{step.label}</span>
+                  <span
+                    className={`vob-step-label ${
+                      isCompleted
+                        ? 'vob-step-label--completed'
+                        : isActive
+                        ? 'vob-step-label--active'
+                        : 'vob-step-label--pending'
+                    }`}
+                  >
+                    {step.label}
+                  </span>
                 </li>
               );
             })}
           </ol>
         </aside>
 
-        <div style={styles.content}>
-          {error && (
-            <div style={styles.error}>
-              {error}
-            </div>
-          )}
+        <div className="vob-content">
+          {error && <div className="vob-error-banner">{error}</div>}
 
           {showValidationError && (
-            <div style={styles.validationError}>
-              {currentStep === 1
-                ? 'Please fill in all required fields (Industry and Business Type) before proceeding.'
-                : 'Please add at least one registration before proceeding.'}
+            <div className="vob-validation-banner">
+              {currentStep === 1 && 'Please fill in all required fields (Industry and Business Type) before proceeding.'}
+              {currentStep === 2 && 'Please add at least one registration before proceeding.'}
+              {currentStep === 3 && 'Please add at least one bank account before proceeding.'}
+              {currentStep === 4 && 'Please add at least one location and certify all statements before proceeding.'}
             </div>
           )}
 
           {currentStep === 1 && (
-            <Step1BusinessInfo 
-              data={step1} 
+            <Step1BusinessInfo
+              data={step1}
               onChange={setStep1}
               onValidationChange={setStep1Valid}
             />
           )}
           {currentStep === 2 && (
-            <Step2Registrations 
-              data={step2} 
+            <Step2Registrations
+              data={step2}
               onChange={setStep2}
               onValidationChange={setStep2Valid}
             />
           )}
+          {currentStep === 3 && (
+            <Step3BankInfo
+              data={step3}
+              onChange={setStep3}
+              onValidationChange={setStep3Valid}
+            />
+          )}
+          {currentStep === 4 && (
+            <Step4DispatchLocations
+              data={step4}
+              onChange={setStep4}
+              onValidationChange={setStep4Valid}
+            />
+          )}
 
-          <div style={styles.nav}>
+          <div className="vob-nav-row">
             <button
               type="button"
               onClick={handleBack}
               disabled={currentStep === 1 || submitting}
-              style={{
-                ...styles.btnBase,
-                ...styles.btnSecondary,
-                ...(currentStep === 1 || submitting ? styles.btnDisabled : {}),
-              }}
-              onMouseEnter={(e) => {
-                if (!(currentStep === 1 || submitting)) {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#f8f9fa';
-                }
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#ffffff';
-              }}
+              className="vob-btn vob-btn--secondary"
             >
               Back
             </button>
@@ -323,24 +1391,9 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
               onClick={handleNext}
               disabled={isNextDisabled}
               title={getTooltip()}
-              style={{
-                ...styles.btnBase,
-                ...(isNextDisabled ? styles.btnPrimaryDisabled : styles.btnPrimary),
-              }}
-              onMouseEnter={(e) => {
-                if (!isNextDisabled) {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1976d2';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isNextDisabled) {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#2196f3';
-                } else {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#90caf9';
-                }
-              }}
+              className="vob-btn vob-btn--primary"
             >
-              {submitting ? 'Saving...' : 'Next'}
+              {submitting ? 'Saving...' : currentStep === 4 ? 'Submit Profile' : 'Next'}
             </button>
           </div>
         </div>

@@ -33,8 +33,7 @@ axiosInstance.interceptors.response.use(
     const originalRequest = error.config;
 
     // Exclude all auth endpoints (login, send-otp, verify-otp, refresh-token, etc.) from refresh logic
-    const isAuthEndpoint = originalRequest?.url?.includes('/api/v1/auth/');
-
+    const isAuthEndpoint = originalRequest?.url?.includes('/api/v1/identity/auth/');
     if (error.response?.status === 401 && !isAuthEndpoint && !originalRequest._retry && !originalRequest?._skipRefresh) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -47,12 +46,10 @@ axiosInstance.interceptors.response.use(
             return Promise.reject(err);
           });
       }
-
       originalRequest._retry = true;
       isRefreshing = true;
-
       try {
-        await axiosInstance.post('/api/v1/auth/refresh-token');
+        await axiosInstance.post('/api/v1/identity/auth/refresh-token');
         isRefreshing = false;
         processQueue(null);
         return axiosInstance(originalRequest);
@@ -67,5 +64,4 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
 export default axiosInstance;
