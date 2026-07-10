@@ -297,6 +297,61 @@
     gap: 20px;
 }
 
+/* ================= Step 4 (Edit Products & Services) ================= */
+.vr-panel--title-only {
+    padding: 22px 28px;
+}
+
+.vr-panel-title--plain {
+    margin: 0;
+    padding: 0;
+    border: none;
+    font-size: 18px;
+}
+
+.vr-chip-count {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 4px 0 12px 0;
+}
+
+.vr-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.vr-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: #e3f8ee;
+    color: #1f8a5f;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.vr-chip-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    color: #1f8a5f;
+}
+
+.vr-chip-remove:hover {
+    color: #14603f;
+}
+
+.vr-panel--plain-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 720px) {
     .vr-grid {

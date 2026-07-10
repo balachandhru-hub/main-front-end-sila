@@ -2,7 +2,7 @@ import axiosInstance from './axiosInstance';
 
 export const sendOtp = async (email: string) => {
     try {
-        const response = await axiosInstance.post('/api/v1/auth/send-otp', {
+        const response = await axiosInstance.post('/api/v1/identity/auth/send-otp', {
             email,
         }, {
             headers: {
@@ -21,7 +21,7 @@ export const sendOtp = async (email: string) => {
 };
 export const verifyOtp = async (email: string, otp: string) => {
     try {
-        const response = await axiosInstance.post('/api/v1/auth/verify-otp', {
+        const response = await axiosInstance.post('/api/v1/identity/auth/verify-otp', {
             email,
             otp,
         }, {
@@ -42,7 +42,7 @@ export const verifyOtp = async (email: string, otp: string) => {
 
 export const login = async (userName: string, password: string) => {
     try {
-        const response = await axiosInstance.post('/api/v1/auth/login', {
+        const response = await axiosInstance.post('/api/v1/identity/auth/login', {
             userName,
             password,
         }, {
@@ -59,7 +59,7 @@ export const login = async (userName: string, password: string) => {
 
 export const getTokenClaims = async (skipRefresh = false) => {
     try {
-        const response = await axiosInstance.get('api/v1/token-claim', {
+        const response = await axiosInstance.get('api/v1/identity/token-claim', {
             ...({ _skipRefresh: skipRefresh } as any)
         });
         return response.data;

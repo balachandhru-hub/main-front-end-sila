@@ -55,8 +55,8 @@ const Sidebar = () => {
         {userRole === 'buyer' && (
           <li>
             <Link
-              to="/buyer/dashboard"
-              className={`nav-item ${location.pathname.includes('/buyer/dashboard') ? 'active' : ''}`}
+              to="/buyer"
+              className={`nav-item ${location.pathname.includes('/buyer') ? 'active' : ''}`}
             >
               Dashboard
             </Link>
@@ -65,8 +65,8 @@ const Sidebar = () => {
         {userRole === 'supplier' && (
           <li>
             <Link
-              to="/supplier/dashboard"
-              className={`nav-item ${location.pathname.includes('/supplier/dashboard') ? 'active' : ''}`}
+              to="/supplier"
+              className={`nav-item ${location.pathname.includes('/supplier') ? 'active' : ''}`}
             >
               Dashboard
             </Link>
@@ -75,8 +75,8 @@ const Sidebar = () => {
         {userRole === 'platform-user' && (
           <li>
             <Link
-              to="/platform-user/dashboard"
-              className={`nav-item ${location.pathname.includes('/platform-user/dashboard') ? 'active' : ''}`}
+              to="/platform-user"
+              className={`nav-item ${location.pathname.includes('/platform-user') ? 'active' : ''}`}
             >
               Dashboard
             </Link>
@@ -103,12 +103,13 @@ const Shell = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const showSidebar = isLoggedIn && !location.pathname.includes('/profile');
+  // FIX: Hide sidebar during onboarding - onboarding is full-screen like login
+  const isOnboarding = location.pathname.includes('/onboarding');
 
   return (
     <div className="app-container">
-      {showSidebar && <Sidebar />}
-      <main className={`main-content ${!showSidebar ? 'no-padding' : ''}`}>
+      {isLoggedIn && !isOnboarding && <Sidebar />}
+      <main className={`main-content ${!isLoggedIn || isOnboarding ? 'no-padding' : ''}`}>
         <React.Suspense fallback={<Loader fullScreen={true} message="Loading modules..." />}>
           <Routes>
             <Route
