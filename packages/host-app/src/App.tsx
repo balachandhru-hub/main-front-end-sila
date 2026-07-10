@@ -101,11 +101,14 @@ const Sidebar = () => {
 const Shell = () => {
   const { isLoggedIn, userRole, login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const showSidebar = isLoggedIn && !location.pathname.includes('/profile');
 
   return (
     <div className="app-container">
-      {isLoggedIn && <Sidebar />}
-      <main className={`main-content ${!isLoggedIn ? 'no-padding' : ''}`}>
+      {showSidebar && <Sidebar />}
+      <main className={`main-content ${!showSidebar ? 'no-padding' : ''}`}>
         <React.Suspense fallback={<Loader fullScreen={true} message="Loading modules..." />}>
           <Routes>
             <Route

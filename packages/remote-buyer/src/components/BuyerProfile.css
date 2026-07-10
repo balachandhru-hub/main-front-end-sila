@@ -1,0 +1,465 @@
+/* ------------------------------------------------------------------ */
+/*  BuyerProfile.css                                                    */
+/* ------------------------------------------------------------------ */
+
+:root {
+    --bp-blue: #2f6fed;
+    --bp-blue-dark: #1e56cc;
+    --bp-green: #1e9e5a;
+    --bp-text: #1f2937;
+    --bp-text-muted: #6b7280;
+    --bp-border: #e2e6ec;
+    --bp-bg: #f3f5f8;
+    --bp-white: #ffffff;
+    --bp-danger: #d64545;
+    --bp-radius: 8px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+.bp-page {
+    min-height: 100vh;
+    background: var(--bp-bg);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--bp-text);
+}
+
+/* ---------------------------- header ---------------------------- */
+
+.bp-header {
+    background: var(--bp-white);
+    border-bottom: 1px solid var(--bp-border);
+    padding: 18px 40px;
+}
+
+.bp-logo {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--bp-text);
+    line-height: 1.1;
+}
+
+.bp-logo-accent {
+    color: var(--bp-green);
+}
+
+.bp-logo-tagline {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.4px;
+    color: var(--bp-text-muted);
+    text-transform: uppercase;
+}
+
+/* ---------------------------- layout ---------------------------- */
+
+.bp-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 32px;
+    max-width: 1200px;
+    margin: 32px auto;
+    padding: 0 32px;
+}
+
+.bp-main-centered {
+    justify-content: center;
+}
+
+.bp-sidebar-wrap {
+    flex: 0 0 260px;
+}
+
+.bp-content {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ---------------------------- sidebar ---------------------------- */
+
+.bp-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.bp-step-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    cursor: default;
+    font: inherit;
+}
+
+.bp-step-clickable {
+    cursor: pointer;
+}
+
+.bp-step-circle {
+    flex: 0 0 26px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1.5px solid #c7ccd6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--bp-text-muted);
+    background: var(--bp-white);
+}
+
+.bp-step-circle.bp-step-current {
+    border-color: var(--bp-blue);
+    color: var(--bp-blue);
+}
+
+.bp-step-circle.bp-step-complete {
+    border-color: var(--bp-green);
+    background: var(--bp-green);
+    color: var(--bp-white);
+}
+
+.bp-step-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--bp-text-muted);
+}
+
+.bp-step-current-label {
+    color: var(--bp-blue);
+    font-weight: 600;
+}
+
+.bp-step-complete-label {
+    color: var(--bp-green);
+    font-weight: 600;
+}
+
+/* ---------------------------- panel ---------------------------- */
+
+.bp-panel {
+    background: var(--bp-white);
+    border: 1px solid var(--bp-border);
+    border-radius: 12px;
+    padding: 28px 32px 32px;
+}
+
+.bp-panel-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 16px;
+}
+
+.bp-divider {
+    height: 1px;
+    background: var(--bp-border);
+    margin: 0 -32px 24px;
+}
+
+/* ---------------------------- form grid ---------------------------- */
+
+.bp-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 24px;
+}
+
+.bp-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.bp-field-wide {
+    grid-column: 1 / -1;
+}
+
+.bp-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--bp-text);
+}
+
+.bp-required {
+    color: var(--bp-danger);
+    margin-left: 2px;
+}
+
+.bp-field input[type="text"],
+.bp-field input[type="number"],
+.bp-field input[type="url"],
+.bp-field input[type="email"],
+.bp-field input[type="tel"],
+.bp-field input[type="date"],
+.bp-field select,
+.bp-field textarea {
+    border: 1px solid var(--bp-border);
+    border-radius: var(--bp-radius);
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--bp-text);
+    background: var(--bp-white);
+    width: 100%;
+    font-family: inherit;
+}
+
+.bp-field input:focus,
+.bp-field select:focus,
+.bp-field textarea:focus {
+    outline: none;
+    border-color: var(--bp-blue);
+    box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.15);
+}
+
+.bp-field textarea {
+    resize: vertical;
+    min-height: 96px;
+}
+
+/* ---------------------------- dropzone ---------------------------- */
+
+.bp-dropzone {
+    border: 1.5px dashed #9fb8f0;
+    background: #f2f6ff;
+    border-radius: var(--bp-radius);
+    padding: 26px 16px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--bp-text-muted);
+    cursor: pointer;
+    display: block;
+}
+
+.bp-hidden-file-input {
+    display: none;
+}
+
+/* ---------------------------- actions ---------------------------- */
+
+.bp-actions {
+    display: flex;
+    align-items: center;
+    margin-top: 24px;
+    gap: 12px;
+}
+
+.bp-actions-right {
+    justify-content: flex-end;
+}
+
+.bp-actions-between {
+    justify-content: space-between;
+}
+
+.bp-btn {
+    border-radius: 6px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    font-family: inherit;
+}
+
+.bp-btn-primary {
+    background: var(--bp-blue);
+    color: var(--bp-white);
+}
+
+.bp-btn-primary:hover {
+    background: var(--bp-blue-dark);
+}
+
+.bp-btn-primary:disabled {
+    background: #a9c0f2;
+    cursor: not-allowed;
+}
+
+.bp-btn-secondary {
+    background: var(--bp-white);
+    color: var(--bp-text);
+    border-color: var(--bp-border);
+}
+
+.bp-btn-secondary:hover {
+    background: #f4f6f9;
+}
+
+/* ---------------------------- table ---------------------------- */
+
+.bp-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 13px;
+}
+
+.bp-table th {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--bp-border);
+    color: var(--bp-text-muted);
+    font-weight: 600;
+}
+
+.bp-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--bp-border);
+    color: var(--bp-text);
+}
+
+.bp-empty-row {
+    text-align: center;
+    color: var(--bp-text-muted);
+    padding: 20px;
+}
+
+.bp-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #e7f7ee;
+    color: var(--bp-green);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.bp-pill-icon {
+    font-size: 11px;
+}
+
+.bp-tag {
+    display: inline-block;
+    margin-left: 8px;
+    background: #eaf1ff;
+    color: var(--bp-blue);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+.bp-icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    color: var(--bp-blue);
+    padding: 4px;
+}
+
+.bp-icon-btn:hover {
+    color: var(--bp-danger);
+}
+
+/* ---------------------------- checkboxes ---------------------------- */
+
+.bp-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--bp-text);
+    cursor: pointer;
+}
+
+.bp-checkbox-label input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--bp-blue);
+    cursor: pointer;
+}
+
+.bp-checkbox-label a {
+    color: var(--bp-blue);
+    text-decoration: none;
+}
+
+.bp-checkbox-label a:hover {
+    text-decoration: underline;
+}
+
+.bp-agreements {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+/* ---------------------------- success state ---------------------------- */
+
+.bp-success-card {
+    background: var(--bp-white);
+    border: 1px solid var(--bp-border);
+    border-radius: 12px;
+    padding: 48px;
+    text-align: center;
+    max-width: 420px;
+}
+
+.bp-success-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--bp-green);
+    color: var(--bp-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin: 0 auto 16px;
+}
+
+.bp-success-card h2 {
+    margin: 0 0 8px;
+    font-size: 20px;
+}
+
+.bp-success-card p {
+    color: var(--bp-text-muted);
+    font-size: 14px;
+    margin: 0 0 24px;
+}
+
+/* ---------------------------- responsive ---------------------------- */
+
+@media (max-width: 860px) {
+    .bp-main {
+        flex-direction: column;
+    }
+
+    .bp-sidebar-wrap {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+
+    .bp-sidebar {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .bp-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .bp-panel {
+        padding: 22px 18px 26px;
+    }
+
+    .bp-divider {
+        margin: 0 -18px 20px;
+    }
+}
