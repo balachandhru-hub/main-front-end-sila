@@ -17,6 +17,19 @@ const CheckIcon = () => (
 const OTP_LENGTH = 6;
 const OTP_DURATION = 600; // seconds
 
+const CATEGORY_OPTIONS = [
+    'IT Hardware',
+    'Office Supplies',
+    'Cloud Services',
+    'Consulting',
+    'Software Licenses',
+    'Logistics & Freight',
+    'Manufacturing',
+    'Raw Materials',
+    'Marketing Services',
+    'Facilities & Maintenance',
+];
+
 interface BuyersRegistrationProps {
     businessEmail?: string;
 }
@@ -24,7 +37,7 @@ interface BuyersRegistrationProps {
 const BuyersRegistration: React.FC<BuyersRegistrationProps> = ({
     businessEmail: initialEmail,
 }) => {
-    const [step, setStep] = useState<1 | 2 | 3>(1);
+    const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
     const [email, setEmail] = useState(initialEmail ?? '');
 
@@ -55,6 +68,17 @@ const BuyersRegistration: React.FC<BuyersRegistrationProps> = ({
     const [isCreatingAccount, setIsCreatingAccount] = useState(false);
     const [createError, setCreateError] = useState('');
     const navigate = useNavigate();
+
+    const [categories, setCategories] = useState<string[]>([]);
+
+    const handleAddCategory = (value: string) => {
+        if (!value || categories.includes(value)) return;
+        setCategories((prev) => [...prev, value]);
+    };
+
+    const handleRemoveCategory = (value: string) => {
+        setCategories((prev) => prev.filter((c) => c !== value));
+    };
 
     useEffect(() => {
         if (step !== 2) return;
@@ -294,7 +318,7 @@ const BuyersRegistration: React.FC<BuyersRegistrationProps> = ({
                             )}
                         </div>
                     </div>
-                ) : (
+                ) : step === 3 ? (
                     <div className="vr-step3">
                         <div className="vr-step3-header">
                             <h1 className="vr-title">Buyer Registration</h1>
@@ -443,13 +467,67 @@ const BuyersRegistration: React.FC<BuyersRegistrationProps> = ({
                                 </a>
                             </label>
 
-                            {createError && (
-                                <div className="vr-hint vr-hint--error" style={{ marginBottom: '1rem', marginTop: '1rem' }}>
-                                    {createError}
-                                </div>
-                            )}
+                            <Button
+                                variant="primary"
+                                size="md"
+                                onClick={() => setStep(4)}
+                                disabled={!agreeTerms}
+                            >
+                                Continue
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="vr-step3 vr-step4">
+                        <div className="vr-panel vr-panel--title-only">
+                            <h2 className="vr-panel-title vr-panel-title--plain">
+                                Edit Products &amp; Services
+                            </h2>
+                        </div>
 
-                            <Button variant="primary" size="md" onClick={handleCreateAccount} disabled={!agreeTerms || isCreatingAccount}>
+                        <div className="vr-panel">
+                            <h2 className="vr-panel-title">Product &amp; Service Categories</h2>
+
+                            <div className="vr-field vr-field--full">
+                                <label className="vr-label vr-label--plain">Select Product &amp; Service Category*</label>
+                                <select
+                                    className="vr-input vr-select"
+                                    value=""
+                                    onChange={(e) => handleAddCategory(e.target.value)}
+                                >
+                                    <option value="">Select category</option>
+                                    {CATEGORY_OPTIONS.filter((c) => !categories.includes(c)).map((c) => (
+                                        <option key={c} value={c}>
+                                            {c}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <p className="vr-chip-count">Selected Categories ({categories.length})</p>
+                            <div className="vr-chip-row">
+                                {categories.map((c) => (
+                                    <span key={c} className="vr-chip">
+                                        {c}
+                                        <span className="vr-chip-remove" onClick={() => handleRemoveCategory(c)}>
+                                            ×
+                                        </span>
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+
+                        {createError && (
+                            <div className="vr-hint vr-hint--error">{createError}</div>
+                        )}
+
+                        <div className="vr-panel--plain-footer">
+                            <Button
+                                variant="primary"
+                                size="md"
+                                onClick={handleCreateAccount}
+                                disabled={isCreatingAccount || categories.length === 0}
+                            >
                                 {isCreatingAccount ? 'Creating...' : 'Create Account'}
                             </Button>
                         </div>
@@ -460,7 +538,7 @@ const BuyersRegistration: React.FC<BuyersRegistrationProps> = ({
     );
 };
 
-const Stepper: React.FC<{ current: 1 | 2 | 3 }> = ({ current }) => {
+const Stepper: React.FC<{ current: 1 | 2 | 3 | 4 }> = ({ current }) => {
     return (
         <div className="vr-stepper">
             {[1, 2, 3].map((n, i) => (
