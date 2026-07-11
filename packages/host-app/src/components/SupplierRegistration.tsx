@@ -70,7 +70,6 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
     const navigate = useNavigate();
 
     const [categories, setCategories] = useState<string[]>([]);
-    const [locations, setLocations] = useState<string[]>([]);
 
     const handleAddCategory = (value: string) => {
         if (!value || categories.includes(value)) return;
@@ -81,14 +80,6 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
         setCategories((prev) => prev.filter((c) => c !== value));
     };
 
-    const handleAddLocation = (value: string) => {
-        if (!value || locations.includes(value)) return;
-        setLocations((prev) => [...prev, value]);
-    };
-
-    const handleRemoveLocation = (value: string) => {
-        setLocations((prev) => prev.filter((l) => l !== value));
-    };
 
     useEffect(() => {
         if (step !== 2) return;
@@ -526,39 +517,6 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                             </div>
                         </div>
 
-                        <div className="vr-panel">
-                            <h2 className="vr-panel-title">Ship-To / Service Locations</h2>
-
-                            <div className="vr-field vr-field--full">
-                                <label className="vr-label vr-label--plain">Select Ship-To / Service Location*</label>
-                                <select
-                                    className="vr-input vr-select"
-                                    value=""
-                                    onChange={(e) => handleAddLocation(e.target.value)}
-                                >
-                                    <option value="">Select location</option>
-                                    {Country.getAllCountries()
-                                        .filter((c) => !locations.includes(c.name))
-                                        .map((c) => (
-                                            <option key={c.isoCode} value={c.name}>
-                                                {c.name}
-                                            </option>
-                                        ))}
-                                </select>
-                            </div>
-
-                            <p className="vr-chip-count">Selected Locations ({locations.length})</p>
-                            <div className="vr-chip-row">
-                                {locations.map((l) => (
-                                    <span key={l} className="vr-chip">
-                                        {l}
-                                        <span className="vr-chip-remove" onClick={() => handleRemoveLocation(l)}>
-                                            ×
-                                        </span>
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
 
                         {createError && (
                             <div className="vr-hint vr-hint--error">{createError}</div>
@@ -569,7 +527,7 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                 variant="primary"
                                 size="md"
                                 onClick={handleCreateAccount}
-                                disabled={isCreatingAccount || categories.length === 0 || locations.length === 0}
+                                disabled={isCreatingAccount || categories.length === 0}
                             >
                                 {isCreatingAccount ? 'Creating...' : 'Create Account'}
                             </Button>
