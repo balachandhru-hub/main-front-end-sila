@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Country, State, City } from "country-state-city";
 import "./BuyerProfile.css";
+import { fetchSegments, fetchClasses } from "../api/masterdataApi";
+import type { SelectedProduct, SelectedSubProduct } from "../api/masterdataApi";
 
 interface BusinessInfo {
     industry: string;
@@ -61,6 +63,7 @@ interface Agreements {
 
 const STEP_LABELS = [
     "Business Information",
+    "Product & Service Categories",
     "Registrations & Certifications",
     "Bank Account Information",
     "Dispatch Locations",
@@ -93,7 +96,6 @@ const BUSINESS_TYPES = [
 const REGISTRATION_TYPES = ["GST", "PAN", "IEC", "MSME / Udyam", "ISO Certificate", "Other"];
 
 const YEARS = Array.from({ length: 60 }, (_, i) => String(new Date().getFullYear() - i));
-
 
 const emptyBusinessInfo: BusinessInfo = {
     industry: "",
@@ -151,6 +153,185 @@ function maskAccountNumber(accountNumber: string): string {
 }
 
 
+function ProductDropdown({ 
+    segments, 
+    onSelect,
+    loading
+}: { 
+    segments: any[]; 
+    onSelect: (family: SelectedProduct) => void; 
+    loading: boolean;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [expandedSegments, setExpandedSegments] = useState<number[]>([]);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    const toggleExpand = (segmentId: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setExpandedSegments(prev => 
+            prev.includes(segmentId) ? prev.filter(id => id !== segmentId) : [...prev, segmentId]
+        );
+    };
+
+    return (
+        <div ref={containerRef} className="custom-dropdown-container">
+            <div className="custom-dropdown-trigger" onClick={() => setIsOpen(!isOpen)}>
+                <span>Select product</span>
+                <span>▼</span>
+            </div>
+
+            {isOpen && (
+                <div className="custom-dropdown-menu">
+                    {loading ? (
+                        <div className="custom-dropdown-item-loading">
+                            Loading products...
+                        </div>
+                    ) : segments.length === 0 ? (
+                        <div className="custom-dropdown-item-empty">
+                            No products found.
+                        </div>
+                    ) : (
+                        segments.map((seg) => {
+                            const isExpanded = expandedSegments.includes(seg.segment);
+                            return (
+                                <div key={seg.segment} className="custom-dropdown-item-wrapper">
+                                    <div className="segment-row" onClick={(e) => toggleExpand(seg.segment, e)}>
+                                        <span>{seg.title}</span>
+                                        <button type="button" onClick={(e) => toggleExpand(seg.segment, e)}>
+                                            {isExpanded ? '−' : '+'}
+                                        </button>
+                                    </div>
+                                    {isExpanded && seg.family && (
+                                        <div className="nested-items-container">
+                                            {seg.family.map((fam: any) => (
+                                                <div 
+                                                    key={fam.family} 
+                                                    className="nested-item-row"
+                                                    onClick={() => {
+                                                        onSelect({ segment: seg.segment, family: fam.family, title: fam.title });
+                                                        setIsOpen(false);
+                                                    }}
+                                                >
+                                                    {fam.title} ({fam.family})
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function SubProductDropdown({ 
+    classes, 
+    onSelect,
+    disabled,
+    loading
+}: { 
+    classes: any[]; 
+    onSelect: (commodity: SelectedSubProduct) => void; 
+    disabled: boolean;
+    loading: boolean;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [expandedClasses, setExpandedClasses] = useState<number[]>([]);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    const toggleExpand = (classId: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setExpandedClasses(prev => 
+            prev.includes(classId) ? prev.filter(id => id !== classId) : [...prev, classId]
+        );
+    };
+
+    return (
+        <div ref={containerRef} className="custom-dropdown-container">
+            <div 
+                className={`custom-dropdown-trigger ${disabled ? 'custom-dropdown-trigger-disabled' : ''}`}
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+            >
+                <span>
+                    {disabled ? 'Please select a product first' : 'Select sub-product'}
+                </span>
+                <span>▼</span>
+            </div>
+
+            {!disabled && isOpen && (
+                <div className="custom-dropdown-menu">
+                    {loading ? (
+                        <div className="custom-dropdown-item-loading">
+                            Loading sub-products...
+                        </div>
+                    ) : classes.length === 0 ? (
+                        <div className="custom-dropdown-item-empty">
+                            No sub-products found.
+                        </div>
+                    ) : (
+                        classes.map((cls) => {
+                            const isExpanded = expandedClasses.includes(cls.class);
+                            return (
+                                <div key={cls.class} className="custom-dropdown-item-wrapper">
+                                    <div className="class-row" onClick={(e) => toggleExpand(cls.class, e)}>
+                                        <span>{cls.title}</span>
+                                        <button type="button" onClick={(e) => toggleExpand(cls.class, e)}>
+                                            {isExpanded ? '−' : '+'}
+                                        </button>
+                                    </div>
+                                    {isExpanded && cls.commodity && (
+                                        <div className="nested-items-container">
+                                            {cls.commodity.map((com: any) => (
+                                                <div 
+                                                    key={com.commodity} 
+                                                    className="nested-item-row"
+                                                    onClick={() => {
+                                                        onSelect({ class: cls.class, commodity: com.commodity, title: com.title });
+                                                        setIsOpen(false);
+                                                    }}
+                                                >
+                                                    {com.title} ({com.commodity})
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 
 export default function BuyerProfile() {
     const navigate = useNavigate();
@@ -158,6 +339,81 @@ export default function BuyerProfile() {
     const [furthestStep, setFurthestStep] = useState<number>(1);
 
     const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(emptyBusinessInfo);
+    
+    // UNSPSC Masterdata states and hooks
+    const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
+    const [selectedSubProducts, setSelectedSubProducts] = useState<SelectedSubProduct[]>([]);
+    const [activeProduct, setActiveProduct] = useState<SelectedProduct | null>(null);
+
+    const [segments, setSegments] = useState<any[]>([]);
+    const [loadingSegments, setLoadingSegments] = useState(false);
+    const [classes, setClasses] = useState<any[]>([]);
+    const [loadingClasses, setLoadingClasses] = useState(false);
+
+    useEffect(() => {
+        const loadSegments = async () => {
+            setLoadingSegments(true);
+            try {
+                const data = await fetchSegments();
+                setSegments(data);
+            } catch (err) {
+                console.error("Failed to load segments:", err);
+            } finally {
+                setLoadingSegments(false);
+            }
+        };
+        loadSegments();
+    }, []);
+
+    useEffect(() => {
+        if (!activeProduct) {
+            setClasses([]);
+            return;
+        }
+        const loadClasses = async () => {
+            setLoadingClasses(true);
+            try {
+                const data = await fetchClasses(activeProduct.segment, activeProduct.family);
+                setClasses(data);
+            } catch (err) {
+                console.error("Failed to load classes:", err);
+            } finally {
+                setLoadingClasses(false);
+            }
+        };
+        loadClasses();
+    }, [activeProduct]);
+
+    const handleSelectProduct = (product: SelectedProduct) => {
+        if (!selectedProducts.some(p => p.family === product.family)) {
+            setSelectedProducts((prev) => [...prev, product]);
+        }
+        setActiveProduct(product);
+    };
+
+    const handleRemoveProduct = (familyCode: number) => {
+        setSelectedProducts((prev) => {
+            const remaining = prev.filter(p => p.family !== familyCode);
+            if (activeProduct?.family === familyCode) {
+                if (remaining.length > 0) {
+                    setActiveProduct(remaining[remaining.length - 1]);
+                } else {
+                    setActiveProduct(null);
+                }
+            }
+            return remaining;
+        });
+    };
+
+    const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
+        if (!selectedSubProducts.some(p => p.commodity === subProduct.commodity)) {
+            setSelectedSubProducts((prev) => [...prev, subProduct]);
+        }
+    };
+
+    const handleRemoveSubProduct = (commodityCode: number) => {
+        setSelectedSubProducts((prev) => prev.filter((p) => p.commodity !== commodityCode));
+    };
 
     const [registrations, setRegistrations] = useState<Registration[]>([
         {
@@ -466,7 +722,7 @@ export default function BuyerProfile() {
 
                 <div className="bp-actions bp-actions-right">
                     <button type="button" className="bp-btn bp-btn-primary" onClick={handleNext}>
-                        Next
+                        Continue
                     </button>
                 </div>
             </div>
@@ -476,7 +732,115 @@ export default function BuyerProfile() {
     function renderStep2() {
         return (
             <div className="bp-panel">
-                <h2 className="bp-panel-title">Step 2: Registrations &amp; Certifications</h2>
+                <h2 className="bp-panel-title">Step 2: Product &amp; Service Categories</h2>
+                <div className="bp-divider" />
+                
+                {/* Product and Sub-Product Selectors Card */}
+                <div className="bp-category-section">
+                    
+                    {/* Product Selector */}
+                    <div className="bp-field">
+                        <label>
+                            Select Product (Segment &amp; Family)<span className="bp-required">*</span>
+                        </label>
+                        <ProductDropdown 
+                            segments={segments} 
+                            onSelect={handleSelectProduct} 
+                            loading={loadingSegments}
+                        />
+                    </div>
+
+                    <div className="bp-category-section-subtitle">
+                        Selected Products ({selectedProducts.length}) - <em>Click a tag to select it for sub-products</em>
+                    </div>
+                    
+                    <div className="bp-category-tags">
+                        {selectedProducts.length === 0 ? (
+                            <span className="custom-dropdown-item-empty">No products selected yet.</span>
+                        ) : (
+                            selectedProducts.map((p) => {
+                                const isActive = activeProduct?.family === p.family;
+                                return (
+                                    <span 
+                                        key={p.family} 
+                                        className={`bp-category-tag ${isActive ? 'bp-category-tag-active' : ''}`}
+                                        onClick={() => setActiveProduct(p)}
+                                    >
+                                        {p.title} ({p.family})
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleRemoveProduct(p.family);
+                                            }}
+                                        >
+                                            &times;
+                                        </button>
+                                    </span>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    <div className="bp-selector-divider" />
+
+                    {/* Sub-Product Selector */}
+                    <div className="bp-field">
+                        <label>
+                            Select Sub-Product (Class &amp; Commodity)
+                            {activeProduct && <span className="bp-logo-accent"> - for {activeProduct.title}</span>}
+                            <span className="bp-required">*</span>
+                        </label>
+                        <SubProductDropdown 
+                            classes={classes} 
+                            onSelect={handleSelectSubProduct} 
+                            disabled={!activeProduct}
+                            loading={loadingClasses}
+                        />
+                    </div>
+
+                    <div className="bp-category-section-subtitle">
+                        Selected Sub-Products ({selectedSubProducts.length})
+                    </div>
+                    
+                    <div className="bp-category-tags">
+                        {selectedSubProducts.length === 0 ? (
+                            <span className="custom-dropdown-item-empty">No sub-products selected yet.</span>
+                        ) : (
+                            selectedSubProducts.map((p) => (
+                                <span 
+                                    key={p.commodity} 
+                                    className="bp-category-tag bp-category-tag-active-sub"
+                                >
+                                    {p.title} ({p.commodity})
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveSubProduct(p.commodity)}
+                                    >
+                                        &times;
+                                    </button>
+                                </span>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                <div className="bp-actions bp-actions-right">
+                    <button type="button" className="bp-btn bp-btn-secondary" onClick={handleBack}>
+                        Back
+                    </button>
+                    <button type="button" className="bp-btn bp-btn-primary" onClick={handleNext}>
+                        Continue
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    function renderStep3() {
+        return (
+            <div className="bp-panel">
+                <h2 className="bp-panel-title">Step 3: Registrations &amp; Certifications</h2>
                 <div className="bp-divider" />
                 <div className="bp-form-grid">
                     <div className="bp-field">
@@ -609,10 +973,10 @@ export default function BuyerProfile() {
         );
     }
 
-    function renderStep3() {
+    function renderStep4() {
         return (
             <div className="bp-panel">
-                <h2 className="bp-panel-title">Step 3: Bank Account Information</h2>
+                <h2 className="bp-panel-title">Step 4: Bank Account Information</h2>
                 <div className="bp-divider" />
                 <div className="bp-form-grid">
                     <div className="bp-field">
@@ -782,10 +1146,10 @@ export default function BuyerProfile() {
         );
     }
 
-    function renderStep4() {
+    function renderStep5() {
         return (
             <div className="bp-panel">
-                <h2 className="bp-panel-title">Step 4: Dispatch Locations</h2>
+                <h2 className="bp-panel-title">Step 5: Dispatch Locations</h2>
                 <div className="bp-divider" />
                 <form onSubmit={handleSubmitProfile}>
                     <div className="bp-form-grid">
@@ -1038,6 +1402,8 @@ export default function BuyerProfile() {
                 return renderStep3();
             case 4:
                 return renderStep4();
+            case 5:
+                return renderStep5();
             default:
                 return null;
         }

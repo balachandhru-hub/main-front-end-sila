@@ -1,30 +1,14 @@
 import axios from 'axios';
-import { useAuthStore } from '../store/useAuthStore';
 const baseURL = import.meta.env.VITE_AUTH_API_BASE;
-const apiKey = 'N8qX2LmP7vRa5HdK9sWy4JcTf1AzNgEuXm6BpLr3YvCi0FoMsZaDhUk8QtGeXwPnV';
 
 const axiosInstance = axios.create({
   baseURL,
   timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
-    ...(apiKey ? { 'X-API-Key': apiKey } : {}),
   },
   withCredentials: true,
 });
-
-axiosInstance.interceptors.request.use(
-  (config) => {
-    const isLoginOrRefresh = config.url?.includes('/login') || config.url?.includes('/refresh-token');
-    if (isLoginOrRefresh && config.headers) {
-      delete config.headers['X-API-Key'];
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
 
 let isRefreshing = false;
 let failedQueue: any[] = [];
@@ -69,7 +53,6 @@ axiosInstance.interceptors.response.use(
       } catch (refreshError) {
         isRefreshing = false;
         processQueue(refreshError);
-        useAuthStore.getState().logout();
         window.dispatchEvent(new CustomEvent('session:expired'));
         return Promise.reject(refreshError);
       }
