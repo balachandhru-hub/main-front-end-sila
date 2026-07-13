@@ -103,13 +103,15 @@ const Shell = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // FIX: Hide sidebar during onboarding - onboarding is full-screen like login
+  // Hide sidebar during onboarding and for platform-user
   const isOnboarding = location.pathname.includes('/onboarding');
+  const isPlatformUser = userRole === 'platform-user';
+  const showSidebar = isLoggedIn && !isOnboarding && !isPlatformUser;
 
   return (
     <div className="app-container">
-      {isLoggedIn && !isOnboarding && <Sidebar />}
-      <main className={`main-content ${!isLoggedIn || isOnboarding ? 'no-padding' : ''}`}>
+      {showSidebar && <Sidebar />}
+      <main className={`main-content ${!isLoggedIn || isOnboarding || isPlatformUser ? 'no-padding' : ''} ${isPlatformUser ? 'bg-white' : ''}`}>
         <React.Suspense fallback={<Loader fullScreen={true} message="Loading modules..." />}>
           <Routes>
             <Route

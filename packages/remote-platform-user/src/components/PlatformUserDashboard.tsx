@@ -1,51 +1,240 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { getAllBuyers, getAllSuppliers, type Buyer, type Supplier } from '../api/platformApi';
+import { FaUser, FaBuilding, FaEnvelope, FaPhone, FaGlobe, FaMapMarkerAlt, FaSearch } from 'react-icons/fa';
+import './PlatformUserDashboard.css';
+const vosx_logo = `${window.location.protocol}//${window.location.host}/assets/vosx-logo.png`;
 
 export const PlatformUserDashboard: React.FC = () => {
-  const userId = sessionStorage.getItem('vosox_user_id');
-  const personId = sessionStorage.getItem('vosox_person_id');
-  const organizationId = sessionStorage.getItem('vosox_organization_id');
-  const roleId = sessionStorage.getItem('vosox_role_id');
-  const userRole = sessionStorage.getItem('vosox_user_role');
+  const [buyers, setBuyers] = useState<Buyer[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'buyers' | 'suppliers'>('buyers');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [buyersData, suppliersData] = await Promise.all([
+          getAllBuyers(),
+          getAllSuppliers(),
+        ]);
+
+        const resolvedBuyers = Array.isArray(buyersData)
+          ? buyersData
+          : (buyersData as any)?.buyers || (buyersData as any)?.data || [];
+        const resolvedSuppliers = Array.isArray(suppliersData)
+          ? suppliersData
+          : (suppliersData as any)?.suppliers || (suppliersData as any)?.data || [];
+
+        setBuyers(resolvedBuyers);
+        setSuppliers(resolvedSuppliers);
+      } catch (err: any) {
+        console.error('Failed to fetch platform metrics:', err);
+        setError(err.message || 'Failed to retrieve buyers and suppliers list.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const filterList = (list: any[]) => {
+    return list.filter((item) => {
+      const profile = item.businessProfile || item;
+      const name = (profile.organizationName || '').toLowerCase();
+      const email = (profile.email || '').toLowerCase();
+      const industry = (profile.industry || '').toLowerCase();
+      const bizType = (profile.businessType || '').toLowerCase();
+      const country = (profile.country || '').toLowerCase();
+      const city = (profile.city || '').toLowerCase();
+      const query = searchQuery.toLowerCase();
+
+      return (
+        name.includes(query) ||
+        email.includes(query) ||
+        industry.includes(query) ||
+        bizType.includes(query) ||
+        country.includes(query) ||
+        city.includes(query)
+      );
+    });
+  };
+
+  const filteredList = activeTab === 'buyers' ? filterList(buyers) : filterList(suppliers);
 
   return (
-    <div style={{
-      maxWidth: '600px',
-      margin: '0 auto',
-      backgroundColor: '#ffffff',
-      padding: '32px',
-      borderRadius: '12px',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-      border: '1px solid #e5e7eb'
-    }}>
-      <h2 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '24px', color: '#111827' }}>
-        Platform User Dashboard
-      </h2>
-      
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
-          <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>User ID</strong>
-          <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{userId || 'N/A'}</span>
-        </div>
-        
-        <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
-          <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>Person ID</strong>
-          <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{personId || 'N/A'}</span>
-        </div>
-        
-        <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
-          <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>Organization ID</strong>
-          <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{organizationId || 'N/A'}</span>
-        </div>
-        
-        <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
-          <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>Role ID</strong>
-          <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: '#1f2937', wordBreak: 'break-all' }}>{roleId || 'N/A'}</span>
+    <div className="plat-dashboard">
+      {/* Top Header Bar with Left Logo */}
+      <header className="plat-top-header">
+        <img src={vosx_logo} alt="VOSX" className="plat-top-logo" />
+      </header>
+
+      <div className="plat-content-wrapper">
+        {/* Header */}
+        <header className="plat-header">
+          <h1 className="plat-title">Platform Administrator Dashboard</h1>
+          <p className="plat-subtitle">Manage, view, and monitor registered buyers and suppliers on the platform.</p>
+        </header>
+
+        {/* Stats Section */}
+        <section className="plat-stats-grid">
+          <div className="plat-stat-card" onClick={() => setActiveTab('buyers')} style={{ cursor: 'pointer' }}>
+            <div className="plat-stat-icon-wrapper plat-stat-icon-buyers">
+              <FaUser />
+            </div>
+            <div className="plat-stat-info">
+              <span className="plat-stat-value">{loading ? '...' : buyers.length}</span>
+              <span className="plat-stat-label">Total Registered Buyers</span>
+            </div>
+          </div>
+
+          <div className="plat-stat-card" onClick={() => setActiveTab('suppliers')} style={{ cursor: 'pointer' }}>
+            <div className="plat-stat-icon-wrapper plat-stat-icon-suppliers">
+              <FaBuilding />
+            </div>
+            <div className="plat-stat-info">
+              <span className="plat-stat-value">{loading ? '...' : suppliers.length}</span>
+              <span className="plat-stat-label">Total Registered Suppliers</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Controls Bar */}
+        <div className="plat-controls-bar">
+          {/* Tab buttons */}
+          <div className="plat-tabs">
+            <button
+              onClick={() => setActiveTab('buyers')}
+              className={`plat-tab-btn ${activeTab === 'buyers' ? 'active' : ''}`}
+            >
+              Buyers ({buyers.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('suppliers')}
+              className={`plat-tab-btn ${activeTab === 'suppliers' ? 'active active-suppliers' : ''}`}
+            >
+              Suppliers ({suppliers.length})
+            </button>
+          </div>
+
+          {/* Search bar */}
+          <div className="plat-search-wrapper">
+            <FaSearch className="plat-search-icon" />
+            <input
+              type="text"
+              placeholder={`Search ${activeTab}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="plat-search-input"
+            />
+          </div>
         </div>
 
-        <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #f3f4f6' }}>
-          <strong style={{ display: 'block', fontSize: '0.85rem', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>User Role</strong>
-          <span style={{ fontSize: '1rem', color: '#1f2937', fontWeight: 600 }}>{userRole || 'N/A'}</span>
-        </div>
+        {/* Error Banner */}
+        {error && <div className="plat-error-banner">{error}</div>}
+
+        {/* Loading Spinner */}
+        {loading ? (
+          <div className="plat-loading-container">
+            <div className="plat-spinner"></div>
+            <span style={{ color: '#4a5568', fontWeight: 500 }}>Loading platform registry...</span>
+          </div>
+        ) : (
+          /* Cards Grid */
+          <>
+            {filteredList.length === 0 ? (
+              <div className="plat-empty-state">
+                <div className="plat-empty-icon">
+                  {activeTab === 'buyers' ? <FaUser /> : <FaBuilding />}
+                </div>
+                <h3 className="plat-empty-title">No {activeTab} found</h3>
+                <p className="plat-empty-desc">
+                  {searchQuery ? `No results matching "${searchQuery}"` : `There are currently no registered ${activeTab} on the platform.`}
+                </p>
+              </div>
+            ) : (
+              <div className="plat-cards-grid">
+                {filteredList.map((item) => {
+                  const profile = item.businessProfile || item;
+                  const name = profile.organizationName || 'Unnamed Business';
+                  const email = profile.email || 'No email provided';
+                  const phone = profile.phone || 'No phone number';
+                  const website = profile.website;
+                  const bizType = profile.businessType;
+                  const industry = profile.industry;
+                  const description = profile.description;
+
+                  // Construct location string
+                  const locationParts = [profile.city, profile.state, profile.country].filter(Boolean);
+                  const location = locationParts.join(', ') || 'No address specified';
+
+                  return (
+                    <div key={item.organizationId} className="plat-card">
+                      <div className="plat-card-header">
+                        <div className="plat-card-title-row">
+                          <h3 className="plat-card-name">{name}</h3>
+                          {bizType && (
+                            <span className="plat-badge plat-badge-type">{bizType}</span>
+                          )}
+                        </div>
+                        {industry && (
+                          <div style={{ marginTop: '4px' }}>
+                            <span className="plat-badge plat-badge-industry">{industry}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {description && (
+                        <p className="plat-card-desc" title={description}>
+                          {description}
+                        </p>
+                      )}
+
+                      <div className="plat-card-details">
+                        <div className="plat-detail-item">
+                          <FaEnvelope className="plat-detail-icon" />
+                          <span className="plat-detail-text" title={email}>{email}</span>
+                        </div>
+
+                        <div className="plat-detail-item">
+                          <FaPhone className="plat-detail-icon" />
+                          <span className="plat-detail-text">{phone}</span>
+                        </div>
+
+                        <div className="plat-detail-item">
+                          <FaMapMarkerAlt className="plat-detail-icon" />
+                          <span className="plat-detail-text" title={location}>{location}</span>
+                        </div>
+
+                        {website && (
+                          <div className="plat-detail-item">
+                            <FaGlobe className="plat-detail-icon" />
+                            <a
+                              href={website.startsWith('http') ? website : `https://${website}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="plat-detail-text"
+                              style={{ color: activeTab === 'buyers' ? '#3182ce' : '#805ad5', textDecoration: 'none' }}
+                            >
+                              {website}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="plat-card-footer">
+                        ID: {item.organizationId}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

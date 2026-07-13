@@ -122,6 +122,10 @@ h1, h2, h3, h4, h5, h6 {
   overflow-y: auto;
 }
 
+.main-content.bg-white {
+  background-color: #ffffff !important;
+}
+
 .main-content.no-padding {
   padding: 0;
 }

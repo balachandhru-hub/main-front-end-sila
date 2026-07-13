@@ -1,9 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import './Supplieronboardingform.css';
+import './SupplierOnboardingForm.css';
 
-// ============================================================================
-// TYPES & INITIAL STATES FOR ALL ONBOARDING STEPS
-// ============================================================================
+export const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const base64String = (reader.result as string).split(',')[1];
+      resolve(base64String);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
 
 // Step 1: Business Information
 export interface Step1Data {
