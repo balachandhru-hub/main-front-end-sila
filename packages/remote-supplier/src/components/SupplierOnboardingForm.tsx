@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { fetchOnboardingDetails } from '../api/supplierApi';
+import { Country, State, City } from 'country-state-city';
 import './SupplierOnboardingForm.css';
 
 export const fileToBase64 = (file: File): Promise<string> => {
@@ -144,7 +146,6 @@ const BUSINESS_TYPE_OPTIONS = [
 
 const REGISTRATION_TYPE_OPTIONS = ['GST', 'PAN', 'IEC', 'MSME / Udyam', 'ISO Certificate', 'Other'];
 const CURRENCY_OPTIONS = ['INR', 'USD', 'EUR', 'GBP'];
-const STATE_OPTIONS = ['Tamilnadu', 'Karnataka', 'Maharashtra', 'Delhi', 'Other'];
 const YEAR_OPTIONS = Array.from({ length: 60 }, (_, i) => String(new Date().getFullYear() - i));
 
 interface StepMeta {
@@ -838,6 +839,7 @@ interface Step4DispatchLocationsProps {
   data: Step4Data;
   onChange: (data: Step4Data) => void;
   onValidationChange?: (isValid: boolean) => void;
+  onboardingData?: any;
 }
 
 interface Step4Draft {
@@ -868,10 +870,39 @@ const emptyStep4Draft: Step4Draft = {
   isDefault: false,
 };
 
-const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, onChange, onValidationChange }) => {
+const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, onChange, onValidationChange, onboardingData }) => {
   const [draft, setDraft] = useState<Step4Draft>(emptyStep4Draft);
   const [formError, setFormError] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (data.locations.length === 0 && onboardingData) {
+      setDraft((prev) => ({
+        ...prev,
+        locationName: onboardingData.organizationName || '',
+        contactPerson: prev.contactPerson,
+        country: onboardingData.country || '',
+        state: onboardingData.state || '',
+        addressLine1: onboardingData.addressLine1 || '',
+        addressLine2: onboardingData.addressLine2 || '',
+        city: onboardingData.city || '',
+        pinCode: onboardingData.pinCode || '',
+        contactEmail: onboardingData.email || '',
+        contactPhone: onboardingData.phone || '',
+      }));
+    }
+  }, [onboardingData, data.locations.length]);
+
+  const isReadOnly = data.locations.length === 0;
+  const hasDefaultLocation = data.locations.some((loc) => loc.isDefault);
+
+  const countries = Country.getAllCountries();
+  const selectedCountryObj = countries.find(c => c.name === draft.country);
+  const states = selectedCountryObj ? State.getStatesOfCountry(selectedCountryObj.isoCode) : [];
+  const selectedStateObj = states.find(s => s.name === draft.state);
+  const cities = (selectedCountryObj && selectedStateObj) 
+    ? City.getCitiesOfState(selectedCountryObj.isoCode, selectedStateObj.isoCode) 
+    : [];
 
   const handleDraftField = <K extends keyof Step4Draft>(field: K, value: Step4Draft[K]) => {
     setDraft((prev) => ({ ...prev, [field]: value }));
@@ -893,8 +924,7 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
       return;
     }
 
-    const isFirstLocation = data.locations.length === 0;
-    const shouldBeDefault = isFirstLocation || draft.isDefault;
+    const shouldBeDefault = draft.isDefault;
 
     const newEntry: DispatchLocationEntry = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -976,6 +1006,7 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
             value={draft.locationName}
             onChange={(e) => handleDraftField('locationName', e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, locationName: true }))}
+            disabled={isReadOnly}
           />
           {locationNameError && <span className="vob-error-text">{locationNameError}</span>}
         </div>
@@ -988,20 +1019,32 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
             className="vob-input"
             value={draft.contactPerson}
             onChange={(e) => handleDraftField('contactPerson', e.target.value)}
+            disabled={isReadOnly}
           />
         </div>
 
         <div className="vob-field">
           <label className="vob-label vob-label--required">Country</label>
-          <input
+          <select
             data-field="country"
-            type="text"
-            placeholder="Country"
-            className={`vob-input ${countryError ? 'vob-input--error' : ''}`}
+            className={`vob-select ${countryError ? 'vob-select--error' : ''}`}
             value={draft.country}
-            onChange={(e) => handleDraftField('country', e.target.value)}
+            onChange={(e) => {
+              handleDraftField('country', e.target.value);
+              handleDraftField('state', '');
+              handleDraftField('city', '');
+            }}
             onBlur={() => setTouched((prev) => ({ ...prev, country: true }))}
-          />
+            disabled={isReadOnly}
+          >
+            <option value="">Select Country</option>
+            {countries.map((c) => (
+              <option key={c.isoCode} value={c.name}>{c.name}</option>
+            ))}
+            {isReadOnly && !selectedCountryObj && draft.country && (
+              <option value={draft.country}>{draft.country}</option>
+            )}
+          </select>
           {countryError && <span className="vob-error-text">{countryError}</span>}
         </div>
 
@@ -1011,13 +1054,20 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
             data-field="state"
             className={`vob-select ${stateError ? 'vob-select--error' : ''}`}
             value={draft.state}
-            onChange={(e) => handleDraftField('state', e.target.value)}
+            onChange={(e) => {
+              handleDraftField('state', e.target.value);
+              handleDraftField('city', '');
+            }}
             onBlur={() => setTouched((prev) => ({ ...prev, state: true }))}
+            disabled={isReadOnly || !draft.country}
           >
             <option value="">Select State</option>
-            {STATE_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
+            {states.map((s) => (
+              <option key={s.isoCode} value={s.name}>{s.name}</option>
             ))}
+            {isReadOnly && !selectedStateObj && draft.state && (
+              <option value={draft.state}>{draft.state}</option>
+            )}
           </select>
           {stateError && <span className="vob-error-text">{stateError}</span>}
         </div>
@@ -1032,6 +1082,7 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
             value={draft.addressLine1}
             onChange={(e) => handleDraftField('addressLine1', e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, addressLine1: true }))}
+            disabled={isReadOnly}
           />
           {addressLine1Error && <span className="vob-error-text">{addressLine1Error}</span>}
         </div>
@@ -1044,20 +1095,28 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
             className="vob-input"
             value={draft.addressLine2}
             onChange={(e) => handleDraftField('addressLine2', e.target.value)}
+            disabled={isReadOnly}
           />
         </div>
 
         <div className="vob-field">
           <label className="vob-label vob-label--required">City</label>
-          <input
+          <select
             data-field="city"
-            type="text"
-            placeholder="City"
-            className={`vob-input ${cityError ? 'vob-input--error' : ''}`}
+            className={`vob-select ${cityError ? 'vob-select--error' : ''}`}
             value={draft.city}
             onChange={(e) => handleDraftField('city', e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, city: true }))}
-          />
+            disabled={isReadOnly || !draft.state}
+          >
+            <option value="">Select City</option>
+            {cities.map((c) => (
+              <option key={c.name} value={c.name}>{c.name}</option>
+            ))}
+            {isReadOnly && !cities.find(c => c.name === draft.city) && draft.city && (
+              <option value={draft.city}>{draft.city}</option>
+            )}
+          </select>
           {cityError && <span className="vob-error-text">{cityError}</span>}
         </div>
 
@@ -1071,6 +1130,7 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
             value={draft.pinCode}
             onChange={(e) => handleDraftField('pinCode', e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, pinCode: true }))}
+            disabled={isReadOnly}
           />
           {pinCodeError && <span className="vob-error-text">{pinCodeError}</span>}
         </div>
@@ -1083,6 +1143,7 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
             className="vob-input"
             value={draft.contactEmail}
             onChange={(e) => handleDraftField('contactEmail', e.target.value)}
+            disabled={isReadOnly}
           />
         </div>
 
@@ -1094,19 +1155,24 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
             className="vob-input"
             value={draft.contactPhone}
             onChange={(e) => handleDraftField('contactPhone', e.target.value)}
+            disabled={isReadOnly}
           />
         </div>
 
         <div className="vob-action-row">
-          <label className="vob-checkbox-wrapper">
-            <input
-              type="checkbox"
-              className="vob-checkbox"
-              checked={draft.isDefault}
-              onChange={(e) => handleDraftField('isDefault', e.target.checked)}
-            />
-            <span className="vob-checkbox-label">Default Dispatch Location</span>
-          </label>
+          {!hasDefaultLocation ? (
+            <label className="vob-checkbox-wrapper">
+              <input
+                type="checkbox"
+                className="vob-checkbox"
+                checked={draft.isDefault}
+                onChange={(e) => handleDraftField('isDefault', e.target.checked)}
+              />
+              <span className="vob-checkbox-label">Default Dispatch Location</span>
+            </label>
+          ) : (
+            <div />
+          )}
 
           <button
             type="button"
@@ -1237,6 +1303,19 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
   const [step4Valid, setStep4Valid] = useState(false);
 
   const [showValidationError, setShowValidationError] = useState(false);
+  const [onboardingData, setOnboardingData] = useState<any>(null);
+
+  useEffect(() => {
+    const loadOnboardingData = async () => {
+      try {
+        const data = await fetchOnboardingDetails();
+        setOnboardingData(data);
+      } catch (err) {
+        console.warn('Failed to fetch onboarding details', err);
+      }
+    };
+    loadOnboardingData();
+  }, []);
 
   const handleNext = async () => {
     setError(null);
@@ -1382,6 +1461,7 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
               data={step4}
               onChange={setStep4}
               onValidationChange={setStep4Valid}
+              onboardingData={onboardingData}
             />
           )}
 

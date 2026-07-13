@@ -57,14 +57,14 @@ const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onComple
           registrationName: reg.name,
           asset: reg.certificateFile
             ? {
-                entityType: 'SUPPLIER',
-                entityId: orgId,
-                assetType: 'REGISTRATION_DOCUMENT',
-                fileName: reg.certificateFile.name,
-                contentType: reg.certificateFile.type,
-                isSingletonAsset: false,
-                fileBytes: fileBytes,
-              }
+              entityType: 'SUPPLIER',
+              entityId: '7b75d5fd-a87d-4fca-a9a9-c6e781f8d431',
+              assetType: reg.type,
+              fileName: reg.certificateFile.name,
+              contentType: reg.certificateFile.type,
+              isSingletonAsset: false,
+              fileBytes: fileBytes,
+            }
             : null,
           expiryDate: reg.expiryDate ? new Date(reg.expiryDate).toISOString() : null,
         };
