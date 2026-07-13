@@ -24,11 +24,9 @@ export const fetchOnboardingDetails = async (): Promise<any> => {
   }
 };
 
-export const getSupplierProfile = async (organizationId: string): Promise<any> => {
+export const getSupplierProfile = async (): Promise<any> => {
   try {
-    const response = await supplierInstance.get('/api/v1/GetSupplierProfile', {
-      params: { organizationId },
-    });
+    const response = await supplierInstance.get('api/v1/supplier/profile');
     return response.data;
   } catch (error: any) {
     throw error;
