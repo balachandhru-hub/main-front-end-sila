@@ -130,6 +130,11 @@ const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onComple
     // 6. Post profile to server via api helper
     await createSupplierProfile(payload);
 
+    // Save organization name
+    if (payload.businessProfile.organizationName) {
+      sessionStorage.setItem('vosox_organization_name', payload.businessProfile.organizationName);
+    }
+
     // 7. Update profileComplete status
     sessionStorage.setItem('vosox_profile_complete', 'true');
     onCompleteSuccess();
@@ -151,14 +156,12 @@ const SupplierApp: React.FC = () => {
         return;
       }
 
-      const orgId = useAuthStore.getState().organizationId || sessionStorage.getItem('vosox_organization_id');
-      if (!orgId) {
-        setProfileComplete(false);
-        return;
-      }
-
       try {
-        await getSupplierProfile(orgId);
+        const profile = await getSupplierProfile();
+        // Save organization name
+        if (profile?.businessProfile?.organizationName) {
+          sessionStorage.setItem('vosox_organization_name', profile.businessProfile.organizationName);
+        }
         // If the profile is retrieved successfully, it exists and is complete
         sessionStorage.setItem('vosox_profile_complete', 'true');
         setProfileComplete(true);
