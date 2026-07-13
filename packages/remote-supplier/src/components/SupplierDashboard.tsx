@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import './SupplierDashboard.css';
 import { useAuthStore } from '../../../host-app/src/store/useAuthStore';
+import { logoutSupplier } from '../api/supplierApi'; 
 
-// SVGs for Icons (Self-contained, highly robust)
 const HomeIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -99,12 +99,37 @@ const CheckCircleIcon = () => (
   </svg>
 );
 
+const LogoutIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
+
 export const SupplierDashboard: React.FC = () => {
-  const logout = useAuthStore.getState().logout;
   const organizationName = sessionStorage.getItem('vosox_organization_name') || 'Apex Office & Technology Supp...';
   const firstLetter = organizationName.trim().charAt(0).toUpperCase();
 
   const [activeTab, setActiveTab] = useState('Dashboard');
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    setLogoutError(null);
+    try {
+      await logoutSupplier();
+    } catch (error: any) {
+      setLogoutError(error?.message || 'Logout request failed, clearing session locally.');
+    } finally {
+      sessionStorage.removeItem('vosox_organization_name');
+      useAuthStore.getState().logout();
+      window.dispatchEvent(new CustomEvent('session:expired'));
+      setLoggingOut(false);
+    }
+  };
 
   const menuItems = [
     { label: 'Dashboard', icon: <HomeIcon /> },
@@ -157,18 +182,23 @@ export const SupplierDashboard: React.FC = () => {
           ))}
           <li
             className="sd-nav-item"
-            style={{ marginTop: 'auto', color: '#dc2626' }}
-            onClick={logout}
+            style={{
+              marginTop: 'auto',
+              color: '#dc2626',
+              opacity: loggingOut ? 0.6 : 1,
+              cursor: loggingOut ? 'not-allowed' : 'pointer',
+              pointerEvents: loggingOut ? 'none' : 'auto',
+            }}
+            onClick={handleLogout}
+            role="button"
+            aria-disabled={loggingOut}
+            title={logoutError || undefined}
           >
             <span className="sd-nav-label">
               <span className="sd-nav-icon" style={{ transform: 'rotate(180deg)' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
-                </svg>
+                <LogoutIcon />
               </span>
-              Log Out
+              {loggingOut ? 'Logging out...' : 'Log Out'}
             </span>
           </li>
         </ul>
@@ -183,7 +213,7 @@ export const SupplierDashboard: React.FC = () => {
               <BellIcon />
               <div className="sd-notification-dot" />
             </div>
-            
+
             <div className="sd-user-profile">
               <div className="sd-user-info">
                 <div className="sd-user-name" title={organizationName}>
@@ -371,7 +401,7 @@ export const SupplierDashboard: React.FC = () => {
             <p className="sd-subtitle" style={{ marginBottom: '24px' }}>
               Active enterprise buyers looking for products and services matching your certified categories and registered ship-to locations.
             </p>
-            
+
             <div className="sd-matchmaker-grid">
               <div className="sd-match-card">
                 <div className="sd-match-header">
