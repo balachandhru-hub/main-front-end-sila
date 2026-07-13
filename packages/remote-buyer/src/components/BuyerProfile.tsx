@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Country, State, City } from "country-state-city";
@@ -56,6 +56,26 @@ interface Agreements {
     infoAccurate: boolean;
     agreeTerms: boolean;
     authorizeVerification: boolean;
+}
+
+interface BuyerProfileProps {
+    onComplete?: (data: {
+        businessInfo: BusinessInfo;
+        registrations: Registration[];
+        bankAccounts: BankAccount[];
+        dispatchLocations: DispatchLocation[];
+    }) => Promise<void> | void;
+    onboardingData?: {
+        organizationName: string;
+        email: string;
+        phone: string;
+        country: string;
+        addressLine1: string;
+        addressLine2: string;
+        city: string;
+        state: string;
+        pinCode: string;
+    } | null;
 }
 
 
@@ -151,59 +171,22 @@ function maskAccountNumber(accountNumber: string): string {
 }
 
 
-
-export default function BuyerProfile() {
+export default function BuyerProfile({ onComplete, onboardingData }: BuyerProfileProps) {
     const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [furthestStep, setFurthestStep] = useState<number>(1);
 
     const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(emptyBusinessInfo);
 
-    const [registrations, setRegistrations] = useState<Registration[]>([
-        {
-            id: makeId(),
-            type: "GST",
-            number: "EXAMPLE0123456",
-            name: "Jon Snow",
-            expiryDate: "04.08.2050",
-            attachmentName: "GST Attachment.pdf",
-        },
-    ]);
+    const [registrations, setRegistrations] = useState<Registration[]>([]);
     const [registrationDraft, setRegistrationDraft] = useState(emptyRegistrationDraft);
 
-    const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([
-        {
-            id: makeId(),
-            accountHolderName: "Cersei Lannister",
-            bankName: "HDFC Bank",
-            branchName: "",
-            accountNumber: "0000XXXXXX2456",
-            ifscCode: "",
-            swiftCode: "",
-            iban: "",
-            currency: "INR",
-            isPrimary: true,
-        },
-    ]);
+    const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
     const [bankDraft, setBankDraft] = useState(emptyBankDraft);
 
-    const [dispatchLocations, setDispatchLocations] = useState<DispatchLocation[]>([
-        {
-            id: makeId(),
-            locationName: "Chennai Warehouse",
-            contactPerson: "Arya Stark",
-            country: "IN",
-            state: "TN",
-            addressLine1: "",
-            addressLine2: "",
-            city: "Chennai",
-            pinZip: "",
-            contactEmail: "",
-            contactPhone: "9876543210",
-            isDefault: true,
-        },
-    ]);
+    const [dispatchLocations, setDispatchLocations] = useState<DispatchLocation[]>([]);
     const [locationDraft, setLocationDraft] = useState(emptyLocationDraft);
+    const [hasAutoFilled, setHasAutoFilled] = useState(false);
 
     const [agreements, setAgreements] = useState<Agreements>({
         infoAccurate: false,
@@ -212,6 +195,30 @@ export default function BuyerProfile() {
     });
 
     const [submitted, setSubmitted] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // ============================================================================
+    // Auto-fill input fields from onboarding data
+    // ============================================================================
+    useEffect(() => {
+        if (onboardingData && !hasAutoFilled && dispatchLocations.length === 0) {
+            setLocationDraft({
+                locationName: onboardingData.organizationName || 'Main Office',
+                contactPerson: '',
+                country: onboardingData.country || '',
+                state: onboardingData.state || '',
+                addressLine1: onboardingData.addressLine1 || '',
+                addressLine2: onboardingData.addressLine2 || '',
+                city: onboardingData.city || '',
+                pinZip: onboardingData.pinCode || '',
+                contactEmail: onboardingData.email || '',
+                contactPhone: onboardingData.phone || '',
+                isDefault: true,
+            });
+            setHasAutoFilled(true);
+        }
+    }, [onboardingData, hasAutoFilled, dispatchLocations.length]);
 
     /* ---------------------------- navigation --------------------------- */
 
@@ -282,13 +289,22 @@ export default function BuyerProfile() {
         field: K,
         value: (typeof locationDraft)[K]
     ) {
+        // Block editing if auto-filled and not yet added to table
+        if (hasAutoFilled) return;
         setLocationDraft((prev) => ({ ...prev, [field]: value }));
     }
 
     function addLocation() {
         if (!locationDraft.locationName || !locationDraft.addressLine1 || !locationDraft.city) return;
-        setDispatchLocations((prev) => [...prev, { id: makeId(), ...locationDraft }]);
+        
+        setDispatchLocations((prev) => [...prev, { 
+            id: makeId(), 
+            ...locationDraft 
+        }]);
+        
+        // Clear fields and remove read-only after first add
         setLocationDraft(emptyLocationDraft);
+        setHasAutoFilled(false);
     }
 
     function removeLocation(id: string) {
@@ -302,10 +318,37 @@ export default function BuyerProfile() {
     const canSubmit =
         agreements.infoAccurate && agreements.agreeTerms && agreements.authorizeVerification;
 
-    function handleSubmitProfile(e: FormEvent) {
+    async function handleSubmitProfile(e: FormEvent) {
         e.preventDefault();
         if (!canSubmit) return;
-        setSubmitted(true);
+
+        setError(null);
+        setSubmitting(true);
+
+        try {
+            // If there's a location in draft (auto-filled or manually entered), add it first
+            const finalLocations = [...dispatchLocations];
+            if (locationDraft.locationName && locationDraft.addressLine1 && locationDraft.city) {
+                finalLocations.push({ id: makeId(), ...locationDraft });
+            }
+
+            if (onComplete) {
+                await onComplete({
+                    businessInfo,
+                    registrations,
+                    bankAccounts,
+                    dispatchLocations: finalLocations,
+                });
+                setSubmitted(true);
+            } else {
+                setSubmitted(true);
+            }
+        } catch (err: any) {
+            setError(err.message || 'Failed to submit profile. Please try again.');
+            console.error('Error submitting profile:', err);
+        } finally {
+            setSubmitting(false);
+        }
     }
 
     /* ------------------------------------------------------------------ */
@@ -782,11 +825,31 @@ export default function BuyerProfile() {
         );
     }
 
+    // ============================================================================
+    // UPDATED: Step 4 with read-only fields when auto-filled
+    // ============================================================================
     function renderStep4() {
+        const isReadOnly = hasAutoFilled;
+
         return (
             <div className="bp-panel">
                 <h2 className="bp-panel-title">Step 4: Dispatch Locations</h2>
                 <div className="bp-divider" />
+                
+                {isReadOnly && (
+                    <div style={{ 
+                        backgroundColor: '#e7f3ff', 
+                        border: '1px solid #0d6efd', 
+                        borderRadius: '6px', 
+                        padding: '10px 15px', 
+                        marginBottom: '15px',
+                        color: '#084298',
+                        fontSize: '0.9rem'
+                    }}>
+                        ℹ️ These fields are auto-filled from your onboarding details. Click "+ Add Location" to confirm, then you can add more locations manually.
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmitProfile}>
                     <div className="bp-form-grid">
                         <div className="bp-field">
@@ -798,6 +861,8 @@ export default function BuyerProfile() {
                                 type="text"
                                 value={locationDraft.locationName}
                                 onChange={(e) => updateLocationDraft("locationName", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -808,6 +873,8 @@ export default function BuyerProfile() {
                                 type="text"
                                 value={locationDraft.contactPerson}
                                 onChange={(e) => updateLocationDraft("contactPerson", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -823,6 +890,8 @@ export default function BuyerProfile() {
                                     updateLocationDraft("state", "");
                                     updateLocationDraft("city", "");
                                 }}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             >
                                 <option value="">Select Country</option>
                                 {Country.getAllCountries().map((c) => (
@@ -844,7 +913,8 @@ export default function BuyerProfile() {
                                     updateLocationDraft("state", e.target.value);
                                     updateLocationDraft("city", "");
                                 }}
-                                disabled={!locationDraft.country}
+                                disabled={isReadOnly || !locationDraft.country}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             >
                                 <option value="">Select State</option>
                                 {locationDraft.country && State.getStatesOfCountry(locationDraft.country).map((s) => (
@@ -864,6 +934,8 @@ export default function BuyerProfile() {
                                 type="text"
                                 value={locationDraft.addressLine1}
                                 onChange={(e) => updateLocationDraft("addressLine1", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -874,6 +946,8 @@ export default function BuyerProfile() {
                                 type="text"
                                 value={locationDraft.addressLine2}
                                 onChange={(e) => updateLocationDraft("addressLine2", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -885,7 +959,8 @@ export default function BuyerProfile() {
                                 id="city"
                                 value={locationDraft.city}
                                 onChange={(e) => updateLocationDraft("city", e.target.value)}
-                                disabled={!locationDraft.state}
+                                disabled={isReadOnly || !locationDraft.state}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             >
                                 <option value="">Select City</option>
                                 {locationDraft.state && City.getCitiesOfState(locationDraft.country, locationDraft.state).map((c) => (
@@ -905,6 +980,8 @@ export default function BuyerProfile() {
                                 type="text"
                                 value={locationDraft.pinZip}
                                 onChange={(e) => updateLocationDraft("pinZip", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -915,6 +992,8 @@ export default function BuyerProfile() {
                                 type="email"
                                 value={locationDraft.contactEmail}
                                 onChange={(e) => updateLocationDraft("contactEmail", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -925,20 +1004,27 @@ export default function BuyerProfile() {
                                 type="tel"
                                 value={locationDraft.contactPhone}
                                 onChange={(e) => updateLocationDraft("contactPhone", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
                     </div>
 
                     <div className="bp-actions bp-actions-between">
-                        <label className="bp-checkbox-label">
+                        <label className="bp-checkbox-label" style={isReadOnly ? { opacity: 0.6, pointerEvents: 'none' } : {}}>
                             <input
                                 type="checkbox"
                                 checked={locationDraft.isDefault}
                                 onChange={(e) => updateLocationDraft("isDefault", e.target.checked)}
+                                disabled={isReadOnly}
                             />
                             Default Dispatch Location
                         </label>
-                        <button type="button" className="bp-btn bp-btn-primary" onClick={addLocation}>
+                        <button 
+                            type="button" 
+                            className="bp-btn bp-btn-primary" 
+                            onClick={addLocation}
+                        >
                             + Add Location
                         </button>
                     </div>
@@ -1015,12 +1101,18 @@ export default function BuyerProfile() {
                         </label>
                     </div>
 
+                    {error && (
+                        <div style={{ color: '#dc2626', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '6px', marginBottom: '15px', fontSize: '0.9rem', border: '1px solid #f87171' }}>
+                            {error}
+                        </div>
+                    )}
+
                     <div className="bp-actions bp-actions-right">
-                        <button type="button" className="bp-btn bp-btn-secondary" onClick={handleBack}>
+                        <button type="button" className="bp-btn bp-btn-secondary" onClick={handleBack} disabled={submitting}>
                             Back
                         </button>
-                        <button type="submit" className="bp-btn bp-btn-primary" disabled={!canSubmit}>
-                            Submit Profile
+                        <button type="submit" className="bp-btn bp-btn-primary" disabled={!canSubmit || submitting}>
+                            {submitting ? 'Submitting...' : 'Submit Profile'}
                         </button>
                     </div>
                 </form>
