@@ -45,6 +45,14 @@ platformInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    if (error.response?.status === 401) {
+      const isRefreshTokenRequest = originalRequest?.url?.includes('/refresh-token');
+      if (isRefreshTokenRequest) {
+        useAuthStore.getState().logout();
+        window.dispatchEvent(new CustomEvent('session:expired'));
+        return Promise.reject(error);
+      }
+    }
     const isAuthEndpoint = originalRequest?.url?.includes('/api/v1/identity/auth/');
     if (error.response?.status === 401 && !isAuthEndpoint && !originalRequest._retry && !originalRequest?._skipRefresh) {
       if (isRefreshing) {
