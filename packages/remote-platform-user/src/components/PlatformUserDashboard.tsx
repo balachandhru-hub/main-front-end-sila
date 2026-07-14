@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getAllBuyers, getAllSuppliers, type Buyer, type Supplier } from '../api/platformApi';
-import { FaUser, FaBuilding, FaEnvelope, FaPhone, FaGlobe, FaMapMarkerAlt, FaSearch } from 'react-icons/fa';
+import { getAllBuyers, getAllSuppliers, logoutPlatformUser, type Buyer, type Supplier } from '../api/platformApi';
+import { useAuthStore } from '../../../host-app/src/store/useAuthStore';
+import { FaUser, FaBuilding, FaEnvelope, FaPhone, FaGlobe, FaMapMarkerAlt, FaSearch, FaSignOutAlt } from 'react-icons/fa';
 import './PlatformUserDashboard.css';
 const vosx_logo = `${window.location.protocol}//${window.location.host}/assets/vosx-logo.png`;
 
@@ -11,35 +12,63 @@ export const PlatformUserDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'buyers' | 'suppliers'>('buyers');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [loggingOut, setLoggingOut] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
-      try {
-        const [buyersData, suppliersData] = await Promise.all([
-          getAllBuyers(),
-          getAllSuppliers(),
-        ]);
 
+      const [buyersResult, suppliersResult] = await Promise.allSettled([
+        getAllBuyers({ index: 0, limit: 50 }),
+        getAllSuppliers({ index: 0, limit: 50 }),
+      ]);
+
+      const errors: string[] = [];
+
+      if (buyersResult.status === 'fulfilled') {
+        const buyersData = buyersResult.value;
         const resolvedBuyers = Array.isArray(buyersData)
           ? buyersData
           : (buyersData as any)?.buyers || (buyersData as any)?.data || [];
+        setBuyers(resolvedBuyers);
+      } else {
+        console.error('Failed to fetch buyers:', buyersResult.reason);
+        errors.push(buyersResult.reason?.message || 'Failed to load buyers.');
+      }
+
+      if (suppliersResult.status === 'fulfilled') {
+        const suppliersData = suppliersResult.value;
         const resolvedSuppliers = Array.isArray(suppliersData)
           ? suppliersData
           : (suppliersData as any)?.suppliers || (suppliersData as any)?.data || [];
-
-        setBuyers(resolvedBuyers);
         setSuppliers(resolvedSuppliers);
-      } catch (err: any) {
-        console.error('Failed to fetch platform metrics:', err);
-        setError(err.message || 'Failed to retrieve buyers and suppliers list.');
-      } finally {
-        setLoading(false);
+      } else {
+        console.error('Failed to fetch suppliers:', suppliersResult.reason);
+        errors.push(suppliersResult.reason?.message || 'Failed to load suppliers.');
       }
+
+      if (errors.length > 0) {
+        setError(errors.join(' '));
+      }
+      setLoading(false);
     };
     fetchData();
   }, []);
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logoutPlatformUser();
+    } catch (err) {
+      console.error('Logout request failed:', err);
+    } finally {
+      useAuthStore.getState().logout();
+      window.dispatchEvent(new CustomEvent('session:expired'));
+      setLoggingOut(false);
+    }
+  };
 
   const filterList = (list: any[]) => {
     return list.filter((item) => {
@@ -70,6 +99,15 @@ export const PlatformUserDashboard: React.FC = () => {
       {/* Top Header Bar with Left Logo */}
       <header className="plat-top-header">
         <img src={vosx_logo} alt="VOSX" className="plat-top-logo" />
+        <button
+          className="plat-logout-btn"
+          onClick={handleLogout}
+          disabled={loggingOut}
+          title="Log out"
+        >
+          <FaSignOutAlt />
+          {loggingOut ? 'Logging out...' : 'Log Out'}
+        </button>
       </header>
 
       <div className="plat-content-wrapper">
@@ -104,7 +142,6 @@ export const PlatformUserDashboard: React.FC = () => {
 
         {/* Controls Bar */}
         <div className="plat-controls-bar">
-          {/* Tab buttons */}
           <div className="plat-tabs">
             <button
               onClick={() => setActiveTab('buyers')}
@@ -120,7 +157,6 @@ export const PlatformUserDashboard: React.FC = () => {
             </button>
           </div>
 
-          {/* Search bar */}
           <div className="plat-search-wrapper">
             <FaSearch className="plat-search-icon" />
             <input
@@ -143,7 +179,6 @@ export const PlatformUserDashboard: React.FC = () => {
             <span style={{ color: '#4a5568', fontWeight: 500 }}>Loading platform registry...</span>
           </div>
         ) : (
-          /* Cards Grid */
           <>
             {filteredList.length === 0 ? (
               <div className="plat-empty-state">
@@ -167,7 +202,6 @@ export const PlatformUserDashboard: React.FC = () => {
                   const industry = profile.industry;
                   const description = profile.description;
 
-                  // Construct location string
                   const locationParts = [profile.city, profile.state, profile.country].filter(Boolean);
                   const location = locationParts.join(', ') || 'No address specified';
 

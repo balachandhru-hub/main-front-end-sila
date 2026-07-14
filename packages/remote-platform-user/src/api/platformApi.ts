@@ -17,7 +17,6 @@ export interface BusinessProfile {
 export interface Buyer {
   organizationId: string;
   businessProfile?: BusinessProfile;
-  // Fallbacks if shape is flattened
   organizationName?: string;
   email?: string;
   phone?: string;
@@ -31,7 +30,6 @@ export interface Buyer {
 export interface Supplier {
   organizationId: string;
   businessProfile?: BusinessProfile;
-  // Fallbacks if shape is flattened
   organizationName?: string;
   email?: string;
   phone?: string;
@@ -42,12 +40,38 @@ export interface Supplier {
   businessType?: string;
 }
 
-export const getAllBuyers = async (): Promise<Buyer[]> => {
-  const response = await platformInstance.get('/api/v1/buyer/getAllbuyer');
+export interface PaginationParams {
+  index: number;
+  limit: number;
+}
+
+export const getAllBuyers = async (
+  { index, limit }: PaginationParams = { index: 0, limit: 50 }
+): Promise<Buyer[]> => {
+  const response = await platformInstance.post('/api/v1/buyer/getAllbuyer', {
+    index,
+    limit,
+  });
   return response.data;
 };
 
-export const getAllSuppliers = async (): Promise<Supplier[]> => {
-  const response = await platformInstance.get('/api/v1/supplier/getAllSupplier');
+export const getAllSuppliers = async (
+  { index, limit }: PaginationParams = { index: 0, limit: 50 }
+): Promise<Supplier[]> => {
+  const response = await platformInstance.post('/api/v1/supplier/get-all-supplier', {
+    index,
+    limit,
+  });
   return response.data;
+};
+
+export const logoutPlatformUser = async (): Promise<void> => {
+  try {
+    await platformInstance.put('/api/v1/identity/auth/logout');
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
+    throw new Error(`${errMsg} (${status})`);
+  }
 };
