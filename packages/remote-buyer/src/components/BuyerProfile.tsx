@@ -1,8 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Country, State, City } from "country-state-city";
 import "./BuyerProfile.css";
+
+// TODO: Update this import path to match your actual file location
+import { fetchSegments, fetchClasses } from "../api/masterdataApi";
+import type { SelectedProduct, SelectedSubProduct } from "../api/masterdataApi";
 
 interface BusinessInfo {
     industry: string;
@@ -58,9 +62,38 @@ interface Agreements {
     authorizeVerification: boolean;
 }
 
+// ============================================================================
+// UPDATED: Props now include categories data
+// ============================================================================
+interface BuyerProfileProps {
+    onComplete?: (data: {
+        businessInfo: BusinessInfo;
+        registrations: Registration[];
+        bankAccounts: BankAccount[];
+        dispatchLocations: DispatchLocation[];
+        selectedProducts: SelectedProduct[];
+        selectedSubProducts: SelectedSubProduct[];
+    }) => Promise<void> | void;
+    onboardingData?: {
+        organizationName: string;
+        email: string;
+        phone: string;
+        country: string;
+        addressLine1: string;
+        addressLine2: string;
+        city: string;
+        state: string;
+        pinCode: string;
+    } | null;
+}
 
+
+// ============================================================================
+// UPDATED: 5 steps now
+// ============================================================================
 const STEP_LABELS = [
     "Business Information",
+    "Product & Service Categories",
     "Registrations & Certifications",
     "Bank Account Information",
     "Dispatch Locations",
@@ -151,59 +184,293 @@ function maskAccountNumber(accountNumber: string): string {
 }
 
 
+// ============================================================================
+// Teammate's ProductDropdown component (unchanged)
+// ============================================================================
+function ProductDropdown({ 
+    segments, 
+    onSelect,
+    loading
+}: { 
+    segments: any[]; 
+    onSelect: (family: SelectedProduct) => void; 
+    loading: boolean;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [expandedSegments, setExpandedSegments] = useState<number[]>([]);
+    const containerRef = useRef<HTMLDivElement>(null);
 
-export default function BuyerProfile() {
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    const toggleExpand = (segmentId: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setExpandedSegments(prev => 
+            prev.includes(segmentId) ? prev.filter(id => id !== segmentId) : [...prev, segmentId]
+        );
+    };
+
+    return (
+        <div ref={containerRef} className="custom-dropdown-container">
+            <div className="custom-dropdown-trigger" onClick={() => setIsOpen(!isOpen)}>
+                <span>Select product</span>
+                <span>▼</span>
+            </div>
+
+            {isOpen && (
+                <div className="custom-dropdown-menu">
+                    {loading ? (
+                        <div className="custom-dropdown-item-loading">
+                            Loading products...
+                        </div>
+                    ) : segments.length === 0 ? (
+                        <div className="custom-dropdown-item-empty">
+                            No products found.
+                        </div>
+                    ) : (
+                        segments.map((seg) => {
+                            const isExpanded = expandedSegments.includes(seg.segment);
+                            return (
+                                <div key={seg.segment} className="custom-dropdown-item-wrapper">
+                                    <div className="segment-row" onClick={(e) => toggleExpand(seg.segment, e)}>
+                                        <span>{seg.title}</span>
+                                        <button type="button" onClick={(e) => toggleExpand(seg.segment, e)}>
+                                            {isExpanded ? '−' : '+'}
+                                        </button>
+                                    </div>
+                                    {isExpanded && seg.family && (
+                                        <div className="nested-items-container">
+                                            {seg.family.map((fam: any) => (
+                                                <div 
+                                                    key={fam.family} 
+                                                    className="nested-item-row"
+                                                    onClick={() => {
+                                                        onSelect({ segment: seg.segment, family: fam.family, title: fam.title });
+                                                        setIsOpen(false);
+                                                    }}
+                                                >
+                                                    {fam.title} ({fam.family})
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ============================================================================
+// Teammate's SubProductDropdown component (unchanged)
+// ============================================================================
+function SubProductDropdown({ 
+    classes, 
+    onSelect,
+    disabled,
+    loading
+}: { 
+    classes: any[]; 
+    onSelect: (commodity: SelectedSubProduct) => void; 
+    disabled: boolean;
+    loading: boolean;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [expandedClasses, setExpandedClasses] = useState<number[]>([]);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    const toggleExpand = (classId: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setExpandedClasses(prev => 
+            prev.includes(classId) ? prev.filter(id => id !== classId) : [...prev, classId]
+        );
+    };
+
+    return (
+        <div ref={containerRef} className="custom-dropdown-container">
+            <div 
+                className={`custom-dropdown-trigger ${disabled ? 'custom-dropdown-trigger-disabled' : ''}`}
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+            >
+                <span>
+                    {disabled ? 'Please select a product first' : 'Select sub-product'}
+                </span>
+                <span>▼</span>
+            </div>
+
+            {!disabled && isOpen && (
+                <div className="custom-dropdown-menu">
+                    {loading ? (
+                        <div className="custom-dropdown-item-loading">
+                            Loading sub-products...
+                        </div>
+                    ) : classes.length === 0 ? (
+                        <div className="custom-dropdown-item-empty">
+                            No sub-products found.
+                        </div>
+                    ) : (
+                        classes.map((cls) => {
+                            const isExpanded = expandedClasses.includes(cls.class);
+                            return (
+                                <div key={cls.class} className="custom-dropdown-item-wrapper">
+                                    <div className="class-row" onClick={(e) => toggleExpand(cls.class, e)}>
+                                        <span>{cls.title}</span>
+                                        <button type="button" onClick={(e) => toggleExpand(cls.class, e)}>
+                                            {isExpanded ? '−' : '+'}
+                                        </button>
+                                    </div>
+                                    {isExpanded && cls.commodity && (
+                                        <div className="nested-items-container">
+                                            {cls.commodity.map((com: any) => (
+                                                <div 
+                                                    key={com.commodity} 
+                                                    className="nested-item-row"
+                                                    onClick={() => {
+                                                        onSelect({ class: cls.class, commodity: com.commodity, title: com.title });
+                                                        setIsOpen(false);
+                                                    }}
+                                                >
+                                                    {com.title} ({com.commodity})
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+export default function BuyerProfile({ onComplete, onboardingData }: BuyerProfileProps) {
     const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [furthestStep, setFurthestStep] = useState<number>(1);
 
     const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(emptyBusinessInfo);
+    
+    // ============================================================================
+    // NEW: Categories states from teammate's code
+    // ============================================================================
+    const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
+    const [selectedSubProducts, setSelectedSubProducts] = useState<SelectedSubProduct[]>([]);
+    const [activeProduct, setActiveProduct] = useState<SelectedProduct | null>(null);
+    const [segments, setSegments] = useState<any[]>([]);
+    const [loadingSegments, setLoadingSegments] = useState(false);
+    const [classes, setClasses] = useState<any[]>([]);
+    const [loadingClasses, setLoadingClasses] = useState(false);
 
-    const [registrations, setRegistrations] = useState<Registration[]>([
-        {
-            id: makeId(),
-            type: "GST",
-            number: "EXAMPLE0123456",
-            name: "Jon Snow",
-            expiryDate: "04.08.2050",
-            attachmentName: "GST Attachment.pdf",
-        },
-    ]);
+    // Load segments on mount
+    useEffect(() => {
+        const loadSegments = async () => {
+            setLoadingSegments(true);
+            try {
+                const data = await fetchSegments();
+                setSegments(data);
+            } catch (err) {
+                console.error("Failed to load segments:", err);
+            } finally {
+                setLoadingSegments(false);
+            }
+        };
+        loadSegments();
+    }, []);
+
+    // Load classes when active product changes
+    useEffect(() => {
+        if (!activeProduct) {
+            setClasses([]);
+            return;
+        }
+        const loadClasses = async () => {
+            setLoadingClasses(true);
+            try {
+                const data = await fetchClasses(activeProduct.segment, activeProduct.family);
+                setClasses(data);
+            } catch (err) {
+                console.error("Failed to load classes:", err);
+            } finally {
+                setLoadingClasses(false);
+            }
+        };
+        loadClasses();
+    }, [activeProduct]);
+
+    const handleSelectProduct = (product: SelectedProduct) => {
+        if (!selectedProducts.some(p => p.family === product.family)) {
+            setSelectedProducts((prev) => [...prev, product]);
+        }
+        setActiveProduct(product);
+    };
+
+    const handleRemoveProduct = (familyCode: number) => {
+        setSelectedProducts((prev) => {
+            const remaining = prev.filter(p => p.family !== familyCode);
+            if (activeProduct?.family === familyCode) {
+                if (remaining.length > 0) {
+                    setActiveProduct(remaining[remaining.length - 1]);
+                } else {
+                    setActiveProduct(null);
+                }
+            }
+            return remaining;
+        });
+    };
+
+const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
+    if (!selectedSubProducts.some(p => p.commodity === subProduct.commodity)) {
+        setSelectedSubProducts((prev) => [...prev, {
+            ...subProduct,
+            parentSegment: activeProduct?.segment || 0,
+            parentFamily: activeProduct?.family || 0,
+            parentTitle: activeProduct?.title || '',
+        }]);
+    }
+};
+    const handleRemoveSubProduct = (commodityCode: number) => {
+        setSelectedSubProducts((prev) => prev.filter((p) => p.commodity !== commodityCode));
+    };
+
+    const [registrations, setRegistrations] = useState<Registration[]>([]);
     const [registrationDraft, setRegistrationDraft] = useState(emptyRegistrationDraft);
 
-    const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([
-        {
-            id: makeId(),
-            accountHolderName: "Cersei Lannister",
-            bankName: "HDFC Bank",
-            branchName: "",
-            accountNumber: "0000XXXXXX2456",
-            ifscCode: "",
-            swiftCode: "",
-            iban: "",
-            currency: "INR",
-            isPrimary: true,
-        },
-    ]);
+    const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
     const [bankDraft, setBankDraft] = useState(emptyBankDraft);
 
-    const [dispatchLocations, setDispatchLocations] = useState<DispatchLocation[]>([
-        {
-            id: makeId(),
-            locationName: "Chennai Warehouse",
-            contactPerson: "Arya Stark",
-            country: "IN",
-            state: "TN",
-            addressLine1: "",
-            addressLine2: "",
-            city: "Chennai",
-            pinZip: "",
-            contactEmail: "",
-            contactPhone: "9876543210",
-            isDefault: true,
-        },
-    ]);
+    const [dispatchLocations, setDispatchLocations] = useState<DispatchLocation[]>([]);
     const [locationDraft, setLocationDraft] = useState(emptyLocationDraft);
+    const [hasAutoFilled, setHasAutoFilled] = useState(false);
 
     const [agreements, setAgreements] = useState<Agreements>({
         infoAccurate: false,
@@ -212,6 +479,28 @@ export default function BuyerProfile() {
     });
 
     const [submitted, setSubmitted] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Auto-fill delivery location from onboarding data
+    useEffect(() => {
+        if (onboardingData && !hasAutoFilled && dispatchLocations.length === 0) {
+            setLocationDraft({
+                locationName: onboardingData.organizationName || 'Main Office',
+                contactPerson: '',
+                country: onboardingData.country || '',
+                state: onboardingData.state || '',
+                addressLine1: onboardingData.addressLine1 || '',
+                addressLine2: onboardingData.addressLine2 || '',
+                city: onboardingData.city || '',
+                pinZip: onboardingData.pinCode || '',
+                contactEmail: onboardingData.email || '',
+                contactPhone: onboardingData.phone || '',
+                isDefault: true,
+            });
+            setHasAutoFilled(true);
+        }
+    }, [onboardingData, hasAutoFilled, dispatchLocations.length]);
 
     /* ---------------------------- navigation --------------------------- */
 
@@ -237,7 +526,7 @@ export default function BuyerProfile() {
         setBusinessInfo((prev) => ({ ...prev, [field]: value }));
     }
 
-    /* ------------------------- step 2 handlers -------------------------- */
+    /* ------------------------- step 3 handlers (was step 2) -------------------------- */
 
     function updateRegistrationDraft(field: keyof typeof registrationDraft, value: string) {
         setRegistrationDraft((prev) => ({ ...prev, [field]: value }));
@@ -260,7 +549,7 @@ export default function BuyerProfile() {
         setRegistrations((prev) => prev.filter((r) => r.id !== id));
     }
 
-    /* ------------------------- step 3 handlers -------------------------- */
+    /* ------------------------- step 4 handlers (was step 3) -------------------------- */
 
     function updateBankDraft<K extends keyof typeof bankDraft>(field: K, value: (typeof bankDraft)[K]) {
         setBankDraft((prev) => ({ ...prev, [field]: value }));
@@ -276,19 +565,26 @@ export default function BuyerProfile() {
         setBankAccounts((prev) => prev.filter((b) => b.id !== id));
     }
 
-    /* ------------------------- step 4 handlers -------------------------- */
+    /* ------------------------- step 5 handlers (was step 4) -------------------------- */
 
     function updateLocationDraft<K extends keyof typeof locationDraft>(
         field: K,
         value: (typeof locationDraft)[K]
     ) {
+        if (hasAutoFilled) return;
         setLocationDraft((prev) => ({ ...prev, [field]: value }));
     }
 
     function addLocation() {
         if (!locationDraft.locationName || !locationDraft.addressLine1 || !locationDraft.city) return;
-        setDispatchLocations((prev) => [...prev, { id: makeId(), ...locationDraft }]);
+        
+        setDispatchLocations((prev) => [...prev, { 
+            id: makeId(), 
+            ...locationDraft 
+        }]);
+        
         setLocationDraft(emptyLocationDraft);
+        setHasAutoFilled(false);
     }
 
     function removeLocation(id: string) {
@@ -302,10 +598,41 @@ export default function BuyerProfile() {
     const canSubmit =
         agreements.infoAccurate && agreements.agreeTerms && agreements.authorizeVerification;
 
-    function handleSubmitProfile(e: FormEvent) {
+    // ============================================================================
+    // UPDATED: Pass categories data to onComplete
+    // ============================================================================
+    async function handleSubmitProfile(e: FormEvent) {
         e.preventDefault();
         if (!canSubmit) return;
-        setSubmitted(true);
+
+        setError(null);
+        setSubmitting(true);
+
+        try {
+            const finalLocations = [...dispatchLocations];
+            if (locationDraft.locationName && locationDraft.addressLine1 && locationDraft.city) {
+                finalLocations.push({ id: makeId(), ...locationDraft });
+            }
+
+            if (onComplete) {
+                await onComplete({
+    businessInfo,
+    registrations,
+    bankAccounts,
+    dispatchLocations: finalLocations,
+    selectedProducts,
+    selectedSubProducts,
+});
+                setSubmitted(true);
+            } else {
+                setSubmitted(true);
+            }
+        } catch (err: any) {
+            setError(err.message || 'Failed to submit profile. Please try again.');
+            console.error('Error submitting profile:', err);
+        } finally {
+            setSubmitting(false);
+        }
     }
 
     /* ------------------------------------------------------------------ */
@@ -473,10 +800,121 @@ export default function BuyerProfile() {
         );
     }
 
+    // ============================================================================
+    // NEW: Step 2 - Product & Service Categories (from teammate)
+    // ============================================================================
     function renderStep2() {
         return (
             <div className="bp-panel">
-                <h2 className="bp-panel-title">Step 2: Registrations &amp; Certifications</h2>
+                <h2 className="bp-panel-title">Step 2: Product &amp; Service Categories</h2>
+                <div className="bp-divider" />
+                
+                <div className="bp-category-section">
+                    
+                    <div className="bp-field">
+                        <label>
+                            Select Product (Segment &amp; Family)<span className="bp-required">*</span>
+                        </label>
+                        <ProductDropdown 
+                            segments={segments} 
+                            onSelect={handleSelectProduct} 
+                            loading={loadingSegments}
+                        />
+                    </div>
+
+                    <div className="bp-category-section-subtitle">
+                        Selected Products ({selectedProducts.length}) - <em>Click a tag to select it for sub-products</em>
+                    </div>
+                    
+                    <div className="bp-category-tags">
+                        {selectedProducts.length === 0 ? (
+                            <span className="custom-dropdown-item-empty">No products selected yet.</span>
+                        ) : (
+                            selectedProducts.map((p) => {
+                                const isActive = activeProduct?.family === p.family;
+                                return (
+                                    <span 
+                                        key={p.family} 
+                                        className={`bp-category-tag ${isActive ? 'bp-category-tag-active' : ''}`}
+                                        onClick={() => setActiveProduct(p)}
+                                    >
+                                        {p.title} ({p.family})
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleRemoveProduct(p.family);
+                                            }}
+                                        >
+                                            &times;
+                                        </button>
+                                    </span>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    <div className="bp-selector-divider" />
+
+                    <div className="bp-field">
+                        <label>
+                            Select Sub-Product (Class &amp; Commodity)
+                            {activeProduct && <span className="bp-logo-accent"> - for {activeProduct.title}</span>}
+                            <span className="bp-required">*</span>
+                        </label>
+                        <SubProductDropdown 
+                            classes={classes} 
+                            onSelect={handleSelectSubProduct} 
+                            disabled={!activeProduct}
+                            loading={loadingClasses}
+                        />
+                    </div>
+
+                    <div className="bp-category-section-subtitle">
+                        Selected Sub-Products ({selectedSubProducts.length})
+                    </div>
+                    
+                    <div className="bp-category-tags">
+                        {selectedSubProducts.length === 0 ? (
+                            <span className="custom-dropdown-item-empty">No sub-products selected yet.</span>
+                        ) : (
+                            selectedSubProducts.map((p) => (
+                                <span 
+                                    key={p.commodity} 
+                                    className="bp-category-tag bp-category-tag-active-sub"
+                                >
+                                    {p.title} ({p.commodity})
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveSubProduct(p.commodity)}
+                                    >
+                                        &times;
+                                    </button>
+                                </span>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                <div className="bp-actions bp-actions-right">
+                    <button type="button" className="bp-btn bp-btn-secondary" onClick={handleBack}>
+                        Back
+                    </button>
+                    <button type="button" className="bp-btn bp-btn-primary" onClick={handleNext}>
+                        Next
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // ============================================================================
+    // Step 3: Registrations (was step 2)
+    // ============================================================================
+    function renderStep3() {
+        return (
+            <div className="bp-panel">
+                <h2 className="bp-panel-title">Step 3: Registrations &amp; Certifications</h2>
                 <div className="bp-divider" />
                 <div className="bp-form-grid">
                     <div className="bp-field">
@@ -609,10 +1047,13 @@ export default function BuyerProfile() {
         );
     }
 
-    function renderStep3() {
+    // ============================================================================
+    // Step 4: Bank Accounts (was step 3)
+    // ============================================================================
+    function renderStep4() {
         return (
             <div className="bp-panel">
-                <h2 className="bp-panel-title">Step 3: Bank Account Information</h2>
+                <h2 className="bp-panel-title">Step 4: Bank Account Information</h2>
                 <div className="bp-divider" />
                 <div className="bp-form-grid">
                     <div className="bp-field">
@@ -782,11 +1223,31 @@ export default function BuyerProfile() {
         );
     }
 
-    function renderStep4() {
+    // ============================================================================
+    // Step 5: Dispatch Locations (was step 4)
+    // ============================================================================
+    function renderStep5() {
+        const isReadOnly = hasAutoFilled;
+
         return (
             <div className="bp-panel">
-                <h2 className="bp-panel-title">Step 4: Dispatch Locations</h2>
+                <h2 className="bp-panel-title">Step 5: Dispatch Locations</h2>
                 <div className="bp-divider" />
+                
+                {isReadOnly && (
+                    <div style={{ 
+                        backgroundColor: '#e7f3ff', 
+                        border: '1px solid #0d6efd', 
+                        borderRadius: '6px', 
+                        padding: '10px 15px', 
+                        marginBottom: '15px',
+                        color: '#084298',
+                        fontSize: '0.9rem'
+                    }}>
+                        ℹ️ These fields are auto-filled from your onboarding details. Click "+ Add Location" to confirm, then you can add more locations manually.
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmitProfile}>
                     <div className="bp-form-grid">
                         <div className="bp-field">
@@ -798,6 +1259,8 @@ export default function BuyerProfile() {
                                 type="text"
                                 value={locationDraft.locationName}
                                 onChange={(e) => updateLocationDraft("locationName", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -808,6 +1271,8 @@ export default function BuyerProfile() {
                                 type="text"
                                 value={locationDraft.contactPerson}
                                 onChange={(e) => updateLocationDraft("contactPerson", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -823,6 +1288,8 @@ export default function BuyerProfile() {
                                     updateLocationDraft("state", "");
                                     updateLocationDraft("city", "");
                                 }}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             >
                                 <option value="">Select Country</option>
                                 {Country.getAllCountries().map((c) => (
@@ -844,7 +1311,8 @@ export default function BuyerProfile() {
                                     updateLocationDraft("state", e.target.value);
                                     updateLocationDraft("city", "");
                                 }}
-                                disabled={!locationDraft.country}
+                                disabled={isReadOnly || !locationDraft.country}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             >
                                 <option value="">Select State</option>
                                 {locationDraft.country && State.getStatesOfCountry(locationDraft.country).map((s) => (
@@ -864,6 +1332,8 @@ export default function BuyerProfile() {
                                 type="text"
                                 value={locationDraft.addressLine1}
                                 onChange={(e) => updateLocationDraft("addressLine1", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -874,6 +1344,8 @@ export default function BuyerProfile() {
                                 type="text"
                                 value={locationDraft.addressLine2}
                                 onChange={(e) => updateLocationDraft("addressLine2", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -885,7 +1357,8 @@ export default function BuyerProfile() {
                                 id="city"
                                 value={locationDraft.city}
                                 onChange={(e) => updateLocationDraft("city", e.target.value)}
-                                disabled={!locationDraft.state}
+                                disabled={isReadOnly || !locationDraft.state}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             >
                                 <option value="">Select City</option>
                                 {locationDraft.state && City.getCitiesOfState(locationDraft.country, locationDraft.state).map((c) => (
@@ -905,6 +1378,8 @@ export default function BuyerProfile() {
                                 type="text"
                                 value={locationDraft.pinZip}
                                 onChange={(e) => updateLocationDraft("pinZip", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -915,6 +1390,8 @@ export default function BuyerProfile() {
                                 type="email"
                                 value={locationDraft.contactEmail}
                                 onChange={(e) => updateLocationDraft("contactEmail", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -925,20 +1402,27 @@ export default function BuyerProfile() {
                                 type="tel"
                                 value={locationDraft.contactPhone}
                                 onChange={(e) => updateLocationDraft("contactPhone", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
                     </div>
 
                     <div className="bp-actions bp-actions-between">
-                        <label className="bp-checkbox-label">
+                        <label className="bp-checkbox-label" style={isReadOnly ? { opacity: 0.6, pointerEvents: 'none' } : {}}>
                             <input
                                 type="checkbox"
                                 checked={locationDraft.isDefault}
                                 onChange={(e) => updateLocationDraft("isDefault", e.target.checked)}
+                                disabled={isReadOnly}
                             />
                             Default Dispatch Location
                         </label>
-                        <button type="button" className="bp-btn bp-btn-primary" onClick={addLocation}>
+                        <button 
+                            type="button" 
+                            className="bp-btn bp-btn-primary" 
+                            onClick={addLocation}
+                        >
                             + Add Location
                         </button>
                     </div>
@@ -1015,12 +1499,18 @@ export default function BuyerProfile() {
                         </label>
                     </div>
 
+                    {error && (
+                        <div style={{ color: '#dc2626', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '6px', marginBottom: '15px', fontSize: '0.9rem', border: '1px solid #f87171' }}>
+                            {error}
+                        </div>
+                    )}
+
                     <div className="bp-actions bp-actions-right">
-                        <button type="button" className="bp-btn bp-btn-secondary" onClick={handleBack}>
+                        <button type="button" className="bp-btn bp-btn-secondary" onClick={handleBack} disabled={submitting}>
                             Back
                         </button>
-                        <button type="submit" className="bp-btn bp-btn-primary" disabled={!canSubmit}>
-                            Submit Profile
+                        <button type="submit" className="bp-btn bp-btn-primary" disabled={!canSubmit || submitting}>
+                            {submitting ? 'Submitting...' : 'Submit Profile'}
                         </button>
                     </div>
                 </form>
@@ -1038,6 +1528,8 @@ export default function BuyerProfile() {
                 return renderStep3();
             case 4:
                 return renderStep4();
+            case 5:
+                return renderStep5();
             default:
                 return null;
         }

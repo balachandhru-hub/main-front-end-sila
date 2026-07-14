@@ -13,6 +13,19 @@ const supplierInstance = axios.create({
   withCredentials: true,
 });
 
+supplierInstance.interceptors.request.use(
+  (config) => {
+    const isLoginOrRefresh = config.url?.includes('/login') || config.url?.includes('/refresh-token');
+    if (isLoginOrRefresh && config.headers) {
+      delete config.headers['X-API-Key'];
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 let isRefreshing = false;
 let failedQueue: any[] = [];
 

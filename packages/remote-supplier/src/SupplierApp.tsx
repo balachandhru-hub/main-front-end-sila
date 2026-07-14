@@ -57,14 +57,14 @@ const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onComple
           registrationName: reg.name,
           asset: reg.certificateFile
             ? {
-                entityType: 'SUPPLIER',
-                entityId: orgId,
-                assetType: 'REGISTRATION_DOCUMENT',
-                fileName: reg.certificateFile.name,
-                contentType: reg.certificateFile.type,
-                isSingletonAsset: false,
-                fileBytes: fileBytes,
-              }
+              entityType: 'SUPPLIER',
+              entityId: '7b75d5fd-a87d-4fca-a9a9-c6e781f8d431',
+              assetType: reg.type,
+              fileName: reg.certificateFile.name,
+              contentType: reg.certificateFile.type,
+              isSingletonAsset: false,
+              fileBytes: fileBytes,
+            }
             : null,
           expiryDate: reg.expiryDate ? new Date(reg.expiryDate).toISOString() : null,
         };
@@ -130,6 +130,11 @@ const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onComple
     // 6. Post profile to server via api helper
     await createSupplierProfile(payload);
 
+    // Save organization name
+    if (payload.businessProfile.organizationName) {
+      sessionStorage.setItem('vosox_organization_name', payload.businessProfile.organizationName);
+    }
+
     // 7. Update profileComplete status
     sessionStorage.setItem('vosox_profile_complete', 'true');
     onCompleteSuccess();
@@ -151,14 +156,12 @@ const SupplierApp: React.FC = () => {
         return;
       }
 
-      const orgId = useAuthStore.getState().organizationId || sessionStorage.getItem('vosox_organization_id');
-      if (!orgId) {
-        setProfileComplete(false);
-        return;
-      }
-
       try {
-        await getSupplierProfile(orgId);
+        const profile = await getSupplierProfile();
+        // Save organization name
+        if (profile?.businessProfile?.organizationName) {
+          sessionStorage.setItem('vosox_organization_name', profile.businessProfile.organizationName);
+        }
         // If the profile is retrieved successfully, it exists and is complete
         sessionStorage.setItem('vosox_profile_complete', 'true');
         setProfileComplete(true);
