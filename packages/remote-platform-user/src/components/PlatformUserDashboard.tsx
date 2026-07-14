@@ -1,60 +1,141 @@
-import React, { useState, useEffect } from 'react';
-import { getAllBuyers, getAllSuppliers, logoutPlatformUser, type Buyer, type Supplier } from '../api/platformApi';
+import React, { useState, useEffect, useCallback } from 'react';
+import { getAllBuyers, getAllSuppliers, logoutPlatformUser } from '../api/platformApi';
+import type { BuyerDto, SupplierDto, BusinessProfileDto, PlatformEntityType, PlatformRecordDto } from '../dto/platformDto';
 import { useAuthStore } from '../../../host-app/src/store/useAuthStore';
-import { FaUser, FaBuilding, FaEnvelope, FaPhone, FaGlobe, FaMapMarkerAlt, FaSearch, FaSignOutAlt } from 'react-icons/fa';
+import {
+  FaUser,
+  FaBuilding,
+  FaEnvelope,
+  FaPhone,
+  FaGlobe,
+  FaMapMarkerAlt,
+  FaSearch,
+  FaSignOutAlt,
+  FaChevronLeft,
+  FaChevronRight,
+} from 'react-icons/fa';
+import { PlatformUserPopup } from './PlatformUserPopup';
 import './PlatformUserDashboard.css';
 const vosx_logo = `${window.location.protocol}//${window.location.host}/assets/vosx-logo.png`;
 
+const PAGE_SIZE = 8;
+
 export const PlatformUserDashboard: React.FC = () => {
-  const [buyers, setBuyers] = useState<Buyer[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [buyers, setBuyers] = useState<BuyerDto[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [sectionLoading, setSectionLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'buyers' | 'suppliers'>('buyers');
+  const [activeTab, setActiveTab] = useState<PlatformEntityType>('buyers');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loggingOut, setLoggingOut] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
+  const [buyerIndex, setBuyerIndex] = useState<number>(0);
+  const [supplierIndex, setSupplierIndex] = useState<number>(0);
+  const [buyersHasMore, setBuyersHasMore] = useState<boolean>(false);
+  const [suppliersHasMore, setSuppliersHasMore] = useState<boolean>(false);
 
+  const [selectedDetail, setSelectedDetail] = useState<{ type: PlatformEntityType; record: PlatformRecordDto } | null>(
+    null
+  );
+
+  const loadBuyers = useCallback(async (index: number) => {
+    setSectionLoading(true);
+    try {
+      const data = await getAllBuyers({ index, limit: PAGE_SIZE });
+      const resolved = Array.isArray(data) ? data : (data as any)?.buyers || (data as any)?.data || [];
+      setBuyers(resolved);
+      setBuyersHasMore(resolved.length === PAGE_SIZE);
+      setError(null);
+    } catch (err: any) {
+      console.error('Failed to fetch buyers:', err);
+      setError(err.message || 'Failed to load buyers.');
+    } finally {
+      setSectionLoading(false);
+    }
+  }, []);
+
+  const loadSuppliers = useCallback(async (index: number) => {
+    setSectionLoading(true);
+    try {
+      const data = await getAllSuppliers({ index, limit: PAGE_SIZE });
+      const resolved = Array.isArray(data) ? data : (data as any)?.suppliers || (data as any)?.data || [];
+      setSuppliers(resolved);
+      setSuppliersHasMore(resolved.length === PAGE_SIZE);
+      setError(null);
+    } catch (err: any) {
+      console.error('Failed to fetch suppliers:', err);
+      setError(err.message || 'Failed to load suppliers.');
+    } finally {
+      setSectionLoading(false);
+    }
+  }, []);
+
+  // Initial load: fetch both lists' first page
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
       const [buyersResult, suppliersResult] = await Promise.allSettled([
-        getAllBuyers({ index: 0, limit: 50 }),
-        getAllSuppliers({ index: 0, limit: 50 }),
+        getAllBuyers({ index: 0, limit: PAGE_SIZE }),
+        getAllSuppliers({ index: 0, limit: PAGE_SIZE }),
       ]);
 
       const errors: string[] = [];
 
       if (buyersResult.status === 'fulfilled') {
-        const buyersData = buyersResult.value;
-        const resolvedBuyers = Array.isArray(buyersData)
-          ? buyersData
-          : (buyersData as any)?.buyers || (buyersData as any)?.data || [];
-        setBuyers(resolvedBuyers);
+        const resolved = Array.isArray(buyersResult.value)
+          ? buyersResult.value
+          : (buyersResult.value as any)?.buyers || (buyersResult.value as any)?.data || [];
+        setBuyers(resolved);
+        setBuyersHasMore(resolved.length === PAGE_SIZE);
       } else {
         console.error('Failed to fetch buyers:', buyersResult.reason);
         errors.push(buyersResult.reason?.message || 'Failed to load buyers.');
       }
 
       if (suppliersResult.status === 'fulfilled') {
-        const suppliersData = suppliersResult.value;
-        const resolvedSuppliers = Array.isArray(suppliersData)
-          ? suppliersData
-          : (suppliersData as any)?.suppliers || (suppliersData as any)?.data || [];
-        setSuppliers(resolvedSuppliers);
+        const resolved = Array.isArray(suppliersResult.value)
+          ? suppliersResult.value
+          : (suppliersResult.value as any)?.suppliers || (suppliersResult.value as any)?.data || [];
+        setSuppliers(resolved);
+        setSuppliersHasMore(resolved.length === PAGE_SIZE);
       } else {
         console.error('Failed to fetch suppliers:', suppliersResult.reason);
         errors.push(suppliersResult.reason?.message || 'Failed to load suppliers.');
       }
 
-      if (errors.length > 0) {
-        setError(errors.join(' '));
-      }
+      if (errors.length > 0) setError(errors.join(' '));
       setLoading(false);
-    };
-    fetchData();
+    })();
   }, []);
+
+  const handleNextPage = () => {
+    if (activeTab === 'buyers') {
+      if (!buyersHasMore) return;
+      const nextIndex = buyerIndex + 1;
+      setBuyerIndex(nextIndex);
+      loadBuyers(nextIndex);
+    } else {
+      if (!suppliersHasMore) return;
+      const nextIndex = supplierIndex + 1;
+      setSupplierIndex(nextIndex);
+      loadSuppliers(nextIndex);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (activeTab === 'buyers') {
+      if (buyerIndex === 0) return;
+      const prevIndex = buyerIndex - 1;
+      setBuyerIndex(prevIndex);
+      loadBuyers(prevIndex);
+    } else {
+      if (supplierIndex === 0) return;
+      const prevIndex = supplierIndex - 1;
+      setSupplierIndex(prevIndex);
+      loadSuppliers(prevIndex);
+    }
+  };
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -70,9 +151,9 @@ export const PlatformUserDashboard: React.FC = () => {
     }
   };
 
-  const filterList = (list: any[]) => {
+  const filterList = (list: PlatformRecordDto[]) => {
     return list.filter((item) => {
-      const profile = item.businessProfile || item;
+      const profile = item.businessProfile || ({} as BusinessProfileDto);
       const name = (profile.organizationName || '').toLowerCase();
       const email = (profile.email || '').toLowerCase();
       const industry = (profile.industry || '').toLowerCase();
@@ -93,18 +174,15 @@ export const PlatformUserDashboard: React.FC = () => {
   };
 
   const filteredList = activeTab === 'buyers' ? filterList(buyers) : filterList(suppliers);
+  const currentIndex = activeTab === 'buyers' ? buyerIndex : supplierIndex;
+  const currentHasMore = activeTab === 'buyers' ? buyersHasMore : suppliersHasMore;
 
   return (
     <div className="plat-dashboard">
       {/* Top Header Bar with Left Logo */}
       <header className="plat-top-header">
         <img src={vosx_logo} alt="VOSX" className="plat-top-logo" />
-        <button
-          className="plat-logout-btn"
-          onClick={handleLogout}
-          disabled={loggingOut}
-          title="Log out"
-        >
+        <button className="plat-logout-btn" onClick={handleLogout} disabled={loggingOut} title="Log out">
           <FaSignOutAlt />
           {loggingOut ? 'Logging out...' : 'Log Out'}
         </button>
@@ -125,7 +203,7 @@ export const PlatformUserDashboard: React.FC = () => {
             </div>
             <div className="plat-stat-info">
               <span className="plat-stat-value">{loading ? '...' : buyers.length}</span>
-              <span className="plat-stat-label">Total Registered Buyers</span>
+              <span className="plat-stat-label">Buyers On This Page</span>
             </div>
           </div>
 
@@ -135,7 +213,7 @@ export const PlatformUserDashboard: React.FC = () => {
             </div>
             <div className="plat-stat-info">
               <span className="plat-stat-value">{loading ? '...' : suppliers.length}</span>
-              <span className="plat-stat-label">Total Registered Suppliers</span>
+              <span className="plat-stat-label">Suppliers On This Page</span>
             </div>
           </div>
         </section>
@@ -161,7 +239,7 @@ export const PlatformUserDashboard: React.FC = () => {
             <FaSearch className="plat-search-icon" />
             <input
               type="text"
-              placeholder={`Search ${activeTab}...`}
+              placeholder={`Search ${activeTab} on this page...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="plat-search-input"
@@ -182,18 +260,18 @@ export const PlatformUserDashboard: React.FC = () => {
           <>
             {filteredList.length === 0 ? (
               <div className="plat-empty-state">
-                <div className="plat-empty-icon">
-                  {activeTab === 'buyers' ? <FaUser /> : <FaBuilding />}
-                </div>
+                <div className="plat-empty-icon">{activeTab === 'buyers' ? <FaUser /> : <FaBuilding />}</div>
                 <h3 className="plat-empty-title">No {activeTab} found</h3>
                 <p className="plat-empty-desc">
-                  {searchQuery ? `No results matching "${searchQuery}"` : `There are currently no registered ${activeTab} on the platform.`}
+                  {searchQuery
+                    ? `No results matching "${searchQuery}" on this page.`
+                    : `There are currently no registered ${activeTab} on this page.`}
                 </p>
               </div>
             ) : (
-              <div className="plat-cards-grid">
+              <div className={`plat-cards-grid ${sectionLoading ? 'plat-cards-grid-loading' : ''}`}>
                 {filteredList.map((item) => {
-                  const profile = item.businessProfile || item;
+                  const profile = item.businessProfile || ({} as BusinessProfileDto);
                   const name = profile.organizationName || 'Unnamed Business';
                   const email = profile.email || 'No email provided';
                   const phone = profile.phone || 'No phone number';
@@ -210,9 +288,7 @@ export const PlatformUserDashboard: React.FC = () => {
                       <div className="plat-card-header">
                         <div className="plat-card-title-row">
                           <h3 className="plat-card-name">{name}</h3>
-                          {bizType && (
-                            <span className="plat-badge plat-badge-type">{bizType}</span>
-                          )}
+                          {bizType && <span className="plat-badge plat-badge-type">{bizType}</span>}
                         </div>
                         {industry && (
                           <div style={{ marginTop: '4px' }}>
@@ -230,7 +306,9 @@ export const PlatformUserDashboard: React.FC = () => {
                       <div className="plat-card-details">
                         <div className="plat-detail-item">
                           <FaEnvelope className="plat-detail-icon" />
-                          <span className="plat-detail-text" title={email}>{email}</span>
+                          <span className="plat-detail-text" title={email}>
+                            {email}
+                          </span>
                         </div>
 
                         <div className="plat-detail-item">
@@ -240,7 +318,9 @@ export const PlatformUserDashboard: React.FC = () => {
 
                         <div className="plat-detail-item">
                           <FaMapMarkerAlt className="plat-detail-icon" />
-                          <span className="plat-detail-text" title={location}>{location}</span>
+                          <span className="plat-detail-text" title={location}>
+                            {location}
+                          </span>
                         </div>
 
                         {website && (
@@ -259,17 +339,47 @@ export const PlatformUserDashboard: React.FC = () => {
                         )}
                       </div>
 
-                      <div className="plat-card-footer">
-                        ID: {item.organizationId}
+                      <div className="plat-card-footer plat-card-footer-actions">
+                        <span>ID: {item.organizationId}</span>
+                        <button
+                          className="plat-see-more-btn"
+                          onClick={() => setSelectedDetail({ type: activeTab, record: item })}
+                        >
+                          See More Details
+                        </button>
                       </div>
                     </div>
                   );
                 })}
               </div>
             )}
+
+            {/* Pagination Controls */}
+            <div className="plat-pagination-bar">
+              <button className="plat-pagination-btn" onClick={handlePrevPage} disabled={currentIndex === 0 || sectionLoading}>
+                <FaChevronLeft />
+                Previous
+              </button>
+              <span className="plat-pagination-label">
+                Page {currentIndex + 1}
+                {sectionLoading && ' · Loading...'}
+              </span>
+              <button className="plat-pagination-btn" onClick={handleNextPage} disabled={!currentHasMore || sectionLoading}>
+                Next
+                <FaChevronRight />
+              </button>
+            </div>
           </>
         )}
       </div>
+
+      {selectedDetail && (
+        <PlatformUserPopup
+          type={selectedDetail.type}
+          record={selectedDetail.record}
+          onClose={() => setSelectedDetail(null)}
+        />
+      )}
     </div>
   );
 };
