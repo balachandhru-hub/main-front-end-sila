@@ -78,7 +78,7 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, on
         website: data.businessInfo.website || '',
         description: data.businessInfo.companyDescription || '',
         status: 'PENDING',
-        buyerCategories: buyerCategories, // ✅ NEW: mapped from categories
+        buyerCategories: buyerCategories,
         buyerBankAccounts: data.bankAccounts.map((b: any) => ({
           accountHolderName: b.accountHolderName,
           bankName: b.bankName,
@@ -96,9 +96,9 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, on
           registrationType: r.type,
           registrationDocument: {
             entityType: 'BUYER',
-            entityId: orgId,
+            entityId: 'a266daa7-a80e-4463-abcc-fbe11294c051',
             assetType: r.type,
-            fileBytes: '', // TODO: handle file upload
+            fileBytes: '', 
             fileName: r.attachmentName || '',
             contentType: 'application/pdf',
             isSingletonAsset: true,
