@@ -1,53 +1,28 @@
 import platformInstance from './platformInstance';
+import type {
+  BuyerDto,
+  SupplierDto,
+  PaginationParamsDto,
+  AssetDownloadResponseDto,
+} from '../dto/platformDto';
 
-export interface BusinessProfile {
-  organizationName?: string;
-  email?: string;
-  phone?: string;
-  country?: string;
-  city?: string;
-  state?: string;
-  pinCode?: string;
-  industry?: string;
-  businessType?: string;
-  description?: string;
-  website?: string;
-}
-
-export interface Buyer {
-  organizationId: string;
-  businessProfile?: BusinessProfile;
-  organizationName?: string;
-  email?: string;
-  phone?: string;
-  country?: string;
-  city?: string;
-  state?: string;
-  industry?: string;
-  businessType?: string;
-}
-
-export interface Supplier {
-  organizationId: string;
-  businessProfile?: BusinessProfile;
-  organizationName?: string;
-  email?: string;
-  phone?: string;
-  country?: string;
-  city?: string;
-  state?: string;
-  industry?: string;
-  businessType?: string;
-}
-
-export interface PaginationParams {
-  index: number;
-  limit: number;
-}
+// Re-export DTO types under their existing consumer-facing names so
+// components that already import { type Buyer, type Supplier } keep working.
+export type {
+  BuyerDto as Buyer,
+  SupplierDto as Supplier,
+  BusinessProfileDto as BusinessProfile,
+  RegistrationDto as Registration,
+  BankAccountDto as BankAccount,
+  DispatchLocationDto as DispatchLocation,
+  AssetDto as Asset,
+  AssetDownloadResponseDto as AssetDownloadResponse,
+  PaginationParamsDto as PaginationParams,
+} from '../dto/platformDto';
 
 export const getAllBuyers = async (
-  { index, limit }: PaginationParams = { index: 0, limit: 50 }
-): Promise<Buyer[]> => {
+  { index, limit }: PaginationParamsDto = { index: 0, limit: 50 }
+): Promise<BuyerDto[]> => {
   const response = await platformInstance.post('/api/v1/buyer/getAllbuyer', {
     index,
     limit,
@@ -56,8 +31,8 @@ export const getAllBuyers = async (
 };
 
 export const getAllSuppliers = async (
-  { index, limit }: PaginationParams = { index: 0, limit: 50 }
-): Promise<Supplier[]> => {
+  { index, limit }: PaginationParamsDto = { index: 0, limit: 50 }
+): Promise<SupplierDto[]> => {
   const response = await platformInstance.post('/api/v1/supplier/get-all-supplier', {
     index,
     limit,
@@ -72,6 +47,30 @@ export const logoutPlatformUser = async (): Promise<void> => {
     const status = error.response?.status || 'unknown';
     const responseData = error.response?.data;
     const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+export const downloadBuyerAsset = async (assetId: string): Promise<AssetDownloadResponseDto> => {
+  try {
+    const response = await platformInstance.get(`/api/v1/buyer/asset/${assetId}`);
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to fetch document.';
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+export const downloadSupplierAsset = async (assetId: string): Promise<AssetDownloadResponseDto> => {
+  try {
+    const response = await platformInstance.get(`/api/v1/supplier/asset/${assetId}`);
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to fetch document.';
     throw new Error(`${errMsg} (${status})`);
   }
 };
