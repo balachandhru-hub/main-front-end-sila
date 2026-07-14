@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import SupplierDashboard from './components/SupplierDashboard';
+import Invitations from './components/Invitations';
 import SupplierOnboardingForm, {
   fileToBase64,
   type Step1Data,
@@ -35,17 +36,16 @@ const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onComple
       console.warn('Failed to fetch onboarding info, using fallbacks', e);
     }
 
-    const defaultLocation = data.step4.locations.find((l: DispatchLocationEntry) => l.isDefault) || data.step4.locations[0];
 
     const orgName = onboardingInfo?.organizationName;
-    const orgEmail = onboardingInfo?.email || defaultLocation?.contactEmail;
-    const orgPhone = onboardingInfo?.phone || defaultLocation?.contactPhone;
-    const orgCountry = onboardingInfo?.country || defaultLocation?.country;
-    const orgAddress1 = onboardingInfo?.addressLine1 || defaultLocation?.addressLine1;
-    const orgAddress2 = onboardingInfo?.addressLine2 || defaultLocation?.addressLine2;
-    const orgCity = onboardingInfo?.city || defaultLocation?.city;
-    const orgState = onboardingInfo?.state || defaultLocation?.state;
-    const orgPin = onboardingInfo?.pinCode || defaultLocation?.pinCode;
+    const orgEmail = onboardingInfo?.email;
+    const orgPhone = onboardingInfo?.phone;
+    const orgCountry = onboardingInfo?.country;
+    const orgAddress1 = onboardingInfo?.addressLine1;
+    const orgAddress2 = onboardingInfo?.addressLine2;
+    const orgCity = onboardingInfo?.city;
+    const orgState = onboardingInfo?.state;
+    const orgPin = onboardingInfo?.pinCode;
 
     // 2. Map registrations, converting files to base64
     const mappedRegistrations = await Promise.all(
@@ -128,17 +128,18 @@ const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onComple
     };
 
     // 6. Post profile to server via api helper
-    await createSupplierProfile(payload);
+    const response = await createSupplierProfile(payload);
 
-    // Save organization name
-    if (payload.businessProfile.organizationName) {
-      sessionStorage.setItem('vosox_organization_name', payload.businessProfile.organizationName);
+    if (response && response.status === 200) {
+      // Save organization name
+      if (payload.businessProfile.organizationName) {
+        sessionStorage.setItem('vosox_organization_name', payload.businessProfile.organizationName);
+      }
+      // 7. Update profileComplete status
+      sessionStorage.setItem('vosox_profile_complete', 'true');
+      onCompleteSuccess();
+      navigate('../dashboard', { replace: true });
     }
-
-    // 7. Update profileComplete status
-    sessionStorage.setItem('vosox_profile_complete', 'true');
-    onCompleteSuccess();
-    navigate('../dashboard', { replace: true });
   };
 
   return <SupplierOnboardingForm onComplete={handleOnboardingComplete} />;
@@ -158,6 +159,10 @@ const SupplierApp: React.FC = () => {
 
       try {
         const profile = await getSupplierProfile();
+        if (!profile) {
+          setProfileComplete(false);
+          return;
+        }
         // Save organization name
         if (profile?.businessProfile?.organizationName) {
           sessionStorage.setItem('vosox_organization_name', profile.businessProfile.organizationName);
@@ -204,6 +209,10 @@ const SupplierApp: React.FC = () => {
       <Route
         path="dashboard"
         element={profileComplete ? <SupplierDashboard /> : <Navigate to="onboarding" replace />}
+      />
+      <Route
+        path="invitations"
+        element={profileComplete ? <Invitations /> : <Navigate to="onboarding" replace />}
       />
       <Route path="*" element={<Navigate to={profileComplete ? 'dashboard' : 'onboarding'} replace />} />
     </Routes>

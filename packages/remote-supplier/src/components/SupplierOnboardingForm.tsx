@@ -168,9 +168,15 @@ interface Step1BusinessInfoProps {
   data: Step1Data;
   onChange: (data: Step1Data) => void;
   onValidationChange?: (isValid: boolean) => void;
+  onboardingData?: any;
 }
 
-const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({ data, onChange, onValidationChange }) => {
+const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
+  data,
+  onChange,
+  onValidationChange,
+  onboardingData,
+}) => {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const handleField = <K extends keyof Step1Data>(field: K, value: Step1Data[K]) => {
@@ -197,117 +203,187 @@ const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({ data, onChange, o
   const businessTypeError = getFieldError('businessType');
 
   return (
-    <div className="vob-card">
-      <h2 className="vob-title">Step 1: Business Information</h2>
+    <>
+      <div className="vob-card">
+        <h2 className="vob-title">Step 1: Business Information</h2>
 
-      <div className="vob-grid">
-        <div className="vob-field">
-          <label className="vob-label vob-label--required">Industry</label>
-          <select
-            data-field="industry"
-            className={`vob-select ${industryError ? 'vob-select--error' : ''}`}
-            value={data.industry}
-            onChange={(e) => handleField('industry', e.target.value)}
-            onBlur={() => setTouched((prev) => ({ ...prev, industry: true }))}
-          >
-            <option value="">Select Industry</option>
-            {INDUSTRY_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
-          </select>
-          {industryError && <span className="vob-error-text">{industryError}</span>}
-        </div>
+        <div className="vob-grid">
+          <div className="vob-field">
+            <label className="vob-label vob-label--required">Industry</label>
+            <select
+              data-field="industry"
+              className={`vob-select ${industryError ? 'vob-select--error' : ''}`}
+              value={data.industry}
+              onChange={(e) => handleField('industry', e.target.value)}
+              onBlur={() => setTouched((prev) => ({ ...prev, industry: true }))}
+            >
+              <option value="">Select Industry</option>
+              {INDUSTRY_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+            {industryError && <span className="vob-error-text">{industryError}</span>}
+          </div>
 
-        <div className="vob-field">
-          <label className="vob-label vob-label--required">Business Type</label>
-          <select
-            data-field="businessType"
-            className={`vob-select ${businessTypeError ? 'vob-select--error' : ''}`}
-            value={data.businessType}
-            onChange={(e) => handleField('businessType', e.target.value)}
-            onBlur={() => setTouched((prev) => ({ ...prev, businessType: true }))}
-          >
-            <option value="">Select Business Type</option>
-            {BUSINESS_TYPE_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
-          </select>
-          {businessTypeError && <span className="vob-error-text">{businessTypeError}</span>}
-        </div>
+          <div className="vob-field">
+            <label className="vob-label vob-label--required">Business Type</label>
+            <select
+              data-field="businessType"
+              className={`vob-select ${businessTypeError ? 'vob-select--error' : ''}`}
+              value={data.businessType}
+              onChange={(e) => handleField('businessType', e.target.value)}
+              onBlur={() => setTouched((prev) => ({ ...prev, businessType: true }))}
+            >
+              <option value="">Select Business Type</option>
+              {BUSINESS_TYPE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+            {businessTypeError && <span className="vob-error-text">{businessTypeError}</span>}
+          </div>
 
-        <div className="vob-field">
-          <label className="vob-label">Employee Count</label>
-          <input
-            type="number"
-            min="0"
-            placeholder="Employee Count"
-            className="vob-input"
-            value={data.employeeCount}
-            onChange={(e) => handleField('employeeCount', e.target.value)}
-          />
-        </div>
+          <div className="vob-field">
+            <label className="vob-label">Employee Count</label>
+            <input
+              type="number"
+              min="0"
+              placeholder="Employee Count"
+              className="vob-input"
+              value={data.employeeCount}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (/^\d*$/.test(val)) {
+                  handleField('employeeCount', val);
+                }
+              }}
+            />
+          </div>
 
-        <div className="vob-field">
-          <label className="vob-label">Annual Turnover</label>
-          <input
-            type="text"
-            placeholder="Annual Turnover"
-            className="vob-input"
-            value={data.annualTurnover}
-            onChange={(e) => handleField('annualTurnover', e.target.value)}
-          />
-        </div>
+          <div className="vob-field">
+            <label className="vob-label">Annual Turnover</label>
+            <input
+              type="text"
+              placeholder="Annual Turnover"
+              className="vob-input"
+              value={data.annualTurnover}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (/^\d*\.?\d*$/.test(val)) {
+                  handleField('annualTurnover', val);
+                }
+              }}
+            />
+          </div>
 
-        <div className="vob-field">
-          <label className="vob-label">Currency</label>
-          <select
-            className="vob-select"
-            value={data.currency}
-            onChange={(e) => handleField('currency', e.target.value)}
-          >
-            {CURRENCY_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
-          </select>
-        </div>
+          <div className="vob-field">
+            <label className="vob-label">Currency</label>
+            <select
+              className="vob-select"
+              value={data.currency}
+              onChange={(e) => handleField('currency', e.target.value)}
+            >
+              {CURRENCY_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
 
-        <div className="vob-field">
-          <label className="vob-label">Year Established</label>
-          <select
-            className="vob-select"
-            value={data.yearEstablished}
-            onChange={(e) => handleField('yearEstablished', e.target.value)}
-          >
-            <option value="">Select Year</option>
-            {YEAR_OPTIONS.map((year) => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
-        </div>
+          <div className="vob-field">
+            <label className="vob-label">Year Established</label>
+            <select
+              className="vob-select"
+              value={data.yearEstablished}
+              onChange={(e) => handleField('yearEstablished', e.target.value)}
+            >
+              <option value="">Select Year</option>
+              {YEAR_OPTIONS.map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
 
-        <div className="vob-field vob-field--full">
-          <label className="vob-label">Website</label>
-          <input
-            type="url"
-            placeholder="https://"
-            className="vob-input"
-            value={data.website}
-            onChange={(e) => handleField('website', e.target.value)}
-          />
-        </div>
+          <div className="vob-field vob-field--full">
+            <label className="vob-label">Website</label>
+            <input
+              type="url"
+              placeholder="https://"
+              className="vob-input"
+              value={data.website}
+              onChange={(e) => handleField('website', e.target.value)}
+            />
+          </div>
 
-        <div className="vob-field vob-field--full">
-          <label className="vob-label">Company Description</label>
-          <textarea
-            rows={4}
-            placeholder="Tell buyers about your company, products, services and capabilities..."
-            className="vob-textarea"
-            value={data.companyDescription}
-            onChange={(e) => handleField('companyDescription', e.target.value)}
-          />
+          <div className="vob-field vob-field--full">
+            <label className="vob-label">Company Description</label>
+            <textarea
+              rows={4}
+              placeholder="Tell buyers about your company, products, services and capabilities..."
+              className="vob-textarea"
+              value={data.companyDescription}
+              onChange={(e) => handleField('companyDescription', e.target.value)}
+            />
+          </div>
         </div>
       </div>
-    </div>
+
+      <div className="vob-card">
+        <h2 className="vob-title">Company Information</h2>
+        {onboardingData ? (
+          <div className="vob-grid">
+            <div className="vob-info-group">
+              <div className="vob-info-label">Organization Name</div>
+              <div className="vob-info-value">{onboardingData.organizationName || '-'}</div>
+            </div>
+            <div className="vob-info-group">
+              <div className="vob-info-label">Email</div>
+              <div className="vob-info-value">{onboardingData.email || '-'}</div>
+            </div>
+            <div className="vob-info-group">
+              <div className="vob-info-label">Phone</div>
+              <div className="vob-info-value">{onboardingData.phone || '-'}</div>
+            </div>
+            <div className="vob-info-group">
+              <div className="vob-info-label">Country</div>
+              <div className="vob-info-value">{onboardingData.country || '-'}</div>
+            </div>
+            <div className="vob-info-group">
+              <div className="vob-info-label">City</div>
+              <div className="vob-info-value">{onboardingData.city || '-'}</div>
+            </div>
+            <div className="vob-info-group">
+              <div className="vob-info-label">State</div>
+              <div className="vob-info-value">{onboardingData.state || '-'}</div>
+            </div>
+            <div className="vob-info-group">
+              <div className="vob-info-label">PIN / ZIP Code</div>
+              <div className="vob-info-value">{onboardingData.pinCode || '-'}</div>
+            </div>
+
+            <div className="vob-info-divider" />
+
+            <div className="vob-field--full">
+              <div className="vob-info-label">Address</div>
+              <div className="vob-address-block">
+                {onboardingData.addressLine1 && <div>{onboardingData.addressLine1}</div>}
+                {onboardingData.addressLine2 && <div>{onboardingData.addressLine2}</div>}
+                {(onboardingData.city || onboardingData.state || onboardingData.pinCode) && (
+                  <div>
+                    {onboardingData.city}
+                    {onboardingData.city && onboardingData.state && ', '}
+                    {onboardingData.state}
+                    {(onboardingData.city || onboardingData.state) && onboardingData.pinCode && ' - '}
+                    {onboardingData.pinCode}
+                  </div>
+                )}
+                {onboardingData.country && <div>{onboardingData.country}</div>}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ color: '#868e96', fontSize: '13px' }}>Loading company information...</div>
+        )}
+      </div>
+    </>
   );
 };
 
@@ -707,7 +783,12 @@ const Step3BankInfo: React.FC<Step3BankInfoProps> = ({ data, onChange, onValidat
             placeholder="Account Number"
             className={`vob-input ${accountNumberError ? 'vob-input--error' : ''}`}
             value={draft.accountNumber}
-            onChange={(e) => handleDraftField('accountNumber', e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (/^\d*$/.test(val)) {
+                handleDraftField('accountNumber', val);
+              }
+            }}
             onBlur={() => setTouched((prev) => ({ ...prev, accountNumber: true }))}
           />
           {accountNumberError && <span className="vob-error-text">{accountNumberError}</span>}
@@ -839,7 +920,6 @@ interface Step4DispatchLocationsProps {
   data: Step4Data;
   onChange: (data: Step4Data) => void;
   onValidationChange?: (isValid: boolean) => void;
-  onboardingData?: any;
 }
 
 interface Step4Draft {
@@ -870,38 +950,20 @@ const emptyStep4Draft: Step4Draft = {
   isDefault: false,
 };
 
-const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, onChange, onValidationChange, onboardingData }) => {
+const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, onChange, onValidationChange }) => {
   const [draft, setDraft] = useState<Step4Draft>(emptyStep4Draft);
   const [formError, setFormError] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    if (data.locations.length === 0 && onboardingData) {
-      setDraft((prev) => ({
-        ...prev,
-        locationName: onboardingData.organizationName || '',
-        contactPerson: prev.contactPerson,
-        country: onboardingData.country || '',
-        state: onboardingData.state || '',
-        addressLine1: onboardingData.addressLine1 || '',
-        addressLine2: onboardingData.addressLine2 || '',
-        city: onboardingData.city || '',
-        pinCode: onboardingData.pinCode || '',
-        contactEmail: onboardingData.email || '',
-        contactPhone: onboardingData.phone || '',
-      }));
-    }
-  }, [onboardingData, data.locations.length]);
-
-  const isReadOnly = data.locations.length === 0;
+  const isReadOnly = false;
   const hasDefaultLocation = data.locations.some((loc) => loc.isDefault);
 
   const countries = Country.getAllCountries();
   const selectedCountryObj = countries.find(c => c.name === draft.country);
   const states = selectedCountryObj ? State.getStatesOfCountry(selectedCountryObj.isoCode) : [];
   const selectedStateObj = states.find(s => s.name === draft.state);
-  const cities = (selectedCountryObj && selectedStateObj) 
-    ? City.getCitiesOfState(selectedCountryObj.isoCode, selectedStateObj.isoCode) 
+  const cities = (selectedCountryObj && selectedStateObj)
+    ? City.getCitiesOfState(selectedCountryObj.isoCode, selectedStateObj.isoCode)
     : [];
 
   const handleDraftField = <K extends keyof Step4Draft>(field: K, value: Step4Draft[K]) => {
@@ -1285,7 +1347,7 @@ interface SupplierOnboardingFormProps {
   }) => Promise<void> | void;
 }
 
-const vosx_logo = `${window.location.protocol}//${window.location.host}/assets/vosx-logo.png`;
+const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;
 
 const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -1377,7 +1439,7 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
   return (
     <div className="vob-page">
       <header className="vob-header">
-        <img src={vosx_logo} alt="VOSX" style={{ height: 32 }} />
+        <img src={sila_logo} alt="SILA" style={{ height: 32 }} />
       </header>
 
       <main className="vob-main">
@@ -1396,24 +1458,22 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
                   }}
                 >
                   <span
-                    className={`vob-step-number ${
-                      isCompleted
+                    className={`vob-step-number ${isCompleted
                         ? 'vob-step-number--completed'
                         : isActive
-                        ? 'vob-step-number--active'
-                        : 'vob-step-number--pending'
-                    }`}
+                          ? 'vob-step-number--active'
+                          : 'vob-step-number--pending'
+                      }`}
                   >
                     {isCompleted ? <CheckIcon /> : step.id}
                   </span>
                   <span
-                    className={`vob-step-label ${
-                      isCompleted
+                    className={`vob-step-label ${isCompleted
                         ? 'vob-step-label--completed'
                         : isActive
-                        ? 'vob-step-label--active'
-                        : 'vob-step-label--pending'
-                    }`}
+                          ? 'vob-step-label--active'
+                          : 'vob-step-label--pending'
+                      }`}
                   >
                     {step.label}
                   </span>
@@ -1440,6 +1500,7 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
               data={step1}
               onChange={setStep1}
               onValidationChange={setStep1Valid}
+              onboardingData={onboardingData}
             />
           )}
           {currentStep === 2 && (
@@ -1461,7 +1522,6 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
               data={step4}
               onChange={setStep4}
               onValidationChange={setStep4Valid}
-              onboardingData={onboardingData}
             />
           )}
 

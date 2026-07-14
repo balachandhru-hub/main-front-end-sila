@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Loader } from '@vosox/shared-ui';
-import vosx_logo from '../../public/assets/vosx-logo.png';
+import sila_logo2 from '../../public/assets/SILA_Logo2.png';
 import supplier_logo from '../assets/Supplier.png'
 import buyer_logo from '../assets/Buyer.png'
 import Header from './Header';
@@ -52,7 +52,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
     }
   };
 
-const handleSignIn = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (!username || !password) {
@@ -62,10 +62,10 @@ const handleSignIn = async (e: React.FormEvent) => {
     setIsLoading(true);
     try {
       await login(username, password);
- 
+
       // Introduce a 1-second delay to let the browser process and write the new cookies
       await delay(1000);
- 
+
       // Fetch token claims to retrieve IDs
       let details: any = {};
       try {
@@ -77,19 +77,19 @@ const handleSignIn = async (e: React.FormEvent) => {
             organizationId: claims.organizationId,
             roleId: claims.roleId,
           };
- 
+
           // Store user details in sessionStorage for dashboard use
           sessionStorage.setItem('vosox_user_id', claims.userId || '');
           sessionStorage.setItem('vosox_person_id', claims.personId || '');
           sessionStorage.setItem('vosox_organization_id', claims.organizationId || '');
           sessionStorage.setItem('vosox_role_id', claims.roleId || '');
           sessionStorage.setItem('vosox_user_role', claims.role || '');
- 
+
           onLoginSuccess?.(details);
- 
+
           // FIX: Navigate to the correct path based on user role
           const userRole = claims.role || 'supplier';
- 
+
           if (userRole === 'supplier') {
             navigate('/supplier/onboarding', { replace: true });
           } else if (userRole === 'buyer') {
@@ -139,7 +139,7 @@ const handleSignIn = async (e: React.FormEvent) => {
         <div className="vx-card">
           <div className="vx-left">
             <div className="vx-left-logo-box">
-              <img src={vosx_logo} alt="VOSX" className="vx-logo-img vx-logo-img--boxed" />
+              <img src={sila_logo2} alt="SILA" className="vx-logo-img vx-logo-img--boxed" />
             </div>
             <h2 className="vx-left-title">Supplier Onboarding &amp; Sourcing Portal</h2>
             <p className="vx-left-text">

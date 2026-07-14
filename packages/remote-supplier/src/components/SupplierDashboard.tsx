@@ -3,6 +3,7 @@ import SilaLogo from "../assets/SILA - Logo.png";
 import "./SupplierDashboard.css";
 import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
 import { logoutSupplier } from "../api/supplierApi";
+import { useNavigate } from "react-router-dom";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -380,6 +381,7 @@ const matchCards: MatchCard[] = [
 ];
 
 const SupplierDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const organizationName =
     sessionStorage.getItem("vosox_organization_name") || "Apex Office & Technology Supp...";
   const firstLetter = organizationName.trim().charAt(0).toUpperCase();
@@ -398,7 +400,7 @@ const SupplierDashboard: React.FC = () => {
     } catch (error: any) {
       setLogoutError(error?.message || "Logout request failed, clearing session locally.");
     } finally {
-      sessionStorage.removeItem("vosox_organization_name");
+      sessionStorage.clear();
       useAuthStore.getState().logout();
       window.dispatchEvent(new CustomEvent("session:expired"));
       setLoggingOut(false);
@@ -406,290 +408,317 @@ const SupplierDashboard: React.FC = () => {
   };
 
   return (
-    <div className={`pud-shell ${isSidebarOpen ? "" : "pud-sidebar-closed"}`}>
-      <aside className="pud-sidebar">
-        <nav className="pud-nav">
-          {navItems.map((item) => (
-            <div
-              key={item.label}
-              className={`pud-nav-item${item.active ? " pud-nav-item-active" : ""}`}
-            >
-              <span className="pud-nav-icon">{item.icon}</span>
-              <span className="pud-nav-label">{item.label}</span>
-              {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
-            </div>
-          ))}
-          <div
-            className="pud-nav-item pud-nav-item-logout"
-            style={{
-              marginTop: "auto",
-              opacity: loggingOut ? 0.6 : 1,
-              cursor: loggingOut ? "not-allowed" : "pointer",
-              pointerEvents: loggingOut ? "none" : "auto",
-            }}
-            onClick={handleLogout}
-            role="button"
-            aria-disabled={loggingOut}
-            title={logoutError || undefined}
-          >
-            <span className="pud-nav-icon" style={{ transform: "rotate(180deg)" }}>
-              <LogoutIcon />
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9' }}>
+      <header className="pud-header" style={{ width: '100%', zIndex: 10, position: 'relative' }}>
+        <div className="pud-header-left">
+          <div className="pud-logo">
+            <img src={SilaLogo} alt="SILA Logo" className="pud-logo-img" />
+          </div>
+        </div>
+        <div className="pud-header-spacer" />
+        <div className="pud-header-right">
+          <span className="pud-header-bell">
+            <IconBell />
+          </span>
+          <div className="pud-header-account">
+            <span className="pud-header-account-name" title={organizationName}>
+              {organizationName}
             </span>
-            <span className="pud-nav-label">{loggingOut ? "Logging out..." : "Log Out"}</span>
-          </div>
-        </nav>
-      </aside>
-
-      <div className="pud-main">
-        <header className="pud-header">
-          <div className="pud-header-left">
-            <button className="pud-sidebar-toggle" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-              <IconMenu />
-            </button>
-            <div className="pud-logo">
-              <img src={SilaLogo} alt="SILA Logo" className="pud-logo-img" />
-            </div>
-          </div>
-          <div className="pud-header-spacer" />
-          <div className="pud-header-right">
-            <span className="pud-header-bell">
-              <IconBell />
+            <span className="pud-header-account-verified">
+              <IconCheck /> Verified Vendor
             </span>
-            <div className="pud-header-account">
-              <span className="pud-header-account-name" title={organizationName}>
-                {organizationName}
-              </span>
-              <span className="pud-header-account-verified">
-                <IconCheck /> Verified Vendor
-              </span>
-            </div>
-            <div className="pud-header-avatar">{firstLetter}</div>
           </div>
-        </header>
+          <div className="pud-header-avatar">{firstLetter}</div>
+        </div>
+      </header>
 
-        <main className="pud-content">
-          <h1 className="pud-title">Supplier Operations Command</h1>
-          <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
+      <div className={`pud-shell ${isSidebarOpen ? "" : "pud-sidebar-closed"}`} style={{ flex: 1, position: 'relative', minHeight: 'calc(100vh - 64px)' }}>
+        <button
+          className="pud-sidebar-toggle"
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          style={{
+            position: 'absolute',
+            top: '5px',
+            left: '5px',
+            zIndex: 1001,
+            background: '#ffffff',
+            border: '1px solid #e6e8ec',
+            borderRadius: '6px',
+            width: '30px',
+            height: '30px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+            padding: 0
+          }}
+          title="Toggle Sidebar"
+        >
+          {isSidebarOpen ? <IconClose /> : <IconMenu />}
+        </button>
 
-          <div className="pud-status-banner">
-            <span className="pud-status-dot" />
-            <div>
-              <div className="pud-status-title">Active Approved Supplier Portal Status (100%)</div>
-              <div className="pud-status-subtext">
-                Your credentials, certification audit records, and bank routes are verified for secure bidding.
-              </div>
-            </div>
-          </div>
-
-          <div className="pud-stats-grid">
-            {statCards.map((stat) => (
-              <div className="pud-stat-card" key={stat.label}>
-                <div className={`pud-stat-icon ${stat.colorClass}`}>{stat.icon}</div>
-                <div className="pud-stat-label">{stat.label}</div>
-                <div className="pud-stat-value">{stat.value}</div>
-                <div className="pud-stat-link">{stat.linkText}</div>
+        <aside className="pud-sidebar">
+          <nav className="pud-nav" style={{ paddingTop: '40px' }}>
+            {navItems.map((item) => (
+              <div
+                key={item.label}
+                className={`pud-nav-item${item.active ? " pud-nav-item-active" : ""}`}
+                onClick={() => {
+                  if (item.label === "Dashboard") navigate("../dashboard");
+                  if (item.label === "Invitations") navigate("../invitations");
+                }}
+              >
+                <span className="pud-nav-icon">{item.icon}</span>
+                <span className="pud-nav-label">{item.label}</span>
+                {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
               </div>
             ))}
-          </div>
+            <div
+              className="pud-nav-item pud-nav-item-logout"
+              style={{
+                marginTop: "auto",
+                opacity: loggingOut ? 0.6 : 1,
+                cursor: loggingOut ? "not-allowed" : "pointer",
+                pointerEvents: loggingOut ? "none" : "auto",
+              }}
+              onClick={handleLogout}
+              role="button"
+              aria-disabled={loggingOut}
+              title={logoutError || undefined}
+            >
+              <span className="pud-nav-icon" style={{ transform: "rotate(180deg)" }}>
+                <LogoutIcon />
+              </span>
+              <span className="pud-nav-label">{loggingOut ? "Logging out..." : "Log Out"}</span>
+            </div>
+          </nav>
+        </aside>
 
-          <div className="pud-panels">
-            <section className="pud-panel">
-              <div className="pud-panel-header">
-                <div>
-                  <div className="pud-panel-title">Recent Sourcing Opportunities</div>
-                  <div className="pud-panel-subtitle">Newly listed RFQs matched to your industry categories</div>
+        <div className="pud-main">
+          <main className="pud-content">
+            <h1 className="pud-title">Supplier Operations Command</h1>
+            <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
+
+            <div className="pud-status-banner">
+              <span className="pud-status-dot" />
+              <div>
+                <div className="pud-status-title">Active Approved Supplier Portal Status (100%)</div>
+                <div className="pud-status-subtext">
+                  Your credentials, certification audit records, and bank routes are verified for secure bidding.
                 </div>
-                <a className="pud-panel-link" href="#">View All RFQs →</a>
-              </div>
-              <div className="pud-panel-list">
-                {rfqItems.map((rfq) => (
-                  <div className="pud-rfq-row" key={rfq.code}>
-                    <div className="pud-rfq-info">
-                      <div className="pud-rfq-meta">
-                        <span className="pud-code-badge">{rfq.code}</span>
-                        <span className="pud-dot-sep">•</span>
-                        <span className="pud-company">{rfq.company}</span>
-                      </div>
-                      <div className="pud-rfq-title">{rfq.title}</div>
-                      <div className="pud-rfq-details">
-                        <span><IconCalendar /> Closes: {rfq.closes}</span>
-                        <span><IconPin /> Deliv: {rfq.deliv}</span>
-                      </div>
-                    </div>
-                    <button className="pud-btn pud-btn-outline">View RFQ Details</button>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="pud-panel">
-              <div className="pud-panel-header">
-                <div>
-                  <div className="pud-panel-title">Recent Purchase Orders</div>
-                  <div className="pud-panel-subtitle">New orders requiring attention</div>
-                </div>
-                <a className="pud-panel-link" href="#">View All →</a>
-              </div>
-              <div className="pud-panel-list">
-                {poItems.map((po) => (
-                  <div className="pud-po-row" key={po.code}>
-                    <div className="pud-po-info">
-                      <div className="pud-po-meta">
-                        <span className="pud-po-code">{po.code}</span>
-                        <span className={`pud-status-badge pud-status-badge-${po.status.toLowerCase()}`}>
-                          {po.status}
-                        </span>
-                      </div>
-                      <div className="pud-po-company">{po.company}</div>
-                      <div className="pud-po-date"><IconCalendar /> Order Date: {po.orderDate}</div>
-                    </div>
-                    <div className="pud-po-right">
-                      <div className="pud-po-amount">{po.amount}</div>
-                      <a className="pud-po-process" href="#">Process →</a>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </div>
-
-          <section className="pud-matchmaker">
-            <div className="pud-matchmaker-header">
-              <div className="pud-matchmaker-title-row">
-                <span className="pud-matchmaker-icon"><IconSparkles /></span>
-                <div className="pud-matchmaker-title">Smart Sourcing Matchmaker</div>
-              </div>
-              <div className="pud-matchmaker-subtitle">
-                Active enterprise buyers looking for products and services matching your certified categories and registered ship-to locations.
               </div>
             </div>
 
-            <div className="pud-match-grid">
-              {matchCards.map((card) => (
-                <div className="pud-match-card" key={card.name}>
-                  <span className="pud-match-location"><IconPin /> {card.location}</span>
-                  <div className="pud-match-top">
-                    <div className="pud-match-avatar">{card.initials}</div>
-                    <div>
-                      <div className="pud-match-name">{card.name}</div>
-                      <div className="pud-match-seeking"><NavIconBuilding /> Seeking: {card.seeking}</div>
-                    </div>
-                  </div>
-                  <p className="pud-match-desc">{card.description}</p>
-                  <div className="pud-match-rep-row">
-                    <span className="pud-match-rep-label">Representative:</span>
-                    <span className="pud-match-rep-name">{card.representative}</span>
-                  </div>
-                  <div className="pud-match-actions">
-                    <button
-                      className="pud-btn pud-btn-outline pud-btn-flex"
-                      onClick={() => setSelectedProfile(card)}
-                    >
-                      <IconEye /> Profile
-                    </button>
-                    {card.actionVariant === "message" ? (
-                      <button className="pud-btn pud-btn-message pud-btn-flex">
-                        <IconMessageSquare /> Message
-                      </button>
-                    ) : (
-                      <button className="pud-btn pud-btn-interest pud-btn-flex">
-                        <IconSend /> Send Interest
-                      </button>
-                    )}
-                  </div>
+            <div className="pud-stats-grid">
+              {statCards.map((stat) => (
+                <div className="pud-stat-card" key={stat.label}>
+                  <div className={`pud-stat-icon ${stat.colorClass}`}>{stat.icon}</div>
+                  <div className="pud-stat-label">{stat.label}</div>
+                  <div className="pud-stat-value">{stat.value}</div>
+                  <div className="pud-stat-link">{stat.linkText}</div>
                 </div>
               ))}
             </div>
 
-            <div className="pud-pagination">
-              <button className="pud-page-btn pud-page-btn-disabled" disabled>
-                <IconChevronLeft />
-              </button>
-              <button className="pud-page-btn pud-page-btn-active">
-                <IconChevronRight />
-              </button>
-            </div>
-          </section>
-        </main>
-      </div>
-
-      {selectedProfile && (
-        <div className="pud-modal-overlay" onClick={() => setSelectedProfile(null)}>
-          <div className="pud-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="pud-modal-header">
-              <span className="pud-modal-badge">
-                <IconShieldCheck /> Verified Sourcing Partner
-              </span>
-              <button className="pud-modal-close" onClick={() => setSelectedProfile(null)}>
-                <IconClose />
-              </button>
-              <h2 className="pud-modal-name">{selectedProfile.name}</h2>
-              <div className="pud-modal-meta">
-                <span><IconPin /> {selectedProfile.location}</span>
-                <span><IconGlobe /> {selectedProfile.website}</span>
-              </div>
-            </div>
-
-            <div className="pud-modal-body">
-              <div className="pud-modal-section-title">Organization Description</div>
-              <p className="pud-modal-desc">{selectedProfile.description}</p>
-
-              <div className="pud-modal-analytics">
-                <div className="pud-modal-analytics-title">
-                  <IconSparkles /> Verified Match Analytics
+            <div className="pud-panels">
+              <section className="pud-panel">
+                <div className="pud-panel-header">
+                  <div>
+                    <div className="pud-panel-title">Recent Sourcing Opportunities</div>
+                    <div className="pud-panel-subtitle">Newly listed RFQs matched to your industry categories</div>
+                  </div>
+                  <a className="pud-panel-link" href="#">View All RFQs →</a>
                 </div>
-                <div className="pud-modal-analytics-grid">
-                  <div className="pud-modal-analytics-item">
-                    <span className="pud-modal-check"><IconCheckCircle /></span>
-                    <div>
-                      <div className="pud-modal-analytics-label">Interest Category</div>
-                      <div className="pud-modal-analytics-value">{selectedProfile.seeking}</div>
-                      <div className="pud-modal-analytics-note">{selectedProfile.categoryNote}</div>
+                <div className="pud-panel-list">
+                  {rfqItems.map((rfq) => (
+                    <div className="pud-rfq-row" key={rfq.code}>
+                      <div className="pud-rfq-info">
+                        <div className="pud-rfq-meta">
+                          <span className="pud-code-badge">{rfq.code}</span>
+                          <span className="pud-dot-sep">•</span>
+                          <span className="pud-company">{rfq.company}</span>
+                        </div>
+                        <div className="pud-rfq-title">{rfq.title}</div>
+                        <div className="pud-rfq-details">
+                          <span><IconCalendar /> Closes: {rfq.closes}</span>
+                          <span><IconPin /> Deliv: {rfq.deliv}</span>
+                        </div>
+                      </div>
+                      <button className="pud-btn pud-btn-outline">View RFQ Details</button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="pud-panel">
+                <div className="pud-panel-header">
+                  <div>
+                    <div className="pud-panel-title">Recent Purchase Orders</div>
+                    <div className="pud-panel-subtitle">New orders requiring attention</div>
+                  </div>
+                  <a className="pud-panel-link" href="#">View All →</a>
+                </div>
+                <div className="pud-panel-list">
+                  {poItems.map((po) => (
+                    <div className="pud-po-row" key={po.code}>
+                      <div className="pud-po-info">
+                        <div className="pud-po-meta">
+                          <span className="pud-po-code">{po.code}</span>
+                          <span className={`pud-status-badge pud-status-badge-${po.status.toLowerCase()}`}>
+                            {po.status}
+                          </span>
+                        </div>
+                        <div className="pud-po-company">{po.company}</div>
+                        <div className="pud-po-date"><IconCalendar /> Order Date: {po.orderDate}</div>
+                      </div>
+                      <div className="pud-po-right">
+                        <div className="pud-po-amount">{po.amount}</div>
+                        <a className="pud-po-process" href="#">Process →</a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            <section className="pud-matchmaker">
+              <div className="pud-matchmaker-header">
+                <div className="pud-matchmaker-title-row">
+                  <span className="pud-matchmaker-icon"><IconSparkles /></span>
+                  <div className="pud-matchmaker-title">Smart Sourcing Matchmaker</div>
+                </div>
+                <div className="pud-matchmaker-subtitle">
+                  Active enterprise buyers looking for products and services matching your certified categories and registered ship-to locations.
+                </div>
+              </div>
+
+              <div className="pud-match-grid">
+                {matchCards.map((card) => (
+                  <div className="pud-match-card" key={card.name}>
+                    <span className="pud-match-location"><IconPin /> {card.location}</span>
+                    <div className="pud-match-top">
+                      <div className="pud-match-avatar">{card.initials}</div>
+                      <div>
+                        <div className="pud-match-name">{card.name}</div>
+                        <div className="pud-match-seeking"><NavIconBuilding /> Seeking: {card.seeking}</div>
+                      </div>
+                    </div>
+                    <p className="pud-match-desc">{card.description}</p>
+                    <div className="pud-match-rep-row">
+                      <span className="pud-match-rep-label">Representative:</span>
+                      <span className="pud-match-rep-name">{card.representative}</span>
+                    </div>
+                    <div className="pud-match-actions">
+                      <button
+                        className="pud-btn pud-btn-outline pud-btn-flex"
+                        onClick={() => setSelectedProfile(card)}
+                      >
+                        <IconEye /> Profile
+                      </button>
+                      {card.actionVariant === "message" ? (
+                        <button className="pud-btn pud-btn-message pud-btn-flex">
+                          <IconMessageSquare /> Message
+                        </button>
+                      ) : (
+                        <button className="pud-btn pud-btn-interest pud-btn-flex">
+                          <IconSend /> Send Interest
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className="pud-modal-analytics-item">
-                    <span className="pud-modal-check"><IconCheckCircle /></span>
-                    <div>
-                      <div className="pud-modal-analytics-label">Delivery Destination</div>
-                      <div className="pud-modal-analytics-value">{selectedProfile.location}</div>
-                      <div className="pud-modal-analytics-note">{selectedProfile.destinationNote}</div>
+                ))}
+              </div>
+
+              <div className="pud-pagination">
+                <button className="pud-page-btn pud-page-btn-disabled" disabled>
+                  <IconChevronLeft />
+                </button>
+                <button className="pud-page-btn pud-page-btn-active">
+                  <IconChevronRight />
+                </button>
+              </div>
+            </section>
+          </main>
+        </div>
+
+        {selectedProfile && (
+          <div className="pud-modal-overlay" onClick={() => setSelectedProfile(null)}>
+            <div className="pud-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="pud-modal-header">
+                <span className="pud-modal-badge">
+                  <IconShieldCheck /> Verified Sourcing Partner
+                </span>
+                <button className="pud-modal-close" onClick={() => setSelectedProfile(null)}>
+                  <IconClose />
+                </button>
+                <h2 className="pud-modal-name">{selectedProfile.name}</h2>
+                <div className="pud-modal-meta">
+                  <span><IconPin /> {selectedProfile.location}</span>
+                  <span><IconGlobe /> {selectedProfile.website}</span>
+                </div>
+              </div>
+
+              <div className="pud-modal-body">
+                <div className="pud-modal-section-title">Organization Description</div>
+                <p className="pud-modal-desc">{selectedProfile.description}</p>
+
+                <div className="pud-modal-analytics">
+                  <div className="pud-modal-analytics-title">
+                    <IconSparkles /> Verified Match Analytics
+                  </div>
+                  <div className="pud-modal-analytics-grid">
+                    <div className="pud-modal-analytics-item">
+                      <span className="pud-modal-check"><IconCheckCircle /></span>
+                      <div>
+                        <div className="pud-modal-analytics-label">Interest Category</div>
+                        <div className="pud-modal-analytics-value">{selectedProfile.seeking}</div>
+                        <div className="pud-modal-analytics-note">{selectedProfile.categoryNote}</div>
+                      </div>
+                    </div>
+                    <div className="pud-modal-analytics-item">
+                      <span className="pud-modal-check"><IconCheckCircle /></span>
+                      <div>
+                        <div className="pud-modal-analytics-label">Delivery Destination</div>
+                        <div className="pud-modal-analytics-value">{selectedProfile.location}</div>
+                        <div className="pud-modal-analytics-note">{selectedProfile.destinationNote}</div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="pud-modal-info-grid">
-                <div>
-                  <div className="pud-modal-info-label">Company Representative</div>
-                  <div className="pud-modal-info-value">
-                    {selectedProfile.representative} ({selectedProfile.repTitle})
+                <div className="pud-modal-info-grid">
+                  <div>
+                    <div className="pud-modal-info-label">Company Representative</div>
+                    <div className="pud-modal-info-value">
+                      {selectedProfile.representative} ({selectedProfile.repTitle})
+                    </div>
+                    <a className="pud-modal-info-link" href={`mailto:${selectedProfile.repEmail}`}>
+                      {selectedProfile.repEmail}
+                    </a>
                   </div>
-                  <a className="pud-modal-info-link" href={`mailto:${selectedProfile.repEmail}`}>
-                    {selectedProfile.repEmail}
-                  </a>
-                </div>
-                <div>
-                  <div className="pud-modal-info-label">Scale of Operations</div>
-                  <div className="pud-modal-info-value">Revenue: {selectedProfile.revenue}</div>
-                  <div className="pud-modal-info-value">Scale: {selectedProfile.employees}</div>
+                  <div>
+                    <div className="pud-modal-info-label">Scale of Operations</div>
+                    <div className="pud-modal-info-value">Revenue: {selectedProfile.revenue}</div>
+                    <div className="pud-modal-info-value">Scale: {selectedProfile.employees}</div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="pud-modal-footer">
-              {selectedProfile.actionVariant === "message" ? (
-                <button className="pud-btn pud-btn-message pud-modal-footer-btn">
-                  <IconMessageSquare /> Message Buyer
-                </button>
-              ) : (
-                <button className="pud-btn pud-btn-interest pud-modal-footer-btn">
-                  <IconSend /> Send Interest
-                </button>
-              )}
+              <div className="pud-modal-footer">
+                {selectedProfile.actionVariant === "message" ? (
+                  <button className="pud-btn pud-btn-message pud-modal-footer-btn">
+                    <IconMessageSquare /> Message Buyer
+                  </button>
+                ) : (
+                  <button className="pud-btn pud-btn-interest pud-modal-footer-btn">
+                    <IconSend /> Send Interest
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

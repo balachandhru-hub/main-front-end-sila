@@ -16,7 +16,7 @@ import {
 } from 'react-icons/fa';
 import { PlatformUserPopup } from './PlatformUserPopup';
 import './PlatformUserDashboard.css';
-const vosx_logo = `${window.location.protocol}//${window.location.host}/assets/vosx-logo.png`;
+const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;
 
 const PAGE_SIZE = 8;
 
@@ -181,8 +181,13 @@ export const PlatformUserDashboard: React.FC = () => {
     <div className="plat-dashboard">
       {/* Top Header Bar with Left Logo */}
       <header className="plat-top-header">
-        <img src={vosx_logo} alt="VOSX" className="plat-top-logo" />
-        <button className="plat-logout-btn" onClick={handleLogout} disabled={loggingOut} title="Log out">
+        <img src={sila_logo} alt="SILA" className="plat-top-logo" />
+        <button
+          className="plat-logout-btn"
+          onClick={handleLogout}
+          disabled={loggingOut}
+          title="Log out"
+        >
           <FaSignOutAlt />
           {loggingOut ? 'Logging out...' : 'Log Out'}
         </button>

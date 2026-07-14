@@ -448,16 +448,17 @@ export default function BuyerProfile({ onComplete, onboardingData }: BuyerProfil
         });
     };
 
-const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
-    if (!selectedSubProducts.some(p => p.commodity === subProduct.commodity)) {
-        setSelectedSubProducts((prev) => [...prev, {
-            ...subProduct,
-            parentSegment: activeProduct?.segment || 0,
-            parentFamily: activeProduct?.family || 0,
-            parentTitle: activeProduct?.title || '',
-        }]);
-    }
-};
+    const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
+        if (!selectedSubProducts.some(p => p.commodity === subProduct.commodity)) {
+            setSelectedSubProducts((prev) => [...prev, {
+                ...subProduct,
+                parentSegment: activeProduct?.segment || 0,
+                parentFamily: activeProduct?.family || 0,
+                parentTitle: activeProduct?.title || '',
+            }]);
+        }
+    };
+
     const handleRemoveSubProduct = (commodityCode: number) => {
         setSelectedSubProducts((prev) => prev.filter((p) => p.commodity !== commodityCode));
     };
@@ -470,7 +471,6 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
 
     const [dispatchLocations, setDispatchLocations] = useState<DispatchLocation[]>([]);
     const [locationDraft, setLocationDraft] = useState(emptyLocationDraft);
-    const [hasAutoFilled, setHasAutoFilled] = useState(false);
 
     const [agreements, setAgreements] = useState<Agreements>({
         infoAccurate: false,
@@ -481,26 +481,6 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
     const [submitted, setSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    // Auto-fill delivery location from onboarding data
-    useEffect(() => {
-        if (onboardingData && !hasAutoFilled && dispatchLocations.length === 0) {
-            setLocationDraft({
-                locationName: onboardingData.organizationName || 'Main Office',
-                contactPerson: '',
-                country: onboardingData.country || '',
-                state: onboardingData.state || '',
-                addressLine1: onboardingData.addressLine1 || '',
-                addressLine2: onboardingData.addressLine2 || '',
-                city: onboardingData.city || '',
-                pinZip: onboardingData.pinCode || '',
-                contactEmail: onboardingData.email || '',
-                contactPhone: onboardingData.phone || '',
-                isDefault: true,
-            });
-            setHasAutoFilled(true);
-        }
-    }, [onboardingData, hasAutoFilled, dispatchLocations.length]);
 
     /* ---------------------------- navigation --------------------------- */
 
@@ -571,7 +551,6 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
         field: K,
         value: (typeof locationDraft)[K]
     ) {
-        if (hasAutoFilled) return;
         setLocationDraft((prev) => ({ ...prev, [field]: value }));
     }
 
@@ -584,7 +563,6 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
         }]);
         
         setLocationDraft(emptyLocationDraft);
-        setHasAutoFilled(false);
     }
 
     function removeLocation(id: string) {
@@ -599,7 +577,7 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
         agreements.infoAccurate && agreements.agreeTerms && agreements.authorizeVerification;
 
     // ============================================================================
-    // UPDATED: Pass categories data to onComplete
+    // UPDATED: Auto-include draft data on submit if user didn't click "+ Add"
     // ============================================================================
     async function handleSubmitProfile(e: FormEvent) {
         e.preventDefault();
@@ -609,20 +587,33 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
         setSubmitting(true);
 
         try {
-            const finalLocations = [...dispatchLocations];
+            // Auto-include registration draft if filled
+            let finalRegistrations = [...registrations];
+            if (registrationDraft.number && registrationDraft.name) {
+                finalRegistrations = [...finalRegistrations, { id: makeId(), ...registrationDraft }];
+            }
+
+            // Auto-include bank account draft if filled
+            let finalBankAccounts = [...bankAccounts];
+            if (bankDraft.accountHolderName && bankDraft.bankName && bankDraft.accountNumber) {
+                finalBankAccounts = [...finalBankAccounts, { id: makeId(), ...bankDraft }];
+            }
+
+            // Auto-include location draft if filled
+            let finalLocations = [...dispatchLocations];
             if (locationDraft.locationName && locationDraft.addressLine1 && locationDraft.city) {
-                finalLocations.push({ id: makeId(), ...locationDraft });
+                finalLocations = [...finalLocations, { id: makeId(), ...locationDraft }];
             }
 
             if (onComplete) {
                 await onComplete({
-    businessInfo,
-    registrations,
-    bankAccounts,
-    dispatchLocations: finalLocations,
-    selectedProducts,
-    selectedSubProducts,
-});
+                    businessInfo,
+                    registrations: finalRegistrations,
+                    bankAccounts: finalBankAccounts,
+                    dispatchLocations: finalLocations,
+                    selectedProducts,
+                    selectedSubProducts,
+                });
                 setSubmitted(true);
             } else {
                 setSubmitted(true);
@@ -673,130 +664,191 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
         );
     }
 
-    function renderStep1() {
+    // ============================================================================
+    // NEW: Company Information read-only section
+    // ============================================================================
+    function renderCompanyInfo() {
+        if (!onboardingData) return null;
+
         return (
-            <div className="bp-panel">
-                <h2 className="bp-panel-title">Step 1: Business Information</h2>
+            <div className="bp-panel" style={{ marginTop: '20px' }}>
+                <h2 className="bp-panel-title">Company Information</h2>
                 <div className="bp-divider" />
-                <div className="bp-form-grid">
-                    <div className="bp-field">
-                        <label htmlFor="industry">
-                            Industry<span className="bp-required">*</span>
-                        </label>
-                        <select
-                            id="industry"
-                            value={businessInfo.industry}
-                            onChange={(e) => updateBusinessInfo("industry", e.target.value)}
-                        >
-                            <option value="">Select Industry</option>
-                            {INDUSTRIES.map((i) => (
-                                <option key={i} value={i}>
-                                    {i}
-                                </option>
-                            ))}
-                        </select>
+                <div className="bp-company-info-grid">
+                    <div className="bp-company-info-item">
+                        <span className="bp-company-info-label">Organization Name</span>
+                        <span className="bp-company-info-value">{onboardingData.organizationName || '—'}</span>
                     </div>
-
-                    <div className="bp-field">
-                        <label htmlFor="businessType">
-                            Business Type<span className="bp-required">*</span>
-                        </label>
-                        <select
-                            id="businessType"
-                            value={businessInfo.businessType}
-                            onChange={(e) => updateBusinessInfo("businessType", e.target.value)}
-                        >
-                            <option value="">Select Business Type</option>
-                            {BUSINESS_TYPES.map((t) => (
-                                <option key={t} value={t}>
-                                    {t}
-                                </option>
-                            ))}
-                        </select>
+                    <div className="bp-company-info-item">
+                        <span className="bp-company-info-label">Email</span>
+                        <span className="bp-company-info-value">{onboardingData.email || '—'}</span>
                     </div>
-
-                    <div className="bp-field">
-                        <label htmlFor="employeeCount">Employee Count</label>
-                        <input
-                            id="employeeCount"
-                            type="number"
-                            min={0}
-                            value={businessInfo.employeeCount}
-                            onChange={(e) => updateBusinessInfo("employeeCount", e.target.value)}
-                        />
+                    <div className="bp-company-info-item">
+                        <span className="bp-company-info-label">Phone</span>
+                        <span className="bp-company-info-value">{onboardingData.phone || '—'}</span>
                     </div>
-
-                    <div className="bp-field">
-                        <label htmlFor="annualTurnover">Annual Turnover</label>
-                        <input
-                            id="annualTurnover"
-                            type="number"
-                            min={0}
-                            value={businessInfo.annualTurnover}
-                            onChange={(e) => updateBusinessInfo("annualTurnover", e.target.value)}
-                        />
+                    <div className="bp-company-info-item">
+                        <span className="bp-company-info-label">Country</span>
+                        <span className="bp-company-info-value">{onboardingData.country || '—'}</span>
                     </div>
-
-                    <div className="bp-field">
-                        <label htmlFor="currency">Currency</label>
-                        <select
-                            id="currency"
-                            value={businessInfo.currency}
-                            onChange={(e) => updateBusinessInfo("currency", e.target.value)}
-                        >
-                            {CURRENCIES.map((c) => (
-                                <option key={c} value={c}>
-                                    {c}
-                                </option>
-                            ))}
-                        </select>
+                    <div className="bp-company-info-item">
+                        <span className="bp-company-info-label">City</span>
+                        <span className="bp-company-info-value">{onboardingData.city || '—'}</span>
                     </div>
-
-                    <div className="bp-field">
-                        <label htmlFor="yearEstablished">Year Established</label>
-                        <select
-                            id="yearEstablished"
-                            value={businessInfo.yearEstablished}
-                            onChange={(e) => updateBusinessInfo("yearEstablished", e.target.value)}
-                        >
-                            <option value="">Select Year</option>
-                            {YEARS.map((y) => (
-                                <option key={y} value={y}>
-                                    {y}
-                                </option>
-                            ))}
-                        </select>
+                    <div className="bp-company-info-item">
+                        <span className="bp-company-info-label">State</span>
+                        <span className="bp-company-info-value">{onboardingData.state || '—'}</span>
                     </div>
-
-                    <div className="bp-field bp-field-wide">
-                        <label htmlFor="website">Website</label>
-                        <input
-                            id="website"
-                            type="url"
-                            placeholder="https://"
-                            value={businessInfo.website}
-                            onChange={(e) => updateBusinessInfo("website", e.target.value)}
-                        />
+                    <div className="bp-company-info-item">
+                        <span className="bp-company-info-label">PIN / ZIP Code</span>
+                        <span className="bp-company-info-value">{onboardingData.pinCode || '—'}</span>
                     </div>
-
-                    <div className="bp-field bp-field-wide">
-                        <label htmlFor="companyDescription">Company Description</label>
-                        <textarea
-                            id="companyDescription"
-                            rows={4}
-                            placeholder="Tell buyers about your company, products, services and capabilities..."
-                            value={businessInfo.companyDescription}
-                            onChange={(e) => updateBusinessInfo("companyDescription", e.target.value)}
-                        />
+                    <div className="bp-company-info-item bp-company-info-item-full">
+                        <span className="bp-company-info-label">Address</span>
+                        <span className="bp-company-info-value">
+                            {onboardingData.addressLine1 ? (
+                                <>
+                                    {onboardingData.addressLine1}
+                                    {onboardingData.addressLine2 && <><br />{onboardingData.addressLine2}</>}
+                                    <br />
+                                    {onboardingData.city}{onboardingData.city && onboardingData.state ? ', ' : ''}{onboardingData.state} {onboardingData.pinCode}
+                                    <br />
+                                    {onboardingData.country}
+                                </>
+                            ) : '—'}
+                        </span>
                     </div>
                 </div>
+            </div>
+        );
+    }
 
-                <div className="bp-actions bp-actions-right">
+    function renderStep1() {
+        return (
+            <>
+                <div className="bp-panel">
+                    <h2 className="bp-panel-title">Step 1: Business Information</h2>
+                    <div className="bp-divider" />
+                    <div className="bp-form-grid">
+                        <div className="bp-field">
+                            <label htmlFor="industry">
+                                Industry<span className="bp-required">*</span>
+                            </label>
+                            <select
+                                id="industry"
+                                value={businessInfo.industry}
+                                onChange={(e) => updateBusinessInfo("industry", e.target.value)}
+                            >
+                                <option value="">Select Industry</option>
+                                {INDUSTRIES.map((i) => (
+                                    <option key={i} value={i}>
+                                        {i}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="bp-field">
+                            <label htmlFor="businessType">
+                                Business Type<span className="bp-required">*</span>
+                            </label>
+                            <select
+                                id="businessType"
+                                value={businessInfo.businessType}
+                                onChange={(e) => updateBusinessInfo("businessType", e.target.value)}
+                            >
+                                <option value="">Select Business Type</option>
+                                {BUSINESS_TYPES.map((t) => (
+                                    <option key={t} value={t}>
+                                        {t}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="bp-field">
+                            <label htmlFor="employeeCount">Employee Count</label>
+                            <input
+                                id="employeeCount"
+                                type="number"
+                                min={0}
+                                value={businessInfo.employeeCount}
+                                onChange={(e) => updateBusinessInfo("employeeCount", e.target.value)}
+                            />
+                        </div>
+
+                        <div className="bp-field">
+                            <label htmlFor="annualTurnover">Annual Turnover</label>
+                            <input
+                                id="annualTurnover"
+                                type="number"
+                                min={0}
+                                value={businessInfo.annualTurnover}
+                                onChange={(e) => updateBusinessInfo("annualTurnover", e.target.value)}
+                            />
+                        </div>
+
+                        <div className="bp-field">
+                            <label htmlFor="currency">Currency</label>
+                            <select
+                                id="currency"
+                                value={businessInfo.currency}
+                                onChange={(e) => updateBusinessInfo("currency", e.target.value)}
+                            >
+                                {CURRENCIES.map((c) => (
+                                    <option key={c} value={c}>
+                                        {c}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="bp-field">
+                            <label htmlFor="yearEstablished">Year Established</label>
+                            <select
+                                id="yearEstablished"
+                                value={businessInfo.yearEstablished}
+                                onChange={(e) => updateBusinessInfo("yearEstablished", e.target.value)}
+                            >
+                                <option value="">Select Year</option>
+                                {YEARS.map((y) => (
+                                    <option key={y} value={y}>
+                                        {y}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="bp-field bp-field-wide">
+                            <label htmlFor="website">Website</label>
+                            <input
+                                id="website"
+                                type="url"
+                                placeholder="https://"
+                                value={businessInfo.website}
+                                onChange={(e) => updateBusinessInfo("website", e.target.value)}
+                            />
+                        </div>
+
+                        <div className="bp-field bp-field-wide">
+                            <label htmlFor="companyDescription">Company Description</label>
+                            <textarea
+                                id="companyDescription"
+                                rows={4}
+                                placeholder="Tell buyers about your company, products, services and capabilities..."
+                                value={businessInfo.companyDescription}
+                                onChange={(e) => updateBusinessInfo("companyDescription", e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </div>
+                {renderCompanyInfo()}
+                <div className="bp-actions bp-actions-right" style={{ marginTop: '20px' }}>
                     <button type="button" className="bp-btn bp-btn-primary" onClick={handleNext}>
                         Next
                     </button>
                 </div>
-            </div>
+            </>
         );
     }
 
@@ -1227,27 +1279,11 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
     // Step 5: Dispatch Locations (was step 4)
     // ============================================================================
     function renderStep5() {
-        const isReadOnly = hasAutoFilled;
-
         return (
             <div className="bp-panel">
                 <h2 className="bp-panel-title">Step 5: Dispatch Locations</h2>
                 <div className="bp-divider" />
                 
-                {isReadOnly && (
-                    <div style={{ 
-                        backgroundColor: '#e7f3ff', 
-                        border: '1px solid #0d6efd', 
-                        borderRadius: '6px', 
-                        padding: '10px 15px', 
-                        marginBottom: '15px',
-                        color: '#084298',
-                        fontSize: '0.9rem'
-                    }}>
-                        ℹ️ These fields are auto-filled from your onboarding details. Click "+ Add Location" to confirm, then you can add more locations manually.
-                    </div>
-                )}
-
                 <form onSubmit={handleSubmitProfile}>
                     <div className="bp-form-grid">
                         <div className="bp-field">
@@ -1259,8 +1295,6 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
                                 type="text"
                                 value={locationDraft.locationName}
                                 onChange={(e) => updateLocationDraft("locationName", e.target.value)}
-                                disabled={isReadOnly}
-                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -1271,8 +1305,6 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
                                 type="text"
                                 value={locationDraft.contactPerson}
                                 onChange={(e) => updateLocationDraft("contactPerson", e.target.value)}
-                                disabled={isReadOnly}
-                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -1288,8 +1320,6 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
                                     updateLocationDraft("state", "");
                                     updateLocationDraft("city", "");
                                 }}
-                                disabled={isReadOnly}
-                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             >
                                 <option value="">Select Country</option>
                                 {Country.getAllCountries().map((c) => (
@@ -1311,8 +1341,7 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
                                     updateLocationDraft("state", e.target.value);
                                     updateLocationDraft("city", "");
                                 }}
-                                disabled={isReadOnly || !locationDraft.country}
-                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
+                                disabled={!locationDraft.country}
                             >
                                 <option value="">Select State</option>
                                 {locationDraft.country && State.getStatesOfCountry(locationDraft.country).map((s) => (
@@ -1332,8 +1361,6 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
                                 type="text"
                                 value={locationDraft.addressLine1}
                                 onChange={(e) => updateLocationDraft("addressLine1", e.target.value)}
-                                disabled={isReadOnly}
-                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -1344,8 +1371,6 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
                                 type="text"
                                 value={locationDraft.addressLine2}
                                 onChange={(e) => updateLocationDraft("addressLine2", e.target.value)}
-                                disabled={isReadOnly}
-                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -1357,8 +1382,7 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
                                 id="city"
                                 value={locationDraft.city}
                                 onChange={(e) => updateLocationDraft("city", e.target.value)}
-                                disabled={isReadOnly || !locationDraft.state}
-                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
+                                disabled={!locationDraft.state}
                             >
                                 <option value="">Select City</option>
                                 {locationDraft.state && City.getCitiesOfState(locationDraft.country, locationDraft.state).map((c) => (
@@ -1378,8 +1402,6 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
                                 type="text"
                                 value={locationDraft.pinZip}
                                 onChange={(e) => updateLocationDraft("pinZip", e.target.value)}
-                                disabled={isReadOnly}
-                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -1390,8 +1412,6 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
                                 type="email"
                                 value={locationDraft.contactEmail}
                                 onChange={(e) => updateLocationDraft("contactEmail", e.target.value)}
-                                disabled={isReadOnly}
-                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -1402,19 +1422,16 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
                                 type="tel"
                                 value={locationDraft.contactPhone}
                                 onChange={(e) => updateLocationDraft("contactPhone", e.target.value)}
-                                disabled={isReadOnly}
-                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
                     </div>
 
                     <div className="bp-actions bp-actions-between">
-                        <label className="bp-checkbox-label" style={isReadOnly ? { opacity: 0.6, pointerEvents: 'none' } : {}}>
+                        <label className="bp-checkbox-label">
                             <input
                                 type="checkbox"
                                 checked={locationDraft.isDefault}
                                 onChange={(e) => updateLocationDraft("isDefault", e.target.checked)}
-                                disabled={isReadOnly}
                             />
                             Default Dispatch Location
                         </label>
@@ -1447,10 +1464,13 @@ const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
                                 </tr>
                             ) : (
                                 dispatchLocations.map((l) => (
-                                    <tr key={l.id}>
+                                    <tr 
+                                        key={l.id} 
+                                        className={l.isDefault ? 'bp-table-row-default' : ''}
+                                    >
                                         <td>
                                             {l.locationName}
-                                            {l.isDefault && <span className="bp-tag">Default</span>}
+                                            {l.isDefault && <span className="bp-default-dot" title="Default Location" />}
                                         </td>
                                         <td>{l.city}</td>
                                         <td>{l.contactPerson}</td>
