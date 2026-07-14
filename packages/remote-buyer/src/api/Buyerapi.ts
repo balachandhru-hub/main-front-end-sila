@@ -1,4 +1,4 @@
-import buyerInstance from './buyerInstance';
+import axiosInstance from "./axiosInstance";
 
 // ============================================================================
 // TYPES
@@ -155,7 +155,7 @@ export interface BuyerRegistrationPayload {
 // ============================================================================
 export const getBuyerProfile = async (): Promise<BuyerProfileResponse | null> => {
   try {
-    const response = await buyerInstance.get<BuyerProfileResponse>('/api/v1/buyer/profile');
+    const response = await axiosInstance.get<BuyerProfileResponse>('/api/v1/buyer/profile');
     // 204 No Content or empty body → profile doesn't exist
     if (!response.data || Object.keys(response.data).length === 0) {
       return null;
@@ -176,7 +176,7 @@ export const getBuyerProfile = async (): Promise<BuyerProfileResponse | null> =>
 // ============================================================================
 export const getOnboardingDetails = async (): Promise<OnboardingResponse> => {
   try {
-    const response = await buyerInstance.get<OnboardingResponse>('/api/v1/identity/onboarding');
+    const response = await axiosInstance.get<OnboardingResponse>('/api/v1/identity/onboarding');
     return response.data;
   } catch (error: any) {
     if (error?.response?.data) {
@@ -192,7 +192,7 @@ export const getOnboardingDetails = async (): Promise<OnboardingResponse> => {
 // ============================================================================
 export const createBuyerProfile = async (payload: BuyerRegistrationPayload): Promise<any> => {
   try {
-    const response = await buyerInstance.post('/api/v1/buyer/register', payload);
+    const response = await axiosInstance.post('/api/v1/buyer/register', payload);
     return response.data;
   } catch (error: any) {
     if (error?.response?.data) {
@@ -208,7 +208,7 @@ export const createBuyerProfile = async (payload: BuyerRegistrationPayload): Pro
 // ============================================================================
 export const updateBuyerProfile = async (payload: BuyerRegistrationPayload): Promise<any> => {
   try {
-    const response = await buyerInstance.put('/api/v1/buyer/profile', payload);
+    const response = await axiosInstance.put('/api/v1/buyer/profile', payload);
     return response.data;
   } catch (error: any) {
     if (error?.response?.data) {

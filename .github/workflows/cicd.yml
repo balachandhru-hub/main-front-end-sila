@@ -22,4 +22,4 @@ jobs:
         run: docker rm vosox-frontend-container || true
 
       - name: Run Docker container
-        run: docker run -d --name vosox-frontend-container -p 5015:5015 -p 5016:5016 -p 5017:5017 vosox-frontend
+        run: docker run -d --name vosox-frontend-container -p 5015:5015 -p 5016:5016 -p 5017:5017 -p 5018:5018 vosox-frontend

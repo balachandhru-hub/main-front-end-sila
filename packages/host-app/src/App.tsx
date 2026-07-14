@@ -103,15 +103,16 @@ const Shell = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Hide sidebar during onboarding and for platform-user
+  // Hide sidebar during onboarding, for platform-user, and for supplier
   const isOnboarding = location.pathname.includes('/onboarding');
   const isPlatformUser = userRole === 'platform-user';
-  const showSidebar = isLoggedIn && !isOnboarding && !isPlatformUser;
+  const isSupplier = userRole === 'supplier';
+  const showSidebar = isLoggedIn && !isOnboarding && !isPlatformUser && !isSupplier;
 
   return (
     <div className="app-container">
       {showSidebar && <Sidebar />}
-      <main className={`main-content ${!isLoggedIn || isOnboarding || isPlatformUser ? 'no-padding' : ''} ${isPlatformUser ? 'bg-white' : ''}`}>
+      <main className={`main-content ${!isLoggedIn || isOnboarding || isPlatformUser || isSupplier ? 'no-padding' : ''} ${isPlatformUser ? 'bg-white' : ''}`}>
         <React.Suspense fallback={<Loader fullScreen={true} message="Loading modules..." />}>
           <Routes>
             <Route

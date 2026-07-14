@@ -33,6 +33,31 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, on
     }
 
     try {
+      // ============================================================================
+      // NEW: Map categories from selected sub-products with parent info
+      // ============================================================================
+      const buyerCategories = data.selectedSubProducts?.length > 0
+        ? data.selectedSubProducts.map((sub: any) => ({
+            segment: sub.parentSegment || 0,
+            segmentTitle: sub.parentTitle || '',
+            family: sub.parentFamily || 0,
+            familyTitle: sub.parentTitle || '',
+            class: sub.class,
+            classTitle: sub.title,
+            commodity: sub.commodity,
+            commodityTitle: sub.title,
+          }))
+        : data.selectedProducts?.map((product: any) => ({
+            segment: product.segment,
+            segmentTitle: product.title,
+            family: product.family,
+            familyTitle: product.title,
+            class: 0,
+            classTitle: '',
+            commodity: 0,
+            commodityTitle: '',
+          })) || [];
+
       const payload = {
         organizationId: orgId,
         organizationName: onboardingData?.organizationName || '',
@@ -53,7 +78,7 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, on
         website: data.businessInfo.website || '',
         description: data.businessInfo.companyDescription || '',
         status: 'PENDING',
-        buyerCategories: [],
+        buyerCategories: buyerCategories, // ✅ NEW: mapped from categories
         buyerBankAccounts: data.bankAccounts.map((b: any) => ({
           accountHolderName: b.accountHolderName,
           bankName: b.bankName,
@@ -97,7 +122,7 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, on
 
       sessionStorage.setItem('vosox_buyer_profile_complete', 'true');
       onCompleteSuccess();
-      navigate('../dashboard', { replace: true });
+      navigate('/buyer/dashboard', { replace: true });
     } catch (error) {
       console.error('Error saving buyer profile:', error);
       throw error;
@@ -192,7 +217,7 @@ const BuyerApp: React.FC = () => {
         path="onboarding"
         element={
           profileComplete ? (
-            <Navigate to="/buyer/dashboard" replace /> // ✅ FIXED: absolute path
+            <Navigate to="/buyer/dashboard" replace />
           ) : (
             <OnboardingRoute 
               onCompleteSuccess={() => setProfileComplete(true)} 
@@ -208,7 +233,7 @@ const BuyerApp: React.FC = () => {
           profileComplete ? (
             <BuyerDashboard />
           ) : (
-            <Navigate to="/buyer/onboarding" replace /> // ✅ FIXED: absolute path
+            <Navigate to="/buyer/onboarding" replace />
           )
         }
       />
