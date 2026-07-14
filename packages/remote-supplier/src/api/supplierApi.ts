@@ -33,3 +33,13 @@ export const getSupplierProfile = async (): Promise<any> => {
   }
 };
 
+export const logoutSupplier = async (): Promise<void> => {
+  try {
+    await supplierInstance.put('/api/v1/identity/auth/logout');
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
+    throw new Error(`${errMsg} (${status})`);
+  }
+};

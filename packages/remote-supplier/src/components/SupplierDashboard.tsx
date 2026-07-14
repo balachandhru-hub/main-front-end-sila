@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import SilaLogo from "../assets/SILA - Logo.png";
 import "./SupplierDashboard.css";
+import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
+import { logoutSupplier } from "../api/supplierApi";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -176,6 +178,14 @@ const NavIconSettings = () => (
   </svg>
 );
 
+const LogoutIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
+
 const IconCheck = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 6 9 17l-5-5" />
@@ -215,7 +225,6 @@ const IconSend = () => (
     <path d="M22 2 11 13" />
   </svg>
 );
-
 
 const IconSparkles = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -371,8 +380,30 @@ const matchCards: MatchCard[] = [
 ];
 
 const SupplierDashboard: React.FC = () => {
+  const organizationName =
+    sessionStorage.getItem("vosox_organization_name") || "Apex Office & Technology Supp...";
+  const firstLetter = organizationName.trim().charAt(0).toUpperCase();
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    setLogoutError(null);
+    try {
+      await logoutSupplier();
+    } catch (error: any) {
+      setLogoutError(error?.message || "Logout request failed, clearing session locally.");
+    } finally {
+      sessionStorage.removeItem("vosox_organization_name");
+      useAuthStore.getState().logout();
+      window.dispatchEvent(new CustomEvent("session:expired"));
+      setLoggingOut(false);
+    }
+  };
 
   return (
     <div className={`pud-shell ${isSidebarOpen ? "" : "pud-sidebar-closed"}`}>
@@ -388,6 +419,24 @@ const SupplierDashboard: React.FC = () => {
               {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
             </div>
           ))}
+          <div
+            className="pud-nav-item pud-nav-item-logout"
+            style={{
+              marginTop: "auto",
+              opacity: loggingOut ? 0.6 : 1,
+              cursor: loggingOut ? "not-allowed" : "pointer",
+              pointerEvents: loggingOut ? "none" : "auto",
+            }}
+            onClick={handleLogout}
+            role="button"
+            aria-disabled={loggingOut}
+            title={logoutError || undefined}
+          >
+            <span className="pud-nav-icon" style={{ transform: "rotate(180deg)" }}>
+              <LogoutIcon />
+            </span>
+            <span className="pud-nav-label">{loggingOut ? "Logging out..." : "Log Out"}</span>
+          </div>
         </nav>
       </aside>
 
@@ -407,12 +456,14 @@ const SupplierDashboard: React.FC = () => {
               <IconBell />
             </span>
             <div className="pud-header-account">
-              <span className="pud-header-account-name">Apex Office &amp; Technology Supp...</span>
+              <span className="pud-header-account-name" title={organizationName}>
+                {organizationName}
+              </span>
               <span className="pud-header-account-verified">
                 <IconCheck /> Verified Vendor
               </span>
             </div>
-            <div className="pud-header-avatar">A</div>
+            <div className="pud-header-avatar">{firstLetter}</div>
           </div>
         </header>
 
