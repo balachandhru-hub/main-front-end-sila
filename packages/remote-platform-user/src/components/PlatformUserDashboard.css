@@ -265,7 +265,7 @@
   color: #4a5568;
   margin: 0 0 16px 0;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  /* -webkit-line-clamp: 2; */
   -webkit-box-orient: vertical;
   overflow: hidden;
   height: 2.7em;
@@ -381,4 +381,29 @@
   .plat-dashboard {
     padding: 24px 16px;
   }
+}
+
+.plat-logout-btn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #fff5f5;
+  color: #c53030;
+  border: 1px solid #fed7d7;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.plat-logout-btn:hover:not(:disabled) {
+  background-color: #fed7d7;
+}
+
+.plat-logout-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
