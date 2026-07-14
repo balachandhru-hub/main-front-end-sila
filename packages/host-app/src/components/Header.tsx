@@ -1,12 +1,12 @@
 import React from 'react';
 import './Header.css';
-import vosx_logo from '../../public/assets/vosx-logo.png';
+import sila_logo from '../../public/assets/SILA_Logo.png';
 
 const Header: React.FC = () => {
   return (
     <header className="vx-header">
       <div className="vx-header-inner">
-        <img src={vosx_logo} alt="VOSX" className="vx-logo-img" />
+        <img src={sila_logo} alt="SILA" className="vx-logo-img" />
       </div>
     </header>
   );

@@ -3,7 +3,7 @@ import { getAllBuyers, getAllSuppliers, logoutPlatformUser, type Buyer, type Sup
 import { useAuthStore } from '../../../host-app/src/store/useAuthStore';
 import { FaUser, FaBuilding, FaEnvelope, FaPhone, FaGlobe, FaMapMarkerAlt, FaSearch, FaSignOutAlt } from 'react-icons/fa';
 import './PlatformUserDashboard.css';
-const vosx_logo = `${window.location.protocol}//${window.location.host}/assets/vosx-logo.png`;
+const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;
 
 export const PlatformUserDashboard: React.FC = () => {
   const [buyers, setBuyers] = useState<Buyer[]>([]);
@@ -98,7 +98,7 @@ export const PlatformUserDashboard: React.FC = () => {
     <div className="plat-dashboard">
       {/* Top Header Bar with Left Logo */}
       <header className="plat-top-header">
-        <img src={vosx_logo} alt="VOSX" className="plat-top-logo" />
+        <img src={sila_logo} alt="SILA" className="plat-top-logo" />
         <button
           className="plat-logout-btn"
           onClick={handleLogout}
