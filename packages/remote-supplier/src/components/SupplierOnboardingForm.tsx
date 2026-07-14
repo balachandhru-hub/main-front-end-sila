@@ -962,8 +962,8 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
   const selectedCountryObj = countries.find(c => c.name === draft.country);
   const states = selectedCountryObj ? State.getStatesOfCountry(selectedCountryObj.isoCode) : [];
   const selectedStateObj = states.find(s => s.name === draft.state);
-  const cities = (selectedCountryObj && selectedStateObj) 
-    ? City.getCitiesOfState(selectedCountryObj.isoCode, selectedStateObj.isoCode) 
+  const cities = (selectedCountryObj && selectedStateObj)
+    ? City.getCitiesOfState(selectedCountryObj.isoCode, selectedStateObj.isoCode)
     : [];
 
   const handleDraftField = <K extends keyof Step4Draft>(field: K, value: Step4Draft[K]) => {
@@ -1347,7 +1347,7 @@ interface SupplierOnboardingFormProps {
   }) => Promise<void> | void;
 }
 
-const vosx_logo = `${window.location.protocol}//${window.location.host}/assets/vosx-logo.png`;
+const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;
 
 const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -1439,7 +1439,7 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
   return (
     <div className="vob-page">
       <header className="vob-header">
-        <img src={vosx_logo} alt="VOSX" style={{ height: 32 }} />
+        <img src={sila_logo} alt="SILA" style={{ height: 32 }} />
       </header>
 
       <main className="vob-main">
@@ -1458,24 +1458,22 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
                   }}
                 >
                   <span
-                    className={`vob-step-number ${
-                      isCompleted
+                    className={`vob-step-number ${isCompleted
                         ? 'vob-step-number--completed'
                         : isActive
-                        ? 'vob-step-number--active'
-                        : 'vob-step-number--pending'
-                    }`}
+                          ? 'vob-step-number--active'
+                          : 'vob-step-number--pending'
+                      }`}
                   >
                     {isCompleted ? <CheckIcon /> : step.id}
                   </span>
                   <span
-                    className={`vob-step-label ${
-                      isCompleted
+                    className={`vob-step-label ${isCompleted
                         ? 'vob-step-label--completed'
                         : isActive
-                        ? 'vob-step-label--active'
-                        : 'vob-step-label--pending'
-                    }`}
+                          ? 'vob-step-label--active'
+                          : 'vob-step-label--pending'
+                      }`}
                   >
                     {step.label}
                   </span>

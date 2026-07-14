@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import SupplierDashboard from './components/SupplierDashboard';
+import Invitations from './components/Invitations';
 import SupplierOnboardingForm, {
   fileToBase64,
   type Step1Data,
@@ -208,6 +209,10 @@ const SupplierApp: React.FC = () => {
       <Route
         path="dashboard"
         element={profileComplete ? <SupplierDashboard /> : <Navigate to="onboarding" replace />}
+      />
+      <Route
+        path="invitations"
+        element={profileComplete ? <Invitations /> : <Navigate to="onboarding" replace />}
       />
       <Route path="*" element={<Navigate to={profileComplete ? 'dashboard' : 'onboarding'} replace />} />
     </Routes>
