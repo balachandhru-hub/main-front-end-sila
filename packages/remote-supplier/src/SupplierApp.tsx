@@ -127,16 +127,18 @@ const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onComple
     };
 
     // 6. Post profile to server via api helper
-    await createSupplierProfile(payload);
+    const response = await createSupplierProfile(payload);
 
-    // Save organization name
-    if (payload.businessProfile.organizationName) {
-      sessionStorage.setItem('vosox_organization_name', payload.businessProfile.organizationName);
+    if (response && response.status === 200) {
+      // Save organization name
+      if (payload.businessProfile.organizationName) {
+        sessionStorage.setItem('vosox_organization_name', payload.businessProfile.organizationName);
+      }
+      // 7. Update profileComplete status
+      sessionStorage.setItem('vosox_profile_complete', 'true');
+      onCompleteSuccess();
+      navigate('../dashboard', { replace: true });
     }
-    // 7. Update profileComplete status
-    sessionStorage.setItem('vosox_profile_complete', 'true');
-    onCompleteSuccess();
-    navigate('../dashboard', { replace: true });
   };
 
   return <SupplierOnboardingForm onComplete={handleOnboardingComplete} />;

@@ -250,7 +250,12 @@ const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
               placeholder="Employee Count"
               className="vob-input"
               value={data.employeeCount}
-              onChange={(e) => handleField('employeeCount', e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (/^\d*$/.test(val)) {
+                  handleField('employeeCount', val);
+                }
+              }}
             />
           </div>
 
@@ -261,7 +266,12 @@ const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
               placeholder="Annual Turnover"
               className="vob-input"
               value={data.annualTurnover}
-              onChange={(e) => handleField('annualTurnover', e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (/^\d*\.?\d*$/.test(val)) {
+                  handleField('annualTurnover', val);
+                }
+              }}
             />
           </div>
 
@@ -773,7 +783,12 @@ const Step3BankInfo: React.FC<Step3BankInfoProps> = ({ data, onChange, onValidat
             placeholder="Account Number"
             className={`vob-input ${accountNumberError ? 'vob-input--error' : ''}`}
             value={draft.accountNumber}
-            onChange={(e) => handleDraftField('accountNumber', e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (/^\d*$/.test(val)) {
+                handleDraftField('accountNumber', val);
+              }
+            }}
             onBlur={() => setTouched((prev) => ({ ...prev, accountNumber: true }))}
           />
           {accountNumberError && <span className="vob-error-text">{accountNumberError}</span>}
