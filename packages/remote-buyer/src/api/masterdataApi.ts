@@ -10,6 +10,9 @@ export interface SelectedSubProduct {
     class: number;
     commodity: number;
     title: string;
+    parentSegment?: number;   
+    parentFamily?: number;     
+    parentTitle?: string;        
 }
 
 export async function fetchSegments(): Promise<any[]> {
