@@ -52,7 +52,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
     }
   };
 
-  const handleSignIn = async (e: React.FormEvent) => {
+const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (!username || !password) {
@@ -62,10 +62,10 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
     setIsLoading(true);
     try {
       await login(username, password);
-
+ 
       // Introduce a 1-second delay to let the browser process and write the new cookies
       await delay(1000);
-
+ 
       // Fetch token claims to retrieve IDs
       let details: any = {};
       try {
@@ -77,26 +77,23 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
             organizationId: claims.organizationId,
             roleId: claims.roleId,
           };
-
+ 
           // Store user details in sessionStorage for dashboard use
           sessionStorage.setItem('vosox_user_id', claims.userId || '');
           sessionStorage.setItem('vosox_person_id', claims.personId || '');
           sessionStorage.setItem('vosox_organization_id', claims.organizationId || '');
           sessionStorage.setItem('vosox_role_id', claims.roleId || '');
           sessionStorage.setItem('vosox_user_role', claims.role || '');
-
+ 
           onLoginSuccess?.(details);
-
+ 
           // FIX: Navigate to the correct path based on user role
-          // Supplier -> /supplier/onboarding (remote app under /supplier/*)
-          // Buyer -> /buyer (or /buyer/onboarding if they have one)
-          // Platform-user -> /platform-user
           const userRole = claims.role || 'supplier';
-
+ 
           if (userRole === 'supplier') {
             navigate('/supplier/onboarding', { replace: true });
           } else if (userRole === 'buyer') {
-            navigate('/buyer', { replace: true });
+            navigate('/buyer/onboarding', { replace: true });  // ✅ FIXED
           } else {
             navigate('/platform-user', { replace: true });
           }

@@ -3,6 +3,8 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Country, State, City } from "country-state-city";
 import "./BuyerProfile.css";
+
+// TODO: Update this import path to match your actual file location
 import { fetchSegments, fetchClasses } from "../api/masterdataApi";
 import type { SelectedProduct, SelectedSubProduct } from "../api/masterdataApi";
 
@@ -60,7 +62,35 @@ interface Agreements {
     authorizeVerification: boolean;
 }
 
+// ============================================================================
+// UPDATED: Props now include categories data
+// ============================================================================
+interface BuyerProfileProps {
+    onComplete?: (data: {
+        businessInfo: BusinessInfo;
+        registrations: Registration[];
+        bankAccounts: BankAccount[];
+        dispatchLocations: DispatchLocation[];
+        selectedProducts: SelectedProduct[];
+        selectedSubProducts: SelectedSubProduct[];
+    }) => Promise<void> | void;
+    onboardingData?: {
+        organizationName: string;
+        email: string;
+        phone: string;
+        country: string;
+        addressLine1: string;
+        addressLine2: string;
+        city: string;
+        state: string;
+        pinCode: string;
+    } | null;
+}
 
+
+// ============================================================================
+// UPDATED: 5 steps now
+// ============================================================================
 const STEP_LABELS = [
     "Business Information",
     "Product & Service Categories",
@@ -96,6 +126,7 @@ const BUSINESS_TYPES = [
 const REGISTRATION_TYPES = ["GST", "PAN", "IEC", "MSME / Udyam", "ISO Certificate", "Other"];
 
 const YEARS = Array.from({ length: 60 }, (_, i) => String(new Date().getFullYear() - i));
+
 
 const emptyBusinessInfo: BusinessInfo = {
     industry: "",
@@ -153,6 +184,9 @@ function maskAccountNumber(accountNumber: string): string {
 }
 
 
+// ============================================================================
+// Teammate's ProductDropdown component (unchanged)
+// ============================================================================
 function ProductDropdown({ 
     segments, 
     onSelect,
@@ -239,6 +273,9 @@ function ProductDropdown({
     );
 }
 
+// ============================================================================
+// Teammate's SubProductDropdown component (unchanged)
+// ============================================================================
 function SubProductDropdown({ 
     classes, 
     onSelect,
@@ -333,23 +370,28 @@ function SubProductDropdown({
 }
 
 
-export default function BuyerProfile() {
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+export default function BuyerProfile({ onComplete, onboardingData }: BuyerProfileProps) {
     const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [furthestStep, setFurthestStep] = useState<number>(1);
 
     const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(emptyBusinessInfo);
     
-    // UNSPSC Masterdata states and hooks
+    // ============================================================================
+    // NEW: Categories states from teammate's code
+    // ============================================================================
     const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
     const [selectedSubProducts, setSelectedSubProducts] = useState<SelectedSubProduct[]>([]);
     const [activeProduct, setActiveProduct] = useState<SelectedProduct | null>(null);
-
     const [segments, setSegments] = useState<any[]>([]);
     const [loadingSegments, setLoadingSegments] = useState(false);
     const [classes, setClasses] = useState<any[]>([]);
     const [loadingClasses, setLoadingClasses] = useState(false);
 
+    // Load segments on mount
     useEffect(() => {
         const loadSegments = async () => {
             setLoadingSegments(true);
@@ -365,6 +407,7 @@ export default function BuyerProfile() {
         loadSegments();
     }, []);
 
+    // Load classes when active product changes
     useEffect(() => {
         if (!activeProduct) {
             setClasses([]);
@@ -405,61 +448,29 @@ export default function BuyerProfile() {
         });
     };
 
-    const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
-        if (!selectedSubProducts.some(p => p.commodity === subProduct.commodity)) {
-            setSelectedSubProducts((prev) => [...prev, subProduct]);
-        }
-    };
-
+const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
+    if (!selectedSubProducts.some(p => p.commodity === subProduct.commodity)) {
+        setSelectedSubProducts((prev) => [...prev, {
+            ...subProduct,
+            parentSegment: activeProduct?.segment || 0,
+            parentFamily: activeProduct?.family || 0,
+            parentTitle: activeProduct?.title || '',
+        }]);
+    }
+};
     const handleRemoveSubProduct = (commodityCode: number) => {
         setSelectedSubProducts((prev) => prev.filter((p) => p.commodity !== commodityCode));
     };
 
-    const [registrations, setRegistrations] = useState<Registration[]>([
-        {
-            id: makeId(),
-            type: "GST",
-            number: "EXAMPLE0123456",
-            name: "Jon Snow",
-            expiryDate: "04.08.2050",
-            attachmentName: "GST Attachment.pdf",
-        },
-    ]);
+    const [registrations, setRegistrations] = useState<Registration[]>([]);
     const [registrationDraft, setRegistrationDraft] = useState(emptyRegistrationDraft);
 
-    const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([
-        {
-            id: makeId(),
-            accountHolderName: "Cersei Lannister",
-            bankName: "HDFC Bank",
-            branchName: "",
-            accountNumber: "0000XXXXXX2456",
-            ifscCode: "",
-            swiftCode: "",
-            iban: "",
-            currency: "INR",
-            isPrimary: true,
-        },
-    ]);
+    const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
     const [bankDraft, setBankDraft] = useState(emptyBankDraft);
 
-    const [dispatchLocations, setDispatchLocations] = useState<DispatchLocation[]>([
-        {
-            id: makeId(),
-            locationName: "Chennai Warehouse",
-            contactPerson: "Arya Stark",
-            country: "IN",
-            state: "TN",
-            addressLine1: "",
-            addressLine2: "",
-            city: "Chennai",
-            pinZip: "",
-            contactEmail: "",
-            contactPhone: "9876543210",
-            isDefault: true,
-        },
-    ]);
+    const [dispatchLocations, setDispatchLocations] = useState<DispatchLocation[]>([]);
     const [locationDraft, setLocationDraft] = useState(emptyLocationDraft);
+    const [hasAutoFilled, setHasAutoFilled] = useState(false);
 
     const [agreements, setAgreements] = useState<Agreements>({
         infoAccurate: false,
@@ -468,6 +479,28 @@ export default function BuyerProfile() {
     });
 
     const [submitted, setSubmitted] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Auto-fill delivery location from onboarding data
+    useEffect(() => {
+        if (onboardingData && !hasAutoFilled && dispatchLocations.length === 0) {
+            setLocationDraft({
+                locationName: onboardingData.organizationName || 'Main Office',
+                contactPerson: '',
+                country: onboardingData.country || '',
+                state: onboardingData.state || '',
+                addressLine1: onboardingData.addressLine1 || '',
+                addressLine2: onboardingData.addressLine2 || '',
+                city: onboardingData.city || '',
+                pinZip: onboardingData.pinCode || '',
+                contactEmail: onboardingData.email || '',
+                contactPhone: onboardingData.phone || '',
+                isDefault: true,
+            });
+            setHasAutoFilled(true);
+        }
+    }, [onboardingData, hasAutoFilled, dispatchLocations.length]);
 
     /* ---------------------------- navigation --------------------------- */
 
@@ -493,7 +526,7 @@ export default function BuyerProfile() {
         setBusinessInfo((prev) => ({ ...prev, [field]: value }));
     }
 
-    /* ------------------------- step 2 handlers -------------------------- */
+    /* ------------------------- step 3 handlers (was step 2) -------------------------- */
 
     function updateRegistrationDraft(field: keyof typeof registrationDraft, value: string) {
         setRegistrationDraft((prev) => ({ ...prev, [field]: value }));
@@ -516,7 +549,7 @@ export default function BuyerProfile() {
         setRegistrations((prev) => prev.filter((r) => r.id !== id));
     }
 
-    /* ------------------------- step 3 handlers -------------------------- */
+    /* ------------------------- step 4 handlers (was step 3) -------------------------- */
 
     function updateBankDraft<K extends keyof typeof bankDraft>(field: K, value: (typeof bankDraft)[K]) {
         setBankDraft((prev) => ({ ...prev, [field]: value }));
@@ -532,19 +565,26 @@ export default function BuyerProfile() {
         setBankAccounts((prev) => prev.filter((b) => b.id !== id));
     }
 
-    /* ------------------------- step 4 handlers -------------------------- */
+    /* ------------------------- step 5 handlers (was step 4) -------------------------- */
 
     function updateLocationDraft<K extends keyof typeof locationDraft>(
         field: K,
         value: (typeof locationDraft)[K]
     ) {
+        if (hasAutoFilled) return;
         setLocationDraft((prev) => ({ ...prev, [field]: value }));
     }
 
     function addLocation() {
         if (!locationDraft.locationName || !locationDraft.addressLine1 || !locationDraft.city) return;
-        setDispatchLocations((prev) => [...prev, { id: makeId(), ...locationDraft }]);
+        
+        setDispatchLocations((prev) => [...prev, { 
+            id: makeId(), 
+            ...locationDraft 
+        }]);
+        
         setLocationDraft(emptyLocationDraft);
+        setHasAutoFilled(false);
     }
 
     function removeLocation(id: string) {
@@ -558,10 +598,41 @@ export default function BuyerProfile() {
     const canSubmit =
         agreements.infoAccurate && agreements.agreeTerms && agreements.authorizeVerification;
 
-    function handleSubmitProfile(e: FormEvent) {
+    // ============================================================================
+    // UPDATED: Pass categories data to onComplete
+    // ============================================================================
+    async function handleSubmitProfile(e: FormEvent) {
         e.preventDefault();
         if (!canSubmit) return;
-        setSubmitted(true);
+
+        setError(null);
+        setSubmitting(true);
+
+        try {
+            const finalLocations = [...dispatchLocations];
+            if (locationDraft.locationName && locationDraft.addressLine1 && locationDraft.city) {
+                finalLocations.push({ id: makeId(), ...locationDraft });
+            }
+
+            if (onComplete) {
+                await onComplete({
+    businessInfo,
+    registrations,
+    bankAccounts,
+    dispatchLocations: finalLocations,
+    selectedProducts,
+    selectedSubProducts,
+});
+                setSubmitted(true);
+            } else {
+                setSubmitted(true);
+            }
+        } catch (err: any) {
+            setError(err.message || 'Failed to submit profile. Please try again.');
+            console.error('Error submitting profile:', err);
+        } finally {
+            setSubmitting(false);
+        }
     }
 
     /* ------------------------------------------------------------------ */
@@ -722,23 +793,24 @@ export default function BuyerProfile() {
 
                 <div className="bp-actions bp-actions-right">
                     <button type="button" className="bp-btn bp-btn-primary" onClick={handleNext}>
-                        Continue
+                        Next
                     </button>
                 </div>
             </div>
         );
     }
 
+    // ============================================================================
+    // NEW: Step 2 - Product & Service Categories (from teammate)
+    // ============================================================================
     function renderStep2() {
         return (
             <div className="bp-panel">
                 <h2 className="bp-panel-title">Step 2: Product &amp; Service Categories</h2>
                 <div className="bp-divider" />
                 
-                {/* Product and Sub-Product Selectors Card */}
                 <div className="bp-category-section">
                     
-                    {/* Product Selector */}
                     <div className="bp-field">
                         <label>
                             Select Product (Segment &amp; Family)<span className="bp-required">*</span>
@@ -784,7 +856,6 @@ export default function BuyerProfile() {
 
                     <div className="bp-selector-divider" />
 
-                    {/* Sub-Product Selector */}
                     <div className="bp-field">
                         <label>
                             Select Sub-Product (Class &amp; Commodity)
@@ -830,13 +901,16 @@ export default function BuyerProfile() {
                         Back
                     </button>
                     <button type="button" className="bp-btn bp-btn-primary" onClick={handleNext}>
-                        Continue
+                        Next
                     </button>
                 </div>
             </div>
         );
     }
 
+    // ============================================================================
+    // Step 3: Registrations (was step 2)
+    // ============================================================================
     function renderStep3() {
         return (
             <div className="bp-panel">
@@ -973,6 +1047,9 @@ export default function BuyerProfile() {
         );
     }
 
+    // ============================================================================
+    // Step 4: Bank Accounts (was step 3)
+    // ============================================================================
     function renderStep4() {
         return (
             <div className="bp-panel">
@@ -1146,11 +1223,31 @@ export default function BuyerProfile() {
         );
     }
 
+    // ============================================================================
+    // Step 5: Dispatch Locations (was step 4)
+    // ============================================================================
     function renderStep5() {
+        const isReadOnly = hasAutoFilled;
+
         return (
             <div className="bp-panel">
                 <h2 className="bp-panel-title">Step 5: Dispatch Locations</h2>
                 <div className="bp-divider" />
+                
+                {isReadOnly && (
+                    <div style={{ 
+                        backgroundColor: '#e7f3ff', 
+                        border: '1px solid #0d6efd', 
+                        borderRadius: '6px', 
+                        padding: '10px 15px', 
+                        marginBottom: '15px',
+                        color: '#084298',
+                        fontSize: '0.9rem'
+                    }}>
+                        ℹ️ These fields are auto-filled from your onboarding details. Click "+ Add Location" to confirm, then you can add more locations manually.
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmitProfile}>
                     <div className="bp-form-grid">
                         <div className="bp-field">
@@ -1162,6 +1259,8 @@ export default function BuyerProfile() {
                                 type="text"
                                 value={locationDraft.locationName}
                                 onChange={(e) => updateLocationDraft("locationName", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -1172,6 +1271,8 @@ export default function BuyerProfile() {
                                 type="text"
                                 value={locationDraft.contactPerson}
                                 onChange={(e) => updateLocationDraft("contactPerson", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -1187,6 +1288,8 @@ export default function BuyerProfile() {
                                     updateLocationDraft("state", "");
                                     updateLocationDraft("city", "");
                                 }}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             >
                                 <option value="">Select Country</option>
                                 {Country.getAllCountries().map((c) => (
@@ -1208,7 +1311,8 @@ export default function BuyerProfile() {
                                     updateLocationDraft("state", e.target.value);
                                     updateLocationDraft("city", "");
                                 }}
-                                disabled={!locationDraft.country}
+                                disabled={isReadOnly || !locationDraft.country}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             >
                                 <option value="">Select State</option>
                                 {locationDraft.country && State.getStatesOfCountry(locationDraft.country).map((s) => (
@@ -1228,6 +1332,8 @@ export default function BuyerProfile() {
                                 type="text"
                                 value={locationDraft.addressLine1}
                                 onChange={(e) => updateLocationDraft("addressLine1", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -1238,6 +1344,8 @@ export default function BuyerProfile() {
                                 type="text"
                                 value={locationDraft.addressLine2}
                                 onChange={(e) => updateLocationDraft("addressLine2", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -1249,7 +1357,8 @@ export default function BuyerProfile() {
                                 id="city"
                                 value={locationDraft.city}
                                 onChange={(e) => updateLocationDraft("city", e.target.value)}
-                                disabled={!locationDraft.state}
+                                disabled={isReadOnly || !locationDraft.state}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             >
                                 <option value="">Select City</option>
                                 {locationDraft.state && City.getCitiesOfState(locationDraft.country, locationDraft.state).map((c) => (
@@ -1269,6 +1378,8 @@ export default function BuyerProfile() {
                                 type="text"
                                 value={locationDraft.pinZip}
                                 onChange={(e) => updateLocationDraft("pinZip", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -1279,6 +1390,8 @@ export default function BuyerProfile() {
                                 type="email"
                                 value={locationDraft.contactEmail}
                                 onChange={(e) => updateLocationDraft("contactEmail", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
 
@@ -1289,20 +1402,27 @@ export default function BuyerProfile() {
                                 type="tel"
                                 value={locationDraft.contactPhone}
                                 onChange={(e) => updateLocationDraft("contactPhone", e.target.value)}
+                                disabled={isReadOnly}
+                                style={isReadOnly ? { backgroundColor: '#f8f9fa', cursor: 'not-allowed' } : {}}
                             />
                         </div>
                     </div>
 
                     <div className="bp-actions bp-actions-between">
-                        <label className="bp-checkbox-label">
+                        <label className="bp-checkbox-label" style={isReadOnly ? { opacity: 0.6, pointerEvents: 'none' } : {}}>
                             <input
                                 type="checkbox"
                                 checked={locationDraft.isDefault}
                                 onChange={(e) => updateLocationDraft("isDefault", e.target.checked)}
+                                disabled={isReadOnly}
                             />
                             Default Dispatch Location
                         </label>
-                        <button type="button" className="bp-btn bp-btn-primary" onClick={addLocation}>
+                        <button 
+                            type="button" 
+                            className="bp-btn bp-btn-primary" 
+                            onClick={addLocation}
+                        >
                             + Add Location
                         </button>
                     </div>
@@ -1379,12 +1499,18 @@ export default function BuyerProfile() {
                         </label>
                     </div>
 
+                    {error && (
+                        <div style={{ color: '#dc2626', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '6px', marginBottom: '15px', fontSize: '0.9rem', border: '1px solid #f87171' }}>
+                            {error}
+                        </div>
+                    )}
+
                     <div className="bp-actions bp-actions-right">
-                        <button type="button" className="bp-btn bp-btn-secondary" onClick={handleBack}>
+                        <button type="button" className="bp-btn bp-btn-secondary" onClick={handleBack} disabled={submitting}>
                             Back
                         </button>
-                        <button type="submit" className="bp-btn bp-btn-primary" disabled={!canSubmit}>
-                            Submit Profile
+                        <button type="submit" className="bp-btn bp-btn-primary" disabled={!canSubmit || submitting}>
+                            {submitting ? 'Submitting...' : 'Submit Profile'}
                         </button>
                     </div>
                 </form>

@@ -1,101 +1,180 @@
-import React, { useState } from 'react';
-import './SupplierDashboard.css';
-import { useAuthStore } from '../../../host-app/src/store/useAuthStore';
-import { logoutSupplier } from '../api/supplierApi'; 
+import React, { useState } from "react";
+import SilaLogo from "../assets/SILA - Logo.png";
+import "./SupplierDashboard.css";
+import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
+import { logoutSupplier } from "../api/supplierApi";
 
-const HomeIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-    <polyline points="9 22 9 12 15 12 15 22" />
+interface StatCard {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  linkText: string;
+  colorClass: string;
+}
+
+interface RFQItem {
+  code: string;
+  company: string;
+  title: string;
+  closes: string;
+  deliv: string;
+}
+
+interface POItem {
+  code: string;
+  status: "ACCEPTED" | "DELIVERED";
+  company: string;
+  orderDate: string;
+  amount: string;
+}
+
+interface MatchCard {
+  location: string;
+  initials: string;
+  name: string;
+  seeking: string;
+  description: string;
+  representative: string;
+  actionLabel: string;
+  actionVariant: "message" | "interest";
+  website: string;
+  repTitle: string;
+  repEmail: string;
+  revenue: string;
+  employees: string;
+  categoryNote: string;
+  destinationNote: string;
+}
+
+const IconMenu = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="12" x2="21" y2="12"></line>
+    <line x1="3" y1="6" x2="21" y2="6"></line>
+    <line x1="3" y1="18" x2="21" y2="18"></line>
   </svg>
 );
 
-const MailIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-    <polyline points="22,6 12,13 2,6" />
+const IconMail = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <path d="m22 6-10 7L2 6" />
   </svg>
 );
 
-const RfqIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+const IconFile = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <polyline points="14 2 14 8 20 8" />
-    <line x1="16" y1="13" x2="8" y2="13" />
-    <line x1="16" y1="17" x2="8" y2="17" />
-    <polyline points="10 9 9 9 8 9" />
+    <path d="M14 2v6h6" />
+    <path d="M8 13h8M8 17h8M8 9h2" />
   </svg>
 );
 
-const QuoteIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="1" x2="12" y2="23" />
-    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+const IconTrend = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+    <polyline points="16 7 22 7 22 13" />
   </svg>
 );
 
-const OrderIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-    <line x1="3" y1="6" x2="21" y2="6" />
+const IconBag = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+    <path d="M3 6h18" />
     <path d="M16 10a4 4 0 0 1-8 0" />
   </svg>
 );
 
-const ContractIcon = () => (
+const IconInvoice = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 2h11l5 5v15H4z" />
+    <path d="M15 2v5h5" />
+    <path d="M9 13h1M9 17h6" />
+  </svg>
+);
+
+const IconBell = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+  </svg>
+);
+
+const NavIconHome = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <path d="M9 22V12h6v10" />
+  </svg>
+);
+
+const NavIconMail = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <path d="m22 6-10 7L2 6" />
+  </svg>
+);
+
+const NavIconFile = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <polyline points="14 2 14 8 20 8" />
-    <path d="M12.5 12.5L10 15l-1.5-1.5" />
+    <path d="M14 2v6h6" />
   </svg>
 );
 
-const InvoiceIcon = () => (
+const NavIconUser = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
-    <line x1="9" y1="22" x2="9" y2="16" />
-    <line x1="8" y1="12" x2="16" y2="12" />
-    <line x1="8" y1="8" x2="16" y2="8" />
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
   </svg>
 );
 
-const PaymentIcon = () => (
+const NavIconBag = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="4" width="20" height="16" rx="2" ry="2" />
-    <line x1="2" y1="10" x2="22" y2="10" />
+    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+    <path d="M3 6h18" />
+    <path d="M16 10a4 4 0 0 1-8 0" />
   </svg>
 );
 
-const MessageIcon = () => (
+const NavIconContract = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8 2h8l4 4v16H4V2z" />
+    <path d="M8 2v4H4" />
+  </svg>
+);
+
+const NavIconInvoice = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7" rx="1" />
+    <rect x="14" y="3" width="7" height="7" rx="1" />
+    <rect x="3" y="14" width="7" height="7" rx="1" />
+    <rect x="14" y="14" width="7" height="7" rx="1" />
+  </svg>
+);
+
+const NavIconPayment = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="5" width="20" height="14" rx="2" />
+    <path d="M2 10h20" />
+  </svg>
+);
+
+const NavIconMessage = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   </svg>
 );
 
-const ProfileIcon = () => (
+const NavIconBuilding = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
+    <rect x="4" y="2" width="16" height="20" rx="1" />
+    <path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01" />
   </svg>
 );
 
-const SettingsIcon = () => (
+const NavIconSettings = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3" />
     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-  </svg>
-);
-
-const BellIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-  </svg>
-);
-
-const CheckCircleIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '2px' }}>
-    <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
@@ -107,11 +186,206 @@ const LogoutIcon = () => (
   </svg>
 );
 
-export const SupplierDashboard: React.FC = () => {
-  const organizationName = sessionStorage.getItem('vosox_organization_name') || 'Apex Office & Technology Supp...';
+const IconCheck = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
+const IconCalendar = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" />
+    <path d="M16 2v4M8 2v4M3 10h18" />
+  </svg>
+);
+
+const IconPin = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
+const IconEye = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+const IconMessageSquare = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+const IconSend = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m22 2-7 20-4-9-9-4Z" />
+    <path d="M22 2 11 13" />
+  </svg>
+);
+
+const IconSparkles = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+    <path d="M5 3v4M3 5h4M19 3v4M17 5h4M5 19v4M3 21h4M19 19v4M17 21h4" />
+  </svg>
+);
+
+const IconChevronLeft = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="15 18 9 12 15 6" />
+  </svg>
+);
+
+const IconChevronRight = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
+const IconClose = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const IconGlobe = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z" />
+  </svg>
+);
+
+const IconShieldCheck = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2 4 5v6c0 5 3.5 8.5 8 11 4.5-2.5 8-6 8-11V5Z" />
+    <path d="m9 12 2 2 4-4" />
+  </svg>
+);
+
+const IconCheckCircle = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
+const navItems = [
+  { icon: <NavIconHome />, label: "Dashboard", active: true },
+  { icon: <NavIconMail />, label: "Invitations", badge: 2 },
+  { icon: <NavIconFile />, label: "RFQs", badge: 2 },
+  { icon: <NavIconUser />, label: "Quotations" },
+  { icon: <NavIconBag />, label: "Purchase Orders" },
+  { icon: <NavIconContract />, label: "Contracts" },
+  { icon: <NavIconInvoice />, label: "Invoices" },
+  { icon: <NavIconPayment />, label: "Payments" },
+  { icon: <NavIconMessage />, label: "Messages" },
+  { icon: <NavIconBuilding />, label: "Company Profile" },
+  { icon: <NavIconSettings />, label: "Settings" },
+];
+
+const statCards: StatCard[] = [
+  { icon: <IconMail />, label: "INVITATIONS", value: 2, linkText: "Pending review >", colorClass: "pud-stat-icon-blue" },
+  { icon: <IconFile />, label: "ACTIVE RFQS", value: 2, linkText: "Bids open >", colorClass: "pud-stat-icon-indigo" },
+  { icon: <IconTrend />, label: "BIDS SUBMITTED", value: 3, linkText: "Track outcomes", colorClass: "pud-stat-icon-green" },
+  { icon: <IconBag />, label: "PURCHASE ORDER", value: 4, linkText: "Accept orders >", colorClass: "pud-stat-icon-purple" },
+  { icon: <IconInvoice />, label: "DUE INVOICES", value: 2, linkText: "Invoice list >", colorClass: "pud-stat-icon-orange" },
+  { icon: <IconBell />, label: "NOTIFICATIONS", value: 3, linkText: "Inquiries & Alerts >", colorClass: "pud-stat-icon-teal" },
+];
+
+const rfqItems: RFQItem[] = [
+  { code: "RFQ-1024", company: "ABC Manufacturing Inc.", title: "Office Furniture Supply", closes: "2026-07-25", deliv: "Sector 4" },
+  { code: "RFQ-1025", company: "Global Tech Solutions Inc.", title: "Enterprise Laptops & Peripherals", closes: "2026-08-05", deliv: "400 Tech Way" },
+  { code: "RFQ-1021", company: "Eco-Friendly Logistics Ltd", title: "Recycled Stationery Bulk", closes: "2026-07-12", deliv: "Frankfurt" },
+];
+
+const poItems: POItem[] = [
+  { code: "PO-2026-90412", status: "ACCEPTED", company: "Global Tech Solutions Inc.", orderDate: "2026-07-04", amount: "$18,500.00" },
+  { code: "PO-2026-88401", status: "ACCEPTED", company: "Apex Partners", orderDate: "2026-05-22", amount: "$4,200.00" },
+  { code: "PO-2026-80214", status: "DELIVERED", company: "ABC Manufacturing Inc.", orderDate: "2026-04-10", amount: "$9,800.00" },
+];
+
+const matchCards: MatchCard[] = [
+  {
+    location: "Singapore",
+    initials: "VL",
+    name: "Vertex Labs Singapore",
+    seeking: "IT Hardware & Accessories",
+    description: "Vertex Labs is a cutting-edge deep tech incubator looking to outfit their brand-new engineering office space with state-of-the-art workstations, high-end developer peripherals, and responsive monitor systems.",
+    representative: "Dr. Adrian Cheng",
+    actionLabel: "Message",
+    actionVariant: "message",
+    website: "www.vertexlabs.com",
+    repTitle: "VP Operations",
+    repEmail: "adrian.cheng@vertexlabs.sg",
+    revenue: "$12.5M USD",
+    employees: "145 Employees",
+    categoryNote: "Matches your catalog listings",
+    destinationNote: "Matches your active service regions",
+  },
+  {
+    location: "European Union",
+    initials: "SH",
+    name: "Starlight Hospitality Group",
+    seeking: "Office Furniture",
+    description: "Starlight Group coordinates multi-location boutique hotel lounges and business centers across Europe. Currently expanding common areas across three new properties and sourcing durable, design-forward furniture.",
+    representative: "Evelyn Carter",
+    actionLabel: "Send Interest",
+    actionVariant: "interest",
+    website: "www.starlighthospitality.eu",
+    repTitle: "Procurement Lead",
+    repEmail: "evelyn.carter@starlightgroup.eu",
+    revenue: "$34.2M USD",
+    employees: "620 Employees",
+    categoryNote: "Matches your catalog listings",
+    destinationNote: "Matches your active service regions",
+  },
+  {
+    location: "North America",
+    initials: "VS",
+    name: "Vanguard Sourcing Partners",
+    seeking: "Stationery",
+    description: "Vanguard supplies administrative desks and corporate centers with specialized FSC certified eco-friendly writing materials, premium notebooks, and recycled paper goods.",
+    representative: "Robert Miller",
+    actionLabel: "Send Interest",
+    actionVariant: "interest",
+    website: "www.vanguardsourcing.com",
+    repTitle: "Sourcing Manager",
+    repEmail: "robert.miller@vanguardsourcing.com",
+    revenue: "$8.9M USD",
+    employees: "95 Employees",
+    categoryNote: "Matches your catalog listings",
+    destinationNote: "Matches your active service regions",
+  },
+  {
+    location: "United Kingdom",
+    initials: "HB",
+    name: "Horizon BioTech",
+    seeking: "Breakroom Supplies",
+    description: "Horizon BioTech operates premium research facilities and corporate office buildings. They require high-volume premium organic coffee, snacks, and breakroom essentials across all sites.",
+    representative: "Claire Johnston",
+    actionLabel: "Send Interest",
+    actionVariant: "interest",
+    website: "www.horizonbiotech.co.uk",
+    repTitle: "Facilities Director",
+    repEmail: "claire.johnston@horizonbiotech.co.uk",
+    revenue: "$21.7M USD",
+    employees: "310 Employees",
+    categoryNote: "Matches your catalog listings",
+    destinationNote: "Matches your active service regions",
+  },
+];
+
+const SupplierDashboard: React.FC = () => {
+  const organizationName =
+    sessionStorage.getItem("vosox_organization_name") || "Apex Office & Technology Supp...";
   const firstLetter = organizationName.trim().charAt(0).toUpperCase();
 
-  const [activeTab, setActiveTab] = useState('Dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
 
@@ -122,392 +396,300 @@ export const SupplierDashboard: React.FC = () => {
     try {
       await logoutSupplier();
     } catch (error: any) {
-      setLogoutError(error?.message || 'Logout request failed, clearing session locally.');
+      setLogoutError(error?.message || "Logout request failed, clearing session locally.");
     } finally {
-      sessionStorage.removeItem('vosox_organization_name');
+      sessionStorage.removeItem("vosox_organization_name");
       useAuthStore.getState().logout();
-      window.dispatchEvent(new CustomEvent('session:expired'));
+      window.dispatchEvent(new CustomEvent("session:expired"));
       setLoggingOut(false);
     }
   };
 
-  const menuItems = [
-    { label: 'Dashboard', icon: <HomeIcon /> },
-    { label: 'Invitations', icon: <MailIcon />, badge: 2 },
-    { label: 'RFQs', icon: <RfqIcon />, badge: 2 },
-    { label: 'Quotations', icon: <QuoteIcon /> },
-    { label: 'Purchase Orders', icon: <OrderIcon /> },
-    { label: 'Contracts', icon: <ContractIcon /> },
-    { label: 'Invoices', icon: <InvoiceIcon /> },
-    { label: 'Payments', icon: <PaymentIcon /> },
-    { label: 'Messages', icon: <MessageIcon /> },
-    { label: 'Company Profile', icon: <ProfileIcon /> },
-    { label: 'Settings', icon: <SettingsIcon /> },
-  ];
-
   return (
-    <div className="sd-layout">
-      {/* Sidebar */}
-      <aside className="sd-sidebar">
-        <div className="sd-sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: "'Outfit', sans-serif", fontSize: '1.4rem', fontWeight: 700 }}>
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#6366f1"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-          </svg>
-          <span style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            VOSOX
-          </span>
-        </div>
-        <ul className="sd-nav">
-          {menuItems.map((item) => (
-            <li
+    <div className={`pud-shell ${isSidebarOpen ? "" : "pud-sidebar-closed"}`}>
+      <aside className="pud-sidebar">
+        <nav className="pud-nav">
+          {navItems.map((item) => (
+            <div
               key={item.label}
-              className={`sd-nav-item ${activeTab === item.label ? 'active' : ''}`}
-              onClick={() => setActiveTab(item.label)}
+              className={`pud-nav-item${item.active ? " pud-nav-item-active" : ""}`}
             >
-              <span className="sd-nav-label">
-                <span className="sd-nav-icon">{item.icon}</span>
-                {item.label}
-              </span>
-              {item.badge && <span className="sd-nav-badge">{item.badge}</span>}
-            </li>
+              <span className="pud-nav-icon">{item.icon}</span>
+              <span className="pud-nav-label">{item.label}</span>
+              {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
+            </div>
           ))}
-          <li
-            className="sd-nav-item"
+          <div
+            className="pud-nav-item pud-nav-item-logout"
             style={{
-              marginTop: 'auto',
-              color: '#dc2626',
+              marginTop: "auto",
               opacity: loggingOut ? 0.6 : 1,
-              cursor: loggingOut ? 'not-allowed' : 'pointer',
-              pointerEvents: loggingOut ? 'none' : 'auto',
+              cursor: loggingOut ? "not-allowed" : "pointer",
+              pointerEvents: loggingOut ? "none" : "auto",
             }}
             onClick={handleLogout}
             role="button"
             aria-disabled={loggingOut}
             title={logoutError || undefined}
           >
-            <span className="sd-nav-label">
-              <span className="sd-nav-icon" style={{ transform: 'rotate(180deg)' }}>
-                <LogoutIcon />
-              </span>
-              {loggingOut ? 'Logging out...' : 'Log Out'}
+            <span className="pud-nav-icon" style={{ transform: "rotate(180deg)" }}>
+              <LogoutIcon />
             </span>
-          </li>
-        </ul>
+            <span className="pud-nav-label">{loggingOut ? "Logging out..." : "Log Out"}</span>
+          </div>
+        </nav>
       </aside>
 
-      {/* Main Container */}
-      <div className="sd-container">
-        {/* Top Header */}
-        <header className="sd-header">
-          <div className="sd-header-actions">
-            <div className="sd-notification-bell">
-              <BellIcon />
-              <div className="sd-notification-dot" />
+      <div className="pud-main">
+        <header className="pud-header">
+          <div className="pud-header-left">
+            <button className="pud-sidebar-toggle" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+              <IconMenu />
+            </button>
+            <div className="pud-logo">
+              <img src={SilaLogo} alt="SILA Logo" className="pud-logo-img" />
             </div>
-
-            <div className="sd-user-profile">
-              <div className="sd-user-info">
-                <div className="sd-user-name" title={organizationName}>
-                  {organizationName}
-                </div>
-                <div className="sd-user-role-badge">
-                  <CheckCircleIcon />
-                  Verified Vendor
-                </div>
-              </div>
-              <div className="sd-user-avatar">
-                {firstLetter}
-              </div>
+          </div>
+          <div className="pud-header-spacer" />
+          <div className="pud-header-right">
+            <span className="pud-header-bell">
+              <IconBell />
+            </span>
+            <div className="pud-header-account">
+              <span className="pud-header-account-name" title={organizationName}>
+                {organizationName}
+              </span>
+              <span className="pud-header-account-verified">
+                <IconCheck /> Verified Vendor
+              </span>
             </div>
+            <div className="pud-header-avatar">{firstLetter}</div>
           </div>
         </header>
 
-        {/* Content Area */}
-        <main className="sd-content">
-          {/* Title Section */}
-          <div className="sd-title-section">
-            <h1 className="sd-title">Supplier Operations Command</h1>
-            <p className="sd-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
-          </div>
+        <main className="pud-content">
+          <h1 className="pud-title">Supplier Operations Command</h1>
+          <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
 
-          {/* Verification Banner */}
-          <div className="sd-status-banner">
-            <div className="sd-banner-dot" />
-            <div className="sd-banner-text">
-              <div className="sd-banner-title">Active Approved Supplier Status (100%)</div>
-              <div className="sd-banner-desc">Your credentials, certification audit records, and bank routes are verified for secure bidding.</div>
-            </div>
-          </div>
-
-          {/* Summary Stats Grid */}
-          <div className="sd-summary-grid">
-            <div className="sd-summary-card">
-              <span className="sd-summary-icon"><MailIcon /></span>
-              <span className="sd-summary-label">Invitations</span>
-              <span className="sd-summary-value">2</span>
-              <span className="sd-summary-link">Pending review &gt;</span>
-            </div>
-            <div className="sd-summary-card">
-              <span className="sd-summary-icon"><RfqIcon /></span>
-              <span className="sd-summary-label">Active RFQs</span>
-              <span className="sd-summary-value">2</span>
-              <span className="sd-summary-link">Bids open &gt;</span>
-            </div>
-            <div className="sd-summary-card">
-              <span className="sd-summary-icon"><QuoteIcon /></span>
-              <span className="sd-summary-label">Bids Submitted</span>
-              <span className="sd-summary-value">3</span>
-              <span className="sd-summary-link">Track outcomes</span>
-            </div>
-            <div className="sd-summary-card">
-              <span className="sd-summary-icon"><OrderIcon /></span>
-              <span className="sd-summary-label">Purchase Order</span>
-              <span className="sd-summary-value">4</span>
-              <span className="sd-summary-link">Accept orders &gt;</span>
-            </div>
-            <div className="sd-summary-card">
-              <span className="sd-summary-icon"><InvoiceIcon /></span>
-              <span className="sd-summary-label">Due Invoices</span>
-              <span className="sd-summary-value">2</span>
-              <span className="sd-summary-link">Invoice list &gt;</span>
-            </div>
-            <div className="sd-summary-card">
-              <span className="sd-summary-icon"><BellIcon /></span>
-              <span className="sd-summary-label">Notifications</span>
-              <span className="sd-summary-value">3</span>
-              <span className="sd-summary-link">Inquiries &amp; Alerts &gt;</span>
-            </div>
-          </div>
-
-          {/* Opportunities and Recent POs */}
-          <div className="sd-main-grid">
-            {/* Recent Sourcing Opportunities */}
-            <div className="sd-card">
-              <div className="sd-card-header">
-                <h3 className="sd-card-title">Recent Sourcing Opportunities</h3>
-                <span className="sd-card-link">View All RFQs &rarr;</span>
-              </div>
-              <div className="sd-list">
-                <div className="sd-opportunity-item">
-                  <div className="sd-opp-info">
-                    <div className="sd-opp-meta">
-                      <span className="sd-opp-rfq">RFQ-1024</span>
-                      <span className="sd-opp-divider">&#8226;</span>
-                      <span className="sd-opp-company">ABC Manufacturing Inc.</span>
-                    </div>
-                    <div className="sd-opp-title">Office Furniture Supply</div>
-                    <div className="sd-opp-dates">Closes: 2026-07-25 &nbsp;|&nbsp; Deliv: Sector 4</div>
-                  </div>
-                  <button className="sd-btn-outline">View RFQ Details</button>
-                </div>
-
-                <div className="sd-opportunity-item">
-                  <div className="sd-opp-info">
-                    <div className="sd-opp-meta">
-                      <span className="sd-opp-rfq">RFQ-1025</span>
-                      <span className="sd-opp-divider">&#8226;</span>
-                      <span className="sd-opp-company">Global Tech Solutions Inc.</span>
-                    </div>
-                    <div className="sd-opp-title">Enterprise Laptops &amp; Peripherals</div>
-                    <div className="sd-opp-dates">Closes: 2026-08-05 &nbsp;|&nbsp; Deliv: 400 Tech Ally</div>
-                  </div>
-                  <button className="sd-btn-outline">View RFQ Details</button>
-                </div>
-
-                <div className="sd-opportunity-item">
-                  <div className="sd-opp-info">
-                    <div className="sd-opp-meta">
-                      <span className="sd-opp-rfq">RFQ-1021</span>
-                      <span className="sd-opp-divider">&#8226;</span>
-                      <span className="sd-opp-company">Eco-Friendly Logistics Ltd</span>
-                    </div>
-                    <div className="sd-opp-title">Recycled Stationery Bulk</div>
-                    <div className="sd-opp-dates">Closes: 2026-07-12 &nbsp;|&nbsp; Deliv: Frankfurt</div>
-                  </div>
-                  <button className="sd-btn-outline">View RFQ Details</button>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Purchase Orders */}
-            <div className="sd-card">
-              <div className="sd-card-header">
-                <h3 className="sd-card-title">Recent Purchase Orders</h3>
-                <span className="sd-card-link">View All &rarr;</span>
-              </div>
-              <div className="sd-list">
-                <div className="sd-po-item">
-                  <div className="sd-po-left">
-                    <div className="sd-po-meta">
-                      <span className="sd-po-id">PO-2026-98412</span>
-                      <span className="sd-badge sd-badge-accepted">Accepted</span>
-                    </div>
-                    <div className="sd-po-company">Global Tech Solutions Inc.</div>
-                    <div className="sd-po-date">Order Date: 2026-07-04</div>
-                  </div>
-                  <div className="sd-po-right">
-                    <span className="sd-po-amount">$18,500.00</span>
-                    <span className="sd-po-process">Process &rarr;</span>
-                  </div>
-                </div>
-
-                <div className="sd-po-item">
-                  <div className="sd-po-left">
-                    <div className="sd-po-meta">
-                      <span className="sd-po-id">PO-2026-88501</span>
-                      <span className="sd-badge sd-badge-accepted">Accepted</span>
-                    </div>
-                    <div className="sd-po-company">Apex Partners</div>
-                    <div className="sd-po-date">Order Date: 2026-06-22</div>
-                  </div>
-                  <div className="sd-po-right">
-                    <span className="sd-po-amount">$4,200.00</span>
-                    <span className="sd-po-process">Process &rarr;</span>
-                  </div>
-                </div>
-
-                <div className="sd-po-item">
-                  <div className="sd-po-left">
-                    <div className="sd-po-meta">
-                      <span className="sd-po-id">PO-2026-88214</span>
-                      <span className="sd-badge sd-badge-delivered">Delivered</span>
-                    </div>
-                    <div className="sd-po-company">ABC Manufacturing Inc.</div>
-                    <div className="sd-po-date">Order Date: 2026-06-10</div>
-                  </div>
-                  <div className="sd-po-right">
-                    <span className="sd-po-amount">$9,800.00</span>
-                    <span className="sd-po-process">Process &rarr;</span>
-                  </div>
-                </div>
+          <div className="pud-status-banner">
+            <span className="pud-status-dot" />
+            <div>
+              <div className="pud-status-title">Active Approved Supplier Portal Status (100%)</div>
+              <div className="pud-status-subtext">
+                Your credentials, certification audit records, and bank routes are verified for secure bidding.
               </div>
             </div>
           </div>
 
-          {/* Smart Sourcing Matchmaker */}
-          <div className="sd-card">
-            <div className="sd-card-header" style={{ marginBottom: '8px' }}>
-              <h3 className="sd-card-title">Smart Sourcing Matchmaker</h3>
-            </div>
-            <p className="sd-subtitle" style={{ marginBottom: '24px' }}>
-              Active enterprise buyers looking for products and services matching your certified categories and registered ship-to locations.
-            </p>
-
-            <div className="sd-matchmaker-grid">
-              <div className="sd-match-card">
-                <div className="sd-match-header">
-                  <div className="sd-match-buyer-row">
-                    <div className="sd-match-avatar">VL</div>
-                    <div className="sd-match-buyer-info">
-                      <span className="sd-match-buyer-name">Vertex Labs Singapore</span>
-                      <span className="sd-match-seeking">Seeking: IT Hardware &amp; Accessories</span>
-                    </div>
-                  </div>
-                  <span className="sd-match-badge">Singapore</span>
-                </div>
-                <p className="sd-match-desc">
-                  Vertex Labs is a cutting-edge deep tech incubator looking to outfit their brand-new engineering office space with state of...
-                </p>
-                <div className="sd-match-rep">
-                  <span>Representative</span>
-                  <span className="sd-match-rep-val">Dr. Adrian Cheng</span>
-                </div>
-                <div className="sd-match-actions">
-                  <button className="sd-btn-outline">Profile</button>
-                  <button className="sd-btn-green">Message</button>
-                </div>
+          <div className="pud-stats-grid">
+            {statCards.map((stat) => (
+              <div className="pud-stat-card" key={stat.label}>
+                <div className={`pud-stat-icon ${stat.colorClass}`}>{stat.icon}</div>
+                <div className="pud-stat-label">{stat.label}</div>
+                <div className="pud-stat-value">{stat.value}</div>
+                <div className="pud-stat-link">{stat.linkText}</div>
               </div>
-
-              <div className="sd-match-card">
-                <div className="sd-match-header">
-                  <div className="sd-match-buyer-row">
-                    <div className="sd-match-avatar" style={{ backgroundColor: '#2563eb' }}>SH</div>
-                    <div className="sd-match-buyer-info">
-                      <span className="sd-match-buyer-name">Starlight Hospitality Group</span>
-                      <span className="sd-match-seeking">Seeking: Office Furniture</span>
-                    </div>
-                  </div>
-                  <span className="sd-match-badge">European Union</span>
-                </div>
-                <p className="sd-match-desc">
-                  Starlight Group coordinates multi-location boutique hotel lounges and business centers across Europe. Currently...
-                </p>
-                <div className="sd-match-rep">
-                  <span>Representative</span>
-                  <span className="sd-match-rep-val">Evelyn Carter</span>
-                </div>
-                <div className="sd-match-actions">
-                  <button className="sd-btn-outline">Profile</button>
-                  <button className="sd-btn-blue">Send Interest</button>
-                </div>
-              </div>
-
-              <div className="sd-match-card">
-                <div className="sd-match-header">
-                  <div className="sd-match-buyer-row">
-                    <div className="sd-match-avatar" style={{ backgroundColor: '#2563eb' }}>VS</div>
-                    <div className="sd-match-buyer-info">
-                      <span className="sd-match-buyer-name">Vanguard Sourcing Partners</span>
-                      <span className="sd-match-seeking">Seeking: Stationery</span>
-                    </div>
-                  </div>
-                  <span className="sd-match-badge">North America</span>
-                </div>
-                <p className="sd-match-desc">
-                  Vanguard supplies administrative desks and corporate centers with specialized FSC certified eco-friendly writing materials, premium...
-                </p>
-                <div className="sd-match-rep">
-                  <span>Representative</span>
-                  <span className="sd-match-rep-val">Robert Miller</span>
-                </div>
-                <div className="sd-match-actions">
-                  <button className="sd-btn-outline">Profile</button>
-                  <button className="sd-btn-blue">Send Interest</button>
-                </div>
-              </div>
-
-              <div className="sd-match-card">
-                <div className="sd-match-header">
-                  <div className="sd-match-buyer-row">
-                    <div className="sd-match-avatar" style={{ backgroundColor: '#2563eb' }}>HB</div>
-                    <div className="sd-match-buyer-info">
-                      <span className="sd-match-buyer-name">Horizon BioTech</span>
-                      <span className="sd-match-seeking">Seeking: Breakroom Supplies</span>
-                    </div>
-                  </div>
-                  <span className="sd-match-badge">United Kingdom</span>
-                </div>
-                <p className="sd-match-desc">
-                  Horizon BioTech operates premium research facilities and corporate office buildings. They require high-volume premium organic coffee...
-                </p>
-                <div className="sd-match-rep">
-                  <span>Representative</span>
-                  <span className="sd-match-rep-val">Claire Johnston</span>
-                </div>
-                <div className="sd-match-actions">
-                  <button className="sd-btn-outline">Profile</button>
-                  <button className="sd-btn-blue">Send Interest</button>
-                </div>
-              </div>
-            </div>
-
-            <div className="sd-pagination">
-              <span className="sd-page-btn">&lt;</span>
-              <span className="sd-page-btn active">1</span>
-              <span className="sd-page-btn">&gt;</span>
-            </div>
+            ))}
           </div>
+
+          <div className="pud-panels">
+            <section className="pud-panel">
+              <div className="pud-panel-header">
+                <div>
+                  <div className="pud-panel-title">Recent Sourcing Opportunities</div>
+                  <div className="pud-panel-subtitle">Newly listed RFQs matched to your industry categories</div>
+                </div>
+                <a className="pud-panel-link" href="#">View All RFQs →</a>
+              </div>
+              <div className="pud-panel-list">
+                {rfqItems.map((rfq) => (
+                  <div className="pud-rfq-row" key={rfq.code}>
+                    <div className="pud-rfq-info">
+                      <div className="pud-rfq-meta">
+                        <span className="pud-code-badge">{rfq.code}</span>
+                        <span className="pud-dot-sep">•</span>
+                        <span className="pud-company">{rfq.company}</span>
+                      </div>
+                      <div className="pud-rfq-title">{rfq.title}</div>
+                      <div className="pud-rfq-details">
+                        <span><IconCalendar /> Closes: {rfq.closes}</span>
+                        <span><IconPin /> Deliv: {rfq.deliv}</span>
+                      </div>
+                    </div>
+                    <button className="pud-btn pud-btn-outline">View RFQ Details</button>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="pud-panel">
+              <div className="pud-panel-header">
+                <div>
+                  <div className="pud-panel-title">Recent Purchase Orders</div>
+                  <div className="pud-panel-subtitle">New orders requiring attention</div>
+                </div>
+                <a className="pud-panel-link" href="#">View All →</a>
+              </div>
+              <div className="pud-panel-list">
+                {poItems.map((po) => (
+                  <div className="pud-po-row" key={po.code}>
+                    <div className="pud-po-info">
+                      <div className="pud-po-meta">
+                        <span className="pud-po-code">{po.code}</span>
+                        <span className={`pud-status-badge pud-status-badge-${po.status.toLowerCase()}`}>
+                          {po.status}
+                        </span>
+                      </div>
+                      <div className="pud-po-company">{po.company}</div>
+                      <div className="pud-po-date"><IconCalendar /> Order Date: {po.orderDate}</div>
+                    </div>
+                    <div className="pud-po-right">
+                      <div className="pud-po-amount">{po.amount}</div>
+                      <a className="pud-po-process" href="#">Process →</a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <section className="pud-matchmaker">
+            <div className="pud-matchmaker-header">
+              <div className="pud-matchmaker-title-row">
+                <span className="pud-matchmaker-icon"><IconSparkles /></span>
+                <div className="pud-matchmaker-title">Smart Sourcing Matchmaker</div>
+              </div>
+              <div className="pud-matchmaker-subtitle">
+                Active enterprise buyers looking for products and services matching your certified categories and registered ship-to locations.
+              </div>
+            </div>
+
+            <div className="pud-match-grid">
+              {matchCards.map((card) => (
+                <div className="pud-match-card" key={card.name}>
+                  <span className="pud-match-location"><IconPin /> {card.location}</span>
+                  <div className="pud-match-top">
+                    <div className="pud-match-avatar">{card.initials}</div>
+                    <div>
+                      <div className="pud-match-name">{card.name}</div>
+                      <div className="pud-match-seeking"><NavIconBuilding /> Seeking: {card.seeking}</div>
+                    </div>
+                  </div>
+                  <p className="pud-match-desc">{card.description}</p>
+                  <div className="pud-match-rep-row">
+                    <span className="pud-match-rep-label">Representative:</span>
+                    <span className="pud-match-rep-name">{card.representative}</span>
+                  </div>
+                  <div className="pud-match-actions">
+                    <button
+                      className="pud-btn pud-btn-outline pud-btn-flex"
+                      onClick={() => setSelectedProfile(card)}
+                    >
+                      <IconEye /> Profile
+                    </button>
+                    {card.actionVariant === "message" ? (
+                      <button className="pud-btn pud-btn-message pud-btn-flex">
+                        <IconMessageSquare /> Message
+                      </button>
+                    ) : (
+                      <button className="pud-btn pud-btn-interest pud-btn-flex">
+                        <IconSend /> Send Interest
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pud-pagination">
+              <button className="pud-page-btn pud-page-btn-disabled" disabled>
+                <IconChevronLeft />
+              </button>
+              <button className="pud-page-btn pud-page-btn-active">
+                <IconChevronRight />
+              </button>
+            </div>
+          </section>
         </main>
       </div>
+
+      {selectedProfile && (
+        <div className="pud-modal-overlay" onClick={() => setSelectedProfile(null)}>
+          <div className="pud-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="pud-modal-header">
+              <span className="pud-modal-badge">
+                <IconShieldCheck /> Verified Sourcing Partner
+              </span>
+              <button className="pud-modal-close" onClick={() => setSelectedProfile(null)}>
+                <IconClose />
+              </button>
+              <h2 className="pud-modal-name">{selectedProfile.name}</h2>
+              <div className="pud-modal-meta">
+                <span><IconPin /> {selectedProfile.location}</span>
+                <span><IconGlobe /> {selectedProfile.website}</span>
+              </div>
+            </div>
+
+            <div className="pud-modal-body">
+              <div className="pud-modal-section-title">Organization Description</div>
+              <p className="pud-modal-desc">{selectedProfile.description}</p>
+
+              <div className="pud-modal-analytics">
+                <div className="pud-modal-analytics-title">
+                  <IconSparkles /> Verified Match Analytics
+                </div>
+                <div className="pud-modal-analytics-grid">
+                  <div className="pud-modal-analytics-item">
+                    <span className="pud-modal-check"><IconCheckCircle /></span>
+                    <div>
+                      <div className="pud-modal-analytics-label">Interest Category</div>
+                      <div className="pud-modal-analytics-value">{selectedProfile.seeking}</div>
+                      <div className="pud-modal-analytics-note">{selectedProfile.categoryNote}</div>
+                    </div>
+                  </div>
+                  <div className="pud-modal-analytics-item">
+                    <span className="pud-modal-check"><IconCheckCircle /></span>
+                    <div>
+                      <div className="pud-modal-analytics-label">Delivery Destination</div>
+                      <div className="pud-modal-analytics-value">{selectedProfile.location}</div>
+                      <div className="pud-modal-analytics-note">{selectedProfile.destinationNote}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pud-modal-info-grid">
+                <div>
+                  <div className="pud-modal-info-label">Company Representative</div>
+                  <div className="pud-modal-info-value">
+                    {selectedProfile.representative} ({selectedProfile.repTitle})
+                  </div>
+                  <a className="pud-modal-info-link" href={`mailto:${selectedProfile.repEmail}`}>
+                    {selectedProfile.repEmail}
+                  </a>
+                </div>
+                <div>
+                  <div className="pud-modal-info-label">Scale of Operations</div>
+                  <div className="pud-modal-info-value">Revenue: {selectedProfile.revenue}</div>
+                  <div className="pud-modal-info-value">Scale: {selectedProfile.employees}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pud-modal-footer">
+              {selectedProfile.actionVariant === "message" ? (
+                <button className="pud-btn pud-btn-message pud-modal-footer-btn">
+                  <IconMessageSquare /> Message Buyer
+                </button>
+              ) : (
+                <button className="pud-btn pud-btn-interest pud-modal-footer-btn">
+                  <IconSend /> Send Interest
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
