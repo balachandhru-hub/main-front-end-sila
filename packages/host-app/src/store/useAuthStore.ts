@@ -56,12 +56,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   },
   logout: () => {
-    sessionStorage.removeItem('vosox_logged_in');
-    sessionStorage.removeItem('vosox_user_role');
-    sessionStorage.removeItem('vosox_user_id');
-    sessionStorage.removeItem('vosox_person_id');
-    sessionStorage.removeItem('vosox_organization_id');
-    sessionStorage.removeItem('vosox_role_id');
+    sessionStorage.clear();
     set({
       isLoggedIn: false,
       userRole: null,

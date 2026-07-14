@@ -398,7 +398,7 @@ const SupplierDashboard: React.FC = () => {
     } catch (error: any) {
       setLogoutError(error?.message || "Logout request failed, clearing session locally.");
     } finally {
-      sessionStorage.removeItem("vosox_organization_name");
+      sessionStorage.clear();
       useAuthStore.getState().logout();
       window.dispatchEvent(new CustomEvent("session:expired"));
       setLoggingOut(false);

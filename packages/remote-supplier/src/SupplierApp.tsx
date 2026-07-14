@@ -35,17 +35,16 @@ const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onComple
       console.warn('Failed to fetch onboarding info, using fallbacks', e);
     }
 
-    const defaultLocation = data.step4.locations.find((l: DispatchLocationEntry) => l.isDefault) || data.step4.locations[0];
 
     const orgName = onboardingInfo?.organizationName;
-    const orgEmail = onboardingInfo?.email || defaultLocation?.contactEmail;
-    const orgPhone = onboardingInfo?.phone || defaultLocation?.contactPhone;
-    const orgCountry = onboardingInfo?.country || defaultLocation?.country;
-    const orgAddress1 = onboardingInfo?.addressLine1 || defaultLocation?.addressLine1;
-    const orgAddress2 = onboardingInfo?.addressLine2 || defaultLocation?.addressLine2;
-    const orgCity = onboardingInfo?.city || defaultLocation?.city;
-    const orgState = onboardingInfo?.state || defaultLocation?.state;
-    const orgPin = onboardingInfo?.pinCode || defaultLocation?.pinCode;
+    const orgEmail = onboardingInfo?.email;
+    const orgPhone = onboardingInfo?.phone;
+    const orgCountry = onboardingInfo?.country;
+    const orgAddress1 = onboardingInfo?.addressLine1;
+    const orgAddress2 = onboardingInfo?.addressLine2;
+    const orgCity = onboardingInfo?.city;
+    const orgState = onboardingInfo?.state;
+    const orgPin = onboardingInfo?.pinCode;
 
     // 2. Map registrations, converting files to base64
     const mappedRegistrations = await Promise.all(
@@ -134,7 +133,6 @@ const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onComple
     if (payload.businessProfile.organizationName) {
       sessionStorage.setItem('vosox_organization_name', payload.businessProfile.organizationName);
     }
-
     // 7. Update profileComplete status
     sessionStorage.setItem('vosox_profile_complete', 'true');
     onCompleteSuccess();
@@ -158,6 +156,10 @@ const SupplierApp: React.FC = () => {
 
       try {
         const profile = await getSupplierProfile();
+        if (!profile) {
+          setProfileComplete(false);
+          return;
+        }
         // Save organization name
         if (profile?.businessProfile?.organizationName) {
           sessionStorage.setItem('vosox_organization_name', profile.businessProfile.organizationName);

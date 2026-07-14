@@ -27,6 +27,9 @@ export const fetchOnboardingDetails = async (): Promise<any> => {
 export const getSupplierProfile = async (): Promise<any> => {
   try {
     const response = await supplierInstance.get('api/v1/supplier/profile');
+    if (response.status === 204 || !response.data || Object.keys(response.data).length === 0) {
+      return null;
+    }
     return response.data;
   } catch (error: any) {
     throw error;

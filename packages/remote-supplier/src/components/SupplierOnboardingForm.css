@@ -472,3 +472,35 @@
   text-decoration: none;
   font-weight: 500;
 }
+
+/* Company Information Read-Only Section */
+.vob-info-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.vob-info-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #868e96;
+  margin-bottom: 4px;
+}
+
+.vob-info-value {
+  font-size: 13px;
+  color: #212529;
+  font-weight: 500;
+}
+
+.vob-info-divider {
+  grid-column: 1 / -1;
+  border-top: 1px solid #f1f3f5;
+  margin: 12px 0 4px 0;
+}
+
+.vob-address-block {
+  font-size: 13px;
+  color: #212529;
+  line-height: 1.5;
+}
+
