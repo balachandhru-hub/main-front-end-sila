@@ -1,8 +1,9 @@
 import supplierInstance from './supplierInstance';
 
-export const createSupplierProfile = async (payload: any): Promise<void> => {
+export const createSupplierProfile = async (payload: any): Promise<any> => {
   try {
-    await supplierInstance.post('/api/v1/supplier/register', payload);
+    const response = await supplierInstance.post('/api/v1/supplier/register', payload);
+    return response;
   } catch (error: any) {
     const status = error.response?.status || 'unknown';
     const responseData = error.response?.data;
