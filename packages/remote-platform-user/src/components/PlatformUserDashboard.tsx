@@ -293,7 +293,14 @@ export const PlatformUserDashboard: React.FC = () => {
                       <div className="plat-card-header">
                         <div className="plat-card-title-row">
                           <h3 className="plat-card-name">{name}</h3>
-                          {bizType && <span className="plat-badge plat-badge-type">{bizType}</span>}
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            {bizType && <span className="plat-badge plat-badge-type">{bizType}</span>}
+                            {profile.status && (
+                              <span className={`plat-badge plat-badge-status-${profile.status.toLowerCase()}`}>
+                                {profile.status}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         {industry && (
                           <div style={{ marginTop: '4px' }}>
@@ -383,6 +390,14 @@ export const PlatformUserDashboard: React.FC = () => {
           type={selectedDetail.type}
           record={selectedDetail.record}
           onClose={() => setSelectedDetail(null)}
+          onStatusUpdated={() => {
+            if (selectedDetail.type === 'buyers') {
+              loadBuyers(buyerIndex);
+            } else {
+              loadSuppliers(supplierIndex);
+            }
+            setSelectedDetail(null);
+          }}
         />
       )}
     </div>

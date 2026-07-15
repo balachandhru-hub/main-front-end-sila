@@ -64,6 +64,8 @@ export interface BusinessProfileDto {
   yearEstablished?: number;
   website?: string;
   description?: string;
+  status?: string;
+  comments?: string | null;
 }
 
 export interface BuyerDto {

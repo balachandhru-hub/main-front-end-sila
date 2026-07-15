@@ -504,3 +504,23 @@
     flex-wrap: wrap;
   }
 }
+
+/* Status Badge Styles for Dashboard Cards */
+.plat-badge-status-pending {
+  background-color: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.plat-badge-status-approved,
+.plat-badge-status-active {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.plat-badge-status-rejected {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}

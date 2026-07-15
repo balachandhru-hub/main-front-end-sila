@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { downloadBuyerAsset, downloadSupplierAsset } from '../api/platformApi';
+import { downloadBuyerAsset, downloadSupplierAsset, updateBuyerStatus, updateSupplierStatus } from '../api/platformApi';
 import type {
   BusinessProfileDto,
   RegistrationDto,
@@ -28,6 +28,7 @@ interface PlatformUserPopupProps {
   type: PlatformEntityType;
   record: PlatformRecordDto;
   onClose: () => void;
+  onStatusUpdated?: () => void;
 }
 
 const formatCurrency = (amount?: number, currency?: string) => {
@@ -80,7 +81,7 @@ interface AttachmentEntry {
   registrationType?: string;
 }
 
-export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, record, onClose }) => {
+export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, record, onClose, onStatusUpdated }) => {
   const profile: BusinessProfileDto = record.businessProfile || {};
   const registrations: RegistrationDto[] = record.registrations || [];
   const bankAccounts: BankAccountDto[] = record.bankAccounts || [];
@@ -89,8 +90,58 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
   const [actionState, setActionState] = useState<Record<string, 'view' | 'download' | null>>({});
   const [actionError, setActionError] = useState<string | null>(null);
 
+  const [statusLoading, setStatusLoading] = useState<boolean>(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [showRejectModal, setShowRejectModal] = useState<boolean>(false);
+  const [rejectComments, setRejectComments] = useState<string>('');
+
+  const handleApprove = async () => {
+    if (statusLoading) return;
+    setStatusError(null);
+    setStatusLoading(true);
+    try {
+      if (type === 'buyers') {
+        await updateBuyerStatus(record.id, 'APPROVED');
+      } else {
+        await updateSupplierStatus(record.id, 'APPROVED');
+      }
+      onStatusUpdated?.();
+    } catch (err: any) {
+      console.error('Failed to approve:', err);
+      setStatusError(err.message || 'Failed to approve registration.');
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (statusLoading) return;
+    if (!rejectComments.trim()) {
+      setStatusError('Comments are required for rejection.');
+      return;
+    }
+    setStatusError(null);
+    setStatusLoading(true);
+    try {
+      if (type === 'buyers') {
+        await updateBuyerStatus(record.id, 'REJECTED', rejectComments);
+      } else {
+        await updateSupplierStatus(record.id, 'REJECTED', rejectComments);
+      }
+      setShowRejectModal(false);
+      onStatusUpdated?.();
+    } catch (err: any) {
+      console.error('Failed to reject:', err);
+      setStatusError(err.message || 'Failed to reject registration.');
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
   const name = profile.organizationName || 'Unnamed Business';
   const accentClass = type === 'buyers' ? 'pup-accent-buyer' : 'pup-accent-supplier';
+  const currentStatus = (profile.status || '').toUpperCase();
+  const isFinalized = currentStatus === 'APPROVED' || currentStatus === 'REJECTED';
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -177,11 +228,21 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
                   {profile.emailVerified ? 'Email Verified' : 'Email Not Verified'}
                 </span>
               )}
+              {profile.status && (
+                <span className={`pup-badge pup-badge-status-${profile.status.toLowerCase()}`}>
+                  {profile.status}
+                </span>
+              )}
             </div>
           </div>
         </div>
 
         <div className="pup-body">
+          {currentStatus === 'REJECTED' && profile.comments && (
+            <div className="pup-rejection-comments-box">
+              <strong>Rejection Reason:</strong> {profile.comments}
+            </div>
+          )}
           {profile.description && <p className="pup-description">{profile.description}</p>}
 
           {/* Company Overview */}
@@ -352,7 +413,7 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
           </section>
 
           {/* Attachments - View & Download */}
-          <section className="pup-section pup-section-last">
+          <section className="pup-section">
             <h3 className="pup-section-title">
               <FaFileDownload className="pup-section-icon" />
               Attachments
@@ -397,8 +458,86 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
               </div>
             )}
           </section>
+
+          {/* Admin Approval Actions */}
+          <section className="pup-section pup-section-last pup-admin-actions-section">
+            <h3 className="pup-section-title">
+              <FaCheckCircle className="pup-section-icon" />
+              Platform Administrator Actions
+            </h3>
+            {statusError && <div className="pup-action-error">{statusError}</div>}
+            {isFinalized ? (
+              <div className="pup-admin-status-display">
+                Registration has been finalized. Status: 
+                <span className={`pup-badge pup-badge-status-${currentStatus.toLowerCase()}`} style={{ marginLeft: '8px' }}>
+                  {currentStatus}
+                </span>
+              </div>
+            ) : (
+              <div className="pup-admin-actions">
+                <button
+                  className="pup-btn-approve"
+                  onClick={handleApprove}
+                  disabled={statusLoading}
+                >
+                  {statusLoading ? <FaSpinner className="pup-spin" /> : <FaCheckCircle style={{ marginRight: '6px' }} />}
+                  Approve Registration
+                </button>
+                <button
+                  className="pup-btn-reject"
+                  onClick={() => {
+                    setStatusError(null);
+                    setShowRejectModal(true);
+                  }}
+                  disabled={statusLoading}
+                >
+                  <FaTimes style={{ marginRight: '6px' }} />
+                  Reject Registration
+                </button>
+              </div>
+            )}
+          </section>
         </div>
       </div>
+
+      {/* Rejection Comments Modal */}
+      {showRejectModal && (
+        <div className="pup-reject-overlay" onClick={() => setShowRejectModal(false)}>
+          <div className="pup-reject-panel" onClick={(e) => e.stopPropagation()}>
+            <button className="pup-close" onClick={() => setShowRejectModal(false)} aria-label="Close comment panel">
+              <FaTimes />
+            </button>
+            <h4 className="pup-reject-title">Rejection Comments</h4>
+            <p className="pup-reject-subtitle">Please enter comments detailing the reason for rejecting this registration.</p>
+            <textarea
+              className="pup-reject-textarea"
+              placeholder="Enter rejection comments here..."
+              value={rejectComments}
+              onChange={(e) => setRejectComments(e.target.value)}
+              rows={4}
+            />
+            <div className="pup-reject-actions">
+              <button
+                className="pup-reject-btn pup-reject-btn-cancel"
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectComments('');
+                }}
+                disabled={statusLoading}
+              >
+                Cancel
+              </button>
+              <button
+                className="pup-reject-btn pup-reject-btn-submit"
+                onClick={handleReject}
+                disabled={statusLoading || !rejectComments.trim()}
+              >
+                {statusLoading ? <FaSpinner className="pup-spin" /> : 'Submit Rejection'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

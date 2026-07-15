@@ -74,3 +74,37 @@ export const downloadSupplierAsset = async (assetId: string): Promise<AssetDownl
     throw new Error(`${errMsg} (${status})`);
   }
 };
+
+export const updateBuyerStatus = async (buyerId: string, status: string, comments?: string): Promise<any> => {
+  try {
+    const response = await platformInstance.put('/api/v1/buyer/status', {
+      id: buyerId,
+      buyerId,
+      status,
+      comments: comments || '',
+    });
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to update buyer status.';
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+export const updateSupplierStatus = async (supplierId: string, status: string, comments?: string): Promise<any> => {
+  try {
+    const response = await platformInstance.put('/api/v1/supplier/status', {
+      id: supplierId,
+      supplierId,
+      status,
+      comments: comments || '',
+    });
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to update supplier status.';
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
