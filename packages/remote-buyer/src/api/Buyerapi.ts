@@ -25,6 +25,7 @@ export interface BuyerProfileResponse {
     yearEstablished: number;
     website: string;
     description: string;
+    status: string;
   };
   registrations: {
     registrationType: string;
@@ -156,12 +157,19 @@ export interface BuyerRegistrationPayload {
 export const getBuyerProfile = async (): Promise<BuyerProfileResponse | null> => {
   try {
     const response = await axiosInstance.get<BuyerProfileResponse>('/api/v1/buyer/profile');
-    // 204 No Content or empty body → profile doesn't exist
-    if (!response.data || Object.keys(response.data).length === 0) {
+
+    // If status is 204 No Content, profile doesn't exist
+    if (response.status === 204 || !response.data || Object.keys(response.data).length === 0) {
       return null;
     }
+
+    // If status is 200, profile exists
     return response.data;
   } catch (error: any) {
+    if (error?.response?.status === 204) {
+      return null;
+    }
+
     // Any error (404, 429, 500, etc.) → throw to be handled by caller
     if (error?.response?.data) {
       const data = error.response.data;
@@ -214,6 +222,22 @@ export const updateBuyerProfile = async (payload: BuyerRegistrationPayload): Pro
     if (error?.response?.data) {
       const data = error.response.data;
       throw new Error(data?.message || data?.description || `Failed to update buyer profile (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+// ============================================================================
+// API: Update Rejected Buyer
+// ============================================================================
+export const updateRejectedBuyer = async (payload: any): Promise<any> => {
+  try {
+    const response = await axiosInstance.put('/api/v1/buyer/update-rejected-buyer', payload);
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to update rejected buyer profile (${error.response.status}).`);
     }
     throw new Error('Could not reach the server. Please check your connection and try again.');
   }
