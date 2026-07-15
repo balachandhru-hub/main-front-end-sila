@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import SilaLogo from "../assets/SILA - Logo.png";
+import SilaLogo from "../../../host-app/public/assets/SILA_Logo.png";
 import "./SupplierDashboard.css";
 import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
 import { logoutSupplier } from "../api/supplierApi";
