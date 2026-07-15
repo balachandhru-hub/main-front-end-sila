@@ -293,18 +293,16 @@ export const PlatformUserDashboard: React.FC = () => {
                       <div className="plat-card-header">
                         <div className="plat-card-title-row">
                           <h3 className="plat-card-name">{name}</h3>
-                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                            {bizType && <span className="plat-badge plat-badge-type">{bizType}</span>}
+                          {bizType && <span className="plat-badge plat-badge-type">{bizType}</span>}
+                        </div>
+                        {(industry || profile.status) && (
+                          <div style={{ marginTop: '8px', display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            {industry && <span className="plat-badge plat-badge-industry">{industry}</span>}
                             {profile.status && (
                               <span className={`plat-badge plat-badge-status-${profile.status.toLowerCase()}`}>
-                                {profile.status}
+                                {profile.status === 'PENDING_VERIFICATION' ? 'PENDING' : profile.status.replace('_', ' ')}
                               </span>
                             )}
-                          </div>
-                        </div>
-                        {industry && (
-                          <div style={{ marginTop: '4px' }}>
-                            <span className="plat-badge plat-badge-industry">{industry}</span>
                           </div>
                         )}
                       </div>
