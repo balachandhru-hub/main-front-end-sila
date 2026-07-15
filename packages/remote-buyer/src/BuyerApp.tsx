@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import BuyerDashboard from './components/BuyerDashboard';
 import BuyerProfile from './components/BuyerProfile';
-import { getBuyerProfile, getOnboardingDetails, createBuyerProfile } from './api/Buyerapi';
+import { getBuyerProfile, getOnboardingDetails, createBuyerProfile, updateRejectedBuyer } from './api/Buyerapi';
 import { useAuthStore } from '../../host-app/src/store/useAuthStore';
-import type { OnboardingResponse } from './api/Buyerapi';
+import type { OnboardingResponse, BuyerProfileResponse } from './api/Buyerapi';
 
 // ============================================================================
 // HELPER: Check if profile is complete in sessionStorage
@@ -19,9 +19,10 @@ const readIsProfileComplete = (): boolean => {
 interface OnboardingRouteProps {
   onCompleteSuccess: () => void;
   onboardingData: OnboardingResponse | null;
+  rejectedProfile?: BuyerProfileResponse | null;
 }
 
-const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, onboardingData }) => {
+const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, onboardingData, rejectedProfile }) => {
   const navigate = useNavigate();
   const organizationId = useAuthStore((state) => state.organizationId);
 
@@ -118,7 +119,41 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, on
         })),
       };
 
-      await createBuyerProfile(payload);
+      if (rejectedProfile) {
+        const updatePayload = {
+          buyer: {
+            buyerId: rejectedProfile.id,
+            businessProfile: {
+              organizationId: payload.organizationId,
+              organizationName: payload.organizationName,
+              email: payload.email,
+              phone: payload.phone,
+              country: payload.country,
+              addressLine1: payload.addressLine1,
+              addressLine2: payload.addressLine2,
+              city: payload.city,
+              state: payload.state,
+              pinCode: payload.pinCode,
+              industry: payload.industry,
+              businessType: payload.businessType,
+              employeeCount: payload.employeeCount,
+              annualTurnover: payload.annualTurnover,
+              currency: payload.currency,
+              yearEstablished: payload.yearEstablished,
+              website: payload.website,
+              description: payload.description,
+              status: payload.status,
+            },
+            buyerCategories: payload.buyerCategories,
+            buyerBankAccounts: payload.buyerBankAccounts,
+            buyerDocumentRegistrations: payload.buyerDocumentRegistrations,
+            buyerDeliveryLocations: payload.buyerDeliveryLocations,
+          }
+        };
+        await updateRejectedBuyer(updatePayload);
+      } else {
+        await createBuyerProfile(payload);
+      }
 
       sessionStorage.setItem('vosox_buyer_profile_complete', 'true');
       onCompleteSuccess();
@@ -138,6 +173,7 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, on
 const BuyerApp: React.FC = () => {
   const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
   const [onboardingData, setOnboardingData] = useState<OnboardingResponse | null>(null);
+  const [rejectedProfile, setRejectedProfile] = useState<BuyerProfileResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const organizationId = useAuthStore((state) => state.organizationId);
 
@@ -168,14 +204,22 @@ const BuyerApp: React.FC = () => {
         // Try to fetch buyer profile from API
         const profile = await getBuyerProfile();
         
-        // ✅ 200 with data → profile exists, go to dashboard
-        if (profile) {
-          sessionStorage.setItem('vosox_buyer_profile_complete', 'true');
-          setProfileComplete(true);
+        // ✅ 200 (profile !== null) → profile exists, go to dashboard or handle REJECT
+        if (profile !== null) {
+          if (profile.businessProfile?.status === 'REJECT') {
+            const onboarding = await getOnboardingDetails();
+            setOnboardingData(onboarding);
+            setRejectedProfile(profile);
+            setProfileComplete(false);
+          } else {
+            sessionStorage.setItem('vosox_buyer_profile_complete', 'true');
+            setProfileComplete(true);
+          }
         } else {
-          // 204 or empty → show onboarding form
+          // 204 (profile === null) → show onboarding form
           const onboarding = await getOnboardingDetails();
           setOnboardingData(onboarding);
+          setRejectedProfile(null);
           setProfileComplete(false);
         }
       } catch (error: any) {
@@ -222,6 +266,7 @@ const BuyerApp: React.FC = () => {
             <OnboardingRoute 
               onCompleteSuccess={() => setProfileComplete(true)} 
               onboardingData={onboardingData}
+              rejectedProfile={rejectedProfile}
             />
           )
         }
