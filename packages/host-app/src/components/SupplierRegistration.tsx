@@ -3,6 +3,7 @@ import { Button } from '@vosox/shared-ui';
 import Header from './Header';
 import './SupplierRegistration.css';
 import { CiMail } from "react-icons/ci";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { sendOtp, verifyOtp } from '../api/authApi';
 import { useNavigate } from 'react-router-dom';
 import { createOrganization } from '../api/organizationApi';
@@ -50,6 +51,8 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
     const [adminEmail, setAdminEmail] = useState('');
     const [pw, setPw] = useState('');
     const [pw2, setPw2] = useState('');
+    const [showPassword, setShowPassword] = useState(false); // ✅ NEW: Track password visibility
+    const [showPassword2, setShowPassword2] = useState(false); // ✅ NEW: Track repeat password visibility
     const [agreeTerms, setAgreeTerms] = useState(false);
 
     const [isCreatingAccount, setIsCreatingAccount] = useState(false);
@@ -407,24 +410,74 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                     />
                                 </div>
 
-
+                                {/* ✅ FIXED: Password field with Show/Hide eye icon */}
                                 <div className="vr-field">
                                     <label className="vr-label vr-label--plain">Password*</label>
-                                    <input
-                                        className="vr-input"
-                                        type="password"
-                                        value={pw}
-                                        onChange={(e) => setPw(e.target.value)}
-                                    />
+                                    <div style={{ position: 'relative' }}>
+                                        <input
+                                            className="vr-input"
+                                            type={showPassword ? 'text' : 'password'}
+                                            value={pw}
+                                            onChange={(e) => setPw(e.target.value)}
+                                            style={{ paddingRight: '40px' }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            style={{
+                                                position: 'absolute',
+                                                right: '12px',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                color: '#6b7280',
+                                                padding: '5px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '18px'
+                                            }}
+                                        >
+                                            {showPassword ? <FaEyeSlash /> : <FaEye />}
+                                        </button>
+                                    </div>
                                 </div>
+
+                                {/* ✅ FIXED: Repeat Password field with Show/Hide eye icon */}
                                 <div className="vr-field">
                                     <label className="vr-label vr-label--plain">Repeat Password*</label>
-                                    <input
-                                        className="vr-input"
-                                        type="password"
-                                        value={pw2}
-                                        onChange={(e) => setPw2(e.target.value)}
-                                    />
+                                    <div style={{ position: 'relative' }}>
+                                        <input
+                                            className="vr-input"
+                                            type={showPassword2 ? 'text' : 'password'}
+                                            value={pw2}
+                                            onChange={(e) => setPw2(e.target.value)}
+                                            style={{ paddingRight: '40px' }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword2(!showPassword2)}
+                                            style={{
+                                                position: 'absolute',
+                                                right: '12px',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                color: '#6b7280',
+                                                padding: '5px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '18px'
+                                            }}
+                                        >
+                                            {showPassword2 ? <FaEyeSlash /> : <FaEye />}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
