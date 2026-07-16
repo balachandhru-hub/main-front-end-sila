@@ -222,12 +222,6 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
               </span>
               {profile.businessType && <span className="pup-badge">{profile.businessType}</span>}
               {profile.industry && <span className="pup-badge">{profile.industry}</span>}
-              {profile.emailVerified !== undefined && (
-                <span className={`pup-badge ${profile.emailVerified ? 'pup-badge-verified' : 'pup-badge-unverified'}`}>
-                  <FaCheckCircle style={{ marginRight: '4px' }} />
-                  {profile.emailVerified ? 'Email Verified' : 'Email Not Verified'}
-                </span>
-              )}
               {profile.status && (
                 <span className={`pup-badge pup-badge-status-${profile.status.toLowerCase()}`}>
                   {profile.status === 'PENDING_VERIFICATION' ? 'PENDING' : profile.status.replace('_', ' ')}

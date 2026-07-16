@@ -49,7 +49,6 @@ export interface BusinessProfileDto {
   organizationName?: string;
   email?: string;
   phone?: string;
-  emailVerified?: boolean;
   country?: string;
   addressLine1?: string;
   addressLine2?: string;

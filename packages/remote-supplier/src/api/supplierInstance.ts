@@ -26,20 +26,6 @@ supplierInstance.interceptors.request.use(
   }
 );
 
-let isRefreshing = false;
-let failedQueue: any[] = [];
-
-const processQueue = (error: any) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve();
-    }
-  });
-  failedQueue = [];
-};
-
 supplierInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -57,27 +43,23 @@ supplierInstance.interceptors.response.use(
     // Exclude all auth endpoints (login, send-otp, verify-otp, refresh-token, etc.) from refresh logic
     const isAuthEndpoint = originalRequest?.url?.includes('/api/v1/identity/auth/');
     if (error.response?.status === 401 && !isAuthEndpoint && !originalRequest._retry && !originalRequest?._skipRefresh) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
+      originalRequest._retry = true;
+
+      if (!(window as any).__vosox_refresh_promise) {
+        (window as any).__vosox_refresh_promise = supplierInstance.post('/api/v1/identity/auth/refresh-token')
           .then(() => {
-            return supplierInstance(originalRequest);
+            (window as any).__vosox_refresh_promise = null;
           })
           .catch((err) => {
-            return Promise.reject(err);
+            (window as any).__vosox_refresh_promise = null;
+            throw err;
           });
       }
-      originalRequest._retry = true;
-      isRefreshing = true;
+
       try {
-        await supplierInstance.post('/api/v1/identity/auth/refresh-token');
-        isRefreshing = false;
-        processQueue(null);
+        await (window as any).__vosox_refresh_promise;
         return supplierInstance(originalRequest);
       } catch (refreshError) {
-        isRefreshing = false;
-        processQueue(refreshError);
         useAuthStore.getState().logout();
         window.dispatchEvent(new CustomEvent('session:expired'));
         return Promise.reject(refreshError);

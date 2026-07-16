@@ -23,7 +23,7 @@ export type {
 export const getAllBuyers = async (
   { index, limit }: PaginationParamsDto = { index: 0, limit: 50 }
 ): Promise<BuyerDto[]> => {
-  const response = await platformInstance.post('/api/v1/buyer/getAllbuyer', {
+  const response = await platformInstance.post('/api/v1/buyer/get-all-buyer', {
     index,
     limit,
   });
@@ -107,4 +107,4 @@ export const updateSupplierStatus = async (supplierId: string, status: string, c
     const errMsg = responseData?.message || responseData?.description || 'Failed to update supplier status.';
     throw new Error(`${errMsg} (${status})`);
   }
-};
+};

@@ -5,6 +5,7 @@ interface LoaderProps {
   color?: string;
   size?: number;
   message?: string;
+  theme?: 'light' | 'dark';
 }
 
 export const Loader: React.FC<LoaderProps> = ({
@@ -12,6 +13,7 @@ export const Loader: React.FC<LoaderProps> = ({
   color = '#6366f1',
   size = 50,
   message,
+  theme = 'dark',
 }) => {
   const containerStyle: React.CSSProperties = fullScreen
     ? {
@@ -20,7 +22,7 @@ export const Loader: React.FC<LoaderProps> = ({
         left: 0,
         width: '100vw',
         height: '100vh',
-        backgroundColor: 'var(--bg-color, #0f172a)',
+        backgroundColor: theme === 'light' ? '#ffffff' : 'var(--bg-color, #0f172a)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -38,7 +40,7 @@ export const Loader: React.FC<LoaderProps> = ({
   const spinnerStyle: React.CSSProperties = {
     width: `${size}px`,
     height: `${size}px`,
-    border: `4px solid rgba(255, 255, 255, 0.1)`,
+    border: theme === 'light' ? `4px solid rgba(0, 0, 0, 0.05)` : `4px solid rgba(255, 255, 255, 0.1)`,
     borderTop: `4px solid ${color}`,
     borderRadius: '50%',
     animation: 'vosox-spin 1s linear infinite',
@@ -47,7 +49,7 @@ export const Loader: React.FC<LoaderProps> = ({
 
   const textStyle: React.CSSProperties = {
     marginTop: '16px',
-    color: 'var(--text-color, #f8fafc)',
+    color: theme === 'light' ? '#1e293b' : 'var(--text-color, #f8fafc)',
     fontSize: '1rem',
     fontWeight: 500,
     fontFamily: 'inherit',
