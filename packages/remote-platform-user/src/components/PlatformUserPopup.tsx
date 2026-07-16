@@ -230,7 +230,7 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
               )}
               {profile.status && (
                 <span className={`pup-badge pup-badge-status-${profile.status.toLowerCase()}`}>
-                  {profile.status}
+                  {profile.status === 'PENDING_VERIFICATION' ? 'PENDING' : profile.status.replace('_', ' ')}
                 </span>
               )}
             </div>
