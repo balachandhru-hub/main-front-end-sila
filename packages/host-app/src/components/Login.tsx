@@ -5,7 +5,7 @@ import sila_logo2 from '../../public/assets/SILA_Logo2.png';
 import supplier_logo from '../assets/Supplier.png'
 import buyer_logo from '../assets/Buyer.png'
 import Header from './Header';
-import { FaUser, FaLock } from 'react-icons/fa';
+import { FaUser, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { login, getTokenClaims } from '../api/authApi';
 import './Login.css';
 
@@ -40,7 +40,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
   const [role, setRole] = useState<Role>('supplier');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(false); // ✅ FIXED: Changed from true to false
+  const [showPassword, setShowPassword] = useState(false); // ✅ NEW: Track password visibility
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -197,15 +198,40 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
                     />
                   </div>
 
+                  {/* ✅ FIXED: Password field with Show/Hide eye icon */}
                   <div className="vx-field">
                     <label className="vx-label"><FaLock /> Password</label>
-                    <input
-                      className="vx-input"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        className="vx-input"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        style={{ paddingRight: '40px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{
+                          position: 'absolute',
+                          right: '12px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#6b7280',
+                          padding: '5px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '18px'
+                        }}
+                      >
+                        {showPassword ? <FaEyeSlash /> : <FaEye />}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="vx-row-between">
