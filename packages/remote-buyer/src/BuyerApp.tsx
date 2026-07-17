@@ -39,25 +39,25 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, on
       // ============================================================================
       const buyerCategories = data.selectedSubProducts?.length > 0
         ? data.selectedSubProducts.map((sub: any) => ({
-            segment: sub.parentSegment || 0,
-            segmentTitle: sub.parentTitle || '',
-            family: sub.parentFamily || 0,
-            familyTitle: sub.parentTitle || '',
-            class: sub.class,
-            classTitle: sub.title,
-            commodity: sub.commodity,
-            commodityTitle: sub.title,
-          }))
+          segment: sub.parentSegment || 0,
+          segmentTitle: sub.parentTitle || '',
+          family: sub.parentFamily || 0,
+          familyTitle: sub.parentTitle || '',
+          class: sub.class,
+          classTitle: sub.title,
+          commodity: sub.commodity,
+          commodityTitle: sub.title,
+        }))
         : data.selectedProducts?.map((product: any) => ({
-            segment: product.segment,
-            segmentTitle: product.title,
-            family: product.family,
-            familyTitle: product.title,
-            class: 0,
-            classTitle: '',
-            commodity: 0,
-            commodityTitle: '',
-          })) || [];
+          segment: product.segment,
+          segmentTitle: product.title,
+          family: product.family,
+          familyTitle: product.title,
+          class: 0,
+          classTitle: '',
+          commodity: 0,
+          commodityTitle: '',
+        })) || [];
 
       const payload = {
         organizationId: orgId,
@@ -99,7 +99,7 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, on
             entityType: 'BUYER',
             entityId: 'a266daa7-a80e-4463-abcc-fbe11294c051',
             assetType: r.type,
-            fileBytes: '', 
+            fileBytes: '',
             fileName: r.attachmentName || '',
             contentType: 'application/pdf',
             isSingletonAsset: true,
@@ -203,10 +203,10 @@ const BuyerApp: React.FC = () => {
       try {
         // Try to fetch buyer profile from API
         const profile = await getBuyerProfile();
-        
+
         // ✅ 200 (profile !== null) → profile exists, go to dashboard or handle REJECT
         if (profile !== null) {
-          if (profile.businessProfile?.status === 'REJECT') {
+          if (profile.businessProfile?.status === 'REJECTED') {
             const onboarding = await getOnboardingDetails();
             setOnboardingData(onboarding);
             setRejectedProfile(profile);
@@ -263,15 +263,15 @@ const BuyerApp: React.FC = () => {
           profileComplete ? (
             <Navigate to="/buyer/dashboard" replace />
           ) : (
-            <OnboardingRoute 
-              onCompleteSuccess={() => setProfileComplete(true)} 
+            <OnboardingRoute
+              onCompleteSuccess={() => setProfileComplete(true)}
               onboardingData={onboardingData}
               rejectedProfile={rejectedProfile}
             />
           )
         }
       />
-      
+
       <Route
         path="dashboard"
         element={
@@ -282,10 +282,10 @@ const BuyerApp: React.FC = () => {
           )
         }
       />
-      
-      <Route 
-        path="*" 
-        element={<Navigate to={profileComplete ? '/buyer/dashboard' : '/buyer/onboarding'} replace />} 
+
+      <Route
+        path="*"
+        element={<Navigate to={profileComplete ? '/buyer/dashboard' : '/buyer/onboarding'} replace />}
       />
     </Routes>
   );

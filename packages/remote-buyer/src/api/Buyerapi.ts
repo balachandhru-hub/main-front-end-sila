@@ -242,3 +242,17 @@ export const updateRejectedBuyer = async (payload: any): Promise<any> => {
     throw new Error('Could not reach the server. Please check your connection and try again.');
   }
 };
+
+// ============================================================================
+// API: Logout Buyer
+// ============================================================================
+export const logoutBuyer = async (): Promise<void> => {
+  try {
+    await axiosInstance.put('/api/v1/identity/auth/logout');
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
