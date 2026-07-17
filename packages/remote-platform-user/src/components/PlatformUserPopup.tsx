@@ -15,12 +15,10 @@ import {
   FaFileAlt,
   FaUniversity,
   FaWarehouse,
-  FaIdBadge,
   FaCheckCircle,
   FaEye,
   FaDownload,
   FaSpinner,
-  FaFileDownload,
 } from 'react-icons/fa';
 import './PlatformUserPopup.css';
 
@@ -57,13 +55,31 @@ const initialsOf = (name?: string) => {
 };
 
 const base64ToBlob = (base64: string, contentType: string): Blob => {
-  const byteCharacters = atob(base64);
-  const byteNumbers = new Array(byteCharacters.length);
-  for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  // Remove data URI prefix if present (e.g., "data:application/pdf;base64,")
+  let cleanBase64 = base64;
+  if (base64.includes(',')) {
+    cleanBase64 = base64.split(',')[1];
   }
-  const byteArray = new Uint8Array(byteNumbers);
-  return new Blob([byteArray], { type: contentType || 'application/octet-stream' });
+  
+  try {
+    const byteCharacters = atob(cleanBase64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    
+    // Map content type (handle both "pdf" and "application/pdf" formats)
+    let mimeType = contentType || 'application/pdf';
+    if (mimeType === 'pdf') {
+      mimeType = 'application/pdf';
+    }
+    
+    return new Blob([byteArray], { type: mimeType });
+  } catch (error) {
+    console.error('Error converting base64 to blob:', error);
+    throw new Error('Failed to process file data');
+  }
 };
 
 const DetailRow: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, value }) => (
@@ -170,13 +186,29 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
     setActionState((prev) => ({ ...prev, [entry.key]: 'view' }));
     try {
       const data = await fetchAsset(entry.assetId);
-      const blob = base64ToBlob(data.fileBytes, data.contentType);
+      
+      // Handle the response - fileBytes might be base64 or raw data
+      const fileBytes = typeof data === 'string' ? data : data.fileBytes;
+      let contentType = data.contentType || 'application/pdf';
+      
+      // Map content type
+      if (contentType === 'pdf') {
+        contentType = 'application/pdf';
+      }
+      
+      if (!fileBytes) {
+        throw new Error('No file data received from server');
+      }
+      
+      const blob = base64ToBlob(fileBytes, contentType);
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank', 'noopener,noreferrer');
+      
+      // Clean up the URL after 60 seconds
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (err: any) {
       console.error('Failed to view document:', err);
-      setActionError(err.message || 'Failed to open document.');
+      setActionError(err.message || 'Failed to open document. Please try again.');
     } finally {
       setActionState((prev) => ({ ...prev, [entry.key]: null }));
     }
@@ -187,18 +219,33 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
     setActionState((prev) => ({ ...prev, [entry.key]: 'download' }));
     try {
       const data = await fetchAsset(entry.assetId);
-      const blob = base64ToBlob(data.fileBytes, data.contentType);
+      
+      // Handle the response - fileBytes might be base64 or raw data
+      const fileBytes = typeof data === 'string' ? data : data.fileBytes;
+      let contentType = data.contentType || 'application/pdf';
+      const fileName = data.fileName || entry.fileName || 'document.pdf';
+      
+      // Map content type
+      if (contentType === 'pdf') {
+        contentType = 'application/pdf';
+      }
+      
+      if (!fileBytes) {
+        throw new Error('No file data received from server');
+      }
+      
+      const blob = base64ToBlob(fileBytes, contentType);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = data.fileName || entry.fileName || 'document';
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
-      link.remove();
+      document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (err: any) {
       console.error('Failed to download document:', err);
-      setActionError(err.message || 'Failed to download document.');
+      setActionError(err.message || 'Failed to download document. Please try again.');
     } finally {
       setActionState((prev) => ({ ...prev, [entry.key]: null }));
     }
@@ -302,21 +349,48 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
               <p className="pup-empty-note">No registration documents on file.</p>
             ) : (
               <div className="pup-subcards">
-                {registrations.map((reg, idx) => (
-                  <div className="pup-subcard" key={idx}>
-                    <div className="pup-subcard-top">
-                      <span className="pup-subcard-title">{reg.registrationType || 'Registration'}</span>
-                      <span className="pup-subcard-tag">Expires: {formatDate(reg.expiryDate)}</span>
+                {registrations.map((reg, idx) => {
+                  const attachmentKey = `${reg.asset?.id}-${idx}`;
+                  const attachment = attachments.find((a) => a.key === attachmentKey);
+                  return (
+                    <div className="pup-subcard" key={idx}>
+                      <div className="pup-grid">
+                        <DetailRow label="Registration Name" value={reg.registrationName} />
+                        <DetailRow label="Registration Type" value={reg.registrationType} />
+                        <DetailRow label="Registration Number" value={reg.registrationNumber} />
+                        <DetailRow label="Expiry Date" value={formatDate(reg.expiryDate)} />
+                        <DetailRow label="Document File" value={reg.asset?.fileName} />
+                      </div>
+                      {attachment && (
+                        <div className="pup-attachment-actions" style={{ marginTop: '12px' }}>
+                          <button
+                            className="pup-attachment-btn"
+                            onClick={() => handleView(attachment)}
+                            disabled={actionState[attachment.key] !== undefined && actionState[attachment.key] !== null}
+                          >
+                            {actionState[attachment.key] === 'view' ? <FaSpinner className="pup-spin" /> : <FaEye />}
+                            View
+                          </button>
+                          <button
+                            className="pup-attachment-btn pup-attachment-btn-primary"
+                            onClick={() => handleDownload(attachment)}
+                            disabled={actionState[attachment.key] !== undefined && actionState[attachment.key] !== null}
+                          >
+                            {actionState[attachment.key] === 'download' ? (
+                              <FaSpinner className="pup-spin" />
+                            ) : (
+                              <FaDownload />
+                            )}
+                            Download
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <div className="pup-grid">
-                      <DetailRow label="Registration Name" value={reg.registrationName} />
-                      <DetailRow label="Registration Number" value={reg.registrationNumber} />
-                      <DetailRow label="Document File" value={reg.asset?.fileName} />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
+            {actionError && <div className="pup-action-error">{actionError}</div>}
           </section>
 
           {/* Bank Accounts */}
@@ -360,7 +434,7 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
           </section>
 
           {/* Dispatch / Delivery Locations */}
-          <section className="pup-section">
+          <section className="pup-section pup-section-last">
             <h3 className="pup-section-title">
               <FaWarehouse className="pup-section-icon" />
               {type === 'buyers' ? 'Delivery Locations' : 'Dispatch Locations'}
@@ -390,104 +464,6 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
                     </div>
                   </div>
                 ))}
-              </div>
-            )}
-          </section>
-
-          {/* Identifiers */}
-          <section className="pup-section">
-            <h3 className="pup-section-title">
-              <FaIdBadge className="pup-section-icon" />
-              Platform Identifiers
-            </h3>
-            <div className="pup-grid">
-              <DetailRow label="Record ID" value={<span className="pup-mono">{record.id}</span>} />
-              <DetailRow label="Organization ID" value={<span className="pup-mono">{record.organizationId}</span>} />
-            </div>
-          </section>
-
-          {/* Attachments - View & Download */}
-          <section className="pup-section">
-            <h3 className="pup-section-title">
-              <FaFileDownload className="pup-section-icon" />
-              Attachments
-              <span className="pup-count-badge">{attachments.length}</span>
-            </h3>
-            {actionError && <div className="pup-action-error">{actionError}</div>}
-            {attachments.length === 0 ? (
-              <p className="pup-empty-note">No attachments available for this record.</p>
-            ) : (
-              <div className="pup-attachments-list">
-                {attachments.map((entry) => (
-                  <div className="pup-attachment-row" key={entry.key}>
-                    <div className="pup-attachment-info">
-                      <FaFileAlt className="pup-attachment-icon" />
-                      <div>
-                        <div className="pup-attachment-name">{entry.fileName}</div>
-                        {entry.registrationName && (
-                          <div className="pup-attachment-sub">{entry.registrationName}</div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="pup-attachment-actions">
-                      <button
-                        className="pup-attachment-btn"
-                        onClick={() => handleView(entry)}
-                        disabled={actionState[entry.key] !== undefined && actionState[entry.key] !== null}
-                      >
-                        {actionState[entry.key] === 'view' ? <FaSpinner className="pup-spin" /> : <FaEye />}
-                        View
-                      </button>
-                      <button
-                        className="pup-attachment-btn pup-attachment-btn-primary"
-                        onClick={() => handleDownload(entry)}
-                        disabled={actionState[entry.key] !== undefined && actionState[entry.key] !== null}
-                      >
-                        {actionState[entry.key] === 'download' ? <FaSpinner className="pup-spin" /> : <FaDownload />}
-                        Download
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Admin Approval Actions */}
-          <section className="pup-section pup-section-last pup-admin-actions-section">
-            <h3 className="pup-section-title">
-              <FaCheckCircle className="pup-section-icon" />
-              Platform Administrator Actions
-            </h3>
-            {statusError && <div className="pup-action-error">{statusError}</div>}
-            {isFinalized ? (
-              <div className="pup-admin-status-display">
-                Registration has been finalized. Status: 
-                <span className={`pup-badge pup-badge-status-${currentStatus.toLowerCase()}`} style={{ marginLeft: '8px' }}>
-                  {currentStatus}
-                </span>
-              </div>
-            ) : (
-              <div className="pup-admin-actions">
-                <button
-                  className="pup-btn-approve"
-                  onClick={handleApprove}
-                  disabled={statusLoading}
-                >
-                  {statusLoading ? <FaSpinner className="pup-spin" /> : <FaCheckCircle style={{ marginRight: '6px' }} />}
-                  Approve Registration
-                </button>
-                <button
-                  className="pup-btn-reject"
-                  onClick={() => {
-                    setStatusError(null);
-                    setShowRejectModal(true);
-                  }}
-                  disabled={statusLoading}
-                >
-                  <FaTimes style={{ marginRight: '6px' }} />
-                  Reject Registration
-                </button>
               </div>
             )}
           </section>
