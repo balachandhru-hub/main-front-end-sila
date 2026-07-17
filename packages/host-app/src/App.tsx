@@ -99,9 +99,18 @@ const Sidebar = () => {
 };
 
 const Shell = () => {
-  const { isLoggedIn, userRole, login } = useAuth();
+  const { isLoggedIn, userRole, login, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  React.useEffect(() => {
+    const handleSessionExpired = () => {
+      logout();
+      navigate('/', { replace: true });
+    };
+    window.addEventListener('session:expired', handleSessionExpired);
+    return () => window.removeEventListener('session:expired', handleSessionExpired);
+  }, [logout, navigate]);
 
   // Hide sidebar during onboarding, for platform-user, and for supplier
   const isOnboarding = location.pathname.includes('/onboarding');
@@ -113,7 +122,14 @@ const Shell = () => {
     <div className="app-container">
       {showSidebar && <Sidebar />}
       <main className={`main-content ${!isLoggedIn || isOnboarding || isPlatformUser || isSupplier ? 'no-padding' : ''} ${isPlatformUser ? 'bg-white' : ''}`}>
-        <React.Suspense fallback={<Loader fullScreen={true} message="Loading modules..." />}>
+        <React.Suspense fallback={
+          <Loader 
+            fullScreen={true} 
+            message="Loading modules..." 
+            theme={userRole === 'platform-user' ? 'light' : 'dark'}
+            color={userRole === 'platform-user' ? '#a855f7' : '#6366f1'}
+          />
+        }>
           <Routes>
             <Route
               path="/"

@@ -295,9 +295,14 @@ export const PlatformUserDashboard: React.FC = () => {
                           <h3 className="plat-card-name">{name}</h3>
                           {bizType && <span className="plat-badge plat-badge-type">{bizType}</span>}
                         </div>
-                        {industry && (
-                          <div style={{ marginTop: '4px' }}>
-                            <span className="plat-badge plat-badge-industry">{industry}</span>
+                        {(industry || profile.status) && (
+                          <div style={{ marginTop: '8px', display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            {industry && <span className="plat-badge plat-badge-industry">{industry}</span>}
+                            {profile.status && (
+                              <span className={`plat-badge plat-badge-status-${profile.status.toLowerCase()}`}>
+                                {profile.status === 'PENDING_VERIFICATION' ? 'PENDING' : profile.status.replace('_', ' ')}
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -383,6 +388,14 @@ export const PlatformUserDashboard: React.FC = () => {
           type={selectedDetail.type}
           record={selectedDetail.record}
           onClose={() => setSelectedDetail(null)}
+          onStatusUpdated={() => {
+            if (selectedDetail.type === 'buyers') {
+              loadBuyers(buyerIndex);
+            } else {
+              loadSuppliers(supplierIndex);
+            }
+            setSelectedDetail(null);
+          }}
         />
       )}
     </div>
