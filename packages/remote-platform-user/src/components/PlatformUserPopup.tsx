@@ -434,7 +434,7 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
           </section>
 
           {/* Dispatch / Delivery Locations */}
-          <section className="pup-section pup-section-last">
+          <section className="pup-section">
             <h3 className="pup-section-title">
               <FaWarehouse className="pup-section-icon" />
               {type === 'buyers' ? 'Delivery Locations' : 'Dispatch Locations'}
@@ -464,6 +464,45 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </section>
+
+          {/* Admin Approval Actions */}
+          <section className="pup-section pup-section-last pup-admin-actions-section">
+            <h3 className="pup-section-title">
+              <FaCheckCircle className="pup-section-icon" />
+              Platform Administrator Actions
+            </h3>
+            {statusError && <div className="pup-action-error">{statusError}</div>}
+            {isFinalized ? (
+              <div className="pup-admin-status-display">
+                Registration has been finalized. Status: 
+                <span className={`pup-badge pup-badge-status-${currentStatus.toLowerCase()}`} style={{ marginLeft: '8px' }}>
+                  {currentStatus.replace('_', ' ')}
+                </span>
+              </div>
+            ) : (
+              <div className="pup-admin-actions">
+                <button
+                  className="pup-btn-approve"
+                  onClick={handleApprove}
+                  disabled={statusLoading}
+                >
+                  {statusLoading ? <FaSpinner className="pup-spin" /> : <FaCheckCircle style={{ marginRight: '6px' }} />}
+                  Approve Registration
+                </button>
+                <button
+                  className="pup-btn-reject"
+                  onClick={() => {
+                    setStatusError(null);
+                    setShowRejectModal(true);
+                  }}
+                  disabled={statusLoading}
+                >
+                  <FaTimes style={{ marginRight: '6px' }} />
+                  Reject Registration
+                </button>
               </div>
             )}
           </section>
