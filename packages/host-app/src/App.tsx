@@ -112,16 +112,17 @@ const Shell = () => {
     return () => window.removeEventListener('session:expired', handleSessionExpired);
   }, [logout, navigate]);
 
-  // Hide sidebar during onboarding, for platform-user, and for supplier
+  // Hide sidebar during onboarding, for platform-user, supplier, and buyer
   const isOnboarding = location.pathname.includes('/onboarding');
   const isPlatformUser = userRole === 'platform-user';
   const isSupplier = userRole === 'supplier';
-  const showSidebar = isLoggedIn && !isOnboarding && !isPlatformUser && !isSupplier;
+  const isBuyer = userRole === 'buyer';
+  const showSidebar = isLoggedIn && !isOnboarding && !isPlatformUser && !isSupplier && !isBuyer;
 
   return (
     <div className="app-container">
       {showSidebar && <Sidebar />}
-      <main className={`main-content ${!isLoggedIn || isOnboarding || isPlatformUser || isSupplier ? 'no-padding' : ''} ${isPlatformUser ? 'bg-white' : ''}`}>
+      <main className={`main-content ${!isLoggedIn || isOnboarding || isPlatformUser || isSupplier || isBuyer ? 'no-padding' : ''} ${isPlatformUser ? 'bg-white' : ''}`}>
         <React.Suspense fallback={
           <Loader 
             fullScreen={true} 
