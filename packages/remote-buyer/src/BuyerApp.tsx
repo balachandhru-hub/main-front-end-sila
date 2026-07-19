@@ -164,7 +164,7 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, on
     }
   };
 
-  return <BuyerProfile onComplete={handleOnboardingComplete} onboardingData={onboardingData} />;
+  return <BuyerProfile onComplete={handleOnboardingComplete} onboardingData={onboardingData} rejectedProfile={rejectedProfile} />;
 };
 
 // ============================================================================
