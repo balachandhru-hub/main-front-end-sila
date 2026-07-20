@@ -1,6 +1,21 @@
 import supplierInstance from './supplierInstance';
+import type {
+  SupplierProfileResponse,
+  UpdateRejectedSupplierPayload,
+  CreateSupplierProfilePayload,
+  MetadataReferenceItem,
+  MetadataReferenceType,
+} from '../dto/supplierDto';
 
-export const createSupplierProfile = async (payload: any): Promise<any> => {
+// re-export so existing imports elsewhere (e.g. SupplierApp.tsx) keep working
+export type { SupplierProfileResponse } from '../dto/supplierDto';
+
+// ============================================================================
+// API: Create Supplier Profile (Register)
+// ============================================================================
+export const createSupplierProfile = async (
+  payload: CreateSupplierProfilePayload
+): Promise<any> => {
   try {
     const response = await supplierInstance.post('/api/v1/supplier/register', payload);
     return response;
@@ -15,6 +30,32 @@ export const createSupplierProfile = async (payload: any): Promise<any> => {
   }
 };
 
+// ============================================================================
+// API: Update Rejected Supplier (resubmission after REJECTED status)
+// ============================================================================
+export const updateRejectedSupplier = async (
+  payload: UpdateRejectedSupplierPayload
+): Promise<any> => {
+  try {
+    const response = await supplierInstance.put(
+      '/api/v1/supplier/update-rejected-supplier',
+      payload
+    );
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg =
+      responseData?.message ||
+      responseData?.description ||
+      'Failed to update rejected supplier profile.';
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+// ============================================================================
+// API: Get Onboarding Details (Auto-fill company info)
+// ============================================================================
 export const fetchOnboardingDetails = async (): Promise<any> => {
   try {
     const response = await supplierInstance.get('/api/v1/identity/onboarding');
@@ -25,18 +66,50 @@ export const fetchOnboardingDetails = async (): Promise<any> => {
   }
 };
 
-export const getSupplierProfile = async (): Promise<any> => {
+// ============================================================================
+// API: Get Metadata Reference List (Industry / Business Type / Document Type / Entity Type)
+// ============================================================================
+export const fetchMetadataReferenceList = async (
+  types: MetadataReferenceType[]
+): Promise<MetadataReferenceItem[]> => {
   try {
-    const response = await supplierInstance.get('api/v1/supplier/profile');
+    const response = await supplierInstance.post<MetadataReferenceItem[]>(
+      '/api/v1/masterdata/metadata/reference-list',
+      types
+    );
+    return response.data ?? [];
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    throw new Error(`Failed to fetch metadata reference list (${status})`);
+  }
+};
+
+// ============================================================================
+// API: Get Supplier Profile (Check if profile exists)
+// Returns null if 204 No Content (profile not found)
+// ============================================================================
+export const getSupplierProfile = async (): Promise<SupplierProfileResponse | null> => {
+  try {
+    const response = await supplierInstance.get<SupplierProfileResponse>(
+      'api/v1/supplier/profile'
+    );
+
     if (response.status === 204 || !response.data || Object.keys(response.data).length === 0) {
       return null;
     }
+
     return response.data;
   } catch (error: any) {
+    if (error?.response?.status === 204) {
+      return null;
+    }
     throw error;
   }
 };
 
+// ============================================================================
+// API: Logout Supplier
+// ============================================================================
 export const logoutSupplier = async (): Promise<void> => {
   try {
     await supplierInstance.put('/api/v1/identity/auth/logout');

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { fetchOnboardingDetails } from '../api/supplierApi';
+import { fetchOnboardingDetails, fetchMetadataReferenceList } from '../api/supplierApi';
+import type { MetadataReferenceItem } from '../dto/supplierDto';
 import { Country, State, City } from 'country-state-city';
 import './SupplierOnboardingForm.css';
 
@@ -125,26 +126,15 @@ const CheckIcon = () => (
   </svg>
 );
 
-const INDUSTRY_OPTIONS = [
-  'Manufacturing',
-  'Textiles & Apparel',
-  'Electronics',
-  'Automotive',
-  'Food & Beverage',
-  'Chemicals',
-  'Construction',
-  'Other',
-];
+// Metadata keys come back as UPPER_SNAKE_CASE (e.g. TEXTILES_APPAREL, GST).
+// Short keys (<=4 chars) are treated as acronyms and kept uppercase;
+// longer words get title-cased. e.g. 'TEXTILES_APPAREL' -> 'Textiles Apparel', 'GST' -> 'GST'
+const formatMetadataLabel = (key: string): string =>
+  key
+    .split('_')
+    .map((word) => (word.length <= 4 ? word : word.charAt(0) + word.slice(1).toLowerCase()))
+    .join(' ');
 
-const BUSINESS_TYPE_OPTIONS = [
-  'Manufacturer',
-  'Trader / Distributor',
-  'Service Provider',
-  'Exporter',
-  'Importer',
-];
-
-const REGISTRATION_TYPE_OPTIONS = ['GST', 'PAN', 'IEC', 'MSME / Udyam', 'ISO Certificate', 'Other'];
 const CURRENCY_OPTIONS = ['INR', 'USD', 'EUR', 'GBP'];
 const YEAR_OPTIONS = Array.from({ length: 60 }, (_, i) => String(new Date().getFullYear() - i));
 
@@ -169,6 +159,8 @@ interface Step1BusinessInfoProps {
   onChange: (data: Step1Data) => void;
   onValidationChange?: (isValid: boolean) => void;
   onboardingData?: any;
+  industryOptions: MetadataReferenceItem[];
+  businessTypeOptions: MetadataReferenceItem[];
 }
 
 const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
@@ -176,6 +168,8 @@ const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
   onChange,
   onValidationChange,
   onboardingData,
+  industryOptions,
+  businessTypeOptions,
 }) => {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -218,8 +212,8 @@ const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
               onBlur={() => setTouched((prev) => ({ ...prev, industry: true }))}
             >
               <option value="">Select Industry</option>
-              {INDUSTRY_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
+              {industryOptions.map((opt) => (
+                <option key={opt.id} value={opt.key}>{formatMetadataLabel(opt.key)}</option>
               ))}
             </select>
             {industryError && <span className="vob-error-text">{industryError}</span>}
@@ -235,8 +229,8 @@ const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
               onBlur={() => setTouched((prev) => ({ ...prev, businessType: true }))}
             >
               <option value="">Select Business Type</option>
-              {BUSINESS_TYPE_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
+              {businessTypeOptions.map((opt) => (
+                <option key={opt.id} value={opt.key}>{formatMetadataLabel(opt.key)}</option>
               ))}
             </select>
             {businessTypeError && <span className="vob-error-text">{businessTypeError}</span>}
@@ -395,6 +389,7 @@ interface Step2RegistrationsProps {
   data: Step2Data;
   onChange: (data: Step2Data) => void;
   onValidationChange?: (isValid: boolean) => void;
+  registrationTypeOptions: MetadataReferenceItem[];
 }
 
 interface Step2Draft {
@@ -406,19 +401,32 @@ interface Step2Draft {
 }
 
 const emptyStep2Draft: Step2Draft = {
-  type: 'GST',
+  type: '',
   number: '',
   name: '',
   expiryDate: '',
   certificateFile: null,
 };
 
-const Step2Registrations: React.FC<Step2RegistrationsProps> = ({ data, onChange, onValidationChange }) => {
+const Step2Registrations: React.FC<Step2RegistrationsProps> = ({
+  data,
+  onChange,
+  onValidationChange,
+  registrationTypeOptions,
+}) => {
   const [draft, setDraft] = useState<Step2Draft>(emptyStep2Draft);
   const [dragActive, setDragActive] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Default the type dropdown to the first fetched option once options load
+  useEffect(() => {
+    if (!draft.type && registrationTypeOptions.length > 0) {
+      setDraft((prev) => ({ ...prev, type: registrationTypeOptions[0].key }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registrationTypeOptions]);
 
   const handleDraftField = <K extends keyof Step2Draft>(field: K, value: Step2Draft[K]) => {
     setDraft((prev) => ({ ...prev, [field]: value }));
@@ -455,7 +463,7 @@ const Step2Registrations: React.FC<Step2RegistrationsProps> = ({ data, onChange,
     };
 
     onChange({ registrations: [...data.registrations, newEntry] });
-    setDraft(emptyStep2Draft);
+    setDraft({ ...emptyStep2Draft, type: registrationTypeOptions[0]?.key ?? '' });
     setTouched({});
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -487,8 +495,8 @@ const Step2Registrations: React.FC<Step2RegistrationsProps> = ({ data, onChange,
             value={draft.type}
             onChange={(e) => handleDraftField('type', e.target.value)}
           >
-            {REGISTRATION_TYPE_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
+            {registrationTypeOptions.map((opt) => (
+              <option key={opt.id} value={opt.key}>{formatMetadataLabel(opt.key)}</option>
             ))}
           </select>
         </div>
@@ -585,7 +593,7 @@ const Step2Registrations: React.FC<Step2RegistrationsProps> = ({ data, onChange,
             <tbody>
               {data.registrations.map((reg) => (
                 <tr key={reg.id}>
-                  <td className="vob-td">{reg.type}</td>
+                  <td className="vob-td">{formatMetadataLabel(reg.type)}</td>
                   <td className="vob-td">{reg.number}</td>
                   <td className="vob-td">{reg.name}</td>
                   <td className="vob-td">{reg.expiryDate || '—'}</td>
@@ -1367,6 +1375,11 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
   const [showValidationError, setShowValidationError] = useState(false);
   const [onboardingData, setOnboardingData] = useState<any>(null);
 
+  // Metadata reference lists (fetched from backend, replaces hardcoded dropdowns)
+  const [industryOptions, setIndustryOptions] = useState<MetadataReferenceItem[]>([]);
+  const [businessTypeOptions, setBusinessTypeOptions] = useState<MetadataReferenceItem[]>([]);
+  const [documentTypeOptions, setDocumentTypeOptions] = useState<MetadataReferenceItem[]>([]);
+
   useEffect(() => {
     const loadOnboardingData = async () => {
       try {
@@ -1377,6 +1390,20 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
       }
     };
     loadOnboardingData();
+  }, []);
+
+  useEffect(() => {
+    const loadMetadata = async () => {
+      try {
+        const items = await fetchMetadataReferenceList(['INDUSTRY', 'BUSINESS_TYPE', 'DOCUMENT_TYPE']);
+        setIndustryOptions(items.filter((i) => i.type === 'INDUSTRY'));
+        setBusinessTypeOptions(items.filter((i) => i.type === 'BUSINESS_TYPE'));
+        setDocumentTypeOptions(items.filter((i) => i.type === 'DOCUMENT_TYPE'));
+      } catch (err) {
+        console.warn('Failed to fetch metadata reference list', err);
+      }
+    };
+    loadMetadata();
   }, []);
 
   const handleNext = async () => {
@@ -1501,6 +1528,8 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
               onChange={setStep1}
               onValidationChange={setStep1Valid}
               onboardingData={onboardingData}
+              industryOptions={industryOptions}
+              businessTypeOptions={businessTypeOptions}
             />
           )}
           {currentStep === 2 && (
@@ -1508,6 +1537,7 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
               data={step2}
               onChange={setStep2}
               onValidationChange={setStep2Valid}
+              registrationTypeOptions={documentTypeOptions}
             />
           )}
           {currentStep === 3 && (
