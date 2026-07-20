@@ -206,7 +206,7 @@ const BuyerApp: React.FC = () => {
         
         // ✅ 200 (profile !== null) → profile exists, go to dashboard or handle REJECT
         if (profile !== null) {
-          if (profile.businessProfile?.status === 'REJECT') {
+          if (profile.businessProfile?.status === 'REJECTED') {
             const onboarding = await getOnboardingDetails();
             setOnboardingData(onboarding);
             setRejectedProfile(profile);

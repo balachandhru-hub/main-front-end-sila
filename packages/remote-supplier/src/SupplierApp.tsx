@@ -12,14 +12,25 @@ import SupplierOnboardingForm, {
   type RegistrationEntry,
   type BankAccountEntry,
 } from './components/SupplierOnboardingForm';
-import { createSupplierProfile, fetchOnboardingDetails, getSupplierProfile } from './api/supplierApi';
+import {
+  createSupplierProfile,
+  fetchOnboardingDetails,
+  getSupplierProfile,
+  updateRejectedSupplier,
+  type SupplierProfileResponse,
+} from './api/supplierApi';
 import { useAuthStore } from '../../host-app/src/store/useAuthStore';
 
 const readIsProfileComplete = (): boolean => {
   return sessionStorage.getItem('vosox_profile_complete') === 'true';
 };
 
-const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onCompleteSuccess }) => {
+interface OnboardingRouteProps {
+  onCompleteSuccess: () => void;
+  rejectedProfile?: SupplierProfileResponse | null;
+}
+
+const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, rejectedProfile }) => {
   const navigate = useNavigate();
 
   const handleOnboardingComplete = async (data: {
@@ -36,7 +47,6 @@ const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onComple
       console.warn('Failed to fetch onboarding info, using fallbacks', e);
     }
 
-
     const orgName = onboardingInfo?.organizationName;
     const orgEmail = onboardingInfo?.email;
     const orgPhone = onboardingInfo?.phone;
@@ -47,7 +57,7 @@ const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onComple
     const orgState = onboardingInfo?.state;
     const orgPin = onboardingInfo?.pinCode;
 
-    // 2. Map registrations, converting files to base64
+    // Map registrations, converting files to base64
     const mappedRegistrations = await Promise.all(
       data.step2.registrations.map(async (reg: RegistrationEntry) => {
         const fileBytes = reg.certificateFile ? await fileToBase64(reg.certificateFile) : '';
@@ -71,7 +81,6 @@ const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onComple
       })
     );
 
-    // 3. Map bank accounts
     const mappedBankAccounts = data.step3.accounts.map((acc: BankAccountEntry) => ({
       accountHolderName: acc.accountHolderName,
       bankName: acc.bankName,
@@ -84,7 +93,6 @@ const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onComple
       isPrimary: acc.isPrimary,
     }));
 
-    // 4. Map dispatch locations
     const mappedDispatchLocations = data.step4.locations.map((loc: DispatchLocationEntry) => ({
       locationName: loc.locationName,
       addressLine1: loc.addressLine1,
@@ -99,43 +107,69 @@ const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onComple
       isDefault: loc.isDefault,
     }));
 
-    // 5. Construct payload
+    const businessProfile = {
+      organizationName: orgName,
+      email: orgEmail,
+      phone: orgPhone,
+      emailVerified: true,
+      country: orgCountry,
+      addressLine1: orgAddress1,
+      addressLine2: orgAddress2,
+      city: orgCity,
+      state: orgState,
+      pinCode: orgPin,
+      industry: data.step1.industry,
+      businessType: data.step1.businessType,
+      employeeCount: parseInt(data.step1.employeeCount, 10) || 0,
+      annualTurnover: parseFloat(data.step1.annualTurnover) || 0,
+      currency: data.step1.currency,
+      yearEstablished: parseInt(data.step1.yearEstablished, 10) || 0,
+      website: data.step1.website || '',
+      description: data.step1.companyDescription || '',
+    };
+
+    if (rejectedProfile) {
+      // ------------------------------------------------------------
+      // RESUBMISSION FLOW: hit update-rejected-supplier
+      // ------------------------------------------------------------
+      const updatePayload = {
+        supplier: {
+          supplierId: rejectedProfile.id,
+          businessProfile,
+          registrations: mappedRegistrations,
+          bankAccounts: mappedBankAccounts,
+          dispatchLocations: mappedDispatchLocations,
+        },
+      };
+
+      await updateRejectedSupplier(updatePayload);
+
+      if (businessProfile.organizationName) {
+        sessionStorage.setItem('vosox_organization_name', businessProfile.organizationName);
+      }
+      sessionStorage.setItem('vosox_profile_complete', 'true');
+      onCompleteSuccess();
+      navigate('../dashboard', { replace: true });
+      return;
+    }
+
+    // ------------------------------------------------------------
+    // FRESH CREATE FLOW: hit register (unchanged)
+    // ------------------------------------------------------------
     const payload = {
       organizationId: orgId,
-      businessProfile: {
-        organizationName: orgName,
-        email: orgEmail,
-        phone: orgPhone,
-        emailVerified: true,
-        country: orgCountry,
-        addressLine1: orgAddress1,
-        addressLine2: orgAddress2,
-        city: orgCity,
-        state: orgState,
-        pinCode: orgPin,
-        industry: data.step1.industry,
-        businessType: data.step1.businessType,
-        employeeCount: parseInt(data.step1.employeeCount, 10) || 0,
-        annualTurnover: parseFloat(data.step1.annualTurnover) || 0,
-        currency: data.step1.currency,
-        yearEstablished: parseInt(data.step1.yearEstablished, 10) || 0,
-        website: data.step1.website || '',
-        description: data.step1.companyDescription || '',
-      },
+      businessProfile,
       registrations: mappedRegistrations,
       bankAccounts: mappedBankAccounts,
       dispatchLocations: mappedDispatchLocations,
     };
 
-    // 6. Post profile to server via api helper
     const response = await createSupplierProfile(payload);
 
     if (response && response.status === 200) {
-      // Save organization name
       if (payload.businessProfile.organizationName) {
         sessionStorage.setItem('vosox_organization_name', payload.businessProfile.organizationName);
       }
-      // 7. Update profileComplete status
       sessionStorage.setItem('vosox_profile_complete', 'true');
       onCompleteSuccess();
       navigate('../dashboard', { replace: true });
@@ -147,10 +181,10 @@ const OnboardingRoute: React.FC<{ onCompleteSuccess: () => void }> = ({ onComple
 
 const SupplierApp: React.FC = () => {
   const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
+  const [rejectedProfile, setRejectedProfile] = useState<SupplierProfileResponse | null>(null);
 
   useEffect(() => {
     const checkProfile = async () => {
-      // First check sessionStorage
       const isComplete = readIsProfileComplete();
       if (isComplete) {
         setProfileComplete(true);
@@ -159,23 +193,30 @@ const SupplierApp: React.FC = () => {
 
       try {
         const profile = await getSupplierProfile();
-        if (!profile) {
+
+        if (profile !== null) {
+          if (profile.businessProfile?.status === 'REJECTED') {
+            // Profile exists but was rejected -> route back to onboarding
+            // with the existing profile so submit hits update-rejected-supplier
+            setRejectedProfile(profile);
+            setProfileComplete(false);
+            return;
+          }
+
+          if (profile.businessProfile?.organizationName) {
+            sessionStorage.setItem('vosox_organization_name', profile.businessProfile.organizationName);
+          }
+          sessionStorage.setItem('vosox_profile_complete', 'true');
+          setProfileComplete(true);
+        } else {
+          // 204 -> no profile yet, show fresh onboarding
+          setRejectedProfile(null);
           setProfileComplete(false);
-          return;
         }
-        // Save organization name
-        if (profile?.businessProfile?.organizationName) {
-          sessionStorage.setItem('vosox_organization_name', profile.businessProfile.organizationName);
-        }
-        // If the profile is retrieved successfully, it exists and is complete
-        sessionStorage.setItem('vosox_profile_complete', 'true');
-        setProfileComplete(true);
       } catch (error: any) {
-        // If we get a 404 error (profile not found), show the onboarding form
         if (error.response?.status === 404) {
           setProfileComplete(false);
         } else {
-          // On other errors, log and also fallback to showing the onboarding form
           console.error('Error checking supplier profile existence:', error);
           setProfileComplete(false);
         }
@@ -201,10 +242,14 @@ const SupplierApp: React.FC = () => {
 
   return (
     <Routes>
-      {/* RELATIVE paths - because this is mounted under /supplier/* */}
       <Route
         path="onboarding"
-        element={<OnboardingRoute onCompleteSuccess={() => setProfileComplete(true)} />}
+        element={
+          <OnboardingRoute
+            onCompleteSuccess={() => setProfileComplete(true)}
+            rejectedProfile={rejectedProfile}
+          />
+        }
       />
       <Route
         path="dashboard"
