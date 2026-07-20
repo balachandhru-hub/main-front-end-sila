@@ -150,6 +150,37 @@ export interface BuyerRegistrationPayload {
   }[];
 }
 
+export interface UpdateRejectedBuyerPayload {
+  buyer: {
+    buyerId: string;
+    businessProfile: {
+      organizationId: string;
+      organizationName: string;
+      email: string;
+      phone: string;
+      country: string;
+      addressLine1: string;
+      addressLine2: string;
+      city: string;
+      state: string;
+      pinCode: string;
+      industry: string;
+      businessType: string;
+      employeeCount: number;
+      annualTurnover: number;
+      currency: string;
+      yearEstablished: number;
+      website: string;
+      description: string;
+      status: string;
+    };
+    buyerCategories: (BuyerRegistrationPayload['buyerCategories'][0] & { id?: string })[];
+    buyerBankAccounts: (BuyerRegistrationPayload['buyerBankAccounts'][0] & { id?: string })[];
+    buyerDocumentRegistrations: (BuyerRegistrationPayload['buyerDocumentRegistrations'][0] & { id?: string })[];
+    buyerDeliveryLocations: (BuyerRegistrationPayload['buyerDeliveryLocations'][0] & { id?: string })[];
+  };
+}
+
 // ============================================================================
 // API: Get Buyer Profile (Check if profile exists)
 // Returns null if 204 No Content (profile not found)
@@ -230,7 +261,7 @@ export const updateBuyerProfile = async (payload: BuyerRegistrationPayload): Pro
 // ============================================================================
 // API: Update Rejected Buyer
 // ============================================================================
-export const updateRejectedBuyer = async (payload: any): Promise<any> => {
+export const updateRejectedBuyer = async (payload: UpdateRejectedBuyerPayload): Promise<any> => {
   try {
     const response = await axiosInstance.put('/api/v1/buyer/update-rejected-buyer', payload);
     return response.data;
