@@ -7,6 +7,7 @@ import "./BuyerProfile.css";
 // TODO: Update this import path to match your actual file location
 import { fetchSegments, fetchClasses } from "../api/masterdataApi";
 import type { SelectedProduct, SelectedSubProduct } from "../api/masterdataApi";
+import type { BuyerProfileResponse } from "../api/Buyerapi";
 
 interface BusinessInfo {
     industry: string;
@@ -85,6 +86,7 @@ interface BuyerProfileProps {
         state: string;
         pinCode: string;
     } | null;
+    rejectedProfile?: BuyerProfileResponse | null;
 }
 
 
@@ -187,13 +189,13 @@ function maskAccountNumber(accountNumber: string): string {
 // ============================================================================
 // Teammate's ProductDropdown component (unchanged)
 // ============================================================================
-function ProductDropdown({ 
-    segments, 
+function ProductDropdown({
+    segments,
     onSelect,
     loading
-}: { 
-    segments: any[]; 
-    onSelect: (family: SelectedProduct) => void; 
+}: {
+    segments: any[];
+    onSelect: (family: SelectedProduct) => void;
     loading: boolean;
 }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -214,7 +216,7 @@ function ProductDropdown({
 
     const toggleExpand = (segmentId: number, e: React.MouseEvent) => {
         e.stopPropagation();
-        setExpandedSegments(prev => 
+        setExpandedSegments(prev =>
             prev.includes(segmentId) ? prev.filter(id => id !== segmentId) : [...prev, segmentId]
         );
     };
@@ -250,8 +252,8 @@ function ProductDropdown({
                                     {isExpanded && seg.family && (
                                         <div className="nested-items-container">
                                             {seg.family.map((fam: any) => (
-                                                <div 
-                                                    key={fam.family} 
+                                                <div
+                                                    key={fam.family}
                                                     className="nested-item-row"
                                                     onClick={() => {
                                                         onSelect({ segment: seg.segment, family: fam.family, title: fam.title });
@@ -276,14 +278,14 @@ function ProductDropdown({
 // ============================================================================
 // Teammate's SubProductDropdown component (unchanged)
 // ============================================================================
-function SubProductDropdown({ 
-    classes, 
+function SubProductDropdown({
+    classes,
     onSelect,
     disabled,
     loading
-}: { 
-    classes: any[]; 
-    onSelect: (commodity: SelectedSubProduct) => void; 
+}: {
+    classes: any[];
+    onSelect: (commodity: SelectedSubProduct) => void;
     disabled: boolean;
     loading: boolean;
 }) {
@@ -305,14 +307,14 @@ function SubProductDropdown({
 
     const toggleExpand = (classId: number, e: React.MouseEvent) => {
         e.stopPropagation();
-        setExpandedClasses(prev => 
+        setExpandedClasses(prev =>
             prev.includes(classId) ? prev.filter(id => id !== classId) : [...prev, classId]
         );
     };
 
     return (
         <div ref={containerRef} className="custom-dropdown-container">
-            <div 
+            <div
                 className={`custom-dropdown-trigger ${disabled ? 'custom-dropdown-trigger-disabled' : ''}`}
                 onClick={() => !disabled && setIsOpen(!isOpen)}
             >
@@ -346,8 +348,8 @@ function SubProductDropdown({
                                     {isExpanded && cls.commodity && (
                                         <div className="nested-items-container">
                                             {cls.commodity.map((com: any) => (
-                                                <div 
-                                                    key={com.commodity} 
+                                                <div
+                                                    key={com.commodity}
                                                     className="nested-item-row"
                                                     onClick={() => {
                                                         onSelect({ class: cls.class, commodity: com.commodity, title: com.title });
@@ -373,13 +375,12 @@ function SubProductDropdown({
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
-export default function BuyerProfile({ onComplete, onboardingData }: BuyerProfileProps) {
+export default function BuyerProfile({ onComplete, onboardingData, rejectedProfile }: BuyerProfileProps) {
     const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [furthestStep, setFurthestStep] = useState<number>(1);
 
     const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(emptyBusinessInfo);
-    
     // ============================================================================
     // NEW: Categories states from teammate's code
     // ============================================================================
@@ -482,6 +483,103 @@ export default function BuyerProfile({ onComplete, onboardingData }: BuyerProfil
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // ============================================================================
+    // NEW: Auto-populate form if rejectedProfile is provided
+    // ============================================================================
+    useEffect(() => {
+        if (rejectedProfile) {
+            if (rejectedProfile.businessProfile) {
+                setBusinessInfo({
+                    industry: rejectedProfile.businessProfile.industry || "",
+                    businessType: rejectedProfile.businessProfile.businessType || "",
+                    employeeCount: rejectedProfile.businessProfile.employeeCount?.toString() || "",
+                    annualTurnover: rejectedProfile.businessProfile.annualTurnover?.toString() || "",
+                    currency: rejectedProfile.businessProfile.currency || "INR",
+                    yearEstablished: rejectedProfile.businessProfile.yearEstablished?.toString() || "",
+                    website: rejectedProfile.businessProfile.website || "",
+                    companyDescription: rejectedProfile.businessProfile.description || "",
+                });
+            }
+
+            if (rejectedProfile.registrations && rejectedProfile.registrations.length > 0) {
+                const mappedRegistrations = rejectedProfile.registrations.map(r => ({
+                    id: makeId(),
+                    type: r.registrationType || "",
+                    number: r.registrationNumber || "",
+                    name: r.registrationName || "",
+                    expiryDate: r.expiryDate ? r.expiryDate.split('T')[0] : "",
+                    attachmentName: r.asset?.fileName || "",
+                }));
+                setRegistrationDraft({
+                    type: mappedRegistrations[0].type || "GST",
+                    number: mappedRegistrations[0].number,
+                    name: mappedRegistrations[0].name,
+                    expiryDate: mappedRegistrations[0].expiryDate,
+                    attachmentName: mappedRegistrations[0].attachmentName,
+                });
+                setRegistrations(mappedRegistrations.slice(1));
+            }
+
+            if (rejectedProfile.bankAccounts && rejectedProfile.bankAccounts.length > 0) {
+                const mappedBanks = rejectedProfile.bankAccounts.map(b => ({
+                    id: makeId(),
+                    accountHolderName: b.accountHolderName || "",
+                    bankName: b.bankName || "",
+                    branchName: b.branchName || "",
+                    accountNumber: b.accountNumber || "",
+                    ifscCode: b.ifscCode || "",
+                    swiftCode: b.swiftCode || "",
+                    iban: "",
+                    currency: b.currency || "INR",
+                    isPrimary: b.isPrimary || false,
+                }));
+                setBankDraft({
+                    accountHolderName: mappedBanks[0].accountHolderName,
+                    bankName: mappedBanks[0].bankName,
+                    branchName: mappedBanks[0].branchName,
+                    accountNumber: mappedBanks[0].accountNumber,
+                    ifscCode: mappedBanks[0].ifscCode,
+                    swiftCode: mappedBanks[0].swiftCode,
+                    iban: mappedBanks[0].iban,
+                    currency: mappedBanks[0].currency || "INR",
+                    isPrimary: mappedBanks[0].isPrimary,
+                });
+                setBankAccounts(mappedBanks.slice(1));
+            }
+
+            if (rejectedProfile.dispatchLocations && rejectedProfile.dispatchLocations.length > 0) {
+                const mappedLocations = rejectedProfile.dispatchLocations.map(l => ({
+                    id: makeId(),
+                    locationName: l.locationName || "",
+                    contactPerson: l.contactPerson || "",
+                    country: l.country || "",
+                    state: l.state || "",
+                    addressLine1: l.addressLine1 || "",
+                    addressLine2: l.addressLine2 || "",
+                    city: l.city || "",
+                    pinZip: l.pinCode || "",
+                    contactEmail: "",
+                    contactPhone: l.contactPhone || "",
+                    isDefault: l.isDefault || false,
+                }));
+                setLocationDraft({
+                    locationName: mappedLocations[0].locationName,
+                    contactPerson: mappedLocations[0].contactPerson,
+                    country: mappedLocations[0].country,
+                    state: mappedLocations[0].state,
+                    addressLine1: mappedLocations[0].addressLine1,
+                    addressLine2: mappedLocations[0].addressLine2,
+                    city: mappedLocations[0].city,
+                    pinZip: mappedLocations[0].pinZip,
+                    contactEmail: mappedLocations[0].contactEmail,
+                    contactPhone: mappedLocations[0].contactPhone,
+                    isDefault: mappedLocations[0].isDefault,
+                });
+                setDispatchLocations(mappedLocations.slice(1));
+            }
+        }
+    }, [rejectedProfile]);
+
     /* ---------------------------- navigation --------------------------- */
 
     function goToStep(step: number) {
@@ -556,12 +654,12 @@ export default function BuyerProfile({ onComplete, onboardingData }: BuyerProfil
 
     function addLocation() {
         if (!locationDraft.locationName || !locationDraft.addressLine1 || !locationDraft.city) return;
-        
-        setDispatchLocations((prev) => [...prev, { 
-            id: makeId(), 
-            ...locationDraft 
+
+        setDispatchLocations((prev) => [...prev, {
+            id: makeId(),
+            ...locationDraft
         }]);
-        
+
         setLocationDraft(emptyLocationDraft);
     }
 
@@ -860,16 +958,16 @@ export default function BuyerProfile({ onComplete, onboardingData }: BuyerProfil
             <div className="bp-panel">
                 <h2 className="bp-panel-title">Step 2: Product &amp; Service Categories</h2>
                 <div className="bp-divider" />
-                
+
                 <div className="bp-category-section">
-                    
+
                     <div className="bp-field">
                         <label>
                             Select Product (Segment &amp; Family)<span className="bp-required">*</span>
                         </label>
-                        <ProductDropdown 
-                            segments={segments} 
-                            onSelect={handleSelectProduct} 
+                        <ProductDropdown
+                            segments={segments}
+                            onSelect={handleSelectProduct}
                             loading={loadingSegments}
                         />
                     </div>
@@ -877,7 +975,7 @@ export default function BuyerProfile({ onComplete, onboardingData }: BuyerProfil
                     <div className="bp-category-section-subtitle">
                         Selected Products ({selectedProducts.length}) - <em>Click a tag to select it for sub-products</em>
                     </div>
-                    
+
                     <div className="bp-category-tags">
                         {selectedProducts.length === 0 ? (
                             <span className="custom-dropdown-item-empty">No products selected yet.</span>
@@ -885,8 +983,8 @@ export default function BuyerProfile({ onComplete, onboardingData }: BuyerProfil
                             selectedProducts.map((p) => {
                                 const isActive = activeProduct?.family === p.family;
                                 return (
-                                    <span 
-                                        key={p.family} 
+                                    <span
+                                        key={p.family}
                                         className={`bp-category-tag ${isActive ? 'bp-category-tag-active' : ''}`}
                                         onClick={() => setActiveProduct(p)}
                                     >
@@ -914,9 +1012,9 @@ export default function BuyerProfile({ onComplete, onboardingData }: BuyerProfil
                             {activeProduct && <span className="bp-logo-accent"> - for {activeProduct.title}</span>}
                             <span className="bp-required">*</span>
                         </label>
-                        <SubProductDropdown 
-                            classes={classes} 
-                            onSelect={handleSelectSubProduct} 
+                        <SubProductDropdown
+                            classes={classes}
+                            onSelect={handleSelectSubProduct}
                             disabled={!activeProduct}
                             loading={loadingClasses}
                         />
@@ -925,14 +1023,14 @@ export default function BuyerProfile({ onComplete, onboardingData }: BuyerProfil
                     <div className="bp-category-section-subtitle">
                         Selected Sub-Products ({selectedSubProducts.length})
                     </div>
-                    
+
                     <div className="bp-category-tags">
                         {selectedSubProducts.length === 0 ? (
                             <span className="custom-dropdown-item-empty">No sub-products selected yet.</span>
                         ) : (
                             selectedSubProducts.map((p) => (
-                                <span 
-                                    key={p.commodity} 
+                                <span
+                                    key={p.commodity}
                                     className="bp-category-tag bp-category-tag-active-sub"
                                 >
                                     {p.title} ({p.commodity})
@@ -1283,7 +1381,7 @@ export default function BuyerProfile({ onComplete, onboardingData }: BuyerProfil
             <div className="bp-panel">
                 <h2 className="bp-panel-title">Step 5: Dispatch Locations</h2>
                 <div className="bp-divider" />
-                
+
                 <form onSubmit={handleSubmitProfile}>
                     <div className="bp-form-grid">
                         <div className="bp-field">
@@ -1435,9 +1533,9 @@ export default function BuyerProfile({ onComplete, onboardingData }: BuyerProfil
                             />
                             Default Dispatch Location
                         </label>
-                        <button 
-                            type="button" 
-                            className="bp-btn bp-btn-primary" 
+                        <button
+                            type="button"
+                            className="bp-btn bp-btn-primary"
                             onClick={addLocation}
                         >
                             + Add Location
@@ -1464,8 +1562,8 @@ export default function BuyerProfile({ onComplete, onboardingData }: BuyerProfil
                                 </tr>
                             ) : (
                                 dispatchLocations.map((l) => (
-                                    <tr 
-                                        key={l.id} 
+                                    <tr
+                                        key={l.id}
                                         className={l.isDefault ? 'bp-table-row-default' : ''}
                                     >
                                         <td>
