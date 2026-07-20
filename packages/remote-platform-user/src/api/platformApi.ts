@@ -108,3 +108,37 @@ export const updateSupplierStatus = async (supplierId: string, status: string, c
     throw new Error(`${errMsg} (${status})`);
   }
 };
+
+export const updateBuyerInternalStatus = async (organizationId: string, isActive: boolean): Promise<any> => {
+  try {
+    const response = await platformInstance.put('/api/v1/buyer/internal-status', {
+      buyer: {
+        organizationId,
+        isActive,
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to update buyer internal status.';
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+export const updateSupplierInternalStatus = async (organizationId: string, isActive: boolean): Promise<any> => {
+  try {
+    const response = await platformInstance.put('/api/v1/supplier/internal-status', {
+      supplier: {
+        organizationId,
+        isActive,
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to update supplier internal status.';
+    throw new Error(`${errMsg} (${status})`);
+  }
+};

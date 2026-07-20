@@ -11,13 +11,13 @@
 .plat-top-header {
   background-color: #ffffff;
   border-bottom: 1px solid #e2e8f0;
-  padding: 16px 24px;
+  padding: 14px 20px;
   display: flex;
   align-items: center;
 }
 
 .plat-top-logo {
-  height: 32px;
+  height: 48px;
   width: auto;
   object-fit: contain;
 }
@@ -36,7 +36,7 @@
 }
 
 .plat-title {
-  font-size: 2.2rem;
+  font-size: 1.3rem;
   font-weight: 800;
   color: #1a202c;
   margin: 0 0 8px 0;
@@ -46,7 +46,7 @@
 .plat-subtitle {
   color: #718096;
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.88rem;
 }
 
 /* Stats Section */
@@ -100,14 +100,14 @@
 }
 
 .plat-stat-value {
-  font-size: 2rem;
+  font-size: 1.4rem;
   font-weight: 800;
   color: #2d3748;
   line-height: 1.2;
 }
 
 .plat-stat-label {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   color: #718096;
   text-transform: uppercase;
   font-weight: 600;
@@ -139,7 +139,7 @@
 
 .plat-tab-btn {
   padding: 10px 24px;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 600;
   border: none;
   background: transparent;
@@ -238,7 +238,7 @@
 }
 
 .plat-card-name {
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #1a202c;
   margin: 0;
@@ -267,7 +267,7 @@
 }
 
 .plat-card-desc {
-  font-size: 0.9rem;
+  font-size: 12px;
   color: #4a5568;
   margin: 0 0 16px 0;
   display: -webkit-box;
@@ -318,7 +318,7 @@
 .plat-card-footer-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
 }
 
