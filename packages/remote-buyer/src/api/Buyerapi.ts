@@ -27,6 +27,26 @@ export interface BuyerProfileResponse {
     description: string;
     status: string;
   };
+  categories?: {
+    segment: number;
+    segmentTitle: string;
+    family: number;
+    familyTitle: string;
+    class: number;
+    classTitle: string;
+    commodity: number;
+    commodityTitle: string;
+  }[];
+  buyerCategories?: {
+    segment: number;
+    segmentTitle: string;
+    family: number;
+    familyTitle: string;
+    class: number;
+    classTitle: string;
+    commodity: number;
+    commodityTitle: string;
+  }[];
   registrations: {
     registrationType: string;
     registrationNumber: string;

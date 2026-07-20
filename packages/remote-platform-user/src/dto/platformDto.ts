@@ -65,12 +65,27 @@ export interface BusinessProfileDto {
   description?: string;
   status?: string;
   comments?: string | null;
+  isActive?: boolean;
+}
+
+export interface CategoryDto {
+  segment?: number;
+  segmentTitle?: string;
+  family?: number;
+  familyTitle?: string;
+  class?: number;
+  classTitle?: string;
+  commodity?: number;
+  commodityTitle?: string;
 }
 
 export interface BuyerDto {
   id: string;
   organizationId: string;
+  isActive?: boolean;
   businessProfile?: BusinessProfileDto;
+  categories?: CategoryDto[];
+  buyerCategories?: CategoryDto[];
   registrations?: RegistrationDto[];
   bankAccounts?: BankAccountDto[];
   dispatchLocations?: DispatchLocationDto[];
@@ -79,7 +94,10 @@ export interface BuyerDto {
 export interface SupplierDto {
   id: string;
   organizationId: string;
+  isActive?: boolean;
   businessProfile?: BusinessProfileDto;
+  categories?: CategoryDto[];
+  supplierCategories?: CategoryDto[];
   registrations?: RegistrationDto[];
   bankAccounts?: BankAccountDto[];
   dispatchLocations?: DispatchLocationDto[];
