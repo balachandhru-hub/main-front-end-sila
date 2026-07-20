@@ -77,7 +77,7 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  padding: 34px 32px 26px 32px;
+  padding: 34px 68px 26px 32px;
   display: flex;
   align-items: center;
   gap: 20px;
@@ -135,7 +135,7 @@
 }
 
 .pup-title {
-  font-size: 1.4rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: #1e293b;
   margin: 0 0 10px 0;
@@ -151,7 +151,7 @@
 
 /* ===== Badges (glassy pills) ===== */
 .pup-badge {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
   padding: 5px 11px;
   border-radius: 20px;
@@ -202,7 +202,7 @@
 }
 
 .pup-description {
-  font-size: 0.94rem;
+  font-size: 0.88rem;
   color: #475569;
   line-height: 1.6;
   background: #f8fafc;
@@ -497,7 +497,7 @@
   padding: 14px 18px;
   border-radius: 8px;
   margin-bottom: 24px;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   line-height: 1.5;
 }
 
@@ -699,4 +699,115 @@
   border-radius: 12px;
   padding: 16px 20px;
   margin-top: 14px;
-}
+}
+
+/* ===== Switch Toggle Button ===== */
+.pup-header-toggle-wrapper {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.pup-toggle-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.pup-admin-status-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background-color: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.pup-admin-status-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.pup-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 66px;
+  height: 30px;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+  user-select: none;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pup-switch-on {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+}
+
+.pup-switch-off {
+  background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+  color: #ffffff;
+}
+
+.pup-switch:hover:not(:disabled) {
+  filter: brightness(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.pup-switch:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pup-switch-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
+  color: #334155;
+}
+
+.pup-switch-on .pup-switch-thumb {
+  transform: translateX(36px);
+}
+
+.pup-switch-off .pup-switch-thumb {
+  transform: translateX(0);
+}
+
+.pup-switch-text {
+  position: absolute;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  z-index: 1;
+}
+
+.pup-switch-on .pup-switch-text {
+  left: 10px;
+}
+
+.pup-switch-off .pup-switch-text {
+  right: 10px;
+}

@@ -350,7 +350,6 @@ export const PlatformUserDashboard: React.FC = () => {
                       </div>
 
                       <div className="plat-card-footer plat-card-footer-actions">
-                        <span>ID: {item.organizationId}</span>
                         <button
                           className="plat-see-more-btn"
                           onClick={() => setSelectedDetail({ type: activeTab, record: item })}

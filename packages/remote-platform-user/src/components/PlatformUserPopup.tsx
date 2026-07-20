@@ -1,10 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { downloadBuyerAsset, downloadSupplierAsset, updateBuyerStatus, updateSupplierStatus } from '../api/platformApi';
+import {
+  downloadBuyerAsset,
+  downloadSupplierAsset,
+  updateBuyerStatus,
+  updateSupplierStatus,
+  updateBuyerInternalStatus,
+  updateSupplierInternalStatus,
+} from '../api/platformApi';
 import type {
   BusinessProfileDto,
   RegistrationDto,
   BankAccountDto,
   DispatchLocationDto,
+  CategoryDto,
   PlatformEntityType,
   PlatformRecordDto,
 } from '../dto/platformDto';
@@ -102,6 +110,7 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
   const registrations: RegistrationDto[] = record.registrations || [];
   const bankAccounts: BankAccountDto[] = record.bankAccounts || [];
   const dispatchLocations: DispatchLocationDto[] = record.dispatchLocations || [];
+  const categories: CategoryDto[] = record.categories || (record as any).buyerCategories || (record as any).supplierCategories || [];
 
   const [actionState, setActionState] = useState<Record<string, 'view' | 'download' | null>>({});
   const [actionError, setActionError] = useState<string | null>(null);
@@ -110,6 +119,34 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
   const [statusError, setStatusError] = useState<string | null>(null);
   const [showRejectModal, setShowRejectModal] = useState<boolean>(false);
   const [rejectComments, setRejectComments] = useState<string>('');
+
+  const [internalStatus, setInternalStatus] = useState<boolean>(
+    record.isActive ?? profile.isActive ?? true
+  );
+  const [internalStatusLoading, setInternalStatusLoading] = useState<boolean>(false);
+
+  const handleToggleInternalStatus = async () => {
+    if (internalStatusLoading) return;
+    const nextStatus = !internalStatus;
+    setInternalStatusLoading(true);
+    setStatusError(null);
+    try {
+      if (type === 'buyers') {
+        await updateBuyerInternalStatus(record.organizationId, nextStatus);
+      } else {
+        await updateSupplierInternalStatus(record.organizationId, nextStatus);
+      }
+      setInternalStatus(nextStatus);
+      record.isActive = nextStatus;
+      if (record.businessProfile) record.businessProfile.isActive = nextStatus;
+      onStatusUpdated?.();
+    } catch (err: any) {
+      console.error('Failed to update internal status:', err);
+      setStatusError(err.message || 'Failed to update account active status.');
+    } finally {
+      setInternalStatusLoading(false);
+    }
+  };
 
   const handleApprove = async () => {
     if (statusLoading) return;
@@ -276,6 +313,25 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
               )}
             </div>
           </div>
+          <div className="pup-header-toggle-wrapper">
+            <span className="pup-toggle-label">
+              Status: <strong style={{ color: internalStatus ? '#059669' : '#dc2626' }}>{internalStatus ? 'ON' : 'OFF'}</strong>
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={internalStatus}
+              className={`pup-switch ${internalStatus ? 'pup-switch-on' : 'pup-switch-off'} ${internalStatusLoading ? 'pup-switch-loading' : ''}`}
+              onClick={handleToggleInternalStatus}
+              disabled={internalStatusLoading}
+              title={internalStatus ? 'Click to turn OFF (deactivate)' : 'Click to turn ON (activate)'}
+            >
+              <span className="pup-switch-thumb">
+                {internalStatusLoading && <FaSpinner className="pup-spin" style={{ fontSize: '10px' }} />}
+              </span>
+              <span className="pup-switch-text">{internalStatus ? 'ON' : 'OFF'}</span>
+            </button>
+          </div>
         </div>
 
         <div className="pup-body">
@@ -318,6 +374,29 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
               />
             </div>
           </section>
+
+          {/* Product & Service Categories */}
+          {categories.length > 0 && (
+            <section className="pup-section">
+              <h3 className="pup-section-title">
+                <FaFileAlt className="pup-section-icon" />
+                Product &amp; Service Categories
+                <span className="pup-count-badge">{categories.length}</span>
+              </h3>
+              <div className="pup-subcards">
+                {categories.map((cat, idx) => (
+                  <div className="pup-subcard" key={idx}>
+                    <div className="pup-grid">
+                      <DetailRow label="Segment" value={cat.segmentTitle || cat.segment} />
+                      <DetailRow label="Family" value={cat.familyTitle || cat.family} />
+                      {cat.classTitle && <DetailRow label="Class" value={cat.classTitle} />}
+                      {cat.commodityTitle && <DetailRow label="Commodity" value={cat.commodityTitle} />}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Contact & Address */}
           <section className="pup-section">

@@ -501,6 +501,41 @@ export default function BuyerProfile({ onComplete, onboardingData, rejectedProfi
                 });
             }
 
+            const rawCategories = rejectedProfile.categories || rejectedProfile.buyerCategories || [];
+            if (rawCategories && rawCategories.length > 0) {
+                const productsMap = new Map<number, SelectedProduct>();
+                const subProducts: SelectedSubProduct[] = [];
+
+                rawCategories.forEach((cat: any) => {
+                    if (cat.family && !productsMap.has(cat.family)) {
+                        productsMap.set(cat.family, {
+                            segment: cat.segment || 0,
+                            family: cat.family || 0,
+                            title: cat.familyTitle || cat.segmentTitle || 'Category',
+                        });
+                    }
+                    if (cat.commodity) {
+                        subProducts.push({
+                            class: cat.class || 0,
+                            commodity: cat.commodity || 0,
+                            title: cat.commodityTitle || cat.classTitle || 'Sub-Product',
+                            parentSegment: cat.segment || 0,
+                            parentFamily: cat.family || 0,
+                            parentTitle: cat.familyTitle || cat.segmentTitle || '',
+                        });
+                    }
+                });
+
+                const productsList = Array.from(productsMap.values());
+                if (productsList.length > 0) {
+                    setSelectedProducts(productsList);
+                    setActiveProduct(productsList[0]);
+                }
+                if (subProducts.length > 0) {
+                    setSelectedSubProducts(subProducts);
+                }
+            }
+
             if (rejectedProfile.registrations && rejectedProfile.registrations.length > 0) {
                 const mappedRegistrations = rejectedProfile.registrations.map(r => ({
                     id: makeId(),
