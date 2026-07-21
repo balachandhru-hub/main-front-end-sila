@@ -17,6 +17,7 @@ import {
   fetchOnboardingDetails,
   getSupplierProfile,
   updateRejectedSupplier,
+  fetchMetadataReferenceList,
   type SupplierProfileResponse,
 } from './api/supplierApi';
 import { useAuthStore } from '../../host-app/src/store/useAuthStore';
@@ -57,6 +58,10 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, re
     const orgState = onboardingInfo?.state;
     const orgPin = onboardingInfo?.pinCode;
 
+    // Fetch ENTITY_TYPE for supplier entity ID
+    const entityTypes = await fetchMetadataReferenceList(['ENTITY_TYPE']);
+    const supplierEntityId = entityTypes.find((e) => e.key === 'SUPPLIER')?.id || '59476530-3c10-438b-b3b3-9db9e96e8d93';
+
     // Map registrations, converting files to base64
     const mappedRegistrations = await Promise.all(
       data.step2.registrations.map(async (reg: RegistrationEntry) => {
@@ -68,7 +73,7 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, re
           asset: reg.certificateFile
             ? {
               entityType: 'SUPPLIER',
-              entityId: '59476530-3c10-438b-b3b3-9db9e96e8d93',
+              entityId: supplierEntityId,
               assetType: reg.type,
               fileName: reg.certificateFile.name,
               contentType: reg.certificateFile.type,
