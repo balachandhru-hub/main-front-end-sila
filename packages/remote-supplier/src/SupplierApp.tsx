@@ -68,7 +68,7 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, re
           asset: reg.certificateFile
             ? {
               entityType: 'SUPPLIER',
-              entityId: '7b75d5fd-a87d-4fca-a9a9-c6e781f8d431',
+              entityId: '59476530-3c10-438b-b3b3-9db9e96e8d93',
               assetType: reg.type,
               fileName: reg.certificateFile.name,
               contentType: reg.certificateFile.type,
