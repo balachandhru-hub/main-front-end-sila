@@ -5,7 +5,7 @@ import { Country, State, City } from "country-state-city";
 import "./BuyerProfile.css";
 
 // TODO: Update this import path to match your actual file location
-import { fetchSegments, fetchClasses } from "../api/masterdataApi";
+import { fetchSegments, fetchClasses, fetchReferenceList } from "../api/masterdataApi";
 import type { SelectedProduct, SelectedSubProduct } from "../api/masterdataApi";
 import type { BuyerProfileResponse } from "../api/Buyerapi";
 
@@ -27,6 +27,7 @@ interface Registration {
     name: string;
     expiryDate: string;
     attachmentName: string;
+    certificateFile: File | null;
 }
 
 interface BankAccount {
@@ -103,29 +104,9 @@ const STEP_LABELS = [
 
 const CURRENCIES = ["INR", "USD", "EUR", "GBP", "AED", "SGD"];
 
-const INDUSTRIES = [
-    "Manufacturing",
-    "Textiles & Apparel",
-    "Electronics",
-    "Automotive",
-    "Chemicals",
-    "Food & Beverage",
-    "Pharmaceuticals",
-    "Construction",
-    "Logistics",
-    "Other",
-];
 
-const BUSINESS_TYPES = [
-    "Manufacturer",
-    "Trader / Distributor",
-    "Wholesaler",
-    "Retailer",
-    "Service Provider",
-    "Exporter / Importer",
-];
 
-const REGISTRATION_TYPES = ["GST", "PAN", "IEC", "MSME / Udyam", "ISO Certificate", "Other"];
+
 
 const YEARS = Array.from({ length: 60 }, (_, i) => String(new Date().getFullYear() - i));
 
@@ -142,11 +123,12 @@ const emptyBusinessInfo: BusinessInfo = {
 };
 
 const emptyRegistrationDraft = {
-    type: "GST",
+    type: "Select Registration Type",
     number: "",
     name: "",
     expiryDate: "",
     attachmentName: "",
+    certificateFile: null as File | null,
 };
 
 const emptyBankDraft = {
@@ -391,6 +373,56 @@ export default function BuyerProfile({ onComplete, onboardingData, rejectedProfi
     const [loadingSegments, setLoadingSegments] = useState(false);
     const [classes, setClasses] = useState<any[]>([]);
     const [loadingClasses, setLoadingClasses] = useState(false);
+    const [industries, setIndustries] = useState<any[]>([]);
+    const [loadingIndustries, setLoadingIndustries] = useState(false);
+
+    const handleIndustryFocus = async () => {
+        if (industries.length === 0 && !loadingIndustries) {
+            setLoadingIndustries(true);
+            try {
+                const data = await fetchReferenceList(["INDUSTRY"]);
+                setIndustries(data);
+            } catch (err) {
+                console.error("Failed to load industries:", err);
+            } finally {
+                setLoadingIndustries(false);
+            }
+        }
+    };
+
+    const [businessTypes, setBusinessTypes] = useState<any[]>([]);
+    const [loadingBusinessTypes, setLoadingBusinessTypes] = useState(false);
+
+    const handleBusinessTypeFocus = async () => {
+        if (businessTypes.length === 0 && !loadingBusinessTypes) {
+            setLoadingBusinessTypes(true);
+            try {
+                const data = await fetchReferenceList(["BUSINESS_TYPE"]);
+                setBusinessTypes(data);
+            } catch (err) {
+                console.error("Failed to load business types:", err);
+            } finally {
+                setLoadingBusinessTypes(false);
+            }
+        }
+    };
+
+    const [documentTypes, setDocumentTypes] = useState<any[]>([]);
+    const [loadingDocumentTypes, setLoadingDocumentTypes] = useState(false);
+
+    const handleDocumentTypeFocus = async () => {
+        if (documentTypes.length === 0 && !loadingDocumentTypes) {
+            setLoadingDocumentTypes(true);
+            try {
+                const data = await fetchReferenceList(["DOCUMENT_TYPE"]);
+                setDocumentTypes(data);
+            } catch (err) {
+                console.error("Failed to load document types:", err);
+            } finally {
+                setLoadingDocumentTypes(false);
+            }
+        }
+    };
 
     // Load segments on mount
     useEffect(() => {
@@ -544,6 +576,7 @@ export default function BuyerProfile({ onComplete, onboardingData, rejectedProfi
                     name: r.registrationName || "",
                     expiryDate: r.expiryDate ? r.expiryDate.split('T')[0] : "",
                     attachmentName: r.asset?.fileName || "",
+                    certificateFile: null,
                 }));
                 setRegistrationDraft({
                     type: mappedRegistrations[0].type || "GST",
@@ -551,6 +584,7 @@ export default function BuyerProfile({ onComplete, onboardingData, rejectedProfi
                     name: mappedRegistrations[0].name,
                     expiryDate: mappedRegistrations[0].expiryDate,
                     attachmentName: mappedRegistrations[0].attachmentName,
+                    certificateFile: null,
                 });
                 setRegistrations(mappedRegistrations.slice(1));
             }
@@ -649,6 +683,7 @@ export default function BuyerProfile({ onComplete, onboardingData, rejectedProfi
         const file = e.target.files?.[0];
         if (file) {
             updateRegistrationDraft("attachmentName", file.name);
+            updateRegistrationDraft("certificateFile", file.name);
         }
     }
 
@@ -870,14 +905,17 @@ export default function BuyerProfile({ onComplete, onboardingData, rejectedProfi
                             <select
                                 id="industry"
                                 value={businessInfo.industry}
+                                onFocus={handleIndustryFocus}
+                                onClick={handleIndustryFocus}
                                 onChange={(e) => updateBusinessInfo("industry", e.target.value)}
                             >
-                                <option value="">Select Industry</option>
-                                {INDUSTRIES.map((i) => (
-                                    <option key={i} value={i}>
-                                        {i}
-                                    </option>
-                                ))}
+                                <option value="">{loadingIndustries ? "Loading..." : "Select Industry"}</option>
+                                {industries.length > 0 &&
+                                    industries.map((i) => (
+                                        <option key={i.key} value={i.key}>
+                                            {i.key}
+                                        </option>
+                                    ))}
                             </select>
                         </div>
 
@@ -888,14 +926,17 @@ export default function BuyerProfile({ onComplete, onboardingData, rejectedProfi
                             <select
                                 id="businessType"
                                 value={businessInfo.businessType}
+                                onFocus={handleBusinessTypeFocus}
+                                onClick={handleBusinessTypeFocus}
                                 onChange={(e) => updateBusinessInfo("businessType", e.target.value)}
                             >
-                                <option value="">Select Business Type</option>
-                                {BUSINESS_TYPES.map((t) => (
-                                    <option key={t} value={t}>
-                                        {t}
-                                    </option>
-                                ))}
+                                <option value="">{loadingBusinessTypes ? "Loading..." : "Select Business Type"}</option>
+                                {businessTypes.length > 0 &&
+                                    businessTypes.map((t) => (
+                                        <option key={t.key} value={t.key}>
+                                            {t.key}
+                                        </option>
+                                    ))}
                             </select>
                         </div>
 
@@ -1107,13 +1148,17 @@ export default function BuyerProfile({ onComplete, onboardingData, rejectedProfi
                         <select
                             id="regType"
                             value={registrationDraft.type}
+                            onFocus={handleDocumentTypeFocus}
+                            onClick={handleDocumentTypeFocus}
                             onChange={(e) => updateRegistrationDraft("type", e.target.value)}
                         >
-                            {REGISTRATION_TYPES.map((t) => (
-                                <option key={t} value={t}>
-                                    {t}
-                                </option>
-                            ))}
+                            <option value="">{loadingDocumentTypes ? "Loading..." : "Select Registration Type"}</option>
+                            {documentTypes.length > 0 &&
+                                documentTypes.map((t) => (
+                                    <option key={t.key} value={t.key}>
+                                        {t.key}
+                                    </option>
+                                ))}
                         </select>
                     </div>
 

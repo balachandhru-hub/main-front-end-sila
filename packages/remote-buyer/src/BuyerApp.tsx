@@ -5,10 +5,23 @@ import BuyerProfile from './components/BuyerProfile';
 import { getBuyerProfile, getOnboardingDetails, createBuyerProfile, updateRejectedBuyer } from './api/Buyerapi';
 import { useAuthStore } from '../../host-app/src/store/useAuthStore';
 import type { OnboardingResponse, BuyerProfileResponse } from './api/Buyerapi';
+import { fetchReferenceList } from './api/masterdataApi';
 
 // ============================================================================
 // HELPER: Check if profile is complete in sessionStorage
 // ============================================================================
+export const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const base64String = (reader.result as string).split(',')[1];
+      resolve(base64String);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
 const readIsProfileComplete = (): boolean => {
   return sessionStorage.getItem('vosox_buyer_profile_complete') === 'true';
 };
@@ -59,6 +72,30 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, on
           commodityTitle: '',
         })) || [];
 
+      const entityTypes = await fetchReferenceList(["ENTITY_TYPE"]);
+      const buyerEntityId = entityTypes.find((e: any) => e.key === "BUYER")?.id || 'a266daa7-a80e-4463-abcc-fbe11294c051';
+
+      const mappedRegistrations = await Promise.all(
+        data.registrations.map(async (r: any) => {
+          const fileBytes = r.certificateFile ? await fileToBase64(r.certificateFile) : '';
+          return {
+            registrationNumber: r.number,
+            registrationName: r.name,
+            expiryDate: r.expiryDate ? new Date(r.expiryDate).toISOString() : null,
+            registrationType: r.type,
+            registrationDocument: {
+              entityType: 'BUYER',
+              entityId: buyerEntityId,
+              assetType: r.type,
+              fileBytes: fileBytes,
+              fileName: r.certificateFile?.name || r.attachmentName || '',
+              contentType: r.certificateFile?.type || 'application/pdf',
+              isSingletonAsset: true,
+            },
+          };
+        })
+      );
+
       const payload = {
         organizationId: orgId,
         organizationName: onboardingData?.organizationName || '',
@@ -90,21 +127,7 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, on
           currency: b.currency,
           isPrimary: b.isPrimary,
         })),
-        buyerDocumentRegistrations: data.registrations.map((r: any) => ({
-          registrationNumber: r.number,
-          registrationName: r.name,
-          expiryDate: r.expiryDate ? new Date(r.expiryDate).toISOString() : null,
-          registrationType: r.type,
-          registrationDocument: {
-            entityType: 'BUYER',
-            entityId: 'a266daa7-a80e-4463-abcc-fbe11294c051',
-            assetType: r.type,
-            fileBytes: '',
-            fileName: r.attachmentName || '',
-            contentType: 'application/pdf',
-            isSingletonAsset: true,
-          },
-        })),
+        buyerDocumentRegistrations: mappedRegistrations,
         buyerDeliveryLocations: data.dispatchLocations.map((l: any) => ({
           locationName: l.locationName,
           addressLine1: l.addressLine1,

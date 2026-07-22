@@ -30,3 +30,8 @@ export async function fetchClasses(segment: number, family: number): Promise<any
     }
     return [];
 }
+
+export async function fetchReferenceList(keys: string[]): Promise<any[]> {
+    const res = await axiosInstance.post(`/api/v1/masterdata/metadata/reference-list`, keys);
+    return Array.isArray(res.data) ? res.data : [];
+}
