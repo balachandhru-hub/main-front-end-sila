@@ -7,19 +7,56 @@
   padding: 0;
 }
 
-/* White top header with left logo */
+/* White top header with left logo and buttons */
 .plat-top-header {
   background-color: #ffffff;
   border-bottom: 1px solid #e2e8f0;
   padding: 14px 20px;
   display: flex;
+  justify-content: space-between;
   align-items: center;
+  gap: 16px;
 }
 
 .plat-top-logo {
   height: 48px;
   width: auto;
   object-fit: contain;
+}
+
+/* Header Actions Container - Settings + Logout */
+.plat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Settings Button - Just Icon, No Box */
+.plat-settings-btn {
+  background: none;
+  border: none;
+  color: #3182ce;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plat-settings-btn:hover {
+  transform: rotate(20deg) scale(1.15);
+  color: #2563eb;
+}
+
+.plat-settings-btn:active {
+  transform: rotate(20deg) scale(0.9);
+}
+
+.plat-settings-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .plat-content-wrapper {
@@ -464,7 +501,6 @@
 }
 
 .plat-logout-btn {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -488,23 +524,6 @@
   cursor: not-allowed;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .plat-controls-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .plat-search-wrapper {
-    min-width: 100%;
-  }
-  .plat-dashboard {
-    padding: 24px 16px;
-  }
-  .plat-pagination-bar {
-    flex-wrap: wrap;
-  }
-}
-
 /* Status Badge Styles for Dashboard Cards */
 .plat-badge-status-pending {
   background-color: #fef3c7;
@@ -523,4 +542,108 @@
   background-color: #fee2e2;
   color: #b91c1c;
   border: 1px solid #fecaca;
+}
+
+/* ===== Responsive adjustments ===== */
+@media (max-width: 1024px) {
+  .plat-search-wrapper {
+    min-width: 280px;
+  }
+}
+
+@media (max-width: 768px) {
+  .plat-top-header {
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .plat-top-logo {
+    height: 40px;
+  }
+
+  .plat-settings-btn {
+    font-size: 18px;
+  }
+
+  .plat-logout-btn {
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+
+  .plat-content-wrapper {
+    padding: 24px 16px;
+  }
+
+  .plat-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .plat-search-wrapper {
+    min-width: 100%;
+  }
+
+  .plat-pagination-bar {
+    flex-wrap: wrap;
+  }
+
+  .plat-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .plat-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .plat-top-header {
+    padding: 12px 12px;
+    gap: 8px;
+  }
+
+  .plat-top-logo {
+    height: 32px;
+  }
+
+  .plat-settings-btn {
+    font-size: 16px;
+  }
+
+  .plat-logout-btn {
+    font-size: 12px;
+    padding: 6px 10px;
+    gap: 4px;
+  }
+
+  .plat-content-wrapper {
+    padding: 20px 12px;
+  }
+
+  .plat-title {
+    font-size: 1.1rem;
+  }
+
+  .plat-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .plat-search-wrapper {
+    min-width: 100%;
+  }
+
+  .plat-card {
+    padding: 16px;
+  }
+
+  .plat-pagination-label {
+    font-size: 0.85rem;
+    min-width: auto;
+  }
+
+  .plat-pagination-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
 }
