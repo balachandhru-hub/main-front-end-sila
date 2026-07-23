@@ -1136,6 +1136,23 @@
         flex-direction: column;
     }
 }
+
+@media (max-width: 480px) {
+    .bd-rfq-card {
+        padding: 12px;
+    }
+    .bd-success-card {
+        padding: 16px;
+    }
+    .bd-stepper {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .bd-step-sep {
+        display: none;
+    }
+}
+
 /* ---------- Custom Infinite Scroll Select ---------- */
 .bd-custom-select-container {
     position: relative;

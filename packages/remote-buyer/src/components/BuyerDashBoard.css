@@ -153,20 +153,21 @@ body {
 /* ---------- Responsive ---------- */
 @media (max-width: 768px) {
     .pud-shell {
-        flex-direction: column;
+        position: relative;
     }
 
     .pud-sidebar {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1000;
+        height: 100%;
+        box-shadow: 2px 0 12px rgba(0,0,0,0.15);
+    }
+
+    .pud-content {
+        padding: 50px 16px 32px 16px; /* Extra top padding for the toggle button */
         width: 100%;
-        flex-direction: row;
-        overflow-x: auto;
-    }
-
-    .pud-nav {
-        flex-direction: row;
-    }
-
-    .pud-nav-label {
-        display: none;
     }
 }
