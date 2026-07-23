@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom'; // Add this import
 import { getAllBuyers, getAllSuppliers, logoutPlatformUser } from '../api/platformApi';
 import type { BuyerDto, SupplierDto, BusinessProfileDto, PlatformEntityType, PlatformRecordDto } from '../dto/platformDto';
 import { useAuthStore } from '../../../host-app/src/store/useAuthStore';
@@ -13,6 +14,7 @@ import {
   FaSignOutAlt,
   FaChevronLeft,
   FaChevronRight,
+  FaCog,
 } from 'react-icons/fa';
 import { PlatformUserPopup } from './PlatformUserPopup';
 import './PlatformUserDashboard.css';
@@ -21,6 +23,7 @@ const sila_logo = `${window.location.protocol}//${window.location.host}/assets/S
 const PAGE_SIZE = 8;
 
 export const PlatformUserDashboard: React.FC = () => {
+  const navigate = useNavigate(); // Add this hook
   const [buyers, setBuyers] = useState<BuyerDto[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -137,6 +140,10 @@ export const PlatformUserDashboard: React.FC = () => {
     }
   };
 
+const handleSettingsClick = () => {
+  navigate('../settings'); 
+};
+
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
@@ -179,18 +186,27 @@ export const PlatformUserDashboard: React.FC = () => {
 
   return (
     <div className="plat-dashboard">
-      {/* Top Header Bar with Left Logo */}
+      {/* Top Header Bar with Logo, Settings, and Logout */}
       <header className="plat-top-header">
         <img src={sila_logo} alt="SILA" className="plat-top-logo" />
-        <button
-          className="plat-logout-btn"
-          onClick={handleLogout}
-          disabled={loggingOut}
-          title="Log out"
-        >
-          <FaSignOutAlt />
-          {loggingOut ? 'Logging out...' : 'Log Out'}
-        </button>
+        <div className="plat-header-actions">
+          <button
+            className="plat-settings-btn"
+            onClick={handleSettingsClick}
+            title="Settings"
+          >
+            <FaCog />
+          </button>
+          <button
+            className="plat-logout-btn"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            title="Log out"
+          >
+            <FaSignOutAlt />
+            {loggingOut ? 'Logging out...' : 'Log Out'}
+          </button>
+        </div>
       </header>
 
       <div className="plat-content-wrapper">
@@ -295,14 +311,9 @@ export const PlatformUserDashboard: React.FC = () => {
                           <h3 className="plat-card-name">{name}</h3>
                           {bizType && <span className="plat-badge plat-badge-type">{bizType}</span>}
                         </div>
-                        {(industry || profile.status) && (
-                          <div style={{ marginTop: '8px', display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                            {industry && <span className="plat-badge plat-badge-industry">{industry}</span>}
-                            {profile.status && (
-                              <span className={`plat-badge plat-badge-status-${profile.status.toLowerCase()}`}>
-                                {profile.status === 'PENDING_VERIFICATION' ? 'PENDING' : profile.status.replace('_', ' ')}
-                              </span>
-                            )}
+                        {industry && (
+                          <div style={{ marginTop: '4px' }}>
+                            <span className="plat-badge plat-badge-industry">{industry}</span>
                           </div>
                         )}
                       </div>
@@ -350,6 +361,7 @@ export const PlatformUserDashboard: React.FC = () => {
                       </div>
 
                       <div className="plat-card-footer plat-card-footer-actions">
+                        <span>ID: {item.organizationId}</span>
                         <button
                           className="plat-see-more-btn"
                           onClick={() => setSelectedDetail({ type: activeTab, record: item })}
@@ -387,14 +399,6 @@ export const PlatformUserDashboard: React.FC = () => {
           type={selectedDetail.type}
           record={selectedDetail.record}
           onClose={() => setSelectedDetail(null)}
-          onStatusUpdated={() => {
-            if (selectedDetail.type === 'buyers') {
-              loadBuyers(buyerIndex);
-            } else {
-              loadSuppliers(supplierIndex);
-            }
-            setSelectedDetail(null);
-          }}
         />
       )}
     </div>
