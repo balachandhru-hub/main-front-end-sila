@@ -307,3 +307,63 @@ export const logoutBuyer = async (): Promise<void> => {
     throw new Error(`${errMsg} (${status})`);
   }
 };
+
+// ============================================================================
+// API: Get All Departments
+// ============================================================================
+export const getAllDepartments = async (buyerId: string, index = 0, limit = 10, searchTerm?: string): Promise<any> => {
+  try {
+    let url = `/api/v1/buyer/all-department?buyerId=${buyerId}&index=${index}&limit=${limit}`;
+    if (searchTerm) {
+      url += `&searchTerm=${encodeURIComponent(searchTerm)}`;
+    }
+    const response = await axiosInstance.get(url);
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to fetch departments (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+// ============================================================================
+// API: Get All Cost Centers
+// ============================================================================
+export const getAllCostCenters = async (departmentId: string, index = 0, limit = 10, searchTerm?: string): Promise<any> => {
+  try {
+    let url = `/api/v1/buyer/all-costcenter?departmentId=${departmentId}&index=${index}&limit=${limit}`;
+    if (searchTerm) {
+      url += `&searchTerm=${encodeURIComponent(searchTerm)}`;
+    }
+    const response = await axiosInstance.get(url);
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to fetch cost centers (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+// ============================================================================
+// API: Get Item Buyer Master
+// ============================================================================
+export const getAllItemMasters = async (buyerId: string, index = 0, limit = 10, searchTerm?: string): Promise<any> => {
+  try {
+    let url = `/api/v1/buyer/item-master?buyerId=${buyerId}&index=${index}&limit=${limit}`;
+    if (searchTerm) {
+      url += `&searchTerm=${encodeURIComponent(searchTerm)}`;
+    }
+    const response = await axiosInstance.get(url);
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to fetch item masters (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
