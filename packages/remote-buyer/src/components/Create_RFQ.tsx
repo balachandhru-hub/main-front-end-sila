@@ -1,5 +1,6 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import "./Create.RFQ.css";
+import { getBuyerProfile, getAllDepartments, getAllCostCenters, getAllItemMasters } from "../api/Buyerapi";
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -160,12 +161,12 @@ const initialLineItems: LineItem[] = [
 
 const uomOptions = ["EA", "BOX", "SET", "PACK", "UNIT"];
 
-const departmentOptions = ["IT", "Procurement", "Finance", "Operations", "Human Resources"];
-const costCenterOptions = ["CC-1001 - IT Infrastructure", "CC-2002 - Admin & Facilities", "CC-3003 - Operations"];
+// const departmentOptions = ["IT", "Procurement", "Finance", "Operations", "Human Resources"];
+// const costCenterOptions = ["CC-1001 - IT Infrastructure", "CC-2002 - Admin & Facilities", "CC-3003 - Operations"];
 const commodityOptions = ["Hardware", "Software", "Professional Services", "Consumables"];
 const currencyOptions = ["AED", "USD", "EUR", "INR", "GBP"];
 const regionOptions = ["MENA", "APAC", "EMEA", "Americas"];
-const materialCodeOptions = ["MAT-IT-501", "MAT-IT-502", "MAT-IT-503", "MAT-IT-504", "MAT-IT-505"];
+// const materialCodeOptions = ["MAT-IT-501", "MAT-IT-502", "MAT-IT-503", "MAT-IT-504", "MAT-IT-505"];
 const fieldTypeOptions: FieldType[] = ["Text", "Dropdown", "Radio", "Checkbox"];
 
 const initialCustomFields: CustomField[] = [
@@ -200,7 +201,47 @@ const CreateRFQ: React.FC = () => {
     // Create RFQ form state
     const [rfqTitle, setRfqTitle] = useState("IT Hardware Refresh - Head Office");
     const [department, setDepartment] = useState("");
+    const [departmentOptions, setDepartmentOptions] = useState<any[]>([]);
+    const [materialCodeOptions, setMaterialCodeOptions] = useState<any[]>([]);
+
+    useEffect(() => {
+        const fetchInitialData = async () => {
+            try {
+                const profile = await getBuyerProfile();
+                if (profile?.id) {
+                    const res = await getAllDepartments(profile.id, 0, 10);
+                    const data = res?.data?.data || res?.data || res || [];
+                    setDepartmentOptions(Array.isArray(data) ? data : []);
+
+                    const itemRes = await getAllItemMasters(profile.id, 0, 10);
+                    const itemData = itemRes?.data?.data || itemRes?.data || itemRes || [];
+                    setMaterialCodeOptions(Array.isArray(itemData) ? itemData : []);
+                }
+            } catch (err) {
+                console.error("Failed to fetch initial data", err);
+            }
+        };
+        fetchInitialData();
+    }, []);
     const [costCenter, setCostCenter] = useState("");
+    const [costCenterOptions, setCostCenterOptions] = useState<any[]>([]);
+
+    useEffect(() => {
+        const fetchCostCenters = async () => {
+            if (!department) {
+                setCostCenterOptions([]);
+                return;
+            }
+            try {
+                const res = await getAllCostCenters(department, 0, 10);
+                const data = res?.data?.data || res?.data || res || [];
+                setCostCenterOptions(Array.isArray(data) ? data : []);
+            } catch (err) {
+                console.error("Failed to fetch cost centers", err);
+            }
+        };
+        fetchCostCenters();
+    }, [department]);
     const [family, setFamily] = useState("");
     const [segment, setSegment] = useState("");
     const [commodity, setCommodity] = useState("");
@@ -235,7 +276,7 @@ const CreateRFQ: React.FC = () => {
     const [newItemQty, setNewItemQty] = useState(1);
     const [newItemUom, setNewItemUom] = useState("EA");
     const [newItemPrice, setNewItemPrice] = useState("");
-    const [newItemMaterialCode, setNewItemMaterialCode] = useState(materialCodeOptions[0]);
+    const [newItemMaterialCode, setNewItemMaterialCode] = useState("");
 
     // Step 2: Select Suppliers state
     const [suppliers] = useState<Supplier[]>(initialSuppliers);
@@ -283,7 +324,7 @@ const CreateRFQ: React.FC = () => {
         setNewItemQty(1);
         setNewItemUom("EA");
         setNewItemPrice("");
-        setNewItemMaterialCode(materialCodeOptions[0]);
+        setNewItemMaterialCode("");
     };
 
     const handleRemoveLineItem = (id: string) => {
@@ -406,22 +447,35 @@ const CreateRFQ: React.FC = () => {
                             <label className="bd-label">Department</label>
                             <select className="bd-select" value={department} onChange={(e) => setDepartment(e.target.value)}>
                                 <option value="">Select Department</option>
-                                {departmentOptions.map((d) => (
-                                    <option key={d} value={d}>
-                                        {d}
-                                    </option>
-                                ))}
+                                {departmentOptions.map((d: any, idx) => {
+                                    const deptName = typeof d === 'string' ? d : (d.department || d.name || d.Name || `Dept ${idx}`);
+                                    const deptId = typeof d === 'string' ? d : (d.id || deptName);
+                                    return (
+                                        <option key={deptId} value={deptId}>
+                                            {deptName}
+                                        </option>
+                                    );
+                                })}
                             </select>
                         </div>
                         <div className="bd-field">
                             <label className="bd-label">Cost Center</label>
-                            <select className="bd-select" value={costCenter} onChange={(e) => setCostCenter(e.target.value)}>
-                                <option value="">Select Cost Center</option>
-                                {costCenterOptions.map((c) => (
-                                    <option key={c} value={c}>
-                                        {c}
-                                    </option>
-                                ))}
+                            <select 
+                                className="bd-select" 
+                                value={costCenter} 
+                                onChange={(e) => setCostCenter(e.target.value)}
+                                disabled={!department}
+                            >
+                                <option value="">{department ? "Select Cost Center" : "Select Department First"}</option>
+                                {costCenterOptions.map((c: any, idx) => {
+                                    const ccName = typeof c === 'string' ? c : (c.costCenter || c.name || c.Name || `CC ${idx}`);
+                                    const ccId = typeof c === 'string' ? c : (c.id || ccName);
+                                    return (
+                                        <option key={ccId} value={ccId}>
+                                            {ccName}
+                                        </option>
+                                    );
+                                })}
                             </select>
                         </div>
                     </div>
@@ -826,11 +880,15 @@ const CreateRFQ: React.FC = () => {
                                     value={newItemMaterialCode}
                                     onChange={(e) => setNewItemMaterialCode(e.target.value)}
                                 >
-                                    {materialCodeOptions.map((m) => (
-                                        <option key={m} value={m}>
-                                            {m}
-                                        </option>
-                                    ))}
+                                    <option value="">Select Material Code</option>
+                                    {materialCodeOptions.map((m: any, idx) => {
+                                        const code = typeof m === 'string' ? m : (m.materialCode || m.id || `Code ${idx}`);
+                                        return (
+                                            <option key={code} value={code}>
+                                                {code}
+                                            </option>
+                                        );
+                                    })}
                                 </select>
                             </div>
                             <button className="bd-btn-add" onClick={handleAddLineItem} type="button">
