@@ -83,3 +83,23 @@
     object-fit: contain;
     display: block;
 }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+    .pud-header {
+        padding: 0 16px;
+    }
+
+    .pud-header-account-name,
+    .pud-header-account-verified {
+        display: none;
+    }
+
+    .pud-logo-img {
+        height: 48px;
+    }
+
+    .pud-header-right {
+        gap: 12px;
+    }
+}
