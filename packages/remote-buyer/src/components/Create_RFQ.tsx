@@ -209,11 +209,11 @@ const CreateRFQ: React.FC = () => {
             try {
                 const profile = await getBuyerProfile();
                 if (profile?.id) {
-                    const res = await getAllDepartments(profile.id, 0, 10);
+                    const res = await getAllDepartments(profile.id, 0, 10000);
                     const data = res?.data?.data || res?.data || res || [];
                     setDepartmentOptions(Array.isArray(data) ? data : []);
 
-                    const itemRes = await getAllItemMasters(profile.id, 0, 10);
+                    const itemRes = await getAllItemMasters(profile.id, 0, 10000);
                     const itemData = itemRes?.data?.data || itemRes?.data || itemRes || [];
                     setMaterialCodeOptions(Array.isArray(itemData) ? itemData : []);
                 }
@@ -233,7 +233,7 @@ const CreateRFQ: React.FC = () => {
                 return;
             }
             try {
-                const res = await getAllCostCenters(department, 0, 10);
+                const res = await getAllCostCenters(department, 0, 10000);
                 const data = res?.data?.data || res?.data || res || [];
                 setCostCenterOptions(Array.isArray(data) ? data : []);
             } catch (err) {
@@ -460,9 +460,9 @@ const CreateRFQ: React.FC = () => {
                         </div>
                         <div className="bd-field">
                             <label className="bd-label">Cost Center</label>
-                            <select 
-                                className="bd-select" 
-                                value={costCenter} 
+                            <select
+                                className="bd-select"
+                                value={costCenter}
                                 onChange={(e) => setCostCenter(e.target.value)}
                                 disabled={!department}
                             >
