@@ -1,8 +1,11 @@
 import React, { useRef, useState, useEffect } from "react";
 import "./Create.RFQ.css";
-import { getBuyerProfile, getAllDepartments, getAllCostCenters, getAllItemMasters } from "../api/Buyerapi";
+import { getBuyerProfile, getAllDepartments, getAllCostCenters, getAllItemMasters, createRFQ, getVerifiedSuppliers, getUnspscSegments, getUnspscFamilies } from "../api/Buyerapi";
+import type { CreateRFQPayload, RfqDocumentAssetDto, RfqItemDto, RfqQuestionDto, VerifiedSupplierDto, SupplierVerificationType } from "../dto/rfqDto";
+import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
 
-/* ---------------------------------- Types ---------------------------------- */
+
+const HARDCODED_RFQ_VERIFICATION_TEMPLATE_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 
 interface LineItem {
     id: string;
@@ -32,15 +35,6 @@ interface CustomField {
     options: string[];
 }
 
-interface Supplier {
-    id: string;
-    name: string;
-    email: string;
-    category: string;
-    verified: boolean;
-}
-
-/* ---------------------------------- Icons ---------------------------------- */
 
 const IconCalendar = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -161,12 +155,9 @@ const initialLineItems: LineItem[] = [
 
 const uomOptions = ["EA", "BOX", "SET", "PACK", "UNIT"];
 
-// const departmentOptions = ["IT", "Procurement", "Finance", "Operations", "Human Resources"];
-// const costCenterOptions = ["CC-1001 - IT Infrastructure", "CC-2002 - Admin & Facilities", "CC-3003 - Operations"];
 const commodityOptions = ["Hardware", "Software", "Professional Services", "Consumables"];
 const currencyOptions = ["AED", "USD", "EUR", "INR", "GBP"];
 const regionOptions = ["MENA", "APAC", "EMEA", "Americas"];
-// const materialCodeOptions = ["MAT-IT-501", "MAT-IT-502", "MAT-IT-503", "MAT-IT-504", "MAT-IT-505"];
 const fieldTypeOptions: FieldType[] = ["Text", "Dropdown", "Radio", "Checkbox"];
 
 const initialCustomFields: CustomField[] = [
@@ -179,26 +170,50 @@ const initialCustomFields: CustomField[] = [
     },
 ];
 
-const initialSuppliers: Supplier[] = [
-    { id: "sup-1", name: "ABC Technologies", email: "contact@abctech.com", category: "IT Hardware", verified: true },
-    { id: "sup-2", name: "XYZ Solutions", email: "sales@xyzsolutions.com", category: "IT Hardware", verified: true },
-    { id: "sup-3", name: "Nova Enterprises", email: "info@novaent.com", category: "IT Hardware", verified: false },
-    { id: "sup-4", name: "Apex Global Furnishing", email: "orders@apexglobal.com", category: "Office Furniture", verified: true },
-    { id: "sup-5", name: "Delta Corp Industries", email: "vendor@deltacorp.com", category: "IT Hardware", verified: false },
-];
-
 const registrationTemplateOptions = [
     "Standard Vendor Registration",
     "Quick Onboarding Form",
     "IT Hardware Vendor Verification",
 ];
 
+/* ---------------------------------- Helpers ---------------------------------- */
+
+const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = reader.result as string;
+            const base64 = result.includes(",") ? result.split(",")[1] : result;
+            resolve(base64);
+        };
+        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.readAsDataURL(file);
+    });
+
+const buildDocumentAsset = async (
+    file: File,
+    entityId: string,
+    assetType: string
+): Promise<RfqDocumentAssetDto> => {
+    const fileBytes = await fileToBase64(file);
+    return {
+        entityType: "RFQ",
+        entityId: entityId || "",
+        assetType,
+        fileBytes,
+        fileName: file.name,
+        contentType: file.type || "application/octet-stream",
+        isSingletonAsset: true,
+    };
+};
+
 /* ---------------------------------- Component ---------------------------------- */
 
 const CreateRFQ: React.FC = () => {
     const [activeStep, setActiveStep] = useState<StepKey>("details");
 
-    // Create RFQ form state
+    const [buyerProfileId, setBuyerProfileId] = useState<string>("");
+
     const [rfqTitle, setRfqTitle] = useState("IT Hardware Refresh - Head Office");
     const [department, setDepartment] = useState("");
     const [departmentOptions, setDepartmentOptions] = useState<any[]>([]);
@@ -209,6 +224,8 @@ const CreateRFQ: React.FC = () => {
             try {
                 const profile = await getBuyerProfile();
                 if (profile?.id) {
+                    setBuyerProfileId(profile.id);
+
                     const res = await getAllDepartments(profile.id, 0, 10000);
                     const data = res?.data?.data || res?.data || res || [];
                     setDepartmentOptions(Array.isArray(data) ? data : []);
@@ -242,8 +259,56 @@ const CreateRFQ: React.FC = () => {
         };
         fetchCostCenters();
     }, [department]);
-    const [family, setFamily] = useState("");
-    const [segment, setSegment] = useState("");
+    const [segmentCode, setSegmentCode] = useState("");
+    const [segmentTitle, setSegmentTitle] = useState("");
+    const [segmentOptions, setSegmentOptions] = useState<UnspscSegmentDto[]>([]);
+
+    const [familyCode, setFamilyCode] = useState("");
+    const [familyTitle, setFamilyTitle] = useState("");
+    const [familyOptions, setFamilyOptions] = useState<UnspscFamilyDto[]>([]);
+
+    useEffect(() => {
+        const fetchSegments = async () => {
+            try {
+                const data = await getUnspscSegments(1, 200);
+                setSegmentOptions(data);
+            } catch (err) {
+                console.error("Failed to fetch UNSPSC segments", err);
+            }
+        };
+        fetchSegments();
+    }, []);
+
+    useEffect(() => {
+        const fetchFamilies = async () => {
+            if (!segmentCode) {
+                setFamilyOptions([]);
+                return;
+            }
+            try {
+                const data = await getUnspscFamilies(Number(segmentCode), 1, 200);
+                setFamilyOptions(data);
+            } catch (err) {
+                console.error("Failed to fetch UNSPSC families", err);
+            }
+        };
+        fetchFamilies();
+    }, [segmentCode]);
+
+    const handleSegmentChange = (value: string) => {
+        setSegmentCode(value);
+        setFamilyCode("");
+        setFamilyTitle("");
+        const selected = segmentOptions.find((s) => String(s.segment) === value);
+        setSegmentTitle(selected?.title || "");
+    };
+
+    const handleFamilyChange = (value: string) => {
+        setFamilyCode(value);
+        const selected = familyOptions.find((f) => String(f.family) === value);
+        setFamilyTitle(selected?.title || "");
+    };
+
     const [commodity, setCommodity] = useState("");
     const [currency, setCurrency] = useState("");
     const [region, setRegion] = useState("");
@@ -256,14 +321,17 @@ const CreateRFQ: React.FC = () => {
     const [endDateTime, setEndDateTime] = useState("2026-07-15T17:40");
     const [deliveryTargetDate, setDeliveryTargetDate] = useState("2026-07-19");
 
-    const [techSpecFile, setTechSpecFile] = useState<string | null>("Specific fil...");
-    const [termsFile, setTermsFile] = useState<string | null>("Terms & Co...");
+    const [techSpecFile, setTechSpecFile] = useState<string | null>(null);
+    const [termsFile, setTermsFile] = useState<string | null>(null);
+
+    const [techSpecFileObj, setTechSpecFileObj] = useState<File | null>(null);
+    const [termsFileObj, setTermsFileObj] = useState<File | null>(null);
 
     const techSpecInputRef = useRef<HTMLInputElement>(null);
     const termsInputRef = useRef<HTMLInputElement>(null);
 
     const [lotOption, setLotOption] = useState(false);
-    const [totalBudget, setTotalBudget] = useState("25000 AED");
+    const [totalBudget, setTotalBudget] = useState("25000");
 
     const [customFields, setCustomFields] = useState<CustomField[]>(initialCustomFields);
     const [newFieldLabel, setNewFieldLabel] = useState("");
@@ -278,16 +346,61 @@ const CreateRFQ: React.FC = () => {
     const [newItemPrice, setNewItemPrice] = useState("");
     const [newItemMaterialCode, setNewItemMaterialCode] = useState("");
 
-    // Step 2: Select Suppliers state
-    const [suppliers] = useState<Supplier[]>(initialSuppliers);
-    const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>(["sup-1", "sup-2", "sup-3"]);
-    const [supplierCategoryFilter, setSupplierCategoryFilter] = useState("All Suppliers");
+    const [suppliers, setSuppliers] = useState<VerifiedSupplierDto[]>([]);
+    const [suppliersLoading, setSuppliersLoading] = useState(false);
+    const [suppliersError, setSuppliersError] = useState<string | null>(null);
+    const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
+    const [supplierTypeFilter, setSupplierTypeFilter] = useState<"ALL" | SupplierVerificationType>("ALL");
     const [supplierSearchQuery, setSupplierSearchQuery] = useState("");
     const [registrationTemplate, setRegistrationTemplate] = useState("");
     const supplierRegistrationLink = "https://supplier.company.com/register";
 
-    // Step 3: Summary & Dispatch state
+    useEffect(() => {
+        if (activeStep !== "suppliers") return;
+        if (!buyerProfileId) return;
+
+        const timer = setTimeout(() => {
+            const fetchSuppliers = async () => {
+                setSuppliersLoading(true);
+                setSuppliersError(null);
+                try {
+                    const payload: {
+                        index: number;
+                        limit: number;
+                        searchTerm?: string;
+                        segmentCode?: string;
+                        familyCode?: string;
+                        type?: SupplierVerificationType;
+                        buyerId: string;
+                    } = {
+                        index: 0,
+                        limit: 50,
+                        buyerId: buyerProfileId,
+                    };
+                    if (supplierSearchQuery.trim()) payload.searchTerm = supplierSearchQuery.trim();
+                    if (supplierTypeFilter !== "ALL") payload.type = supplierTypeFilter;
+                    if (segmentCode) payload.segmentCode = segmentCode;
+                    if (familyCode) payload.familyCode = familyCode;
+
+                    const data = await getVerifiedSuppliers(payload);
+                    setSuppliers(data);
+                } catch (err: any) {
+                    setSuppliersError(err?.message || "Failed to fetch suppliers.");
+                    setSuppliers([]);
+                } finally {
+                    setSuppliersLoading(false);
+                }
+            };
+            fetchSuppliers();
+        }, 350);
+
+        return () => clearTimeout(timer);
+    }, [activeStep, buyerProfileId, supplierSearchQuery, supplierTypeFilter, segmentCode, familyCode]);
+
     const [rfqNumber, setRfqNumber] = useState("");
+
+    const [isSubmittingRFQ, setIsSubmittingRFQ] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
     const formatDateTimeLabel = (value: string) => {
         if (!value) return "";
@@ -358,11 +471,13 @@ const CreateRFQ: React.FC = () => {
 
     const handleFileChosen = (
         e: React.ChangeEvent<HTMLInputElement>,
-        setFile: React.Dispatch<React.SetStateAction<string | null>>
+        setFile: React.Dispatch<React.SetStateAction<string | null>>,
+        setFileObj: React.Dispatch<React.SetStateAction<File | null>>
     ) => {
         const file = e.target.files?.[0];
         if (file) {
             setFile(file.name.length > 12 ? `${file.name.slice(0, 10)}...` : file.name);
+            setFileObj(file);
         }
         e.target.value = "";
     };
@@ -372,30 +487,77 @@ const CreateRFQ: React.FC = () => {
         else if (activeStep === "suppliers") setActiveStep("summary");
     };
 
-    const supplierCategories = Array.from(new Set(suppliers.map((s) => s.category)));
-
-    const filteredSuppliers = suppliers.filter((s) => {
-        const matchesCategory = supplierCategoryFilter === "All Suppliers" || s.category === supplierCategoryFilter;
-        const q = supplierSearchQuery.trim().toLowerCase();
-        const matchesSearch = !q || s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q);
-        return matchesCategory && matchesSearch;
-    });
-
     const toggleSupplier = (id: string) => {
         setSelectedSupplierIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
     };
 
-    const selectedSuppliers = suppliers.filter((s) => selectedSupplierIds.includes(s.id));
-    const verifiedSelectedCount = selectedSuppliers.filter((s) => s.verified).length;
+    const selectedSuppliers = suppliers.filter((s) => selectedSupplierIds.includes(s.supplierId));
+    const verifiedSelectedCount = selectedSuppliers.filter((s) => s.isVerified).length;
     const unverifiedSelectedCount = selectedSuppliers.length - verifiedSelectedCount;
     const hasUnverifiedSelected = unverifiedSelectedCount > 0;
-    const targetCategory = family || "IT Hardware";
+    const targetCategory = familyTitle || segmentTitle || "Not set";
 
-    const handleSubmitRFQ = () => {
+    const handleSubmitRFQ = async () => {
         if (selectedSupplierIds.length === 0) return;
-        const generatedNumber = `RFQ-${Math.floor(1000 + Math.random() * 9000)}`;
-        setRfqNumber(generatedNumber);
-        setActiveStep("summary");
+
+        setSubmitError(null);
+        setIsSubmittingRFQ(true);
+
+        try {
+            const technicalSpecificationDocuments: RfqDocumentAssetDto[] = techSpecFileObj
+                ? [await buildDocumentAsset(techSpecFileObj, buyerProfileId, "TechnicalSpecification")]
+                : [];
+
+            const termsConditionDocuments: RfqDocumentAssetDto[] = termsFileObj
+                ? [await buildDocumentAsset(termsFileObj, buyerProfileId, "TermsAndConditions")]
+                : [];
+
+            const questions: RfqQuestionDto[] = customFields.map((field, idx) => ({
+                question: field.label,
+                questionType: field.type,
+                isRequired: false,
+                displayOrder: idx,
+                options: field.options,
+            }));
+
+            const items: RfqItemDto[] = lineItems.map((li) => ({
+                description: li.description || li.itemName,
+                quantity: li.quantity,
+                uom: li.uom,
+                materialCode: li.materialCode,
+                materialGroup: commodity,
+                costCenter: costCenter,
+                attachments: [],
+            }));
+
+            const payload: CreateRFQPayload = {
+                title: rfqTitle,
+                description,
+                department,
+                region,
+                currency,
+                deliveryLocation,
+                startDate: new Date(startDateTime).toISOString(),
+                endDate: new Date(endDateTime).toISOString(),
+                deliveryTargetDate: new Date(deliveryTargetDate).toISOString(),
+                budget: Number(totalBudget) || 0,
+                addLotOption: lotOption,
+                technicalSpecificationDocuments,
+                termsConditionDocuments,
+                questions,
+                items,
+                supplierIds: selectedSupplierIds,
+                rfqVerificationTemplateId: HARDCODED_RFQ_VERIFICATION_TEMPLATE_ID,
+            };
+
+            const response = await createRFQ(payload);
+            setRfqNumber(response.id);
+            setActiveStep("summary");
+        } catch (err: any) {
+            setSubmitError(err?.message || "Failed to submit RFQ. Please try again.");
+        } finally {
+            setIsSubmittingRFQ(false);
+        }
     };
 
     const handleReset = () => {
@@ -480,25 +642,37 @@ const CreateRFQ: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Family / Segment */}
+                    {/* Segment / Family */}
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Family</label>
-                            <select className="bd-select" value={family} onChange={(e) => setFamily(e.target.value)}>
-                                <option value="">Select Family</option>
-                                <option value="IT Hardware">IT Hardware</option>
-                                <option value="Office Supplies">Office Supplies</option>
-                                <option value="Furniture">Furniture</option>
-                                <option value="Logistics">Logistics</option>
+                            <label className="bd-label">Segment</label>
+                            <select
+                                className="bd-select"
+                                value={segmentCode}
+                                onChange={(e) => handleSegmentChange(e.target.value)}
+                            >
+                                <option value="">Select Segment</option>
+                                {segmentOptions.map((s) => (
+                                    <option key={s.segment} value={s.segment}>
+                                        {s.title}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                         <div className="bd-field">
-                            <label className="bd-label">Segment</label>
-                            <select className="bd-select" value={segment} onChange={(e) => setSegment(e.target.value)}>
-                                <option value="">Select Segment</option>
-                                <option value="Computing Devices">Computing Devices</option>
-                                <option value="Peripherals">Peripherals</option>
-                                <option value="Accessories">Accessories</option>
+                            <label className="bd-label">Family</label>
+                            <select
+                                className="bd-select"
+                                value={familyCode}
+                                onChange={(e) => handleFamilyChange(e.target.value)}
+                                disabled={!segmentCode}
+                            >
+                                <option value="">{segmentCode ? "Select Family" : "Select Segment First"}</option>
+                                {familyOptions.map((f) => (
+                                    <option key={f.family} value={f.family}>
+                                        {f.title}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                     </div>
@@ -664,12 +838,19 @@ const CreateRFQ: React.FC = () => {
                                 ref={techSpecInputRef}
                                 type="file"
                                 className="bd-hidden-file-input"
-                                onChange={(e) => handleFileChosen(e, setTechSpecFile)}
+                                onChange={(e) => handleFileChosen(e, setTechSpecFile, setTechSpecFileObj)}
                             />
                             {techSpecFile && (
                                 <span className="bd-chip">
                                     {techSpecFile}
-                                    <button className="bd-chip-remove" onClick={() => setTechSpecFile(null)} type="button">
+                                    <button
+                                        className="bd-chip-remove"
+                                        onClick={() => {
+                                            setTechSpecFile(null);
+                                            setTechSpecFileObj(null);
+                                        }}
+                                        type="button"
+                                    >
                                         ×
                                     </button>
                                 </span>
@@ -684,12 +865,19 @@ const CreateRFQ: React.FC = () => {
                                 ref={termsInputRef}
                                 type="file"
                                 className="bd-hidden-file-input"
-                                onChange={(e) => handleFileChosen(e, setTermsFile)}
+                                onChange={(e) => handleFileChosen(e, setTermsFile, setTermsFileObj)}
                             />
                             {termsFile && (
                                 <span className="bd-chip">
                                     {termsFile}
-                                    <button className="bd-chip-remove" onClick={() => setTermsFile(null)} type="button">
+                                    <button
+                                        className="bd-chip-remove"
+                                        onClick={() => {
+                                            setTermsFile(null);
+                                            setTermsFileObj(null);
+                                        }}
+                                        type="button"
+                                    >
                                         ×
                                     </button>
                                 </span>
@@ -964,15 +1152,12 @@ const CreateRFQ: React.FC = () => {
                         <div className="bd-suppliers-filters">
                             <select
                                 className="bd-select bd-category-filter"
-                                value={supplierCategoryFilter}
-                                onChange={(e) => setSupplierCategoryFilter(e.target.value)}
+                                value={supplierTypeFilter}
+                                onChange={(e) => setSupplierTypeFilter(e.target.value as "ALL" | SupplierVerificationType)}
                             >
-                                <option value="All Suppliers">All Suppliers</option>
-                                {supplierCategories.map((c) => (
-                                    <option key={c} value={c}>
-                                        {c}
-                                    </option>
-                                ))}
+                                <option value="ALL">All Suppliers</option>
+                                <option value="VERIFIED">Verified</option>
+                                <option value="UNVERIFIED">Unverified</option>
                             </select>
                             <div className="bd-search-wrap">
                                 <span className="bd-search-icon">
@@ -989,36 +1174,41 @@ const CreateRFQ: React.FC = () => {
                         </div>
                     </div>
 
+                    {suppliersError && (
+                        <div className="bd-status-unverified" style={{ marginBottom: 12 }}>
+                            {suppliersError}
+                        </div>
+                    )}
+
                     <div className="bd-table-card">
                         <table className="bd-table bd-suppliers-table">
                             <thead>
                                 <tr>
                                     <th className="bd-checkbox-cell">Select</th>
                                     <th>Supplier Name</th>
-                                    <th>Category</th>
+                                    <th>Email</th>
                                     <th>Verification Status</th>
                                     <th>Pipeline Actions On Submit</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredSuppliers.map((s) => (
-                                    <tr key={s.id}>
+                                {suppliers.map((s) => (
+                                    <tr key={s.supplierId}>
                                         <td className="bd-checkbox-cell">
                                             <input
                                                 type="checkbox"
-                                                checked={selectedSupplierIds.includes(s.id)}
-                                                onChange={() => toggleSupplier(s.id)}
+                                                checked={selectedSupplierIds.includes(s.supplierId)}
+                                                onChange={() => toggleSupplier(s.supplierId)}
                                             />
                                         </td>
                                         <td>
-                                            <div className="bd-supplier-name">{s.name}</div>
-                                            <div className="bd-supplier-email">{s.email}</div>
+                                            <div className="bd-supplier-name">{s.supplierName}</div>
                                         </td>
                                         <td>
-                                            <span className="bd-category-pill">{s.category}</span>
+                                            <span className="bd-supplier-email">{s.email}</span>
                                         </td>
                                         <td>
-                                            {s.verified ? (
+                                            {s.isVerified ? (
                                                 <span className="bd-status-verified">
                                                     <IconCheckCircle /> Verified
                                                 </span>
@@ -1029,7 +1219,7 @@ const CreateRFQ: React.FC = () => {
                                             )}
                                         </td>
                                         <td>
-                                            {s.verified ? (
+                                            {s.isVerified ? (
                                                 <span className="bd-pipeline-pill bd-pipeline-pill-green">
                                                     <IconCheckCircle /> Direct RFQ Sent (Instant)
                                                 </span>
@@ -1041,10 +1231,17 @@ const CreateRFQ: React.FC = () => {
                                         </td>
                                     </tr>
                                 ))}
-                                {filteredSuppliers.length === 0 && (
+                                {!suppliersLoading && suppliers.length === 0 && (
                                     <tr>
                                         <td colSpan={5} className="bd-table-empty">
-                                            No suppliers match your search.
+                                            {suppliersError ? "Could not load suppliers." : "No suppliers match your search."}
+                                        </td>
+                                    </tr>
+                                )}
+                                {suppliersLoading && (
+                                    <tr>
+                                        <td colSpan={5} className="bd-table-empty">
+                                            Loading suppliers...
                                         </td>
                                     </tr>
                                 )}
@@ -1103,6 +1300,12 @@ const CreateRFQ: React.FC = () => {
                         </div>
                     )}
 
+                    {submitError && (
+                        <div className="bd-status-unverified" style={{ marginBottom: 16 }}>
+                            {submitError}
+                        </div>
+                    )}
+
                     <div className="bd-form-footer bd-form-footer-split">
                         <button className="bd-btn-back" onClick={() => setActiveStep("details")} type="button">
                             ← Back to details
@@ -1111,9 +1314,9 @@ const CreateRFQ: React.FC = () => {
                             className="bd-btn-submit"
                             onClick={handleSubmitRFQ}
                             type="button"
-                            disabled={selectedSupplierIds.length === 0}
+                            disabled={selectedSupplierIds.length === 0 || isSubmittingRFQ}
                         >
-                            <IconSend /> Submit RFQ
+                            <IconSend /> {isSubmittingRFQ ? "Submitting..." : "Submit RFQ"}
                         </button>
                     </div>
                 </div>
@@ -1134,17 +1337,17 @@ const CreateRFQ: React.FC = () => {
                             <thead>
                                 <tr>
                                     <th>Supplier Name</th>
-                                    <th>Category</th>
+                                    <th>Email</th>
                                     <th>Delivery Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {selectedSuppliers.map((s) => (
-                                    <tr key={s.id}>
-                                        <td>{s.name}</td>
-                                        <td>{s.category}</td>
+                                    <tr key={s.supplierId}>
+                                        <td>{s.supplierName}</td>
+                                        <td>{s.email}</td>
                                         <td>
-                                            {s.verified ? (
+                                            {s.isVerified ? (
                                                 <span className="bd-delivery-pill bd-delivery-pill-green">
                                                     <span className="bd-dot" /> RFQ Sent
                                                 </span>
