@@ -1,8 +1,12 @@
 import axiosInstance from "./axiosInstance";
+import type {
+  CreateRFQPayload,
+  CreateRFQResponse,
+  VerifiedSupplierSearchPayload,
+  VerifiedSupplierDto,
+} from "../dto/rfqDto";
+import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
 
-// ============================================================================
-// TYPES
-// ============================================================================
 
 export interface BuyerProfileResponse {
   id: string;
@@ -201,27 +205,21 @@ export interface UpdateRejectedBuyerPayload {
   };
 }
 
-// ============================================================================
-// API: Get Buyer Profile (Check if profile exists)
-// Returns null if 204 No Content (profile not found)
-// ============================================================================
+
 export const getBuyerProfile = async (): Promise<BuyerProfileResponse | null> => {
   try {
     const response = await axiosInstance.get<BuyerProfileResponse>('/api/v1/buyer/profile');
 
-    // If status is 204 No Content, profile doesn't exist
     if (response.status === 204 || !response.data || Object.keys(response.data).length === 0) {
       return null;
     }
 
-    // If status is 200, profile exists
     return response.data;
   } catch (error: any) {
     if (error?.response?.status === 204) {
       return null;
     }
 
-    // Any error (404, 429, 500, etc.) → throw to be handled by caller
     if (error?.response?.data) {
       const data = error.response.data;
       throw new Error(data?.message || data?.description || `Failed to fetch buyer profile (${error.response.status}).`);
@@ -230,9 +228,7 @@ export const getBuyerProfile = async (): Promise<BuyerProfileResponse | null> =>
   }
 };
 
-// ============================================================================
-// API: Get Onboarding Details (Auto-fill delivery location)
-// ============================================================================
+
 export const getOnboardingDetails = async (): Promise<OnboardingResponse> => {
   try {
     const response = await axiosInstance.get<OnboardingResponse>('/api/v1/identity/onboarding');
@@ -246,9 +242,7 @@ export const getOnboardingDetails = async (): Promise<OnboardingResponse> => {
   }
 };
 
-// ============================================================================
-// API: Create Buyer Profile (Register)
-// ============================================================================
+
 export const createBuyerProfile = async (payload: BuyerRegistrationPayload): Promise<any> => {
   try {
     const response = await axiosInstance.post('/api/v1/buyer/register', payload);
@@ -262,9 +256,6 @@ export const createBuyerProfile = async (payload: BuyerRegistrationPayload): Pro
   }
 };
 
-// ============================================================================
-// API: Update Buyer Profile
-// ============================================================================
 export const updateBuyerProfile = async (payload: BuyerRegistrationPayload): Promise<any> => {
   try {
     const response = await axiosInstance.put('/api/v1/buyer/profile', payload);
@@ -278,9 +269,7 @@ export const updateBuyerProfile = async (payload: BuyerRegistrationPayload): Pro
   }
 };
 
-// ============================================================================
-// API: Update Rejected Buyer
-// ============================================================================
+
 export const updateRejectedBuyer = async (payload: UpdateRejectedBuyerPayload): Promise<any> => {
   try {
     const response = await axiosInstance.put('/api/v1/buyer/update-rejected-buyer', payload);
@@ -294,9 +283,7 @@ export const updateRejectedBuyer = async (payload: UpdateRejectedBuyerPayload): 
   }
 };
 
-// ============================================================================
-// API: Logout Buyer
-// ============================================================================
+
 export const logoutBuyer = async (): Promise<void> => {
   try {
     await axiosInstance.put('/api/v1/identity/auth/logout');
@@ -308,9 +295,7 @@ export const logoutBuyer = async (): Promise<void> => {
   }
 };
 
-// ============================================================================
-// API: Get All Departments
-// ============================================================================
+
 export const getAllDepartments = async (buyerId: string, index = 0, limit = 10, searchTerm?: string): Promise<any> => {
   try {
     let url = `/api/v1/buyer/all-department?buyerId=${buyerId}&index=${index}&limit=${limit}`;
@@ -328,9 +313,7 @@ export const getAllDepartments = async (buyerId: string, index = 0, limit = 10, 
   }
 };
 
-// ============================================================================
-// API: Get All Cost Centers
-// ============================================================================
+
 export const getAllCostCenters = async (departmentId: string, index = 0, limit = 10, searchTerm?: string): Promise<any> => {
   try {
     let url = `/api/v1/buyer/all-costcenter?departmentId=${departmentId}&index=${index}&limit=${limit}`;
@@ -348,9 +331,7 @@ export const getAllCostCenters = async (departmentId: string, index = 0, limit =
   }
 };
 
-// ============================================================================
-// API: Get Item Buyer Master
-// ============================================================================
+
 export const getAllItemMasters = async (buyerId: string, index = 0, limit = 10, searchTerm?: string): Promise<any> => {
   try {
     let url = `/api/v1/buyer/item-master?buyerId=${buyerId}&index=${index}&limit=${limit}`;
@@ -363,6 +344,79 @@ export const getAllItemMasters = async (buyerId: string, index = 0, limit = 10, 
     if (error?.response?.data) {
       const data = error.response.data;
       throw new Error(data?.message || data?.description || `Failed to fetch item masters (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+
+export const createRFQ = async (payload: CreateRFQPayload): Promise<CreateRFQResponse> => {
+  try {
+    const response = await axiosInstance.post<CreateRFQResponse>('/api/v1/buyer/createrfq', payload);
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to create RFQ (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+
+export const getVerifiedSuppliers = async (
+  payload: VerifiedSupplierSearchPayload
+): Promise<VerifiedSupplierDto[]> => {
+  try {
+    const response = await axiosInstance.post<VerifiedSupplierDto[]>(
+      '/api/v1/supplier/rfq-verfied-supplier',
+      payload
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to fetch suppliers (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+export const getUnspscSegments = async (
+  pageIndex = 1,
+  pageSize = 100,
+  searchTerm?: string
+): Promise<UnspscSegmentDto[]> => {
+  try {
+    let url = `/api/v1/masterdata/unspsc/segment?pageIndex=${pageIndex}&pageSize=${pageSize}`;
+    if (searchTerm) {
+      url += `&searchTerm=${encodeURIComponent(searchTerm)}`;
+    }
+    const response = await axiosInstance.get<UnspscSegmentDto[]>(url);
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to fetch segments (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+
+export const getUnspscFamilies = async (
+  segment: number,
+  pageIndex = 1,
+  pageSize = 100
+): Promise<UnspscFamilyDto[]> => {
+  try {
+    const url = `/api/v1/masterdata/unspsc/family?segment=${segment}&pageIndex=${pageIndex}&pageSize=${pageSize}`;
+    const response = await axiosInstance.get<UnspscFamilyDto[]>(url);
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to fetch families (${error.response.status}).`);
     }
     throw new Error('Could not reach the server. Please check your connection and try again.');
   }
