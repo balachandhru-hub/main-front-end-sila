@@ -565,3 +565,7 @@
     font-size: 13px;
   }
 }
+.dept-settings-card-icon.item-master {
+  background: #ebf8ff;
+  color: #3182ce;
+}

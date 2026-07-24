@@ -1,0 +1,161 @@
+import platformInstance from './platformInstance';
+
+// ─── DTOs ───
+export interface ItemMasterDto {
+  id: string;
+  buyerId: string;
+  description: string;
+  materialCode: string;
+  materialGroup: string;
+}
+
+export interface CreateItemMasterRequestDto {
+  buyerId: string;
+  description: string;
+  materialCode: string;
+  materialGroup: string;
+}
+
+// ─── Get Item Master by Buyer ───
+export const getItemMastersByBuyer = async (
+  buyerId: string,
+  { index = 0, limit = 50, searchTerm = '' }: { index?: number; limit?: number; searchTerm?: string } = {}
+): Promise<ItemMasterDto[]> => {
+  try {
+    const response = await platformInstance.get('/api/v1/buyer/item-master', {
+      params: { buyerId, index, limit, searchTerm },
+    });
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+
+    let errMsg = 'Failed to fetch item masters.';
+    if (typeof responseData === 'string') {
+      errMsg = responseData;
+    } else if (responseData?.message) {
+      errMsg = responseData.message;
+    } else if (responseData?.description) {
+      errMsg = responseData.description;
+    } else if (error.message) {
+      errMsg = error.message;
+    }
+
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+// ─── Create Item Master ───
+export const createItemMaster = async (
+  payload: CreateItemMasterRequestDto
+): Promise<ItemMasterDto> => {
+  try {
+    const response = await platformInstance.post('/api/v1/buyer/item-master', payload);
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+
+    let errMsg = 'Failed to create item master.';
+    if (typeof responseData === 'string') {
+      errMsg = responseData;
+    } else if (responseData?.message) {
+      errMsg = responseData.message;
+    } else if (responseData?.description) {
+      errMsg = responseData.description;
+    } else if (error.message) {
+      errMsg = error.message;
+    }
+
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+// ─── Update Item Master ───
+export const updateItemMaster = async (
+  itemMasterId: string,
+  payload: CreateItemMasterRequestDto
+): Promise<ItemMasterDto> => {
+  try {
+    const response = await platformInstance.put(`/api/v1/buyer/item-master/${itemMasterId}`, payload);
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+
+    let errMsg = 'Failed to update item master.';
+    if (typeof responseData === 'string') {
+      errMsg = responseData;
+    } else if (responseData?.message) {
+      errMsg = responseData.message;
+    } else if (responseData?.description) {
+      errMsg = responseData.description;
+    } else if (error.message) {
+      errMsg = error.message;
+    }
+
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+// ─── Delete Item Master ───
+export const deleteItemMaster = async (itemMasterId: string): Promise<any> => {
+  try {
+    const response = await platformInstance.delete(`/api/v1/buyer/item-master/${itemMasterId}`);
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+
+    let errMsg = 'Failed to delete item master.';
+    if (typeof responseData === 'string') {
+      errMsg = responseData;
+    } else if (responseData?.message) {
+      errMsg = responseData.message;
+    } else if (responseData?.description) {
+      errMsg = responseData.description;
+    } else if (error.message) {
+      errMsg = error.message;
+    }
+
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+// ─── Upload Item Master Excel ───
+export const uploadItemMasterExcel = async (
+  buyerId: string,
+  file: File
+): Promise<any> => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await platformInstance.post(
+      `/api/v1/buyer/item-master/upload?buyerId=${buyerId}`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+
+    let errMsg = 'Failed to upload file.';
+    if (typeof responseData === 'string') {
+      errMsg = responseData;
+    } else if (responseData?.message) {
+      errMsg = responseData.message;
+    } else if (responseData?.description) {
+      errMsg = responseData.description;
+    } else if (error.message) {
+      errMsg = error.message;
+    }
+
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
