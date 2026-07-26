@@ -151,3 +151,61 @@ export interface UpdateRejectedSupplierPayload {
     dispatchLocations: DispatchLocationDto[];
   };
 }
+
+// ============================================================================
+// RFQ DATA DTOs
+// ============================================================================
+
+export interface RFQMasterDataItem {
+  rfqNumber: string;
+  title: string;
+  endDate: string;
+  deliveryLocation: string;
+  organizationName: string;
+  rfqId: string;
+}
+
+export interface RFQDetailDocument {
+  id: string;
+  assetType: string;
+  assetName: string;
+  fileType: string;
+  fileName: string;
+}
+
+export interface RFQDetailItem {
+  description: string;
+  quantity: number;
+  uom: string;
+  materialCode: string;
+  materialGroup: string;
+  costCenter: string;
+  attachments: RFQDetailDocument[];
+}
+
+export interface RFQSupplierQuotation {
+  totalPrice: number;
+  deliveryCharge: number;
+  tax: number;
+  discount: number;
+  deliveryType: string;
+  status: string;
+}
+
+export interface RFQSupplierQuotationItem {
+  quotedPrice: number;
+}
+
+export interface RFQDetailResponse {
+  title: string;
+  description: string;
+  deliveryLocation: string;
+  startDate: string;
+  endDate: string;
+  addLotOption: boolean;
+  technicalSpecificationDocuments: RFQDetailDocument[];
+  termsConditionDocuments: RFQDetailDocument[];
+  items: RFQDetailItem[];
+  supplierQuotation: RFQSupplierQuotation[];
+  supplierQuotationItems: RFQSupplierQuotationItem[];
+}

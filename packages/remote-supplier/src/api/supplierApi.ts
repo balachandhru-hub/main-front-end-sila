@@ -5,10 +5,12 @@ import type {
   CreateSupplierProfilePayload,
   MetadataReferenceItem,
   MetadataReferenceType,
+  RFQMasterDataItem,
+  RFQDetailResponse,
 } from '../dto/supplierDto';
 
 // re-export so existing imports elsewhere (e.g. SupplierApp.tsx) keep working
-export type { SupplierProfileResponse } from '../dto/supplierDto';
+export type { SupplierProfileResponse, RFQMasterDataItem, RFQDetailResponse } from '../dto/supplierDto';
 
 // ============================================================================
 // API: Create Supplier Profile (Register)
@@ -118,5 +120,37 @@ export const logoutSupplier = async (): Promise<void> => {
     const responseData = error.response?.data;
     const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
     throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+// ============================================================================
+// API: Get RFQ Master Data (Recent Sourcing Opportunities)
+// ============================================================================
+export const fetchRFQMasterData = async (payload: {
+  supplierId: string;
+  index: number;
+  limit: number;
+}): Promise<RFQMasterDataItem[]> => {
+  try {
+    const response = await supplierInstance.post('/api/v1/supplier/rfq-master-data', payload);
+    return response.data ?? [];
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    throw new Error(`Failed to fetch RFQ master data (${status})`);
+  }
+};
+
+// ============================================================================
+// API: Get RFQ By ID
+// ============================================================================
+export const fetchRFQById = async (rfqId: string): Promise<RFQDetailResponse> => {
+  try {
+    const response = await supplierInstance.get('/api/v1/supplier/rfq-by-id', {
+      params: { rfqId },
+    });
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    throw new Error(`Failed to fetch RFQ details (${status})`);
   }
 };

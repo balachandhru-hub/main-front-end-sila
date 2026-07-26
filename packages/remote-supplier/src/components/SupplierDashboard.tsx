@@ -1,9 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SilaLogo from "../../../host-app/public/assets/SILA_Logo.png";
 import "./SupplierDashboard.css";
 import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
-import { logoutSupplier } from "../api/supplierApi";
+import {
+  logoutSupplier,
+  fetchRFQMasterData,
+  fetchRFQById,
+  getSupplierProfile,
+  type RFQMasterDataItem,
+  type RFQDetailResponse
+} from "../api/supplierApi";
 import { useNavigate } from "react-router-dom";
+
 
 interface StatCard {
   icon: React.ReactNode;
@@ -11,14 +19,6 @@ interface StatCard {
   value: number;
   linkText: string;
   colorClass: string;
-}
-
-interface RFQItem {
-  code: string;
-  company: string;
-  title: string;
-  closes: string;
-  deliv: string;
 }
 
 interface POItem {
@@ -297,12 +297,6 @@ const statCards: StatCard[] = [
   { icon: <IconBell />, label: "NOTIFICATIONS", value: 3, linkText: "Inquiries & Alerts >", colorClass: "pud-stat-icon-teal" },
 ];
 
-const rfqItems: RFQItem[] = [
-  { code: "RFQ-1024", company: "ABC Manufacturing Inc.", title: "Office Furniture Supply", closes: "2026-07-25", deliv: "Sector 4" },
-  { code: "RFQ-1025", company: "Global Tech Solutions Inc.", title: "Enterprise Laptops & Peripherals", closes: "2026-08-05", deliv: "400 Tech Way" },
-  { code: "RFQ-1021", company: "Eco-Friendly Logistics Ltd", title: "Recycled Stationery Bulk", closes: "2026-07-12", deliv: "Frankfurt" },
-];
-
 const poItems: POItem[] = [
   { code: "PO-2026-90412", status: "ACCEPTED", company: "Global Tech Solutions Inc.", orderDate: "2026-07-04", amount: "$18,500.00" },
   { code: "PO-2026-88401", status: "ACCEPTED", company: "Apex Partners", orderDate: "2026-05-22", amount: "$4,200.00" },
@@ -390,6 +384,81 @@ const SupplierDashboard: React.FC = () => {
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
+
+  const [supplierId, setSupplierId] = useState<string | null>(
+    sessionStorage.getItem("vosox_supplier_id")
+  );
+  const [rfqs, setRfqs] = useState<RFQMasterDataItem[]>([]);
+  const [loadingRfqs, setLoadingRfqs] = useState(true);
+  const [rfqsError, setRfqsError] = useState<string | null>(null);
+
+  const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
+  const [selectedRfq, setSelectedRfq] = useState<RFQDetailResponse | null>(null);
+  const [loadingRfqDetail, setLoadingRfqDetail] = useState(false);
+  const [rfqDetailError, setRfqDetailError] = useState<string | null>(null);
+
+  // Fetch supplier profile if supplierId is not in sessionStorage
+  useEffect(() => {
+    const loadSupplierProfile = async () => {
+      if (!supplierId) {
+        try {
+          const profile = await getSupplierProfile();
+          if (profile?.id) {
+            sessionStorage.setItem("vosox_supplier_id", profile.id);
+            setSupplierId(profile.id);
+          } else {
+            setRfqsError("Supplier profile not found. Please complete onboarding.");
+            setLoadingRfqs(false);
+          }
+        } catch (err: any) {
+          console.error("Failed to load supplier profile", err);
+          setRfqsError("Failed to load supplier profile details.");
+          setLoadingRfqs(false);
+        }
+      }
+    };
+    loadSupplierProfile();
+  }, [supplierId]);
+
+  // Fetch Recent Sourcing Opportunities
+  useEffect(() => {
+    const loadRfqs = async () => {
+      if (!supplierId) return;
+      setLoadingRfqs(true);
+      setRfqsError(null);
+      try {
+        const data = await fetchRFQMasterData({
+          supplierId,
+          index: 0,
+          limit: 10,
+        });
+        setRfqs(data);
+      } catch (err: any) {
+        console.error("Failed to load RFQs", err);
+        setRfqsError(err.message || "Failed to load sourcing opportunities.");
+      } finally {
+        setLoadingRfqs(false);
+      }
+    };
+    loadRfqs();
+  }, [supplierId]);
+
+  const handleViewRfqDetails = async (rfqId: string) => {
+    setSelectedRfqId(rfqId);
+    setLoadingRfqDetail(true);
+    setRfqDetailError(null);
+    setSelectedRfq(null);
+    try {
+      const data = await fetchRFQById(rfqId);
+      setSelectedRfq(data);
+    } catch (err: any) {
+      console.error("Failed to fetch RFQ details", err);
+      setRfqDetailError(err.message || "Failed to load RFQ details.");
+    } finally {
+      setLoadingRfqDetail(false);
+    }
+  };
+
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -529,25 +598,55 @@ const SupplierDashboard: React.FC = () => {
                   </div>
                   <a className="pud-panel-link" href="#">View All RFQs →</a>
                 </div>
-                <div className="pud-panel-list">
-                  {rfqItems.map((rfq) => (
-                    <div className="pud-rfq-row" key={rfq.code}>
-                      <div className="pud-rfq-info">
-                        <div className="pud-rfq-meta">
-                          <span className="pud-code-badge">{rfq.code}</span>
-                          <span className="pud-dot-sep">•</span>
-                          <span className="pud-company">{rfq.company}</span>
-                        </div>
-                        <div className="pud-rfq-title">{rfq.title}</div>
-                        <div className="pud-rfq-details">
-                          <span><IconCalendar /> Closes: {rfq.closes}</span>
-                          <span><IconPin /> Deliv: {rfq.deliv}</span>
-                        </div>
-                      </div>
-                      <button className="pud-btn pud-btn-outline">View RFQ Details</button>
+                {loadingRfqs ? (
+                  <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px' }}>
+                    <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                      <div className="pud-spinner" />
+                      <span>Loading sourcing opportunities...</span>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ) : rfqsError ? (
+                  <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
+                    <div style={{ color: '#ef4444', fontSize: '14px', textAlign: 'center' }}>
+                      {rfqsError}
+                    </div>
+                  </div>
+                ) : rfqs.length === 0 ? (
+                  <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
+                    <div style={{ color: '#64748b', fontSize: '14px', textAlign: 'center' }}>
+                      No recent sourcing opportunities found.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="pud-panel-list">
+                    {rfqs.map((rfq) => (
+                      <div className="pud-rfq-row" key={rfq.rfqId}>
+                        <div className="pud-rfq-info">
+                          <div className="pud-rfq-meta">
+                            <span className="pud-code-badge">{rfq.rfqNumber}</span>
+                            <span className="pud-dot-sep">•</span>
+                            <span className="pud-company">{rfq.organizationName}</span>
+                          </div>
+                          <div className="pud-rfq-title">{rfq.title}</div>
+                          <div className="pud-rfq-details">
+                            <span>
+                              <IconCalendar /> Closes: {new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                            </span>
+                            <span>
+                              <IconPin /> Deliv: {rfq.deliveryLocation}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          className="pud-btn pud-btn-outline"
+                          onClick={() => handleViewRfqDetails(rfq.rfqId)}
+                        >
+                          View RFQ Details
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
 
               <section className="pud-panel">
@@ -715,6 +814,248 @@ const SupplierDashboard: React.FC = () => {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {selectedRfqId && (
+          <div className="pud-modal-overlay" onClick={() => setSelectedRfqId(null)}>
+            <div className="pud-modal pud-modal-rfq" onClick={(e) => e.stopPropagation()}>
+              
+              {/* Modal Header */}
+              <div className="pud-modal-header">
+                <span className="pud-modal-badge">
+                  <IconFile /> RFQ Specification
+                </span>
+                <button className="pud-modal-close" onClick={() => setSelectedRfqId(null)}>
+                  <IconClose />
+                </button>
+                <h2 className="pud-modal-name">
+                  {loadingRfqDetail ? "Loading RFQ Details..." : selectedRfq?.title || "RFQ Details"}
+                </h2>
+                {selectedRfq && (
+                  <div className="pud-modal-meta">
+                    <span><IconCalendar /> Closes: {new Date(selectedRfq.endDate).toLocaleDateString()}</span>
+                    <span><IconPin /> Delivery: {selectedRfq.deliveryLocation}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Body */}
+              <div className="pud-modal-body">
+                {loadingRfqDetail && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', gap: '12px' }}>
+                    <div className="pud-spinner" />
+                    <span style={{ color: '#64748b', fontSize: '14px' }}>Fetching RFQ data from secure server...</span>
+                  </div>
+                )}
+
+                {rfqDetailError && (
+                  <div style={{ padding: '24px 0', textAlign: 'center' }}>
+                    <div style={{ color: '#ef4444', fontSize: '15px', marginBottom: '16px' }}>{rfqDetailError}</div>
+                    <button
+                      className="pud-btn pud-btn-outline"
+                      onClick={() => handleViewRfqDetails(selectedRfqId)}
+                    >
+                      Retry Loading
+                    </button>
+                  </div>
+                )}
+
+                {selectedRfq && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    
+                    {/* General Specs */}
+                    <div>
+                      <div className="pud-modal-section-title">Description</div>
+                      <p className="pud-modal-desc" style={{ whiteSpace: 'pre-wrap' }}>
+                        {selectedRfq.description || "No description provided."}
+                      </p>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
+                        <div>
+                          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
+                          <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                            {new Date(selectedRfq.startDate).toLocaleString()}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>End Date</div>
+                          <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                            {new Date(selectedRfq.endDate).toLocaleString()}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Add Lot Option</div>
+                          <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                            {selectedRfq.addLotOption ? "Allowed" : "Not Allowed"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Reference / Bid Documents */}
+                    {((selectedRfq.technicalSpecificationDocuments?.length ?? 0) > 0 ||
+                      (selectedRfq.termsConditionDocuments?.length ?? 0) > 0) && (
+                      <div>
+                        <div className="pud-modal-section-title">Reference Documents</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginTop: '8px' }}>
+                          
+                          {/* Tech Documents */}
+                          {selectedRfq.technicalSpecificationDocuments?.map((doc) => (
+                            <div key={doc.id} className="pud-rfq-doc-card">
+                              <span className="pud-rfq-doc-icon"><IconFile /></span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                                <div className="pud-rfq-doc-type">Tech Spec • {doc.fileType.toUpperCase()}</div>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Terms Documents */}
+                          {selectedRfq.termsConditionDocuments?.map((doc) => (
+                            <div key={doc.id} className="pud-rfq-doc-card">
+                              <span className="pud-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                                <div className="pud-rfq-doc-type">Terms & Conditions • {doc.fileType.toUpperCase()}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sourcing Items Table */}
+                    <div>
+                      <div className="pud-modal-section-title" style={{ marginBottom: '12px' }}>Required Materials & Services</div>
+                      <div className="pud-rfq-table-container">
+                        <table className="pud-rfq-items-table">
+                          <thead>
+                            <tr>
+                              <th>Material Info</th>
+                              <th>Group / Code</th>
+                              <th style={{ textAlign: 'right' }}>Qty Required</th>
+                              <th style={{ textAlign: 'right' }}>Your Quote</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedRfq.items?.map((item, idx) => {
+                              const quotedPrice = selectedRfq.supplierQuotationItems?.[idx]?.quotedPrice;
+                              return (
+                                <tr key={idx}>
+                                  <td>
+                                    <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
+                                    {item.costCenter && (
+                                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                        Cost Center: {item.costCenter}
+                                      </div>
+                                    )}
+                                    {item.attachments?.map((att) => (
+                                      <div key={att.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f1f5f9', color: '#475569', fontSize: '11px', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', marginRight: '4px' }}>
+                                        <IconFile /> {att.fileName}
+                                      </div>
+                                    ))}
+                                  </td>
+                                  <td>
+                                    <div style={{ fontSize: '13px', color: '#334155' }}>
+                                      {item.materialGroup || "N/A"}
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                      Code: {item.materialCode || "N/A"}
+                                    </div>
+                                  </td>
+                                  <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>
+                                    {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
+                                  </td>
+                                  <td style={{ textAlign: 'right', fontWeight: 700, color: quotedPrice !== undefined ? '#16a34a' : '#64748b' }}>
+                                    {quotedPrice !== undefined && quotedPrice > 0 ? (
+                                      `$${quotedPrice.toFixed(2)}`
+                                    ) : (
+                                      "—"
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Quotation Summary */}
+                    {selectedRfq.supplierQuotation && selectedRfq.supplierQuotation.length > 0 ? (
+                      <div className="pud-rfq-quote-box">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #bbf7d0', paddingBottom: '10px', marginBottom: '12px' }}>
+                          <span style={{ fontSize: '14.5px', fontWeight: 600, color: '#14532d', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <IconCheckCircle /> Active Submitted Bid
+                          </span>
+                          <span className="pud-status-badge pud-status-badge-accepted" style={{ background: '#dcfce7', color: '#15803d' }}>
+                            {selectedRfq.supplierQuotation[0].status || "SUBMITTED"}
+                          </span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px' }}>
+                          <div>
+                            <span style={{ fontSize: '12px', color: '#16a34a' }}>Delivery Charge</span>
+                            <div style={{ fontSize: '15px', fontWeight: 600, color: '#14532d', marginTop: '2px' }}>
+                              ${selectedRfq.supplierQuotation[0].deliveryCharge.toFixed(2)}
+                            </div>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: '12px', color: '#16a34a' }}>Tax</span>
+                            <div style={{ fontSize: '15px', fontWeight: 600, color: '#14532d', marginTop: '2px' }}>
+                              ${selectedRfq.supplierQuotation[0].tax.toFixed(2)}
+                            </div>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: '12px', color: '#16a34a' }}>Discount</span>
+                            <div style={{ fontSize: '15px', fontWeight: 600, color: '#14532d', marginTop: '2px' }}>
+                              ${selectedRfq.supplierQuotation[0].discount.toFixed(2)}
+                            </div>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: '12px', color: '#16a34a' }}>Delivery Type</span>
+                            <div style={{ fontSize: '15px', fontWeight: 600, color: '#14532d', marginTop: '2px' }}>
+                              {selectedRfq.supplierQuotation[0].deliveryType || "Standard"}
+                            </div>
+                          </div>
+                          <div style={{ borderLeft: '1px solid #bbf7d0', paddingLeft: '16px' }}>
+                            <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: 600 }}>Total Bid Amount</span>
+                            <div style={{ fontSize: '18px', fontWeight: 700, color: '#14532d', marginTop: '2px' }}>
+                              ${selectedRfq.supplierQuotation[0].totalPrice.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="pud-rfq-no-quote-box">
+                        <div style={{ fontWeight: 500, color: '#475569' }}>No quotation submitted yet.</div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                          Submit your bid quotation before the closing date to participate.
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="pud-modal-footer">
+                <button
+                  className="pud-btn pud-btn-outline"
+                  onClick={() => setSelectedRfqId(null)}
+                  style={{ marginRight: '10px' }}
+                >
+                  Close
+                </button>
+                {selectedRfq && !(selectedRfq.supplierQuotation && selectedRfq.supplierQuotation.length > 0) && (
+                  <button className="pud-btn pud-btn-message" style={{ background: '#2563eb', color: '#ffffff' }}>
+                    Prepare Quotation
+                  </button>
+                )}
+              </div>
+
             </div>
           </div>
         )}
