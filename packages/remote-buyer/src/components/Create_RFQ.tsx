@@ -147,28 +147,15 @@ const steps: { key: StepKey; label: string }[] = [
     { key: "summary", label: "3. Summary & Dispatch" },
 ];
 
-const initialLineItems: LineItem[] = [
-    { id: "li-1", itemName: "Laptop", description: "Dell Latitude 5450 / 32GB RAM / 512GB SSD", quantity: 25, uom: "EA", price: "", materialCode: "MAT-IT-501" },
-    { id: "li-2", itemName: "Mouse", description: "Wireless Optical Ergonomic Mouse", quantity: 25, uom: "EA", price: "", materialCode: "MAT-IT-502" },
-    { id: "li-3", itemName: "Keyboard", description: "Mechanical Keyboard Blue Switches Silent", quantity: 25, uom: "EA", price: "", materialCode: "MAT-IT-503" },
-];
+const initialLineItems: LineItem[] = [];
 
 const uomOptions = ["EA", "BOX", "SET", "PACK", "UNIT"];
 
-const commodityOptions = ["Hardware", "Software", "Professional Services", "Consumables"];
 const currencyOptions = ["AED", "USD", "EUR", "INR", "GBP"];
 const regionOptions = ["MENA", "APAC", "EMEA", "Americas"];
 const fieldTypeOptions: FieldType[] = ["Text", "Dropdown", "Radio", "Checkbox"];
 
-const initialCustomFields: CustomField[] = [
-    { id: "cf-1", label: "How much is the delivery charge?", type: "Text", options: [] },
-    {
-        id: "cf-2",
-        label: "Is there any additional tax?",
-        type: "Radio",
-        options: ["Yes there is additional tax available", "No there is no additional tax"],
-    },
-];
+const initialCustomFields: CustomField[] = [];
 
 const registrationTemplateOptions = [
     "Standard Vendor Registration",
@@ -214,7 +201,7 @@ const CreateRFQ: React.FC = () => {
 
     const [buyerProfileId, setBuyerProfileId] = useState<string>("");
 
-    const [rfqTitle, setRfqTitle] = useState("IT Hardware Refresh - Head Office");
+    const [rfqTitle, setRfqTitle] = useState("");
     const [department, setDepartment] = useState("");
     const [departmentOptions, setDepartmentOptions] = useState<any[]>([]);
     const [materialCodeOptions, setMaterialCodeOptions] = useState<any[]>([]);
@@ -309,17 +296,14 @@ const CreateRFQ: React.FC = () => {
         setFamilyTitle(selected?.title || "");
     };
 
-    const [commodity, setCommodity] = useState("");
     const [currency, setCurrency] = useState("");
     const [region, setRegion] = useState("");
-    const [nameOfCreator, setNameOfCreator] = useState("John");
-    const [description, setDescription] = useState(
-        "Bulk procurement of high-quality workstations, standard precision mice, and custom mechanical keyboards."
-    );
-    const [deliveryLocation, setDeliveryLocation] = useState("Bengaluru Office, Karnataka,  India");
-    const [startDateTime, setStartDateTime] = useState("2026-07-15T17:30");
-    const [endDateTime, setEndDateTime] = useState("2026-07-15T17:40");
-    const [deliveryTargetDate, setDeliveryTargetDate] = useState("2026-07-19");
+    const [nameOfCreator, setNameOfCreator] = useState("");
+    const [description, setDescription] = useState("");
+    const [deliveryLocation, setDeliveryLocation] = useState("");
+    const [startDateTime, setStartDateTime] = useState("");
+    const [endDateTime, setEndDateTime] = useState("");
+    const [deliveryTargetDate, setDeliveryTargetDate] = useState("");
 
     const [techSpecFile, setTechSpecFile] = useState<string | null>(null);
     const [termsFile, setTermsFile] = useState<string | null>(null);
@@ -331,7 +315,7 @@ const CreateRFQ: React.FC = () => {
     const termsInputRef = useRef<HTMLInputElement>(null);
 
     const [lotOption, setLotOption] = useState(false);
-    const [totalBudget, setTotalBudget] = useState("25000");
+    const [totalBudget, setTotalBudget] = useState("");
 
     const [customFields, setCustomFields] = useState<CustomField[]>(initialCustomFields);
     const [newFieldLabel, setNewFieldLabel] = useState("");
@@ -525,7 +509,7 @@ const CreateRFQ: React.FC = () => {
                 quantity: li.quantity,
                 uom: li.uom,
                 materialCode: li.materialCode,
-                materialGroup: commodity,
+                materialGroup: "",
                 costCenter: costCenter,
                 attachments: [],
             }));
@@ -690,17 +674,6 @@ const CreateRFQ: React.FC = () => {
 
                     {/* Commodity / Currency */}
                     <div className="bd-row-2">
-                        <div className="bd-field">
-                            <label className="bd-label">Commodity</label>
-                            <select className="bd-select" value={commodity} onChange={(e) => setCommodity(e.target.value)}>
-                                <option value="">Select Commodity</option>
-                                {commodityOptions.map((c) => (
-                                    <option key={c} value={c}>
-                                        {c}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
                         <div className="bd-field">
                             <label className="bd-label">Currency</label>
                             <select className="bd-select" value={currency} onChange={(e) => setCurrency(e.target.value)}>
@@ -1051,16 +1024,8 @@ const CreateRFQ: React.FC = () => {
                             </div>
                         </div>
                         <div className="bd-item-add-grid-bottom">
-                            <div className="bd-item-add-field">
-                                <label className="bd-label-sm">PRICE</label>
-                                <input
-                                    className="bd-input-sm"
-                                    type="text"
-                                    placeholder="Enter price"
-                                    value={newItemPrice}
-                                    onChange={(e) => setNewItemPrice(e.target.value)}
-                                />
-                            </div>
+                            {/* <div className="bd-item-add-field">
+                            </div> */}
                             <div className="bd-item-add-field">
                                 <label className="bd-label-sm">MATERIAL CODE</label>
                                 <select
