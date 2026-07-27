@@ -7,10 +7,11 @@ import type {
   MetadataReferenceType,
   RFQMasterDataItem,
   RFQDetailResponse,
+  SubmitQuotationPayload,
 } from '../dto/supplierDto';
 
 // re-export so existing imports elsewhere (e.g. SupplierApp.tsx) keep working
-export type { SupplierProfileResponse, RFQMasterDataItem, RFQDetailResponse } from '../dto/supplierDto';
+export type { SupplierProfileResponse, RFQMasterDataItem, RFQDetailResponse, SubmitQuotationPayload } from '../dto/supplierDto';
 
 // ============================================================================
 // API: Create Supplier Profile (Register)
@@ -152,5 +153,22 @@ export const fetchRFQById = async (rfqId: string): Promise<RFQDetailResponse> =>
   } catch (error: any) {
     const status = error.response?.status || 'unknown';
     throw new Error(`Failed to fetch RFQ details (${status})`);
+  }
+};
+
+// ============================================================================
+// API: Submit Supplier Quotation (Create/Update Quotation)
+// ============================================================================
+export const submitSupplierQuotation = async (
+  payload: SubmitQuotationPayload
+): Promise<any> => {
+  try {
+    const response = await supplierInstance.put('/api/v1/supplier/quotation', payload);
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to submit quotation.';
+    throw new Error(`${errMsg} (${status})`);
   }
 };

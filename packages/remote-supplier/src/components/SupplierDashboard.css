@@ -1180,4 +1180,13 @@
   border-radius: 10px;
   padding: 20px;
   text-align: center;
-}
+}
+
+.pud-rfq-form-input:focus,
+.pud-rfq-item-input:focus {
+  outline: none;
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  transition: all 0.2s ease;
+}
+

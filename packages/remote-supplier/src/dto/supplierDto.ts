@@ -174,6 +174,10 @@ export interface RFQDetailDocument {
 }
 
 export interface RFQDetailItem {
+  id?: string;
+  buyerRFQItemId?: string;
+  supplierRFQItemId?: string;
+  supplierRFQId?: string;
   description: string;
   quantity: number;
   uom: string;
@@ -184,15 +188,22 @@ export interface RFQDetailItem {
 }
 
 export interface RFQSupplierQuotation {
+  id?: string;
+  qutationId?: string;
   totalPrice: number;
   deliveryCharge: number;
   tax: number;
   discount: number;
   deliveryType: string;
   status: string;
+  discountType?: string;
+  taxType?: string;
 }
 
 export interface RFQSupplierQuotationItem {
+  id?: string;
+  supplierRFQItemId?: string;
+  buyerRFQItemId?: string;
   quotedPrice: number;
 }
 
@@ -208,4 +219,22 @@ export interface RFQDetailResponse {
   items: RFQDetailItem[];
   supplierQuotation: RFQSupplierQuotation[];
   supplierQuotationItems: RFQSupplierQuotationItem[];
-}
+}
+
+export interface SubmitQuotationPayload {
+  supplierQuotationId?: string | null;
+  supplierRFQId?: string | null;
+  totalPrice: number;
+  deliveryCharge: number;
+  deliveryType: string;
+  discount: number;
+  discountType: string;
+  tax: number;
+  taxType: string;
+  items?: {
+    supplierRFQItemId?: string | null;
+    buyerRFQItemId: string;
+    quotedPrice: number;
+  }[];
+}
+
