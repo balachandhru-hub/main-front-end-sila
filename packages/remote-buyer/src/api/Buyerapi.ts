@@ -421,3 +421,17 @@ export const getUnspscFamilies = async (
     throw new Error('Could not reach the server. Please check your connection and try again.');
   }
 };
+
+
+export const fetchBuyerRFQs = async (payload: { buyerId: string; index: number; limit: number }): Promise<any[]> => {
+  try {
+    const response = await axiosInstance.post<any[]>('/api/v1/buyer/rfq-master-data', payload);
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to fetch RFQs (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
