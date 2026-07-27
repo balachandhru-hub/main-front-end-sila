@@ -452,6 +452,7 @@
 }
 
 .bd-btn-add {
+    width: fit-content;
     background: #111827;
     color: #ffffff;
     border: none;
