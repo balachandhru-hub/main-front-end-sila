@@ -79,3 +79,43 @@ export interface VerifiedSupplierDto {
   email: string;
   isVerified: boolean;
 }
+
+export interface BuyerSupplierQuotationItem {
+  id?: string;
+  supplierRFQItemId?: string;
+  buyerRFQItemId?: string;
+  quotedPrice: number;
+}
+
+export interface BuyerSupplierQuotation {
+  totalPrice: number | null;
+  deliveryCharge: number | null;
+  tax: number | null;
+  discount: number | null;
+  deliveryType: string | null;
+  status: string | null;
+  supplierQuotationItems: BuyerSupplierQuotationItem[] | null;
+  quotationId: string | null;
+}
+
+export interface BuyerRFQDetailResponse {
+  title: string;
+  description: string;
+  department: string;
+  region: string;
+  currency: string;
+  deliveryLocation: string;
+  startDate: string;
+  endDate: string;
+  deliveryTargetDate: string;
+  budget: number;
+  addLotOption: boolean;
+  technicalSpecificationDocuments: RfqDocumentAssetDto[];
+  termsConditionDocuments: RfqDocumentAssetDto[];
+  questions: RfqQuestionDto[];
+  items: RfqItemDto[];
+  supplierIds: string[];
+  rfqVerificationTemplateId: string | null;
+  supplierQuotation: BuyerSupplierQuotation[];
+  supplierQuotationItems: any[];
+}
