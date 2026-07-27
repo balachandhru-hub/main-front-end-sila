@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import "./Create.RFQ.css";
 import { getBuyerProfile, getAllDepartments, getAllCostCenters, getAllItemMasters, createRFQ, getVerifiedSuppliers, getUnspscSegments, getUnspscFamilies } from "../api/Buyerapi";
+import { fetchReferenceList } from "../api/masterdataApi";
 import type { CreateRFQPayload, RfqDocumentAssetDto, RfqItemDto, RfqQuestionDto, VerifiedSupplierDto, SupplierVerificationType } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
 
@@ -19,14 +20,7 @@ interface LineItem {
 
 type StepKey = "details" | "suppliers" | "summary";
 
-type FieldType = "Text" | "Dropdown" | "Radio" | "Checkbox";
-
-const fieldTypeLabels: Record<FieldType, string> = {
-    Text: "Text Field",
-    Dropdown: "Dropdown Field",
-    Radio: "Radio Button",
-    Checkbox: "Checkbox Field",
-};
+type FieldType = "INPUT" | "RADIO_BUTTON" | "CHECK_BOX";
 
 interface CustomField {
     id: string;
@@ -153,7 +147,6 @@ const uomOptions = ["EA", "BOX", "SET", "PACK", "UNIT"];
 
 const currencyOptions = ["AED", "USD", "EUR", "INR", "GBP"];
 const regionOptions = ["MENA", "APAC", "EMEA", "Americas"];
-const fieldTypeOptions: FieldType[] = ["Text", "Dropdown", "Radio", "Checkbox"];
 
 const initialCustomFields: CustomField[] = [];
 
@@ -319,8 +312,29 @@ const CreateRFQ: React.FC = () => {
 
     const [customFields, setCustomFields] = useState<CustomField[]>(initialCustomFields);
     const [newFieldLabel, setNewFieldLabel] = useState("");
-    const [newFieldType, setNewFieldType] = useState<FieldType>("Text");
-    const [newFieldOptions, setNewFieldOptions] = useState("");
+    const [newFieldType, setNewFieldType] = useState<FieldType>("INPUT");
+
+    const [fieldTypeOptions, setFieldTypeOptions] = useState<any[]>([]);
+    const [checkboxOptions, setCheckboxOptions] = useState<string[]>([]);
+    const [checkboxOptionInput, setCheckboxOptionInput] = useState("");
+
+    useEffect(() => {
+        const loadFieldTypes = async () => {
+            try {
+                const data = await fetchReferenceList(["QUESTION_TYPE"]);
+                const filtered = data.filter((item: any) =>
+                    ["INPUT", "RADIO_BUTTON", "CHECK_BOX"].includes(item.key)
+                );
+                setFieldTypeOptions(filtered);
+            } catch (err) {
+                console.error("Failed to fetch question types", err);
+            }
+        };
+        loadFieldTypes();
+    }, []);
+
+    const getFieldTypeLabel = (key: string) =>
+        fieldTypeOptions.find((t) => t.key === key)?.description || key;
 
     const [lineItems, setLineItems] = useState<LineItem[]>(initialLineItems);
     const [newItemName, setNewItemName] = useState("");
@@ -428,25 +442,40 @@ const CreateRFQ: React.FC = () => {
         setLineItems((prev) => prev.filter((li) => li.id !== id));
     };
 
+    const handleAddCheckboxOption = () => {
+        const val = checkboxOptionInput.trim();
+        if (!val) return;
+        if (checkboxOptions.includes(val)) return;
+        setCheckboxOptions((prev) => [...prev, val]);
+        setCheckboxOptionInput("");
+    };
+
+    const handleRemoveCheckboxOption = (idx: number) => {
+        setCheckboxOptions((prev) => prev.filter((_, i) => i !== idx));
+    };
+
     const handleAddCustomField = () => {
         if (!newFieldLabel.trim()) return;
-        const needsOptions = newFieldType !== "Text";
-        const options = needsOptions
-            ? newFieldOptions
-                .split(",")
-                .map((o) => o.trim())
-                .filter(Boolean)
-            : [];
+
+        let options: string[] = [];
+        if (newFieldType === "RADIO_BUTTON") {
+            options = ["Yes", "No"];
+        } else if (newFieldType === "CHECK_BOX") {
+            options = [...checkboxOptions];
+        }
+
         const field: CustomField = {
             id: `cf-${Date.now()}`,
             label: newFieldLabel.trim(),
             type: newFieldType,
             options,
         };
+
         setCustomFields((prev) => [...prev, field]);
         setNewFieldLabel("");
-        setNewFieldType("Text");
-        setNewFieldOptions("");
+        setNewFieldType("INPUT");
+        setCheckboxOptions([]);
+        setCheckboxOptionInput("");
     };
 
     const handleRemoveCustomField = (id: string) => {
@@ -496,9 +525,15 @@ const CreateRFQ: React.FC = () => {
                 ? [await buildDocumentAsset(termsFileObj, buyerProfileId, "TermsAndConditions")]
                 : [];
 
+            const questionTypeLegacyMap: Record<string, string> = {
+                INPUT: "Text",
+                RADIO_BUTTON: "Radio",
+                CHECK_BOX: "Checkbox",
+            };
+
             const questions: RfqQuestionDto[] = customFields.map((field, idx) => ({
                 question: field.label,
-                questionType: field.type,
+                questionType: questionTypeLegacyMap[field.type] || field.type,
                 isRequired: false,
                 displayOrder: idx,
                 options: field.options,
@@ -917,26 +952,89 @@ const CreateRFQ: React.FC = () => {
                                     <select
                                         className="bd-select-sm"
                                         value={newFieldType}
-                                        onChange={(e) => setNewFieldType(e.target.value as FieldType)}
+                                        onChange={(e) => {
+                                            setNewFieldType(e.target.value as FieldType);
+                                            setCheckboxOptions([]);
+                                            setCheckboxOptionInput("");
+                                        }}
                                     >
                                         {fieldTypeOptions.map((t) => (
-                                            <option key={t} value={t}>
-                                                {fieldTypeLabels[t]}
+                                            <option key={t.id} value={t.key}>
+                                                {t.description}
                                             </option>
                                         ))}
                                     </select>
                                 </div>
                                 <div className="bd-item-add-field">
-                                    <label className="bd-label-sm">DROPDOWN OPTIONS (COMMA-SEPARATED)</label>
-                                    <input
-                                        className="bd-input-sm"
-                                        type="text"
-                                        placeholder="eg. Yes, No"
-                                        value={newFieldOptions}
-                                        onChange={(e) => setNewFieldOptions(e.target.value)}
-                                        disabled={newFieldType === "Text"}
-                                    />
+                                    <label className="bd-label-sm">OPTIONS</label>
+
+                                    {newFieldType === "INPUT" && (
+                                        <input
+                                            className="bd-input-sm"
+                                            type="text"
+                                            disabled
+                                            placeholder="No options required"
+                                        />
+                                    )}
+
+                                    {newFieldType === "RADIO_BUTTON" && (
+                                        <div style={{ display: "flex", gap: 16, alignItems: "center", padding: "6px 0" }}>
+                                            <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "default", fontSize: 13, color: "#374151" }}>
+                                                <input type="radio" disabled name="radio-preview" /> Yes
+                                            </label>
+                                            <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "default", fontSize: 13, color: "#374151" }}>
+                                                <input type="radio" disabled name="radio-preview" /> No
+                                            </label>
+                                        </div>
+                                    )}
+
+                                    {newFieldType === "CHECK_BOX" && (
+                                        <div>
+                                            <div style={{ display: "flex", gap: 8 }}>
+                                                <input
+                                                    className="bd-input-sm"
+                                                    type="text"
+                                                    placeholder="Type option..."
+                                                    value={checkboxOptionInput}
+                                                    onChange={(e) => setCheckboxOptionInput(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter") {
+                                                            e.preventDefault();
+                                                            handleAddCheckboxOption();
+                                                        }
+                                                    }}
+                                                />
+                                                <button
+                                                    className="bd-btn-add"
+                                                    style={{ padding: "6px 10px", minWidth: "auto" }}
+                                                    onClick={handleAddCheckboxOption}
+                                                    type="button"
+                                                    title="Add option"
+                                                >
+                                                    <IconPlus />
+                                                </button>
+                                            </div>
+                                            {checkboxOptions.length > 0 && (
+                                                <div className="bd-dsr-field-options" style={{ marginTop: 8 }}>
+                                                    {checkboxOptions.map((opt, idx) => (
+                                                        <span className="bd-dsr-option-pill" key={idx}>
+                                                            {opt}
+                                                            <button
+                                                                className="bd-chip-remove"
+                                                                onClick={() => handleRemoveCheckboxOption(idx)}
+                                                                type="button"
+                                                                style={{ marginLeft: 4 }}
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
+
                                 <button className="bd-btn-add" onClick={handleAddCustomField} type="button">
                                     <IconPlus /> Add
                                 </button>
@@ -954,15 +1052,39 @@ const CreateRFQ: React.FC = () => {
                                             >
                                                 ×
                                             </button>
-                                            <div className="bd-dsr-field-type">{fieldTypeLabels[field.type]}</div>
+                                            <div className="bd-dsr-field-type">{getFieldTypeLabel(field.type)}</div>
                                             <div className="bd-dsr-field-label">{field.label}</div>
                                             {field.options.length > 0 && (
                                                 <div className="bd-dsr-field-options">
-                                                    {field.options.map((opt, idx) => (
-                                                        <span className="bd-dsr-option-pill" key={idx}>
-                                                            {opt}
-                                                        </span>
-                                                    ))}
+                                                    {field.type === "RADIO_BUTTON" ? (
+                                                        field.options.map((opt, idx) => (
+                                                            <label
+                                                                key={idx}
+                                                                style={{
+                                                                    display: "inline-flex",
+                                                                    alignItems: "center",
+                                                                    gap: 6,
+                                                                    marginRight: 12,
+                                                                    fontSize: 12,
+                                                                    color: "#4b5563",
+                                                                }}
+                                                            >
+                                                                <input
+                                                                    type="radio"
+                                                                    disabled
+                                                                    name={`preview-${field.id}`}
+                                                                    style={{ margin: 0 }}
+                                                                />{" "}
+                                                                {opt}
+                                                            </label>
+                                                        ))
+                                                    ) : (
+                                                        field.options.map((opt, idx) => (
+                                                            <span className="bd-dsr-option-pill" key={idx}>
+                                                                {opt}
+                                                            </span>
+                                                        ))
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -1024,8 +1146,6 @@ const CreateRFQ: React.FC = () => {
                             </div>
                         </div>
                         <div className="bd-item-add-grid-bottom">
-                            {/* <div className="bd-item-add-field">
-                            </div> */}
                             <div className="bd-item-add-field">
                                 <label className="bd-label-sm">MATERIAL CODE</label>
                                 <select
