@@ -1,9 +1,10 @@
 import React, { useRef, useState, useEffect } from "react";
 import "./Create.RFQ.css";
 import { getBuyerProfile, getAllDepartments, getAllCostCenters, getAllItemMasters, createRFQ, getVerifiedSuppliers, getUnspscSegments, getUnspscFamilies } from "../api/Buyerapi";
-import { fetchReferenceList } from "../api/masterdataApi";
+import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../api/masterdataApi";
 import type { CreateRFQPayload, RfqDocumentAssetDto, RfqItemDto, RfqQuestionDto, VerifiedSupplierDto, SupplierVerificationType } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
+import type { CountryDto, UnitDto, CurrencyDto } from "../api/masterdataApi";
 
 
 const HARDCODED_RFQ_VERIFICATION_TEMPLATE_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
@@ -133,7 +134,12 @@ const IconCheckBig = () => (
     </svg>
 );
 
-/* ---------------------------------- Static data ---------------------------------- */
+const IconChevronDown = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="6 9 12 15 18 9" />
+    </svg>
+);
+
 
 const steps: { key: StepKey; label: string }[] = [
     { key: "details", label: "1. RFQ Details" },
@@ -143,10 +149,7 @@ const steps: { key: StepKey; label: string }[] = [
 
 const initialLineItems: LineItem[] = [];
 
-const uomOptions = ["EA", "BOX", "SET", "PACK", "UNIT"];
-
-const currencyOptions = ["AED", "USD", "EUR", "INR", "GBP"];
-const regionOptions = ["MENA", "APAC", "EMEA", "Americas"];
+const fieldTypeOptions: FieldType[] = ["Text", "Dropdown", "Radio", "Checkbox"];
 
 const initialCustomFields: CustomField[] = [];
 
@@ -155,6 +158,8 @@ const registrationTemplateOptions = [
     "Quick Onboarding Form",
     "IT Hardware Vendor Verification",
 ];
+
+const PAGE_LIMIT = 10;
 
 /* ---------------------------------- Helpers ---------------------------------- */
 
@@ -186,6 +191,167 @@ const buildDocumentAsset = async (
         isSingletonAsset: true,
     };
 };
+
+
+function usePaginatedSearchSelect<T>(
+    fetcher: (index: number, limit: number, searchTerm?: string) => Promise<{ items: T[]; totalCount: number }>,
+    isOpen: boolean,
+    searchTerm: string,
+    limit: number = PAGE_LIMIT
+) {
+    const [options, setOptions] = useState<T[]>([]);
+    const [pageIndex, setPageIndex] = useState(0);
+    const [loading, setLoading] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const timer = setTimeout(() => {
+            const run = async () => {
+                setLoading(true);
+                try {
+                    const res = await fetcher(0, limit, searchTerm.trim() || undefined);
+                    const items = res?.items || [];
+                    setOptions(items);
+                    setPageIndex(0);
+                    setHasMore(items.length === limit);
+                } catch (err) {
+                    console.error("Failed to fetch options", err);
+                    setOptions([]);
+                    setHasMore(false);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            run();
+        }, 350);
+        return () => clearTimeout(timer);
+    }, [isOpen, searchTerm]);
+
+    const loadMore = async () => {
+        if (loading || !hasMore) return;
+        const nextIndex = pageIndex + 1;
+        setLoading(true);
+        try {
+            const res = await fetcher(nextIndex, limit, searchTerm.trim() || undefined);
+            const items = res?.items || [];
+            setOptions((prev) => [...prev, ...items]);
+            setPageIndex(nextIndex);
+            setHasMore(items.length === limit);
+        } catch (err) {
+            console.error("Failed to fetch more options", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { options, loading, hasMore, loadMore };
+}
+
+
+interface SearchableSelectProps<T> {
+    value: string;
+    placeholder: string;
+    isOpen: boolean;
+    onToggle: () => void;
+    onClose: () => void;
+    searchTerm: string;
+    onSearchChange: (v: string) => void;
+    options: T[];
+    getOptionLabel: (opt: T) => string;
+    getOptionKey: (opt: T) => string;
+    onSelect: (opt: T) => void;
+    loading: boolean;
+    onScrollBottom: () => void;
+    searchPlaceholder?: string;
+    small?: boolean;
+}
+
+function SearchableSelect<T,>({
+    value,
+    placeholder,
+    isOpen,
+    onToggle,
+    onClose,
+    searchTerm,
+    onSearchChange,
+    options,
+    getOptionLabel,
+    getOptionKey,
+    onSelect,
+    loading,
+    onScrollBottom,
+    searchPlaceholder,
+    small,
+}: SearchableSelectProps<T>) {
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                onClose();
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [onClose]);
+
+    const handleScroll = (e: React.UIEvent<HTMLUListElement>) => {
+        const el = e.currentTarget;
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
+            onScrollBottom();
+        }
+    };
+
+    return (
+        <div className="bd-custom-select-container" ref={containerRef}>
+            <div
+                className={`${small ? "bd-input-sm" : "bd-input"} bd-custom-select-trigger`}
+                onClick={onToggle}
+                style={{ cursor: "pointer" }}
+            >
+                <span className="bd-custom-select-value">{value || placeholder}</span>
+                <IconChevronDown />
+            </div>
+            {isOpen && (
+                <div className="bd-custom-select-panel">
+                    <div className="bd-custom-select-search">
+                        <div className="bd-search-wrap">
+                            <span className="bd-search-icon">
+                                <IconSearch />
+                            </span>
+                            <input
+                                className="bd-input bd-search-input"
+                                style={{ width: "100%" }}
+                                type="text"
+                                placeholder={searchPlaceholder || "Search..."}
+                                value={searchTerm}
+                                onChange={(e) => onSearchChange(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+                    <ul className="bd-custom-select-menu" onScroll={handleScroll}>
+                        {options.map((opt) => (
+                            <li
+                                key={getOptionKey(opt)}
+                                className={`bd-custom-select-option${getOptionLabel(opt) === value ? " selected" : ""}`}
+                                onClick={() => onSelect(opt)}
+                            >
+                                {getOptionLabel(opt)}
+                            </li>
+                        ))}
+                        {loading && <li className="bd-custom-select-loading">Loading...</li>}
+                        {!loading && options.length === 0 && (
+                            <li className="bd-custom-select-empty">No results found</li>
+                        )}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+}
 
 /* ---------------------------------- Component ---------------------------------- */
 
@@ -290,7 +456,19 @@ const CreateRFQ: React.FC = () => {
     };
 
     const [currency, setCurrency] = useState("");
+    const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
+    const [currencySearchTerm, setCurrencySearchTerm] = useState("");
+    const currencySelect = usePaginatedSearchSelect<CurrencyDto>(getCurrencies, isCurrencyDropdownOpen, currencySearchTerm);
+
     const [region, setRegion] = useState("");
+    const [isRegionDropdownOpen, setIsRegionDropdownOpen] = useState(false);
+    const [regionSearchTerm, setRegionSearchTerm] = useState("");
+    const regionSelect = usePaginatedSearchSelect<CountryDto>(getCountries, isRegionDropdownOpen, regionSearchTerm);
+
+    const [isUomDropdownOpen, setIsUomDropdownOpen] = useState(false);
+    const [uomSearchTerm, setUomSearchTerm] = useState("");
+    const uomSelect = usePaginatedSearchSelect<UnitDto>(getUnits, isUomDropdownOpen, uomSearchTerm);
+
     const [nameOfCreator, setNameOfCreator] = useState("");
     const [description, setDescription] = useState("");
     const [deliveryLocation, setDeliveryLocation] = useState("");
@@ -585,7 +763,6 @@ const CreateRFQ: React.FC = () => {
 
     return (
         <div className="bd-rfq-card">
-            {/* Card header */}
             <div className="bd-rfq-header">
                 <div>
                     <div className="bd-rfq-title">Create Request For Quotation (RFQ)</div>
@@ -611,7 +788,6 @@ const CreateRFQ: React.FC = () => {
 
             {activeStep === "details" && (
                 <>
-                    {/* RFQ Title */}
                     <div className="bd-field">
                         <label className="bd-label">RFQ Title</label>
                         <input
@@ -622,7 +798,6 @@ const CreateRFQ: React.FC = () => {
                         />
                     </div>
 
-                    {/* Department / Cost Center */}
                     <div className="bd-row-2">
                         <div className="bd-field">
                             <label className="bd-label">Department</label>
@@ -661,7 +836,6 @@ const CreateRFQ: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Segment / Family */}
                     <div className="bd-row-2">
                         <div className="bd-field">
                             <label className="bd-label">Segment</label>
@@ -696,7 +870,6 @@ const CreateRFQ: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Description */}
                     <div className="bd-field">
                         <label className="bd-label">Description</label>
                         <textarea
@@ -707,33 +880,55 @@ const CreateRFQ: React.FC = () => {
                         />
                     </div>
 
-                    {/* Commodity / Currency */}
                     <div className="bd-row-2">
                         <div className="bd-field">
                             <label className="bd-label">Currency</label>
-                            <select className="bd-select" value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                                <option value="">Select Currency</option>
-                                {currencyOptions.map((c) => (
-                                    <option key={c} value={c}>
-                                        {c}
-                                    </option>
-                                ))}
-                            </select>
+                            <SearchableSelect<CurrencyDto>
+                                value={currency}
+                                placeholder="Select Currency"
+                                isOpen={isCurrencyDropdownOpen}
+                                onToggle={() => setIsCurrencyDropdownOpen((prev) => !prev)}
+                                onClose={() => setIsCurrencyDropdownOpen(false)}
+                                searchTerm={currencySearchTerm}
+                                onSearchChange={setCurrencySearchTerm}
+                                options={currencySelect.options}
+                                getOptionLabel={(o) => o.currencyName}
+                                getOptionKey={(o) => o.id}
+                                onSelect={(o) => {
+                                    setCurrency(o.currencyName);
+                                    setIsCurrencyDropdownOpen(false);
+                                    setCurrencySearchTerm("");
+                                }}
+                                loading={currencySelect.loading}
+                                onScrollBottom={currencySelect.loadMore}
+                                searchPlaceholder="Search currency..."
+                            />
                         </div>
                     </div>
 
-                    {/* Region / Name of Creator */}
                     <div className="bd-row-2">
                         <div className="bd-field">
                             <label className="bd-label">Region</label>
-                            <select className="bd-select" value={region} onChange={(e) => setRegion(e.target.value)}>
-                                <option value="">Select Region</option>
-                                {regionOptions.map((r) => (
-                                    <option key={r} value={r}>
-                                        {r}
-                                    </option>
-                                ))}
-                            </select>
+                            <SearchableSelect<CountryDto>
+                                value={region}
+                                placeholder="Select Region"
+                                isOpen={isRegionDropdownOpen}
+                                onToggle={() => setIsRegionDropdownOpen((prev) => !prev)}
+                                onClose={() => setIsRegionDropdownOpen(false)}
+                                searchTerm={regionSearchTerm}
+                                onSearchChange={setRegionSearchTerm}
+                                options={regionSelect.options}
+                                getOptionLabel={(o) => o.countryName}
+                                getOptionKey={(o) => o.id}
+                                onSelect={(o) => {
+                                    setRegion(o.countryName);
+                                    setIsRegionDropdownOpen(false);
+                                    setRegionSearchTerm("");
+                                }}
+                                loading={regionSelect.loading}
+                                onScrollBottom={regionSelect.loadMore}
+                                searchPlaceholder="Search country..."
+                            />
                         </div>
                         <div className="bd-field">
                             <label className="bd-label">Name of Creator</label>
@@ -746,7 +941,6 @@ const CreateRFQ: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Delivery Location / Start Date */}
                     <div className="bd-row-2">
                         <div className="bd-field">
                             <label className="bd-label">Delivery Location</label>
@@ -783,7 +977,6 @@ const CreateRFQ: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* End Date / Delivery Target Date */}
                     <div className="bd-row-2">
                         <div className="bd-field">
                             <label className="bd-label">End Date &amp; Time</label>
@@ -835,7 +1028,6 @@ const CreateRFQ: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Attachments / Terms */}
                     <div className="bd-row-2">
                         <div className="bd-field">
                             <label className="bd-label">Attachments (Technical Specifications)</label>
@@ -893,7 +1085,6 @@ const CreateRFQ: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Lot Option toggle */}
                     <div className="bd-toggle-row">
                         <div>
                             <div className="bd-toggle-row-title">Lot Option</div>
@@ -911,7 +1102,6 @@ const CreateRFQ: React.FC = () => {
                         </label>
                     </div>
 
-                    {/* Total Budget */}
                     {!lotOption && (
                         <div className="bd-field">
                             <label className="bd-label">Total Budget (AED)</label>
@@ -924,7 +1114,6 @@ const CreateRFQ: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Dynamic Sourcing Requirements */}
                     <div className="bd-dsr-box">
                         <div className="bd-dsr-header">
                             <IconSourcing /> Dynamic Sourcing Requirements (Flexible Fields)
@@ -1097,7 +1286,6 @@ const CreateRFQ: React.FC = () => {
                     <hr className="bd-section-divider" />
                     <div className="bd-section-label">Add materials or services required</div>
 
-                    {/* Add line item row */}
                     <div className="bd-item-add-row">
                         <div className="bd-item-add-grid-top">
                             <div className="bd-item-add-field">
@@ -1132,17 +1320,27 @@ const CreateRFQ: React.FC = () => {
                             </div>
                             <div className="bd-item-add-field">
                                 <label className="bd-label-sm">UOM</label>
-                                <select
-                                    className="bd-select-sm"
+                                <SearchableSelect<UnitDto>
                                     value={newItemUom}
-                                    onChange={(e) => setNewItemUom(e.target.value)}
-                                >
-                                    {uomOptions.map((u) => (
-                                        <option key={u} value={u}>
-                                            {u}
-                                        </option>
-                                    ))}
-                                </select>
+                                    placeholder="Select UOM"
+                                    isOpen={isUomDropdownOpen}
+                                    onToggle={() => setIsUomDropdownOpen((prev) => !prev)}
+                                    onClose={() => setIsUomDropdownOpen(false)}
+                                    searchTerm={uomSearchTerm}
+                                    onSearchChange={setUomSearchTerm}
+                                    options={uomSelect.options}
+                                    getOptionLabel={(o) => o.key}
+                                    getOptionKey={(o) => o.id}
+                                    onSelect={(o) => {
+                                        setNewItemUom(o.key);
+                                        setIsUomDropdownOpen(false);
+                                        setUomSearchTerm("");
+                                    }}
+                                    loading={uomSelect.loading}
+                                    onScrollBottom={uomSelect.loadMore}
+                                    searchPlaceholder="Search unit..."
+                                    small
+                                />
                             </div>
                         </div>
                         <div className="bd-item-add-grid-bottom">
@@ -1170,7 +1368,6 @@ const CreateRFQ: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Line items table */}
                     <div className="bd-line-items-label">
                         <IconList /> LINE ITEMS
                     </div>
