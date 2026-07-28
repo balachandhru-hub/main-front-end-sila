@@ -1153,7 +1153,6 @@
         display: none;
     }
 }
-
 /* ---------- Custom Infinite Scroll Select ---------- */
 .bd-custom-select-container {
     position: relative;
@@ -1180,21 +1179,54 @@
     max-width: 90%;
 }
 
-.bd-custom-select-menu {
+.bd-custom-select-panel {
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
     width: 100%;
-    max-height: 250px;
-    overflow-y: auto;
     background: #ffffff;
     border: 1px solid #d7dbe1;
     border-radius: 8px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     z-index: 50;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.bd-custom-select-search {
+    padding: 8px;
+    border-bottom: 1px solid #eef0f3;
+    flex-shrink: 0;
+}
+
+.bd-custom-select-menu {
+    position: static;
+    width: 100%;
+    max-height: 220px;
+    overflow-y: auto;
     margin: 0;
     padding: 6px 0;
     list-style: none;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.bd-custom-select-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.bd-custom-select-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.bd-custom-select-menu::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 999px;
+}
+
+.bd-custom-select-menu::-webkit-scrollbar-thumb:hover {
+    background-color: #9ca3af;
 }
 
 .bd-custom-select-option,
