@@ -317,9 +317,13 @@
     display: grid;
     grid-template-columns: 1fr 1fr 1fr auto;
     gap: 14px;
-    align-items: end;
+    align-items: start; /* Changed from 'end' to 'start' */
 }
 
+/* Push the Add button down so it lines up with the inputs, not the labels */
+.bd-dsr-builder-row > .bd-btn-add {
+    margin-top: 22px;
+}
 .bd-dsr-fields-list {
     display: grid;
     grid-template-columns: 1fr 1fr;
