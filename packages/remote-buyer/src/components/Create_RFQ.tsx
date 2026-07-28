@@ -149,8 +149,6 @@ const steps: { key: StepKey; label: string }[] = [
 
 const initialLineItems: LineItem[] = [];
 
-const fieldTypeOptions: FieldType[] = ["Text", "Dropdown", "Radio", "Checkbox"];
-
 const initialCustomFields: CustomField[] = [];
 
 const registrationTemplateOptions = [
