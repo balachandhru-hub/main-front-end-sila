@@ -127,8 +127,8 @@ const Shell = () => {
           <Loader 
             fullScreen={true} 
             message="Loading modules..." 
-            theme={userRole === 'platform-user' ? 'light' : 'dark'}
-            color={userRole === 'platform-user' ? '#a855f7' : '#6366f1'}
+            theme="light"
+            color="#1976d2"
           />
         }>
           <Routes>

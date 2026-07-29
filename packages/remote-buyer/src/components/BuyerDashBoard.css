@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 .pud-shell {
     display: flex;
@@ -199,7 +198,7 @@
 }
 
 .pud-title {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Segoe UI', sans-serif;
     font-size: 23px;
     font-weight: 500;
     color: #111827;
