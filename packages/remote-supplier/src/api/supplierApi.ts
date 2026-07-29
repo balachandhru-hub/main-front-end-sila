@@ -172,3 +172,31 @@ export const submitSupplierQuotation = async (
     throw new Error(`${errMsg} (${status})`);
   }
 };
+
+// ============================================================================
+// API: UNSPSC segments and classes for product/sub-product categorization
+// ============================================================================
+export const fetchSegments = async (): Promise<any[]> => {
+  try {
+    const res = await supplierInstance.get(`/api/v1/masterdata/unspsc?pageIndex=1&pageSize=10`);
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (error: any) {
+    console.error('Failed to fetch segments:', error);
+    return [];
+  }
+};
+
+export const fetchClasses = async (segment: number, family: number): Promise<any[]> => {
+  try {
+    const res = await supplierInstance.get(
+      `/api/v1/masterdata/unspsc/class-commodity?segment=${segment}&family=${family}&pageIndex=1&pageSize=10`
+    );
+    if (Array.isArray(res.data)) {
+      return res.data.filter((item) => item && item.class !== null && item.title !== '');
+    }
+    return [];
+  } catch (error: any) {
+    console.error('Failed to fetch classes:', error);
+    return [];
+  }
+};

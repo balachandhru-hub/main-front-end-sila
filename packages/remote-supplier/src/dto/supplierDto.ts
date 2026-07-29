@@ -106,6 +106,17 @@ export interface DispatchLocationDto {
   isDefault: boolean;
 }
 
+export interface CategoryDto {
+  segment?: number;
+  segmentTitle?: string;
+  family?: number;
+  familyTitle?: string;
+  class?: number;
+  classTitle?: string;
+  commodity?: number;
+  commodityTitle?: string;
+}
+
 // ============================================================================
 // SUPPLIER PROFILE — READ (GET /supplier/profile)
 // ============================================================================
@@ -124,6 +135,8 @@ export interface SupplierProfileResponse {
   })[];
   bankAccounts: BankAccountDto[];
   dispatchLocations: DispatchLocationDto[];
+  categories?: CategoryDto[];
+  supplierCategories?: CategoryDto[];
 }
 
 // ============================================================================
@@ -136,6 +149,7 @@ export interface CreateSupplierProfilePayload {
   registrations: RegistrationDto[];
   bankAccounts: BankAccountDto[];
   dispatchLocations: DispatchLocationDto[];
+  supplierCategories?: CategoryDto[];
 }
 
 // ============================================================================
@@ -149,6 +163,7 @@ export interface UpdateRejectedSupplierPayload {
     registrations: RegistrationDto[];
     bankAccounts: BankAccountDto[];
     dispatchLocations: DispatchLocationDto[];
+    supplierCategories?: CategoryDto[];
   };
 }
 
