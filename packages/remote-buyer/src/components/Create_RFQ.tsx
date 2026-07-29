@@ -1173,18 +1173,15 @@ const CreateRFQ: React.FC = () => {
                         </label>
                     </div>
 
-                    {!lotOption && (
-                        <div className="bd-field">
-                            <label className="bd-label">Total Budget (AED)</label>
-                            <input
-                                className="bd-input"
-                                type="text"
-                                value={totalBudget}
-                                onChange={(e) => setTotalBudget(e.target.value)}
-                            />
-                        </div>
-                    )}
-
+                    <div className="bd-field">
+                        <label className="bd-label">Total Budget (AED)</label>
+                        <input
+                            className="bd-input"
+                            type="text"
+                            value={totalBudget}
+                            onChange={(e) => setTotalBudget(e.target.value)}
+                        />
+                    </div>
                     <div className="bd-dsr-box">
                         <div className="bd-dsr-header">
                             <IconSourcing /> Dynamic Sourcing Requirements (Flexible Fields)
