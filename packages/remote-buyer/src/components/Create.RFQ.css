@@ -1239,6 +1239,12 @@
     transition: background 0.15s ease;
 }
 
+.bd-custom-select-option {
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
 .bd-custom-select-option:hover {
     background: #f3f4f6;
 }
@@ -1248,6 +1254,8 @@
     color: #2f6feb;
     font-weight: 600;
 }
+
+
 
 .bd-custom-select-empty,
 .bd-custom-select-loading {
