@@ -8,6 +8,23 @@ export interface DeleteResponseDto {
   id: string;
 }
 
+// ─── DTOs ───
+export interface CreateBusinessUserDto {
+  name: string;
+  email: string;
+  phone: string;
+  country: string;
+  addressLine: string;
+  userName: string;
+  password: string;
+}
+ 
+export interface CreateBusinessUserResponseDto {
+  statusCode: number;
+  message: string;
+  description: string;
+  data?: any;
+}
 // ─── Delete Department ───
 export const deleteDepartment = async (departmentId: string): Promise<DeleteResponseDto> => {
   try {
@@ -110,6 +127,42 @@ export const updateCostCenter = async (
       errMsg = error.message;
     }
 
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+
+// ─── Create Business User ───
+export const createBusinessUser = async (
+  userData: CreateBusinessUserDto
+): Promise<CreateBusinessUserResponseDto> => {
+  try {
+    const response = await platformInstance.post('/api/v1/identity/person', {
+      name: userData.name,
+      email: userData.email,
+      phone: userData.phone,
+      country: userData.country,
+      addressLine: userData.addressLine,
+      userName: userData.userName,
+      password: userData.password,
+      roleId: '5a72f81e-a2c5-4f4a-bd55-6376c3c9ed73',
+    });
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+ 
+    let errMsg = 'Failed to create business user.';
+    if (typeof responseData === 'string') {
+      errMsg = responseData;
+    } else if (responseData?.message) {
+      errMsg = responseData.message;
+    } else if (responseData?.description) {
+      errMsg = responseData.description;
+    } else if (error.message) {
+      errMsg = error.message;
+    }
+ 
     throw new Error(`${errMsg} (${status})`);
   }
 };

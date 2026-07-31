@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 
-export type UserRole = 'buyer' | 'supplier' | 'platform-user';
+export type UserRole = 'buyer' | 'supplier' | 'platform-user'| 'buyer-admin'|'buyer-business-user';
 
 export const ROLE_MAPPING: Record<string, UserRole> = {
-  '735bb267-fec0-489f-8249-d3d65b3857ea': 'supplier', // SUPPLIER_ADMINISTRATOR
-  'c95f5a1b-4aec-4647-9328-895a58193ec4': 'buyer',    // BUYER_ADMINISTRATOR
-  '113d8ead-40c2-425a-bc60-5989e6cdabca': 'platform-user', // PLATFORM_ADMINISTRATOR
+  '735bb267-fec0-489f-8249-d3d65b3857ea': 'supplier',
+  'c95f5a1b-4aec-4647-9328-895a58193ec4': 'buyer-admin',          
+  '113d8ead-40c2-425a-bc60-5989e6cdabca': 'platform-user', 
+  '5a72f81e-a2c5-4f4a-bd55-6376c3c9ed73': 'buyer-business-user',  
 };
 
 export interface AuthState {

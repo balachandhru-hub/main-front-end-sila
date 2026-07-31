@@ -11,9 +11,12 @@ const BuyerApp = React.lazy(() => import('remoteBuyer/BuyerApp'));
 const SupplierApp = React.lazy(() => import('remoteSupplier/SupplierApp'));
 const PlatformUserApp = React.lazy(() => import('remotePlatformUser/PlatformUserApp'));
 
-const Protected: React.FC<{ children: React.ReactNode; allowedRole: 'buyer' | 'supplier' | 'platform-user' }> = ({
+const Protected: React.FC<{ 
+  children: React.ReactNode; 
+  allowedRoles: ('buyer' | 'supplier' | 'platform-user' | 'buyer-admin' | 'buyer-business-user')[] 
+}> = ({
   children,
-  allowedRole,
+  allowedRoles,
 }) => {
   const { isLoggedIn, userRole } = useAuth();
 
@@ -21,8 +24,19 @@ const Protected: React.FC<{ children: React.ReactNode; allowedRole: 'buyer' | 's
     return <Navigate to="/" replace />;
   }
 
-  if (userRole !== allowedRole) {
-    return <Navigate to={userRole === 'buyer' ? '/buyer' : '/supplier'} replace />;
+  if (!allowedRoles.includes(userRole as any)) {
+    // Redirect based on user's actual role
+    if (userRole === 'buyer-admin') {
+      return <Navigate to="/platform-user?view=admin" replace />;
+    } else if (userRole === 'buyer-business-user') {
+      return <Navigate to="/buyer" replace />;
+    } else if (userRole === 'buyer') {
+      return <Navigate to="/buyer" replace />;
+    } else if (userRole === 'supplier') {
+      return <Navigate to="/supplier" replace />;
+    } else {
+      return <Navigate to="/platform-user" replace />;
+    }
   }
 
   return <>{children}</>;
@@ -62,6 +76,26 @@ const Sidebar = () => {
             </Link>
           </li>
         )}
+        {userRole === 'buyer-admin' && (
+          <li>
+            <Link
+              to="/platform-user?view=admin"
+              className={`nav-item ${location.pathname.includes('/platform-user') ? 'active' : ''}`}
+            >
+              Admin Dashboard
+            </Link>
+          </li>
+        )}
+        {userRole === 'buyer-business-user' && (
+          <li>
+            <Link
+              to="/buyer"
+              className={`nav-item ${location.pathname.includes('/buyer') ? 'active' : ''}`}
+            >
+              Dashboard
+            </Link>
+          </li>
+        )}
         {userRole === 'supplier' && (
           <li>
             <Link
@@ -87,7 +121,7 @@ const Sidebar = () => {
       <div style={{ marginTop: 'auto' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-dark)', textAlign: 'center' }}>
-            Logged in as {userRole?.toUpperCase()}
+            Logged in as {userRole?.toUpperCase().replace('-', ' ')}
           </div>
           <Button variant="secondary" size="sm" fullWidth={true} onClick={logout}>
             Log Out
@@ -112,17 +146,20 @@ const Shell = () => {
     return () => window.removeEventListener('session:expired', handleSessionExpired);
   }, [logout, navigate]);
 
-  // Hide sidebar during onboarding, for platform-user, supplier, and buyer
+  // ✅ Updated logic for sidebar visibility
   const isOnboarding = location.pathname.includes('/onboarding');
   const isPlatformUser = userRole === 'platform-user';
+  const isBuyerAdmin = userRole === 'buyer-admin';
+  const isBuyerBusinessUser = userRole === 'buyer-business-user';
   const isSupplier = userRole === 'supplier';
   const isBuyer = userRole === 'buyer';
-  const showSidebar = isLoggedIn && !isOnboarding && !isPlatformUser && !isSupplier && !isBuyer;
+  
+  const showSidebar = isLoggedIn && !isOnboarding && !isPlatformUser && !isBuyerAdmin && !isBuyerBusinessUser && !isSupplier && !isBuyer;
 
   return (
     <div className="app-container">
       {showSidebar && <Sidebar />}
-      <main className={`main-content ${!isLoggedIn || isOnboarding || isPlatformUser || isSupplier || isBuyer ? 'no-padding' : ''} ${isPlatformUser ? 'bg-white' : ''}`}>
+      <main className={`main-content ${!isLoggedIn || isOnboarding || isPlatformUser || isBuyerAdmin || isBuyerBusinessUser || isSupplier || isBuyer ? 'no-padding' : ''} ${isPlatformUser ? 'bg-white' : ''}`}>
         <React.Suspense fallback={
           <Loader 
             fullScreen={true} 
@@ -136,7 +173,20 @@ const Shell = () => {
               path="/"
               element={
                 isLoggedIn ? (
-                  <Navigate to={userRole === 'buyer' ? '/buyer' : userRole === 'supplier' ? '/supplier' : '/platform-user'} replace />
+                  <Navigate 
+                    to={
+                      userRole === 'buyer-admin' 
+                        ? '/platform-user?view=admin'
+                        : userRole === 'buyer-business-user' 
+                        ? '/buyer'
+                        : userRole === 'buyer' 
+                        ? '/buyer' 
+                        : userRole === 'supplier' 
+                        ? '/supplier' 
+                        : '/platform-user'
+                    } 
+                    replace 
+                  />
                 ) : (
                   <Login 
                     onCreateAccount={() => navigate('/supplier-registration')} 
@@ -154,7 +204,7 @@ const Shell = () => {
             <Route
               path="/buyer/*"
               element={
-                <Protected allowedRole="buyer">
+                <Protected allowedRoles={['buyer', 'buyer-business-user']}>
                   <BuyerApp />
                 </Protected>
               }
@@ -164,17 +214,17 @@ const Shell = () => {
             <Route
               path="/supplier/*"
               element={
-                <Protected allowedRole="supplier">
+                <Protected allowedRoles={['supplier']}>
                   <SupplierApp />
                 </Protected>
               }
             />
 
-            {/* Platform User Remote Routes */}
+            {/* Platform User Remote Routes - includes buyer-admin */}
             <Route
               path="/platform-user/*"
               element={
-                <Protected allowedRole="platform-user">
+                <Protected allowedRoles={['platform-user', 'buyer-admin']}>
                   <PlatformUserApp />
                 </Protected>
               }
@@ -184,7 +234,22 @@ const Shell = () => {
             <Route
               path="*"
               element={
-                <Navigate to={isLoggedIn ? (userRole === 'buyer' ? '/buyer' : userRole === 'supplier' ? '/supplier' : '/platform-user') : '/'} replace />
+                <Navigate 
+                  to={
+                    isLoggedIn 
+                      ? userRole === 'buyer-admin'
+                        ? '/platform-user?view=admin'
+                        : userRole === 'buyer-business-user'
+                        ? '/buyer'
+                        : userRole === 'buyer'
+                        ? '/buyer'
+                        : userRole === 'supplier'
+                        ? '/supplier'
+                        : '/platform-user'
+                      : '/'
+                  } 
+                  replace 
+                />
               }
             />
           </Routes>
