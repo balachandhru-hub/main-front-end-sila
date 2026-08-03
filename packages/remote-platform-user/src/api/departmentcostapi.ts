@@ -7,7 +7,15 @@ export interface DeleteResponseDto {
   description: string;
   id: string;
 }
-
+export interface OrganizationUser {
+  personId: string;
+  userId: string;
+  name: string;
+  email: string;
+  userName: string;
+  roleId: string;
+  roleName: string;
+}
 // ─── DTOs ───
 export interface CreateBusinessUserDto {
   name: string;
@@ -167,6 +175,32 @@ export const createBusinessUser = async (
     const responseData = error.response?.data;
 
     let errMsg = 'Failed to create business user.';
+    if (typeof responseData === 'string') {
+      errMsg = responseData;
+    } else if (responseData?.message) {
+      errMsg = responseData.message;
+    } else if (responseData?.description) {
+      errMsg = responseData.description;
+    } else if (error.message) {
+      errMsg = error.message;
+    }
+
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+
+export const getOrganizationUsers = async (organizationId: string): Promise<OrganizationUser[]> => {
+  try {
+    const response = await platformInstance.get('/api/v1/identity/organization-users', {
+      params: { organizationId }
+    });
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+
+    let errMsg = 'Failed to fetch organization users.';
     if (typeof responseData === 'string') {
       errMsg = responseData;
     } else if (responseData?.message) {

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button, Loader } from '@vosox/shared-ui';
-import { createBusinessUser } from './api/departmentcostapi'; 
+import { createBusinessUser, getOrganizationUsers } from './api/departmentcostapi'; 
 import { Country } from 'country-state-city';
 import { CiMail } from 'react-icons/ci';
 import { FaUser, FaLock, FaEye, FaEyeSlash, FaPhone, FaMapMarkerAlt, FaGlobe } from 'react-icons/fa';
@@ -10,14 +10,18 @@ import './UserAdmin.css';
 import { useAuthStore } from '../../host-app/src/store/useAuthStore';
 
 interface BusinessUser {
-  id: string;
-  email: string;
+  personId: string;
+  userId: string;
   name: string;
-  phone: string;
-  country: string;
-  addressLine: string;
+  email: string;
   userName: string;
-  createdDate: string;
+  roleId: string;
+  roleName: string;
+  // Optional: only present for newly created users before refresh
+  phone?: string;
+  country?: string;
+  addressLine?: string;
+  createdDate?: string;
 }
 
 const UserAdmin: React.FC = () => {
@@ -35,52 +39,38 @@ const UserAdmin: React.FC = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [listLoading, setListLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [users, setUsers] = useState<BusinessUser[]>([]);
 
-  // Dummy data
-  const [users, setUsers] = useState<BusinessUser[]>([
-    {
-      id: '1',
-      email: 'user1@example.com',
-      name: 'John Doe',
-      phone: '9876543210',
-      country: 'US',
-      addressLine: 'New York, NY',
-      userName: 'johndoe',
-      createdDate: '2024-01-15',
-    },
-    {
-      id: '2',
-      email: 'user2@example.com',
-      name: 'Jane Smith',
-      phone: '9876543211',
-      country: 'US',
-      addressLine: 'Los Angeles, CA',
-      userName: 'janesmith',
-      createdDate: '2024-02-20',
-    },
-    {
-      id: '3',
-      email: 'user3@example.com',
-      name: 'Mike Johnson',
-      phone: '9876543212',
-      country: 'US',
-      addressLine: 'Chicago, IL',
-      userName: 'mikejohnson',
-      createdDate: '2024-03-10',
-    },
-    {
-      id: '4',
-      email: 'user4@example.com',
-      name: 'Sarah Williams',
-      phone: '9876543213',
-      country: 'US',
-      addressLine: 'Houston, TX',
-      userName: 'sarahwilliams',
-      createdDate: '2024-04-05',
-    },
-  ]);
+  // Fetch real users on mount
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const orgId = sessionStorage.getItem('vosox_organization_id');
+      if (!orgId) {
+        setError('Organization ID not found. Please log in again.');
+        return;
+      }
+      setListLoading(true);
+      try {
+        const data = await getOrganizationUsers(orgId);
+        setUsers(data);
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to load users', {
+          position: 'top-right',
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      } finally {
+        setListLoading(false);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const getPageTitle = () => {
     if (userRole === 'buyer-admin') return 'Buyer Business User List';
@@ -208,13 +198,16 @@ const UserAdmin: React.FC = () => {
         const countryFullName = Country.getAllCountries().find(c => c.isoCode === formData.country)?.name || formData.country;
 
         const newUser: BusinessUser = {
-          id: userId,
-          email: formData.email,
+          personId: userId,
+          userId: userId,
           name: formData.name,
+          email: formData.email,
+          userName: formData.userName,
+          roleId: roleId,
+          roleName: userTypeDisplay,
           phone: formData.phone,
           country: countryFullName,
           addressLine: formData.addressLine,
-          userName: formData.userName,
           createdDate: new Date().toISOString().split('T')[0],
         };
 
@@ -277,39 +270,61 @@ const UserAdmin: React.FC = () => {
       </div>
 
       <div className="user-admin-cards-grid">
-        {users.map((user) => (
-          <div key={user.id} className="user-admin-card">
-            <div className="card-header">
-              <h3 className="card-name">{user.name}</h3>
-            </div>
-            <div className="card-body">
-              <div className="card-field">
-                <label className="card-label"><CiMail /> Email</label>
-                <p className="card-value">{user.email}</p>
-              </div>
-              <div className="card-field">
-                <label className="card-label"><FaUser /> Username</label>
-                <p className="card-value">{user.userName}</p>
-              </div>
-              <div className="card-field">
-                <label className="card-label"><FaPhone /> Phone</label>
-                <p className="card-value">{user.phone}</p>
-              </div>
-              <div className="card-field">
-                <label className="card-label"><FaGlobe /> Country</label>
-                <p className="card-value">{user.country}</p>
-              </div>
-              <div className="card-field">
-                <label className="card-label"><FaMapMarkerAlt /> Address</label>
-                <p className="card-value">{user.addressLine}</p>
-              </div>
-              <div className="card-field">
-                <label className="card-label"> Created Date</label>
-                <p className="card-value">{user.createdDate}</p>
-              </div>
-            </div>
+        {listLoading ? (
+          <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center', padding: '40px' }}>
+            <Loader color="#2f7cf6" />
           </div>
-        ))}
+        ) : users.length === 0 ? (
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+            No users found.
+          </div>
+        ) : (
+          users.map((user) => (
+            <div key={user.personId} className="user-admin-card">
+              <div className="card-header">
+                <h3 className="card-name">{user.name}</h3>
+              </div>
+              <div className="card-body">
+                <div className="card-field">
+                  <label className="card-label"><CiMail /> Email</label>
+                  <p className="card-value">{user.email}</p>
+                </div>
+                <div className="card-field">
+                  <label className="card-label"><FaUser /> Username</label>
+                  <p className="card-value">{user.userName}</p>
+                </div>
+                <div className="card-field">
+                  <label className="card-label"><FaUser /> Role</label>
+                  <p className="card-value">{user.roleName}</p>
+                </div>
+                {user.phone && (
+                  <div className="card-field">
+                    <label className="card-label"><FaPhone /> Phone</label>
+                    <p className="card-value">{user.phone}</p>
+                  </div>
+                )}
+                {user.country && (
+                  <div className="card-field">
+                    <label className="card-label"><FaGlobe /> Country</label>
+                    <p className="card-value">{user.country}</p>
+                  </div>
+                )}
+                {user.addressLine && (
+                  <div className="card-field">
+                    <label className="card-label"><FaMapMarkerAlt /> Address</label>
+                    <p className="card-value">{user.addressLine}</p>
+                  </div>
+                )}
+                {user.createdDate && (
+                  <div className="card-field">
+                    <label className="card-label">Created Date</label>
+                    <p className="card-value">{user.createdDate}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {showModal && (
