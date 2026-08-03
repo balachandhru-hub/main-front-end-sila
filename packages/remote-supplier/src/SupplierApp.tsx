@@ -36,6 +36,8 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, re
 
   const handleOnboardingComplete = async (data: {
     step1: Step1Data;
+    selectedProducts: any[];
+    selectedSubProducts: any[];
     step2: Step2Data;
     step3: Step3Data;
     step4: Step4Data;
@@ -133,6 +135,28 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, re
       description: data.step1.companyDescription || '',
     };
 
+    const supplierCategories = data.selectedSubProducts?.length > 0
+      ? data.selectedSubProducts.map((sub: any) => ({
+        segment: sub.parentSegment || 0,
+        segmentTitle: sub.parentTitle || '',
+        family: sub.parentFamily || 0,
+        familyTitle: sub.parentTitle || '',
+        class: sub.class,
+        classTitle: sub.title,
+        commodity: sub.commodity,
+        commodityTitle: sub.title,
+      }))
+      : data.selectedProducts?.map((product: any) => ({
+        segment: product.segment,
+        segmentTitle: product.title,
+        family: product.family,
+        familyTitle: product.title,
+        class: 0,
+        classTitle: '',
+        commodity: 0,
+        commodityTitle: '',
+      })) || [];
+
     if (rejectedProfile) {
       // ------------------------------------------------------------
       // RESUBMISSION FLOW: hit update-rejected-supplier
@@ -144,6 +168,7 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, re
           registrations: mappedRegistrations,
           bankAccounts: mappedBankAccounts,
           dispatchLocations: mappedDispatchLocations,
+          supplierCategories: supplierCategories,
         },
       };
 
@@ -167,6 +192,7 @@ const OnboardingRoute: React.FC<OnboardingRouteProps> = ({ onCompleteSuccess, re
       registrations: mappedRegistrations,
       bankAccounts: mappedBankAccounts,
       dispatchLocations: mappedDispatchLocations,
+      supplierCategories: supplierCategories,
     };
 
     const response = await createSupplierProfile(payload);

@@ -106,6 +106,17 @@ export interface DispatchLocationDto {
   isDefault: boolean;
 }
 
+export interface CategoryDto {
+  segment?: number;
+  segmentTitle?: string;
+  family?: number;
+  familyTitle?: string;
+  class?: number;
+  classTitle?: string;
+  commodity?: number;
+  commodityTitle?: string;
+}
+
 // ============================================================================
 // SUPPLIER PROFILE — READ (GET /supplier/profile)
 // ============================================================================
@@ -124,6 +135,8 @@ export interface SupplierProfileResponse {
   })[];
   bankAccounts: BankAccountDto[];
   dispatchLocations: DispatchLocationDto[];
+  categories?: CategoryDto[];
+  supplierCategories?: CategoryDto[];
 }
 
 // ============================================================================
@@ -136,6 +149,7 @@ export interface CreateSupplierProfilePayload {
   registrations: RegistrationDto[];
   bankAccounts: BankAccountDto[];
   dispatchLocations: DispatchLocationDto[];
+  supplierCategories?: CategoryDto[];
 }
 
 // ============================================================================
@@ -149,5 +163,93 @@ export interface UpdateRejectedSupplierPayload {
     registrations: RegistrationDto[];
     bankAccounts: BankAccountDto[];
     dispatchLocations: DispatchLocationDto[];
+    supplierCategories?: CategoryDto[];
   };
 }
+
+// ============================================================================
+// RFQ DATA DTOs
+// ============================================================================
+
+export interface RFQMasterDataItem {
+  rfqNumber: string;
+  title: string;
+  endDate: string;
+  deliveryLocation: string;
+  organizationName: string;
+  rfqId: string;
+}
+
+export interface RFQDetailDocument {
+  id: string;
+  assetType: string;
+  assetName: string;
+  fileType: string;
+  fileName: string;
+}
+
+export interface RFQDetailItem {
+  id?: string;
+  buyerRFQItemId?: string;
+  supplierRFQItemId?: string;
+  supplierRFQId?: string;
+  description: string;
+  quantity: number;
+  uom: string;
+  materialCode: string;
+  materialGroup: string;
+  costCenter: string;
+  attachments: RFQDetailDocument[];
+}
+
+export interface RFQSupplierQuotation {
+  id?: string;
+  qutationId?: string;
+  totalPrice: number;
+  deliveryCharge: number;
+  tax: number;
+  discount: number;
+  deliveryType: string;
+  status: string;
+  discountType?: string;
+  taxType?: string;
+}
+
+export interface RFQSupplierQuotationItem {
+  id?: string;
+  supplierRFQItemId?: string;
+  buyerRFQItemId?: string;
+  quotedPrice: number;
+}
+
+export interface RFQDetailResponse {
+  title: string;
+  description: string;
+  deliveryLocation: string;
+  startDate: string;
+  endDate: string;
+  addLotOption: boolean;
+  technicalSpecificationDocuments: RFQDetailDocument[];
+  termsConditionDocuments: RFQDetailDocument[];
+  items: RFQDetailItem[];
+  supplierQuotation: RFQSupplierQuotation[];
+  supplierQuotationItems: RFQSupplierQuotationItem[];
+}
+
+export interface SubmitQuotationPayload {
+  supplierQuotationId?: string | null;
+  supplierRFQId?: string | null;
+  totalPrice: number;
+  deliveryCharge: number;
+  deliveryType: string;
+  discount: number;
+  discountType: string;
+  tax: number;
+  taxType: string;
+  items?: {
+    supplierRFQItemId?: string | null;
+    buyerRFQItemId: string;
+    quotedPrice: number;
+  }[];
+}
+

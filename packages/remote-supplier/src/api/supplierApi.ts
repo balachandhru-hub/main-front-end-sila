@@ -5,10 +5,13 @@ import type {
   CreateSupplierProfilePayload,
   MetadataReferenceItem,
   MetadataReferenceType,
+  RFQMasterDataItem,
+  RFQDetailResponse,
+  SubmitQuotationPayload,
 } from '../dto/supplierDto';
 
 // re-export so existing imports elsewhere (e.g. SupplierApp.tsx) keep working
-export type { SupplierProfileResponse } from '../dto/supplierDto';
+export type { SupplierProfileResponse, RFQMasterDataItem, RFQDetailResponse, SubmitQuotationPayload } from '../dto/supplierDto';
 
 // ============================================================================
 // API: Create Supplier Profile (Register)
@@ -118,5 +121,82 @@ export const logoutSupplier = async (): Promise<void> => {
     const responseData = error.response?.data;
     const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
     throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+// ============================================================================
+// API: Get RFQ Master Data (Recent Sourcing Opportunities)
+// ============================================================================
+export const fetchRFQMasterData = async (payload: {
+  supplierId: string;
+  index: number;
+  limit: number;
+}): Promise<RFQMasterDataItem[]> => {
+  try {
+    const response = await supplierInstance.post('/api/v1/supplier/rfq-master-data', payload);
+    return response.data ?? [];
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    throw new Error(`Failed to fetch RFQ master data (${status})`);
+  }
+};
+
+// ============================================================================
+// API: Get RFQ By ID
+// ============================================================================
+export const fetchRFQById = async (rfqId: string): Promise<RFQDetailResponse> => {
+  try {
+    const response = await supplierInstance.get('/api/v1/supplier/rfq-by-id', {
+      params: { rfqId },
+    });
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    throw new Error(`Failed to fetch RFQ details (${status})`);
+  }
+};
+
+// ============================================================================
+// API: Submit Supplier Quotation (Create/Update Quotation)
+// ============================================================================
+export const submitSupplierQuotation = async (
+  payload: SubmitQuotationPayload
+): Promise<any> => {
+  try {
+    const response = await supplierInstance.put('/api/v1/supplier/quotation', payload);
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to submit quotation.';
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+// ============================================================================
+// API: UNSPSC segments and classes for product/sub-product categorization
+// ============================================================================
+export const fetchSegments = async (): Promise<any[]> => {
+  try {
+    const res = await supplierInstance.get(`/api/v1/masterdata/unspsc?pageIndex=1&pageSize=10`);
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (error: any) {
+    console.error('Failed to fetch segments:', error);
+    return [];
+  }
+};
+
+export const fetchClasses = async (segment: number, family: number): Promise<any[]> => {
+  try {
+    const res = await supplierInstance.get(
+      `/api/v1/masterdata/unspsc/class-commodity?segment=${segment}&family=${family}&pageIndex=1&pageSize=10`
+    );
+    if (Array.isArray(res.data)) {
+      return res.data.filter((item) => item && item.class !== null && item.title !== '');
+    }
+    return [];
+  } catch (error: any) {
+    console.error('Failed to fetch classes:', error);
+    return [];
   }
 };

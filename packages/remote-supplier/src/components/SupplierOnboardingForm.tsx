@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { fetchOnboardingDetails, fetchMetadataReferenceList } from '../api/supplierApi';
+import { fetchOnboardingDetails, fetchMetadataReferenceList, fetchSegments, fetchClasses } from '../api/supplierApi';
 import type { MetadataReferenceItem } from '../dto/supplierDto';
 import { Country, State, City } from 'country-state-city';
 import './SupplierOnboardingForm.css';
@@ -145,9 +145,10 @@ interface StepMeta {
 
 const STEPS: StepMeta[] = [
   { id: 1, label: 'Business Information' },
-  { id: 2, label: 'Registrations & Certifications' },
-  { id: 3, label: 'Bank Account Information' },
-  { id: 4, label: 'Dispatch Locations' },
+  { id: 2, label: 'Product & Service Categories' },
+  { id: 3, label: 'Registrations & Certifications' },
+  { id: 4, label: 'Bank Account Information' },
+  { id: 5, label: 'Dispatch Locations' },
 ];
 
 // ============================================================================
@@ -1343,12 +1344,389 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
 };
 
 // ============================================================================
+// STEP 2 COMPONENT: Step2Categories (Product & Service Categories)
+// ============================================================================
+
+export interface SelectedProduct {
+  segment: number;
+  family: number;
+  title: string;
+}
+
+export interface SelectedSubProduct {
+  class: number;
+  commodity: number;
+  title: string;
+  parentSegment?: number;
+  parentFamily?: number;
+  parentTitle?: string;
+}
+
+interface Step2CategoriesProps {
+  selectedProducts: SelectedProduct[];
+  setSelectedProducts: React.Dispatch<React.SetStateAction<SelectedProduct[]>>;
+  selectedSubProducts: SelectedSubProduct[];
+  setSelectedSubProducts: React.Dispatch<React.SetStateAction<SelectedSubProduct[]>>;
+  onValidationChange?: (isValid: boolean) => void;
+}
+
+function ProductDropdown({
+  segments,
+  onSelect,
+  loading,
+}: {
+  segments: any[];
+  onSelect: (family: SelectedProduct) => void;
+  loading: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [expandedSegments, setExpandedSegments] = useState<number[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const toggleExpand = (segmentId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedSegments((prev) =>
+      prev.includes(segmentId) ? prev.filter((id) => id !== segmentId) : [...prev, segmentId]
+    );
+  };
+
+  return (
+    <div ref={containerRef} className="custom-dropdown-container">
+      <div className="custom-dropdown-trigger" onClick={() => setIsOpen(!isOpen)}>
+        <span>Select product</span>
+        <span>▼</span>
+      </div>
+
+      {isOpen && (
+        <div className="custom-dropdown-menu">
+          {loading ? (
+            <div className="custom-dropdown-item-loading">Loading products...</div>
+          ) : segments.length === 0 ? (
+            <div className="custom-dropdown-item-empty">No products found.</div>
+          ) : (
+            segments.map((seg) => {
+              const isExpanded = expandedSegments.includes(seg.segment);
+              return (
+                <div key={seg.segment} className="custom-dropdown-item-wrapper">
+                  <div className="segment-row" onClick={(e) => toggleExpand(seg.segment, e)}>
+                    <span>{seg.title}</span>
+                    <button type="button" onClick={(e) => toggleExpand(seg.segment, e)}>
+                      {isExpanded ? '−' : '+'}
+                    </button>
+                  </div>
+                  {isExpanded && seg.family && (
+                    <div className="nested-items-container">
+                      {seg.family.map((fam: any) => (
+                        <div
+                          key={fam.family}
+                          className="nested-item-row"
+                          onClick={() => {
+                            onSelect({ segment: seg.segment, family: fam.family, title: fam.title });
+                            setIsOpen(false);
+                          }}
+                        >
+                          {fam.title} ({fam.family})
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SubProductDropdown({
+  classes,
+  onSelect,
+  disabled,
+  loading,
+}: {
+  classes: any[];
+  onSelect: (commodity: SelectedSubProduct) => void;
+  disabled: boolean;
+  loading: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [expandedClasses, setExpandedClasses] = useState<number[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const toggleExpand = (classId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedClasses((prev) =>
+      prev.includes(classId) ? prev.filter((id) => id !== classId) : [...prev, classId]
+    );
+  };
+
+  return (
+    <div ref={containerRef} className="custom-dropdown-container">
+      <div
+        className={`custom-dropdown-trigger ${disabled ? 'custom-dropdown-trigger-disabled' : ''}`}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+      >
+        <span>{disabled ? 'Please select a product first' : 'Select sub-product'}</span>
+        <span>▼</span>
+      </div>
+
+      {!disabled && isOpen && (
+        <div className="custom-dropdown-menu">
+          {loading ? (
+            <div className="custom-dropdown-item-loading">Loading sub-products...</div>
+          ) : classes.length === 0 ? (
+            <div className="custom-dropdown-item-empty">No sub-products found.</div>
+          ) : (
+            classes.map((cls) => {
+              const isExpanded = expandedClasses.includes(cls.class);
+              return (
+                <div key={cls.class} className="custom-dropdown-item-wrapper">
+                  <div className="class-row" onClick={(e) => toggleExpand(cls.class, e)}>
+                    <span>{cls.title}</span>
+                    <button type="button" onClick={(e) => toggleExpand(cls.class, e)}>
+                      {isExpanded ? '−' : '+'}
+                    </button>
+                  </div>
+                  {isExpanded && cls.commodity && (
+                    <div className="nested-items-container">
+                      {cls.commodity.map((com: any) => (
+                        <div
+                          key={com.commodity}
+                          className="nested-item-row"
+                          onClick={() => {
+                            onSelect({ class: cls.class, commodity: com.commodity, title: com.title });
+                            setIsOpen(false);
+                          }}
+                        >
+                          {com.title} ({com.commodity})
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const Step2Categories: React.FC<Step2CategoriesProps> = ({
+  selectedProducts,
+  setSelectedProducts,
+  selectedSubProducts,
+  setSelectedSubProducts,
+  onValidationChange,
+}) => {
+  const [activeProduct, setActiveProduct] = useState<SelectedProduct | null>(null);
+  const [segments, setSegments] = useState<any[]>([]);
+  const [loadingSegments, setLoadingSegments] = useState(false);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [loadingClasses, setLoadingClasses] = useState(false);
+
+  useEffect(() => {
+    const loadSegments = async () => {
+      setLoadingSegments(true);
+      try {
+        const data = await fetchSegments();
+        setSegments(data);
+      } catch (err) {
+        console.error('Failed to load segments:', err);
+      } finally {
+        setLoadingSegments(false);
+      }
+    };
+    loadSegments();
+  }, []);
+
+  useEffect(() => {
+    if (!activeProduct) {
+      setClasses([]);
+      return;
+    }
+    const loadClasses = async () => {
+      setLoadingClasses(true);
+      try {
+        const data = await fetchClasses(activeProduct.segment, activeProduct.family);
+        setClasses(data);
+      } catch (err) {
+        console.error('Failed to load classes:', err);
+      } finally {
+        setLoadingClasses(false);
+      }
+    };
+    loadClasses();
+  }, [activeProduct]);
+
+  useEffect(() => {
+    const isValid = selectedProducts.length > 0 && selectedSubProducts.length > 0;
+    onValidationChange?.(isValid);
+  }, [selectedProducts, selectedSubProducts, onValidationChange]);
+
+  const handleSelectProduct = (product: SelectedProduct) => {
+    if (!selectedProducts.some((p) => p.family === product.family)) {
+      setSelectedProducts((prev) => [...prev, product]);
+    }
+    setActiveProduct(product);
+  };
+
+  const handleRemoveProduct = (familyCode: number) => {
+    setSelectedProducts((prev) => {
+      const remaining = prev.filter((p) => p.family !== familyCode);
+      if (activeProduct?.family === familyCode) {
+        if (remaining.length > 0) {
+          setActiveProduct(remaining[remaining.length - 1]);
+        } else {
+          setActiveProduct(null);
+        }
+      }
+      return remaining;
+    });
+    setSelectedSubProducts((prev) => prev.filter((p) => p.parentFamily !== familyCode));
+  };
+
+  const handleSelectSubProduct = (subProduct: SelectedSubProduct) => {
+    if (!selectedSubProducts.some((p) => p.commodity === subProduct.commodity)) {
+      setSelectedSubProducts((prev) => [
+        ...prev,
+        {
+          ...subProduct,
+          parentSegment: activeProduct?.segment || 0,
+          parentFamily: activeProduct?.family || 0,
+          parentTitle: activeProduct?.title || '',
+        },
+      ]);
+    }
+  };
+
+  const handleRemoveSubProduct = (commodityCode: number) => {
+    setSelectedSubProducts((prev) => prev.filter((p) => p.commodity !== commodityCode));
+  };
+
+  return (
+    <div className="vob-card">
+      <h2 className="vob-title">Step 2: Product &amp; Service Categories</h2>
+
+      <div className="vob-category-section">
+        <div className="vob-field">
+          <label>
+            Select Product (Segment &amp; Family)<span className="vob-required">*</span>
+          </label>
+          <ProductDropdown
+            segments={segments}
+            onSelect={handleSelectProduct}
+            loading={loadingSegments}
+          />
+        </div>
+
+        <div className="vob-category-section-subtitle" style={{ marginTop: '16px' }}>
+          Selected Products ({selectedProducts.length}) - <em>Click a tag to select it for sub-products</em>
+        </div>
+
+        <div className="vob-category-tags" style={{ margin: '8px 0 16px 0' }}>
+          {selectedProducts.length === 0 ? (
+            <span className="custom-dropdown-item-empty">No products selected yet.</span>
+          ) : (
+            selectedProducts.map((p) => {
+              const isActive = activeProduct?.family === p.family;
+              return (
+                <span
+                  key={p.family}
+                  className={`vob-category-tag ${isActive ? 'vob-category-tag-active' : ''}`}
+                  onClick={() => setActiveProduct(p)}
+                >
+                  {p.title} ({p.family})
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveProduct(p.family);
+                    }}
+                  >
+                    &times;
+                  </button>
+                </span>
+              );
+            })
+          )}
+        </div>
+
+        <div className="vob-selector-divider" />
+
+        <div className="vob-field">
+          <label>
+            Select Sub-Product (Class &amp; Commodity)
+            {activeProduct && <span style={{ color: '#1976d2', fontWeight: 600 }}> - for {activeProduct.title}</span>}
+            <span className="vob-required">*</span>
+          </label>
+          <SubProductDropdown
+            classes={classes}
+            onSelect={handleSelectSubProduct}
+            disabled={!activeProduct}
+            loading={loadingClasses}
+          />
+        </div>
+
+        <div className="vob-category-section-subtitle" style={{ marginTop: '16px' }}>
+          Selected Sub-Products ({selectedSubProducts.length})
+        </div>
+
+        <div className="vob-category-tags" style={{ margin: '8px 0 0 0' }}>
+          {selectedSubProducts.length === 0 ? (
+            <span className="custom-dropdown-item-empty">No sub-products selected yet.</span>
+          ) : (
+            selectedSubProducts.map((p) => (
+              <span key={p.commodity} className="vob-category-tag vob-category-tag-active-sub">
+                {p.title} ({p.commodity})
+                <button type="button" onClick={() => handleRemoveSubProduct(p.commodity)}>
+                  &times;
+                </button>
+              </span>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
 // SUPPLIER ONBOARDING FORM (MAIN WIZARD ORCHESTRATOR)
 // ============================================================================
 
 interface SupplierOnboardingFormProps {
   onComplete: (data: {
     step1: Step1Data;
+    selectedProducts: SelectedProduct[];
+    selectedSubProducts: SelectedSubProduct[];
     step2: Step2Data;
     step3: Step3Data;
     step4: Step4Data;
@@ -1360,6 +1738,8 @@ const sila_logo = `${window.location.protocol}//${window.location.host}/assets/S
 const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [step1, setStep1] = useState<Step1Data>(initialStep1Data);
+  const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
+  const [selectedSubProducts, setSelectedSubProducts] = useState<SelectedSubProduct[]>([]);
   const [step2, setStep2] = useState<Step2Data>(initialStep2Data);
   const [step3, setStep3] = useState<Step3Data>(initialStep3Data);
   const [step4, setStep4] = useState<Step4Data>(initialStep4Data);
@@ -1368,6 +1748,7 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
   const [error, setError] = useState<string | null>(null);
 
   const [step1Valid, setStep1Valid] = useState(false);
+  const [step2CategoriesValid, setStep2CategoriesValid] = useState(false);
   const [step2Valid, setStep2Valid] = useState(false);
   const [step3Valid, setStep3Valid] = useState(false);
   const [step4Valid, setStep4Valid] = useState(false);
@@ -1415,22 +1796,27 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
       return;
     }
 
-    if (currentStep === 2 && !step2Valid) {
+    if (currentStep === 2 && !step2CategoriesValid) {
       setShowValidationError(true);
       return;
     }
 
-    if (currentStep === 3 && !step3Valid) {
+    if (currentStep === 3 && !step2Valid) {
       setShowValidationError(true);
       return;
     }
 
-    if (currentStep === 4 && !step4Valid) {
+    if (currentStep === 4 && !step3Valid) {
       setShowValidationError(true);
       return;
     }
 
-    if (currentStep < 4) {
+    if (currentStep === 5 && !step4Valid) {
+      setShowValidationError(true);
+      return;
+    }
+
+    if (currentStep < 5) {
       setCurrentStep((s) => s + 1);
       setShowValidationError(false);
       return;
@@ -1438,7 +1824,14 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
 
     setSubmitting(true);
     try {
-      await onComplete({ step1, step2, step3, step4 });
+      await onComplete({
+        step1,
+        selectedProducts,
+        selectedSubProducts,
+        step2,
+        step3,
+        step4,
+      });
     } catch (err: any) {
       setError(err.message || 'Failed to save details. Please try again.');
     } finally {
@@ -1457,9 +1850,10 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
   const getTooltip = () => {
     if (submitting) return '';
     if (currentStep === 1 && !step1Valid) return 'Please fill in all required fields (Industry and Business Type) first';
-    if (currentStep === 2 && !step2Valid) return 'Please add at least one registration to proceed';
-    if (currentStep === 3 && !step3Valid) return 'Please add at least one bank account to proceed';
-    if (currentStep === 4 && !step4Valid) return 'Please add at least one location and certify all statements to proceed';
+    if (currentStep === 2 && !step2CategoriesValid) return 'Please select at least one product and one sub-product to proceed';
+    if (currentStep === 3 && !step2Valid) return 'Please add at least one registration to proceed';
+    if (currentStep === 4 && !step3Valid) return 'Please add at least one bank account to proceed';
+    if (currentStep === 5 && !step4Valid) return 'Please add at least one location and certify all statements to proceed';
     return '';
   };
 
@@ -1516,9 +1910,10 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
           {showValidationError && (
             <div className="vob-validation-banner">
               {currentStep === 1 && 'Please fill in all required fields (Industry and Business Type) before proceeding.'}
-              {currentStep === 2 && 'Please add at least one registration before proceeding.'}
-              {currentStep === 3 && 'Please add at least one bank account before proceeding.'}
-              {currentStep === 4 && 'Please add at least one location and certify all statements before proceeding.'}
+              {currentStep === 2 && 'Please select at least one product and sub-product before proceeding.'}
+              {currentStep === 3 && 'Please add at least one registration before proceeding.'}
+              {currentStep === 4 && 'Please add at least one bank account before proceeding.'}
+              {currentStep === 5 && 'Please add at least one location and certify all statements before proceeding.'}
             </div>
           )}
 
@@ -1533,6 +1928,15 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
             />
           )}
           {currentStep === 2 && (
+            <Step2Categories
+              selectedProducts={selectedProducts}
+              setSelectedProducts={setSelectedProducts}
+              selectedSubProducts={selectedSubProducts}
+              setSelectedSubProducts={setSelectedSubProducts}
+              onValidationChange={setStep2CategoriesValid}
+            />
+          )}
+          {currentStep === 3 && (
             <Step2Registrations
               data={step2}
               onChange={setStep2}
@@ -1540,14 +1944,14 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
               registrationTypeOptions={documentTypeOptions}
             />
           )}
-          {currentStep === 3 && (
+          {currentStep === 4 && (
             <Step3BankInfo
               data={step3}
               onChange={setStep3}
               onValidationChange={setStep3Valid}
             />
           )}
-          {currentStep === 4 && (
+          {currentStep === 5 && (
             <Step4DispatchLocations
               data={step4}
               onChange={setStep4}
@@ -1571,7 +1975,7 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
               title={getTooltip()}
               className="vob-btn vob-btn--primary"
             >
-              {submitting ? 'Saving...' : currentStep === 4 ? 'Submit Profile' : 'Next'}
+              {submitting ? 'Saving...' : currentStep === 5 ? 'Submit Profile' : 'Next'}
             </button>
           </div>
         </div>

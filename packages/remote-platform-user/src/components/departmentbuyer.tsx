@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaPlus, FaTimes, FaBuilding, FaUserTie, FaList, FaCheck } from 'react-icons/fa';
+import { FaArrowLeft, FaPlus, FaTimes, FaBuilding, FaList, FaCheck, FaBox } from 'react-icons/fa';
 import { getAllBuyers, createBuyerDepartment } from '../api/platformApi';
 import type { BuyerDto } from '../dto/platformDto';
 import { useDepartmentStore } from './useDepartmentStore'; 
@@ -61,6 +61,11 @@ export const Department: React.FC = () => {
 
   const handleViewDepartmentList = () => {
     navigate('../departmentcostlist');
+  };
+
+  // ─── Navigate to Item Master ───
+  const handleViewItemMaster = () => {
+    navigate('../itemmaster');
   };
 
   const openPopup = () => {
@@ -173,17 +178,17 @@ export const Department: React.FC = () => {
 
         {/* Settings List */}
         <div className="dept-settings-list">
-          {/* Host */}
+          {/* Item Master */}
           <div className="dept-settings-card">
-            <div className="dept-settings-card-icon host">
-              <FaUserTie />
+            <div className="dept-settings-card-icon item-master">
+              <FaBox />
             </div>
             <div className="dept-settings-card-content">
-              <h3 className="dept-settings-card-title">Host</h3>
-              <p className="dept-settings-card-desc">Host management settings</p>
+              <h3 className="dept-settings-card-title">Item Master</h3>
+              <p className="dept-settings-card-desc">Manage item master data and configurations</p>
             </div>
-            <button className="dept-settings-card-btn" disabled>
-              Coming Soon
+            <button className="dept-settings-card-btn primary" onClick={handleViewItemMaster}>
+              Open
             </button>
           </div>
 

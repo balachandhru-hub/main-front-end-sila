@@ -4,6 +4,7 @@ import type {
   CreateRFQResponse,
   VerifiedSupplierSearchPayload,
   VerifiedSupplierDto,
+  BuyerRFQDetailResponse,
 } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
 
@@ -417,6 +418,35 @@ export const getUnspscFamilies = async (
     if (error?.response?.data) {
       const data = error.response.data;
       throw new Error(data?.message || data?.description || `Failed to fetch families (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+
+export const fetchBuyerRFQs = async (payload: { buyerId: string; index: number; limit: number }): Promise<any[]> => {
+  try {
+    const response = await axiosInstance.post<any[]>('/api/v1/buyer/rfq-master-data', payload);
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to fetch RFQs (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+export const fetchBuyerRFQById = async (rfqId: string): Promise<BuyerRFQDetailResponse> => {
+  try {
+    const response = await axiosInstance.get<BuyerRFQDetailResponse>('/api/v1/buyer/rfq-by-id', {
+      params: { rfqId },
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to fetch RFQ details (${error.response.status}).`);
     }
     throw new Error('Could not reach the server. Please check your connection and try again.');
   }
