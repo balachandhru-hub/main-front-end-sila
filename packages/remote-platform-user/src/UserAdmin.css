@@ -1,56 +1,57 @@
-.buyer-admin-container {
+
+.user-admin-container {
   padding: 2rem;
   background-color: #f9f9f9;
   min-height: 100vh;
 }
-
+ 
 /* Header Section */
-.buyer-admin-header {
+.user-admin-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 2.5rem;
   gap: 2rem;
 }
-
-.buyer-admin-header-left {
+ 
+.user-admin-header-left {
   flex: 1;
 }
-
-.buyer-admin-title {
+ 
+.user-admin-title {
   font-size: 2rem;
   font-weight: 700;
   color: #1a1a1a;
   margin: 0 0 0.5rem 0;
   letter-spacing: -0.5px;
 }
-
-.buyer-admin-subtitle {
+ 
+.user-admin-subtitle {
   font-size: 0.95rem;
   color: #666;
   margin: 0;
 }
-
-.buyer-admin-header-right {
+ 
+.user-admin-header-right {
   display: flex;
   gap: 1rem;
 }
-
-.buyer-admin-header-right button {
+ 
+.user-admin-header-right button {
   padding: 0.6rem 1.5rem !important;
   font-size: 0.95rem !important;
 }
-
+ 
 /* Cards Grid */
-.buyer-admin-cards-grid {
+.user-admin-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
 }
-
+ 
 /* User Card */
-.buyer-admin-card {
+.user-admin-card {
   background: white;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -58,37 +59,37 @@
   overflow: hidden;
   border: 1px solid #e5e7eb;
 }
-
-.buyer-admin-card:hover {
+ 
+.user-admin-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   transform: translateY(-2px);
 }
-
+ 
 .card-header {
   padding: 1.5rem 1.5rem 1rem 1.5rem;
   border-bottom: 1px solid #f0f0f0;
   background-color: #f5f7fa;
 }
-
+ 
 .card-name {
   font-size: 1.1rem;
   font-weight: 600;
   color: #1a1a1a;
   margin: 0;
 }
-
+ 
 .card-body {
   padding: 1.5rem;
 }
-
+ 
 .card-field {
   margin-bottom: 1.2rem;
 }
-
+ 
 .card-field:last-child {
   margin-bottom: 0;
 }
-
+ 
 .card-label {
   font-size: 0.8rem;
   font-weight: 600;
@@ -100,7 +101,7 @@
   gap: 0.4rem;
   margin-bottom: 0.4rem;
 }
-
+ 
 .card-value {
   font-size: 0.95rem;
   color: #2d3748;
@@ -108,9 +109,9 @@
   word-break: break-word;
   line-height: 1.4;
 }
-
+ 
 /* Modal Overlay */
-.buyer-admin-modal-overlay {
+.user-admin-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -123,9 +124,9 @@
   z-index: 1000;
   padding: 1rem;
 }
-
+ 
 /* Modal */
-.buyer-admin-modal {
+.user-admin-modal {
   background: white;
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
@@ -136,7 +137,7 @@
   animation: slideUp 0.3s ease;
   position: relative;
 }
-
+ 
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -147,8 +148,8 @@
     transform: translateY(0);
   }
 }
-
-.buyer-admin-modal-header {
+ 
+.user-admin-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -156,15 +157,15 @@
   border-bottom: 1px solid #e5e7eb;
   background-color: #f5f7fa;
 }
-
-.buyer-admin-modal-header h2 {
+ 
+.user-admin-modal-header h2 {
   font-size: 1.5rem;
   font-weight: 700;
   color: #1a1a1a;
   margin: 0;
 }
-
-.buyer-admin-modal-close {
+ 
+.user-admin-modal-close {
   background: none;
   border: none;
   font-size: 1.5rem;
@@ -179,18 +180,18 @@
   border-radius: 6px;
   transition: all 0.2s ease;
 }
-
-.buyer-admin-modal-close:hover {
+ 
+.user-admin-modal-close:hover {
   background-color: #e5e7eb;
   color: #1a1a1a;
 }
-
+ 
 /* Form */
-.buyer-admin-form {
+.user-admin-form {
   padding: 2rem;
 }
-
-.buyer-admin-error {
+ 
+.user-admin-error {
   background-color: #fef2f2;
   color: #dc2626;
   padding: 0.75rem 1rem;
@@ -199,16 +200,16 @@
   font-size: 0.9rem;
   border: 1px solid #fca5a5;
 }
-
-.buyer-admin-form-group {
+ 
+.user-admin-form-group {
   margin-bottom: 1.5rem;
 }
-
-.buyer-admin-form-group:last-of-type {
+ 
+.user-admin-form-group:last-of-type {
   margin-bottom: 2rem;
 }
-
-.buyer-admin-label {
+ 
+.user-admin-label {
   display: block;
   font-size: 0.9rem;
   font-weight: 600;
@@ -218,8 +219,8 @@
   align-items: center;
   gap: 0.5rem;
 }
-
-.buyer-admin-input {
+ 
+.user-admin-input {
   width: 100%;
   padding: 0.75rem 1rem;
   border: 1px solid #d1d5db;
@@ -229,26 +230,26 @@
   box-sizing: border-box;
   font-family: inherit;
 }
-
-.buyer-admin-select {
+ 
+.user-admin-select {
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 1rem center;
   padding-right: 2.5rem;
 }
-
-.buyer-admin-input:focus {
+ 
+.user-admin-input:focus {
   outline: none;
   border-color: #2f7cf6;
   box-shadow: 0 0 0 3px rgba(47, 124, 246, 0.1);
 }
-
-.buyer-admin-input::placeholder {
+ 
+.user-admin-input::placeholder {
   color: #999;
 }
-
-.buyer-admin-password-toggle {
+ 
+.user-admin-password-toggle {
   position: absolute;
   right: 12px;
   top: 50%;
@@ -264,79 +265,79 @@
   font-size: 18px;
   transition: color 0.2s ease;
 }
-
-.buyer-admin-password-toggle:hover {
+ 
+.user-admin-password-toggle:hover {
   color: #2f7cf6;
 }
-
+ 
 /* Form Actions */
-.buyer-admin-form-actions {
+.user-admin-form-actions {
   display: flex;
   gap: 0.75rem;
   justify-content: flex-end;
 }
-
-.buyer-admin-form-actions button {
+ 
+.user-admin-form-actions button {
   padding: 0.5rem 1.5rem !important;
   font-size: 0.9rem !important;
   min-width: 110px;
 }
-
-.buyer-admin-form-actions button:disabled {
+ 
+.user-admin-form-actions button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
-
+ 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .buyer-admin-container {
+  .user-admin-container {
     padding: 1.5rem;
   }
-
-  .buyer-admin-header {
+ 
+  .user-admin-header {
     flex-direction: column;
     gap: 1rem;
   }
-
-  .buyer-admin-header-right {
+ 
+  .user-admin-header-right {
     width: 100%;
   }
-
-  .buyer-admin-cards-grid {
+ 
+  .user-admin-cards-grid {
     grid-template-columns: 1fr;
   }
-
-  .buyer-admin-title {
+ 
+  .user-admin-title {
     font-size: 1.5rem;
   }
-
-  .buyer-admin-modal {
+ 
+  .user-admin-modal {
     max-width: calc(100% - 2rem);
   }
 }
-
+ 
 @media (max-width: 480px) {
-  .buyer-admin-container {
+  .user-admin-container {
     padding: 1rem;
   }
-
-  .buyer-admin-header-left {
+ 
+  .user-admin-header-left {
     margin-bottom: 1rem;
   }
-
-  .buyer-admin-title {
+ 
+  .user-admin-title {
     font-size: 1.25rem;
   }
-
-  .buyer-admin-subtitle {
+ 
+  .user-admin-subtitle {
     font-size: 0.85rem;
   }
-
-  .buyer-admin-modal-header {
+ 
+  .user-admin-modal-header {
     padding: 1rem 1.5rem;
   }
-
-  .buyer-admin-form {
+ 
+  .user-admin-form {
     padding: 1.5rem;
   }
 }

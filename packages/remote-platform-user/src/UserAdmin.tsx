@@ -6,7 +6,8 @@ import { CiMail } from 'react-icons/ci';
 import { FaUser, FaLock, FaEye, FaEyeSlash, FaPhone, FaMapMarkerAlt, FaGlobe } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import './BuyerAdmin.css';
+import './UserAdmin.css';
+import { useAuthStore } from '../../host-app/src/store/useAuthStore';
 
 interface BusinessUser {
   id: string;
@@ -19,7 +20,8 @@ interface BusinessUser {
   createdDate: string;
 }
 
-const BuyerAdmin: React.FC = () => {
+const UserAdmin: React.FC = () => {
+  const { userRole } = useAuthStore();
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -80,6 +82,28 @@ const BuyerAdmin: React.FC = () => {
     },
   ]);
 
+  const getPageTitle = () => {
+    if (userRole === 'buyer-admin') return 'Buyer Business User List';
+    if (userRole === 'supplier-admin') return 'Supplier Business User List';
+    return 'Business User List';
+  };
+
+  const getPageSubtitle = () => {
+    return `Manage and view all ${getUserTypeDisplayName()}s`;
+  };
+
+  const getBusinessUserRoleId = () => {
+    if (userRole === 'buyer-admin') return '5a72f81e-a2c5-4f4a-bd55-6376c3c9ed73';
+    if (userRole === 'supplier-admin') return '937aab61-b505-4e1c-a5a3-cd63e29c6db9';
+    return null;
+  };
+
+  const getUserTypeDisplayName = () => {
+    if (userRole === 'buyer-admin') return 'Buyer User';
+    if (userRole === 'supplier-admin') return 'Supplier User';
+    return 'Business User';
+  };
+
   const handleCreateClick = () => {
     setShowModal(true);
     setError(null);
@@ -104,17 +128,13 @@ const BuyerAdmin: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // Validation
     if (
       !formData.name ||
       !formData.email ||
@@ -152,7 +172,15 @@ const BuyerAdmin: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // ✅ Call API to create business user
+      const roleId = getBusinessUserRoleId();
+      const userTypeDisplay = getUserTypeDisplayName();
+      
+      if (!roleId) {
+        setError('Invalid user role. Cannot create business user.');
+        setIsLoading(false);
+        return;
+      }
+
       const response = await createBusinessUser({
         name: formData.name,
         email: formData.email,
@@ -161,11 +189,14 @@ const BuyerAdmin: React.FC = () => {
         addressLine: formData.addressLine,
         userName: formData.userName,
         password: formData.password,
+        roleId: roleId,
       });
 
-      if (response.statusCode === 200 || response.statusCode === 201) {
-        // ✅ Show success toast
-        toast.success(`User created successfully! ID: ${response.data?.id || 'Created'}`, {
+      const isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+      const userId = response.id || response.data?.id;
+
+      if (isSuccess && userId) {
+        toast.success(`${userTypeDisplay} created successfully! ID: ${userId}`, {
           position: 'top-right',
           autoClose: 5000,
           hideProgressBar: false,
@@ -174,12 +205,10 @@ const BuyerAdmin: React.FC = () => {
           draggable: true,
         });
 
-        // Get country name
         const countryFullName = Country.getAllCountries().find(c => c.isoCode === formData.country)?.name || formData.country;
 
-        // Add new user to dummy data
         const newUser: BusinessUser = {
-          id: response.data?.id || (users.length + 1).toString(),
+          id: userId,
           email: formData.email,
           name: formData.name,
           phone: formData.phone,
@@ -192,8 +221,8 @@ const BuyerAdmin: React.FC = () => {
         setUsers((prev) => [newUser, ...prev]);
         handleCloseModal();
       } else {
-        // ✅ Show error toast
-        toast.error(response.message || 'Failed to create business user', {
+        const errorMessage = response.message || response.description || 'Failed to create business user';
+        toast.error(errorMessage, {
           position: 'top-right',
           autoClose: 5000,
           hideProgressBar: false,
@@ -201,11 +230,12 @@ const BuyerAdmin: React.FC = () => {
           pauseOnHover: true,
           draggable: true,
         });
-        setError(response.message || 'Failed to create business user');
+        setError(errorMessage);
+        console.error('API Response:', response);
       }
     } catch (err: any) {
-      // ✅ Show error toast
-      toast.error(err.message || 'Failed to create business user', {
+      const errorMessage = err?.message || err?.response?.data?.message || 'Failed to create business user';
+      toast.error(errorMessage, {
         position: 'top-right',
         autoClose: 5000,
         hideProgressBar: false,
@@ -213,7 +243,7 @@ const BuyerAdmin: React.FC = () => {
         pauseOnHover: true,
         draggable: true,
       });
-      setError(err.message || 'Failed to create business user');
+      setError(errorMessage);
       console.error('Create user error:', err);
     } finally {
       setIsLoading(false);
@@ -221,8 +251,7 @@ const BuyerAdmin: React.FC = () => {
   };
 
   return (
-    <div className="buyer-admin-container">
-      {/* ✅ Toast Container */}
+    <div className="user-admin-container">
       <ToastContainer
         position="top-right"
         autoClose={5000}
@@ -235,23 +264,21 @@ const BuyerAdmin: React.FC = () => {
         pauseOnHover
       />
 
-      {/* Header Section */}
-      <div className="buyer-admin-header">
-        <div className="buyer-admin-header-left">
-          <h1 className="buyer-admin-title">Buyer Business User List</h1>
-          <p className="buyer-admin-subtitle">Manage and view all business users</p>
+      <div className="user-admin-header">
+        <div className="user-admin-header-left">
+          <h1 className="user-admin-title">{getPageTitle()}</h1>
+          <p className="user-admin-subtitle">{getPageSubtitle()}</p>
         </div>
-        <div className="buyer-admin-header-right">
+        <div className="user-admin-header-right">
           <Button variant="primary" size="lg" onClick={handleCreateClick}>
             Create User
           </Button>
         </div>
       </div>
 
-      {/* User Cards Grid */}
-      <div className="buyer-admin-cards-grid">
+      <div className="user-admin-cards-grid">
         {users.map((user) => (
-          <div key={user.id} className="buyer-admin-card">
+          <div key={user.id} className="user-admin-card">
             <div className="card-header">
               <h3 className="card-name">{user.name}</h3>
             </div>
@@ -285,75 +312,74 @@ const BuyerAdmin: React.FC = () => {
         ))}
       </div>
 
-      {/* Create User Modal */}
       {showModal && (
-        <div className="buyer-admin-modal-overlay" onClick={handleCloseModal}>
-          <div className="buyer-admin-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="buyer-admin-modal-header">
-              <h2>Create Business User</h2>
-              <button className="buyer-admin-modal-close" onClick={handleCloseModal}>
+        <div className="user-admin-modal-overlay" onClick={handleCloseModal}>
+          <div className="user-admin-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="user-admin-modal-header">
+              <h2>Create {getUserTypeDisplayName()}</h2>
+              <button className="user-admin-modal-close" onClick={handleCloseModal}>
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="buyer-admin-form">
-              {error && <div className="buyer-admin-error">{error}</div>}
+            <form onSubmit={handleSubmit} className="user-admin-form">
+              {error && <div className="user-admin-error">{error}</div>}
 
-              <div className="buyer-admin-form-group">
-                <label className="buyer-admin-label"><FaUser /> Name</label>
+              <div className="user-admin-form-group">
+                <label className="user-admin-label"><FaUser /> Name</label>
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="Enter full name"
-                  className="buyer-admin-input"
+                  className="user-admin-input"
                 />
               </div>
 
-              <div className="buyer-admin-form-group">
-                <label className="buyer-admin-label"><CiMail /> Email Address</label>
+              <div className="user-admin-form-group">
+                <label className="user-admin-label"><CiMail /> Email Address</label>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="Enter email address"
-                  className="buyer-admin-input"
+                  className="user-admin-input"
                 />
               </div>
 
-              <div className="buyer-admin-form-group">
-                <label className="buyer-admin-label"><FaUser /> Username</label>
+              <div className="user-admin-form-group">
+                <label className="user-admin-label"><FaUser /> Username</label>
                 <input
                   type="text"
                   name="userName"
                   value={formData.userName}
                   onChange={handleInputChange}
                   placeholder="Enter username"
-                  className="buyer-admin-input"
+                  className="user-admin-input"
                 />
               </div>
 
-              <div className="buyer-admin-form-group">
-                <label className="buyer-admin-label"><FaPhone /> Phone</label>
+              <div className="user-admin-form-group">
+                <label className="user-admin-label"><FaPhone /> Phone</label>
                 <input
                   type="tel"
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
                   placeholder="Enter 10-digit phone number"
-                  className="buyer-admin-input"
+                  className="user-admin-input"
                 />
               </div>
 
-              <div className="buyer-admin-form-group">
-                <label className="buyer-admin-label"><FaGlobe /> Country</label>
+              <div className="user-admin-form-group">
+                <label className="user-admin-label"><FaGlobe /> Country</label>
                 <select
                   name="country"
                   value={formData.country}
                   onChange={handleInputChange}
-                  className="buyer-admin-input buyer-admin-select"
+                  className="user-admin-input user-admin-select"
                 >
                   <option value="">Select Country</option>
                   {Country.getAllCountries().map((c) => (
@@ -364,20 +390,20 @@ const BuyerAdmin: React.FC = () => {
                 </select>
               </div>
 
-              <div className="buyer-admin-form-group">
-                <label className="buyer-admin-label"><FaMapMarkerAlt /> Address</label>
+              <div className="user-admin-form-group">
+                <label className="user-admin-label"><FaMapMarkerAlt /> Address</label>
                 <input
                   type="text"
                   name="addressLine"
                   value={formData.addressLine}
                   onChange={handleInputChange}
                   placeholder="Enter address"
-                  className="buyer-admin-input"
+                  className="user-admin-input"
                 />
               </div>
 
-              <div className="buyer-admin-form-group">
-                <label className="buyer-admin-label"><FaLock /> Password</label>
+              <div className="user-admin-form-group">
+                <label className="user-admin-label"><FaLock /> Password</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type={showPassword ? 'text' : 'password'}
@@ -385,21 +411,21 @@ const BuyerAdmin: React.FC = () => {
                     value={formData.password}
                     onChange={handleInputChange}
                     placeholder="Enter password"
-                    className="buyer-admin-input"
+                    className="user-admin-input"
                     style={{ paddingRight: '40px' }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="buyer-admin-password-toggle"
+                    className="user-admin-password-toggle"
                   >
                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
               </div>
 
-              <div className="buyer-admin-form-group">
-                <label className="buyer-admin-label"><FaLock /> Confirm Password</label>
+              <div className="user-admin-form-group">
+                <label className="user-admin-label"><FaLock /> Confirm Password</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
@@ -407,20 +433,20 @@ const BuyerAdmin: React.FC = () => {
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                     placeholder="Confirm password"
-                    className="buyer-admin-input"
+                    className="user-admin-input"
                     style={{ paddingRight: '40px' }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="buyer-admin-password-toggle"
+                    className="user-admin-password-toggle"
                   >
                     {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
               </div>
 
-              <div className="buyer-admin-form-actions">
+              <div className="user-admin-form-actions">
                 <Button
                   type="button"
                   variant="secondary"
@@ -453,4 +479,4 @@ const BuyerAdmin: React.FC = () => {
   );
 };
 
-export default BuyerAdmin;
+export default UserAdmin;

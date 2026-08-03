@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from './AuthContext';
+import { useAuthStore } from './store/useAuthStore';
 import Login from './components/Login';
 import SupplierRegistration from './components/SupplierRegistration';
 import BuyersRegistration from './components/BuyersRegistration';
@@ -13,26 +13,25 @@ const PlatformUserApp = React.lazy(() => import('remotePlatformUser/PlatformUser
 
 const Protected: React.FC<{ 
   children: React.ReactNode; 
-  allowedRoles: ('buyer' | 'supplier' | 'platform-user' | 'buyer-admin' | 'buyer-business-user')[] 
+  allowedRoles: Array<'buyer' | 'supplier' | 'platform-user' | 'buyer-admin' | 'buyer-business-user' | 'supplier-admin' | 'supplier-business-user'>
 }> = ({
   children,
   allowedRoles,
 }) => {
-  const { isLoggedIn, userRole } = useAuth();
+  const { isLoggedIn, userRole } = useAuthStore();
 
   if (!isLoggedIn) {
     return <Navigate to="/" replace />;
   }
 
   if (!allowedRoles.includes(userRole as any)) {
-    // Redirect based on user's actual role
     if (userRole === 'buyer-admin') {
       return <Navigate to="/platform-user?view=admin" replace />;
-    } else if (userRole === 'buyer-business-user') {
+    } else if (userRole === 'supplier-admin') {
+      return <Navigate to="/platform-user?view=supplier-admin" replace />;
+    } else if (userRole === 'buyer-business-user' || userRole === 'buyer') {
       return <Navigate to="/buyer" replace />;
-    } else if (userRole === 'buyer') {
-      return <Navigate to="/buyer" replace />;
-    } else if (userRole === 'supplier') {
+    } else if (userRole === 'supplier-business-user' || userRole === 'supplier') {
       return <Navigate to="/supplier" replace />;
     } else {
       return <Navigate to="/platform-user" replace />;
@@ -43,8 +42,43 @@ const Protected: React.FC<{
 };
 
 const Sidebar = () => {
-  const { userRole, logout } = useAuth();
+  const { userRole, logout } = useAuthStore();
   const location = useLocation();
+
+  // Helper function to get dashboard link based on role
+  const getDashboardLink = () => {
+    if (userRole === 'buyer-admin') {
+      return '/platform-user?view=admin';
+    } else if (userRole === 'buyer-business-user' || userRole === 'buyer') {
+      return '/buyer';
+    } else if (userRole === 'supplier-admin') {
+      return '/platform-user?view=supplier-admin';
+    } else if (userRole === 'supplier-business-user' || userRole === 'supplier') {
+      return '/supplier';
+    } else {
+      return '/platform-user';
+    }
+  };
+
+  // Helper function to get display name
+  const getRoleDisplayName = () => {
+    const roleNames: Record<string, string> = {
+      'buyer': 'Buyer',
+      'buyer-admin': 'Buyer Admin',
+      'buyer-business-user': 'Buyer User',
+      'supplier': 'Supplier',
+      'supplier-admin': 'Supplier Admin',
+      'supplier-business-user': 'Supplier User',
+      'platform-user': 'Platform Admin',
+    };
+    return roleNames[userRole || ''] || 'User';
+  };
+
+  const dashboardLink = getDashboardLink();
+  const isActive = 
+    (userRole?.includes('buyer') && location.pathname.includes('/buyer')) ||
+    (userRole?.includes('supplier') && location.pathname.includes('/supplier')) ||
+    (userRole?.includes('platform-user') && location.pathname.includes('/platform-user'));
 
   return (
     <aside className="sidebar">
@@ -66,62 +100,20 @@ const Sidebar = () => {
       </div>
 
       <ul className="nav-links">
-        {userRole === 'buyer' && (
-          <li>
-            <Link
-              to="/buyer"
-              className={`nav-item ${location.pathname.includes('/buyer') ? 'active' : ''}`}
-            >
-              Dashboard
-            </Link>
-          </li>
-        )}
-        {userRole === 'buyer-admin' && (
-          <li>
-            <Link
-              to="/platform-user?view=admin"
-              className={`nav-item ${location.pathname.includes('/platform-user') ? 'active' : ''}`}
-            >
-              Admin Dashboard
-            </Link>
-          </li>
-        )}
-        {userRole === 'buyer-business-user' && (
-          <li>
-            <Link
-              to="/buyer"
-              className={`nav-item ${location.pathname.includes('/buyer') ? 'active' : ''}`}
-            >
-              Dashboard
-            </Link>
-          </li>
-        )}
-        {userRole === 'supplier' && (
-          <li>
-            <Link
-              to="/supplier"
-              className={`nav-item ${location.pathname.includes('/supplier') ? 'active' : ''}`}
-            >
-              Dashboard
-            </Link>
-          </li>
-        )}
-        {userRole === 'platform-user' && (
-          <li>
-            <Link
-              to="/platform-user"
-              className={`nav-item ${location.pathname.includes('/platform-user') ? 'active' : ''}`}
-            >
-              Dashboard
-            </Link>
-          </li>
-        )}
+        <li>
+          <Link
+            to={dashboardLink}
+            className={`nav-item ${isActive ? 'active' : ''}`}
+          >
+            Dashboard
+          </Link>
+        </li>
       </ul>
 
       <div style={{ marginTop: 'auto' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-dark)', textAlign: 'center' }}>
-            Logged in as {userRole?.toUpperCase().replace('-', ' ')}
+            Logged in as {getRoleDisplayName()}
           </div>
           <Button variant="secondary" size="sm" fullWidth={true} onClick={logout}>
             Log Out
@@ -133,7 +125,7 @@ const Sidebar = () => {
 };
 
 const Shell = () => {
-  const { isLoggedIn, userRole, login, logout } = useAuth();
+  const { isLoggedIn, userRole, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -148,18 +140,38 @@ const Shell = () => {
 
   // ✅ Updated logic for sidebar visibility
   const isOnboarding = location.pathname.includes('/onboarding');
-  const isPlatformUser = userRole === 'platform-user';
-  const isBuyerAdmin = userRole === 'buyer-admin';
-  const isBuyerBusinessUser = userRole === 'buyer-business-user';
-  const isSupplier = userRole === 'supplier';
-  const isBuyer = userRole === 'buyer';
+  const isAuthPage = location.pathname === '/';
+  const isRegistration = location.pathname.includes('/registration');
   
-  const showSidebar = isLoggedIn && !isOnboarding && !isPlatformUser && !isBuyerAdmin && !isBuyerBusinessUser && !isSupplier && !isBuyer;
+  // Show sidebar for regular users (not admins or on auth pages)
+  const showSidebar = 
+    isLoggedIn && 
+    !isOnboarding && 
+    !isAuthPage && 
+    !isRegistration &&
+    userRole !== 'buyer-admin' &&
+    userRole !== 'supplier-admin' &&
+    userRole !== 'platform-user';
+
+  // Helper function to get redirect URL based on role
+  const getRedirectUrl = () => {
+    if (userRole === 'buyer-admin') {
+      return '/platform-user?view=admin';
+    } else if (userRole === 'buyer-business-user' || userRole === 'buyer') {
+      return '/buyer';
+    } else if (userRole === 'supplier-admin') {
+      return '/platform-user?view=supplier-admin';
+    } else if (userRole === 'supplier-business-user' || userRole === 'supplier') {
+      return '/supplier';
+    } else {
+      return '/platform-user';
+    }
+  };
 
   return (
     <div className="app-container">
       {showSidebar && <Sidebar />}
-      <main className={`main-content ${!isLoggedIn || isOnboarding || isPlatformUser || isBuyerAdmin || isBuyerBusinessUser || isSupplier || isBuyer ? 'no-padding' : ''} ${isPlatformUser ? 'bg-white' : ''}`}>
+      <main className={`main-content ${!isLoggedIn || isOnboarding || isAuthPage || isRegistration ? 'no-padding' : ''}`}>
         <React.Suspense fallback={
           <Loader 
             fullScreen={true} 
@@ -173,25 +185,15 @@ const Shell = () => {
               path="/"
               element={
                 isLoggedIn ? (
-                  <Navigate 
-                    to={
-                      userRole === 'buyer-admin' 
-                        ? '/platform-user?view=admin'
-                        : userRole === 'buyer-business-user' 
-                        ? '/buyer'
-                        : userRole === 'buyer' 
-                        ? '/buyer' 
-                        : userRole === 'supplier' 
-                        ? '/supplier' 
-                        : '/platform-user'
-                    } 
-                    replace 
-                  />
+                  <Navigate to={getRedirectUrl()} replace />
                 ) : (
                   <Login 
                     onCreateAccount={() => navigate('/supplier-registration')} 
                     onCreateBuyerAccount={() => navigate('/buyer-registration')}
-                    onLoginSuccess={(details) => login(details)}
+                    onLoginSuccess={(details) => {
+                      // ✅ Call login from useAuthStore
+                      useAuthStore.getState().login(details);
+                    }}
                   />
                 )
               }
@@ -214,17 +216,17 @@ const Shell = () => {
             <Route
               path="/supplier/*"
               element={
-                <Protected allowedRoles={['supplier']}>
+                <Protected allowedRoles={['supplier', 'supplier-business-user']}>
                   <SupplierApp />
                 </Protected>
               }
             />
 
-            {/* Platform User Remote Routes - includes buyer-admin */}
+            {/* Platform User Remote Routes - includes buyer-admin, supplier-admin, platform-user */}
             <Route
               path="/platform-user/*"
               element={
-                <Protected allowedRoles={['platform-user', 'buyer-admin']}>
+                <Protected allowedRoles={['platform-user', 'buyer-admin', 'supplier-admin']}>
                   <PlatformUserApp />
                 </Protected>
               }
@@ -235,19 +237,7 @@ const Shell = () => {
               path="*"
               element={
                 <Navigate 
-                  to={
-                    isLoggedIn 
-                      ? userRole === 'buyer-admin'
-                        ? '/platform-user?view=admin'
-                        : userRole === 'buyer-business-user'
-                        ? '/buyer'
-                        : userRole === 'buyer'
-                        ? '/buyer'
-                        : userRole === 'supplier'
-                        ? '/supplier'
-                        : '/platform-user'
-                      : '/'
-                  } 
+                  to={isLoggedIn ? getRedirectUrl() : '/'} 
                   replace 
                 />
               }

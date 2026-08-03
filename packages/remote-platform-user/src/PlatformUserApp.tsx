@@ -1,26 +1,36 @@
 import React from 'react';
 import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../../host-app/src/AuthContext'; 
+import { useAuthStore } from '../../host-app/src/store/useAuthStore';
 import PlatformUserDashboard from './components/PlatformUserDashboard';
 import Department from './components/departmentbuyer';
 import DepartmentCostList from './components/DepartmentCostList';
 import ItemMaster from './components/ItemMaster';
-import BuyerAdmin from './buyeradmin'; 
+import UserAdmin from './UserAdmin'; 
 
 const PlatformUserApp: React.FC = () => {
-  const { userRole } = useAuth(); 
+  const { userRole } = useAuthStore(); 
   const [searchParams] = useSearchParams(); 
   const view = searchParams.get('view'); 
 
-
-  if (view === 'admin' && userRole === 'buyer-admin') {
-    return <BuyerAdmin />;
+  // ✅ Show UserAdmin for both buyer-admin and supplier-admin
+  if (userRole === 'buyer-admin' && view === 'admin') {
+    return <UserAdmin />;
   }
 
+  if (userRole === 'supplier-admin' && view === 'supplier-admin') {
+    return <UserAdmin />;
+  }
+
+  // ✅ Default to UserAdmin for buyer-admin and supplier-admin
   if (userRole === 'buyer-admin') {
-    return <BuyerAdmin />;
+    return <UserAdmin />;
   }
 
+  if (userRole === 'supplier-admin') {
+    return <UserAdmin />;
+  }
+
+  // ✅ Platform user routes
   return (
     <Routes>
       <Route path="dashboard" element={<PlatformUserDashboard />} />
