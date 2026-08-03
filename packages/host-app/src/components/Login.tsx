@@ -15,6 +15,11 @@ type View = 'role-select' | 'sign-in';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const NETWORK_ADMIN_ROLE_IDS = [
+  '61eb9b97-1fca-4beb-beb8-dc4b379cfa3a',
+  '22067509-af24-48f8-a7e9-416a0b6a439b',
+];
+
 const CheckIcon = () => (
   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M4 12.5l5 5L20 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
@@ -40,8 +45,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
   const [role, setRole] = useState<Role>('supplier');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false); // ✅ FIXED: Changed from true to false
-  const [showPassword, setShowPassword] = useState(false); // ✅ NEW: Track password visibility
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -63,11 +68,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
     setIsLoading(true);
     try {
       await login(username, password);
-
-      // Introduce a 1-second delay to let the browser process and write the new cookies
       await delay(1000);
 
-      // Fetch token claims to retrieve IDs
       let details: any = {};
       try {
         const claims = await getTokenClaims(true);
@@ -79,30 +81,33 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
             roleId: claims.roleId,
           };
 
-          // Store user details in sessionStorage for dashboard use
           sessionStorage.setItem('vosox_user_id', claims.userId || '');
           sessionStorage.setItem('vosox_person_id', claims.personId || '');
           sessionStorage.setItem('vosox_organization_id', claims.organizationId || '');
           sessionStorage.setItem('vosox_role_id', claims.roleId || '');
           sessionStorage.setItem('vosox_user_role', claims.role || '');
+          sessionStorage.setItem('vosox_user_email', username);
+          sessionStorage.setItem('vosox_user_name', claims.name || 'User');
 
           onLoginSuccess?.(details);
 
-          // FIX: Navigate to the correct path based on user role
-          const userRole = claims.role || 'supplier';
-
-          if (userRole === 'supplier') {
-            navigate('/supplier/onboarding', { replace: true });
-          } else if (userRole === 'buyer') {
-            navigate('/buyer/onboarding', { replace: true });  // ✅ FIXED
+          if (NETWORK_ADMIN_ROLE_IDS.includes(claims.roleId)) {
+            navigate('/platform-user/network-admin', { replace: true });
           } else {
-            navigate('/platform-user', { replace: true });
+            const userRole = claims.role || 'supplier';
+
+            if (userRole === 'supplier') {
+              navigate('/supplier/onboarding', { replace: true });
+            } else if (userRole === 'buyer') {
+              navigate('/buyer/onboarding', { replace: true });
+            } else {
+              navigate('/platform-user', { replace: true });
+            }
           }
         } else {
           setError('Failed to retrieve user claims. Role ID not found.');
         }
       } catch (claimsError: any) {
-        console.error('Failed to fetch token claims:', claimsError);
         setError(claimsError.message || 'Failed to retrieve user claims.');
       }
     } catch (err: any) {
@@ -198,7 +203,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
                     />
                   </div>
 
-                  {/* ✅ FIXED: Password field with Show/Hide eye icon */}
                   <div className="vx-field">
                     <label className="vx-label"><FaLock /> Password</label>
                     <div style={{ position: 'relative' }}>
@@ -255,17 +259,13 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
 
                   <p className="vx-footer-text">
                     New User?{' '}
-                    <a
-                      href="#"
-                      className="vx-link"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (role === 'platform-user') {
-                          setRole('supplier');
-                        }
-                        setView('role-select');
-                      }}
-                    >
+                    <a href="#" className="vx-link" onClick={(e) => {
+                      e.preventDefault();
+                      if (role === 'platform-user') {
+                        setRole('supplier');
+                      }
+                      setView('role-select');
+                    }}>
                       Create an Account
                     </a>
                   </p>

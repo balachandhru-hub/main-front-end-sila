@@ -191,6 +191,23 @@ const buildDocumentAsset = async (
 };
 
 
+const formatLabel = (value: string | undefined | null): string => {
+    if (!value) return "";
+    return value
+        .trim()
+        .replace(/\s+/g, " ")
+        .split(" ")
+        .map((word) => (word.length > 0 ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : word))
+        .join(" ");
+};
+
+
+const getMaterialCodeDescription = (m: any): string => {
+    if (!m || typeof m === "string") return "";
+    return m.description || m.Description || m.itemDescription || m.materialDescription || m.itemMasterDescription || "";
+};
+
+
 function usePaginatedSearchSelect<T>(
     fetcher: (index: number, limit: number, searchTerm?: string) => Promise<{ items: T[]; totalCount: number }>,
     isOpen: boolean,
@@ -263,6 +280,8 @@ interface SearchableSelectProps<T> {
     onScrollBottom: () => void;
     searchPlaceholder?: string;
     small?: boolean;
+    hideSearch?: boolean;
+    disabled?: boolean;
 }
 
 function SearchableSelect<T,>({
@@ -281,6 +300,8 @@ function SearchableSelect<T,>({
     onScrollBottom,
     searchPlaceholder,
     small,
+    hideSearch,
+    disabled,
 }: SearchableSelectProps<T>) {
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -304,38 +325,41 @@ function SearchableSelect<T,>({
     return (
         <div className="bd-custom-select-container" ref={containerRef}>
             <div
-                className={`${small ? "bd-input-sm" : "bd-input"} bd-custom-select-trigger`}
-                onClick={onToggle}
-                style={{ cursor: "pointer" }}
+                className={`${small ? "bd-input-sm" : "bd-input"} bd-custom-select-trigger${disabled ? " disabled" : ""}`}
+                onClick={() => !disabled && onToggle()}
+                style={{ cursor: disabled ? "not-allowed" : "pointer" }}
             >
                 <span className="bd-custom-select-value">{value || placeholder}</span>
                 <IconChevronDown />
             </div>
-            {isOpen && (
+            {isOpen && !disabled && (
                 <div className="bd-custom-select-panel">
-                    <div className="bd-custom-select-search">
-                        <div className="bd-search-wrap">
-                            <span className="bd-search-icon">
-                                <IconSearch />
-                            </span>
-                            <input
-                                className="bd-input bd-search-input"
-                                style={{ width: "100%" }}
-                                type="text"
-                                placeholder={searchPlaceholder || "Search..."}
-                                value={searchTerm}
-                                onChange={(e) => onSearchChange(e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                autoFocus
-                            />
+                    {!hideSearch && (
+                        <div className="bd-custom-select-search">
+                            <div className="bd-search-wrap">
+                                <span className="bd-search-icon">
+                                    <IconSearch />
+                                </span>
+                                <input
+                                    className="bd-input bd-search-input"
+                                    style={{ width: "100%" }}
+                                    type="text"
+                                    placeholder={searchPlaceholder || "Search..."}
+                                    value={searchTerm}
+                                    onChange={(e) => onSearchChange(e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    autoFocus
+                                />
+                            </div>
                         </div>
-                    </div>
+                    )}
                     <ul className="bd-custom-select-menu" onScroll={handleScroll}>
                         {options.map((opt) => (
                             <li
                                 key={getOptionKey(opt)}
                                 className={`bd-custom-select-option${getOptionLabel(opt) === value ? " selected" : ""}`}
                                 onClick={() => onSelect(opt)}
+                                title={getOptionLabel(opt)}
                             >
                                 {getOptionLabel(opt)}
                             </li>
@@ -403,6 +427,33 @@ const CreateRFQ: React.FC = () => {
         };
         fetchCostCenters();
     }, [department]);
+
+    const [isDepartmentDropdownOpen, setIsDepartmentDropdownOpen] = useState(false);
+    const [departmentSearchTerm, setDepartmentSearchTerm] = useState("");
+    const [departmentLabel, setDepartmentLabel] = useState("");
+
+    const getDeptName = (d: any, idx: number) =>
+        typeof d === "string" ? d : (d.department || d.name || d.Name || `Dept ${idx}`);
+    const getDeptId = (d: any, idx: number) =>
+        typeof d === "string" ? d : (d.id || getDeptName(d, idx));
+
+    const filteredDepartmentOptions = departmentOptions.filter((d, idx) =>
+        formatLabel(getDeptName(d, idx)).toLowerCase().includes(departmentSearchTerm.trim().toLowerCase())
+    );
+
+    const [isCostCenterDropdownOpen, setIsCostCenterDropdownOpen] = useState(false);
+    const [costCenterSearchTerm, setCostCenterSearchTerm] = useState("");
+    const [costCenterLabel, setCostCenterLabel] = useState("");
+
+    const getCcName = (c: any, idx: number) =>
+        typeof c === "string" ? c : (c.costCenter || c.name || c.Name || `CC ${idx}`);
+    const getCcId = (c: any, idx: number) =>
+        typeof c === "string" ? c : (c.id || getCcName(c, idx));
+
+    const filteredCostCenterOptions = costCenterOptions.filter((c, idx) =>
+        formatLabel(getCcName(c, idx)).toLowerCase().includes(costCenterSearchTerm.trim().toLowerCase())
+    );
+
     const [segmentCode, setSegmentCode] = useState("");
     const [segmentTitle, setSegmentTitle] = useState("");
     const [segmentOptions, setSegmentOptions] = useState<UnspscSegmentDto[]>([]);
@@ -453,6 +504,18 @@ const CreateRFQ: React.FC = () => {
         setFamilyTitle(selected?.title || "");
     };
 
+    const [isSegmentDropdownOpen, setIsSegmentDropdownOpen] = useState(false);
+    const [segmentSearchTerm, setSegmentSearchTerm] = useState("");
+    const filteredSegmentOptions = segmentOptions.filter((s) =>
+        s.title.toLowerCase().includes(segmentSearchTerm.trim().toLowerCase())
+    );
+
+    const [isFamilyDropdownOpen, setIsFamilyDropdownOpen] = useState(false);
+    const [familySearchTerm, setFamilySearchTerm] = useState("");
+    const filteredFamilyOptions = familyOptions.filter((f) =>
+        f.title.toLowerCase().includes(familySearchTerm.trim().toLowerCase())
+    );
+
     const [currency, setCurrency] = useState("");
     const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
     const [currencySearchTerm, setCurrencySearchTerm] = useState("");
@@ -467,7 +530,6 @@ const CreateRFQ: React.FC = () => {
     const [uomSearchTerm, setUomSearchTerm] = useState("");
     const uomSelect = usePaginatedSearchSelect<UnitDto>(getUnits, isUomDropdownOpen, uomSearchTerm);
 
-    const [nameOfCreator, setNameOfCreator] = useState("");
     const [description, setDescription] = useState("");
     const [deliveryLocation, setDeliveryLocation] = useState("");
     const [startDateTime, setStartDateTime] = useState("");
@@ -578,20 +640,26 @@ const CreateRFQ: React.FC = () => {
 
     const formatDateTimeLabel = (value: string) => {
         if (!value) return "";
-        const [datePart, timePart] = value.split("T");
-        if (!datePart) return value;
-        const [y, m, d] = datePart.split("-");
-        if (!timePart) return `${d}/${m}/${y}`;
-        let [hh, mm] = timePart.split(":").map(Number);
+        const date = new Date(value);
+        if (isNaN(date.getTime())) return value;
+        const d = String(date.getUTCDate()).padStart(2, "0");
+        const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+        const y = date.getUTCFullYear();
+        let hh = date.getUTCHours();
+        const mm = String(date.getUTCMinutes()).padStart(2, "0");
         const suffix = hh >= 12 ? "PM" : "AM";
         hh = hh % 12 || 12;
-        return `${d}/${m}/${y} ~ ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")} ${suffix}`;
+        return `${d}/${m}/${y} ~ ${String(hh).padStart(2, "0")}:${mm} ${suffix} UTC`;
     };
 
     const formatDateLabel = (value: string) => {
         if (!value) return "";
-        const [y, m, d] = value.split("-");
-        return `${d}/${m}/${y}`;
+        const date = new Date(`${value}T00:00:00Z`);
+        if (isNaN(date.getTime())) return value;
+        const d = String(date.getUTCDate()).padStart(2, "0");
+        const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+        const y = date.getUTCFullYear();
+        return `${d}/${m}/${y} UTC`;
     };
 
     const handleAddLineItem = () => {
@@ -799,72 +867,106 @@ const CreateRFQ: React.FC = () => {
                     <div className="bd-row-2">
                         <div className="bd-field">
                             <label className="bd-label">Department</label>
-                            <select className="bd-select" value={department} onChange={(e) => setDepartment(e.target.value)}>
-                                <option value="">Select Department</option>
-                                {departmentOptions.map((d: any, idx) => {
-                                    const deptName = typeof d === 'string' ? d : (d.department || d.name || d.Name || `Dept ${idx}`);
-                                    const deptId = typeof d === 'string' ? d : (d.id || deptName);
-                                    return (
-                                        <option key={deptId} value={deptId}>
-                                            {deptName}
-                                        </option>
-                                    );
-                                })}
-                            </select>
+                            <SearchableSelect<any>
+                                value={departmentLabel}
+                                placeholder="Select Department"
+                                isOpen={isDepartmentDropdownOpen}
+                                onToggle={() => setIsDepartmentDropdownOpen((prev) => !prev)}
+                                onClose={() => setIsDepartmentDropdownOpen(false)}
+                                searchTerm={departmentSearchTerm}
+                                onSearchChange={setDepartmentSearchTerm}
+                                options={filteredDepartmentOptions}
+                                getOptionLabel={(d) => formatLabel(getDeptName(d, departmentOptions.indexOf(d)))}
+                                getOptionKey={(d) => getDeptId(d, departmentOptions.indexOf(d))}
+                                onSelect={(d) => {
+                                    const idx = departmentOptions.indexOf(d);
+                                    setDepartment(getDeptId(d, idx));
+                                    setDepartmentLabel(formatLabel(getDeptName(d, idx)));
+                                    setCostCenter("");
+                                    setCostCenterLabel("");
+                                    setIsDepartmentDropdownOpen(false);
+                                    setDepartmentSearchTerm("");
+                                }}
+                                loading={false}
+                                onScrollBottom={() => {}}
+                                searchPlaceholder="Search department..."
+                            />
                         </div>
                         <div className="bd-field">
                             <label className="bd-label">Cost Center</label>
-                            <select
-                                className="bd-select"
-                                value={costCenter}
-                                onChange={(e) => setCostCenter(e.target.value)}
+                            <SearchableSelect<any>
+                                value={costCenterLabel}
+                                placeholder={department ? "Select Cost Center" : "Select Department First"}
+                                isOpen={isCostCenterDropdownOpen}
+                                onToggle={() => setIsCostCenterDropdownOpen((prev) => !prev)}
+                                onClose={() => setIsCostCenterDropdownOpen(false)}
+                                searchTerm={costCenterSearchTerm}
+                                onSearchChange={setCostCenterSearchTerm}
+                                options={filteredCostCenterOptions}
+                                getOptionLabel={(c) => formatLabel(getCcName(c, costCenterOptions.indexOf(c)))}
+                                getOptionKey={(c) => getCcId(c, costCenterOptions.indexOf(c))}
+                                onSelect={(c) => {
+                                    const idx = costCenterOptions.indexOf(c);
+                                    setCostCenter(getCcId(c, idx));
+                                    setCostCenterLabel(formatLabel(getCcName(c, idx)));
+                                    setIsCostCenterDropdownOpen(false);
+                                    setCostCenterSearchTerm("");
+                                }}
+                                loading={false}
+                                onScrollBottom={() => {}}
+                                searchPlaceholder="Search cost center..."
                                 disabled={!department}
-                            >
-                                <option value="">{department ? "Select Cost Center" : "Select Department First"}</option>
-                                {costCenterOptions.map((c: any, idx) => {
-                                    const ccName = typeof c === 'string' ? c : (c.costCenter || c.name || c.Name || `CC ${idx}`);
-                                    const ccId = typeof c === 'string' ? c : (c.id || ccName);
-                                    return (
-                                        <option key={ccId} value={ccId}>
-                                            {ccName}
-                                        </option>
-                                    );
-                                })}
-                            </select>
+                            />
                         </div>
                     </div>
 
                     <div className="bd-row-2">
                         <div className="bd-field">
                             <label className="bd-label">Segment</label>
-                            <select
-                                className="bd-select"
-                                value={segmentCode}
-                                onChange={(e) => handleSegmentChange(e.target.value)}
-                            >
-                                <option value="">Select Segment</option>
-                                {segmentOptions.map((s) => (
-                                    <option key={s.segment} value={s.segment}>
-                                        {s.title}
-                                    </option>
-                                ))}
-                            </select>
+                            <SearchableSelect<UnspscSegmentDto>
+                                value={segmentTitle}
+                                placeholder="Select Segment"
+                                isOpen={isSegmentDropdownOpen}
+                                onToggle={() => setIsSegmentDropdownOpen((prev) => !prev)}
+                                onClose={() => setIsSegmentDropdownOpen(false)}
+                                searchTerm={segmentSearchTerm}
+                                onSearchChange={setSegmentSearchTerm}
+                                options={filteredSegmentOptions}
+                                getOptionLabel={(o) => o.title}
+                                getOptionKey={(o) => String(o.segment)}
+                                onSelect={(o) => {
+                                    handleSegmentChange(String(o.segment));
+                                    setIsSegmentDropdownOpen(false);
+                                    setSegmentSearchTerm("");
+                                }}
+                                loading={false}
+                                onScrollBottom={() => {}}
+                                searchPlaceholder="Search segment..."
+                            />
                         </div>
                         <div className="bd-field">
                             <label className="bd-label">Family</label>
-                            <select
-                                className="bd-select"
-                                value={familyCode}
-                                onChange={(e) => handleFamilyChange(e.target.value)}
+                            <SearchableSelect<UnspscFamilyDto>
+                                value={familyTitle}
+                                placeholder={segmentCode ? "Select Family" : "Select Segment First"}
+                                isOpen={isFamilyDropdownOpen}
+                                onToggle={() => setIsFamilyDropdownOpen((prev) => !prev)}
+                                onClose={() => setIsFamilyDropdownOpen(false)}
+                                searchTerm={familySearchTerm}
+                                onSearchChange={setFamilySearchTerm}
+                                options={filteredFamilyOptions}
+                                getOptionLabel={(o) => o.title}
+                                getOptionKey={(o) => String(o.family)}
+                                onSelect={(o) => {
+                                    handleFamilyChange(String(o.family));
+                                    setIsFamilyDropdownOpen(false);
+                                    setFamilySearchTerm("");
+                                }}
+                                loading={false}
+                                onScrollBottom={() => {}}
+                                searchPlaceholder="Search family..."
                                 disabled={!segmentCode}
-                            >
-                                <option value="">{segmentCode ? "Select Family" : "Select Segment First"}</option>
-                                {familyOptions.map((f) => (
-                                    <option key={f.family} value={f.family}>
-                                        {f.title}
-                                    </option>
-                                ))}
-                            </select>
+                            />
                         </div>
                     </div>
 
@@ -899,7 +1001,7 @@ const CreateRFQ: React.FC = () => {
                                 }}
                                 loading={currencySelect.loading}
                                 onScrollBottom={currencySelect.loadMore}
-                                searchPlaceholder="Search currency..."
+                                hideSearch
                             />
                         </div>
                     </div>
@@ -929,18 +1031,6 @@ const CreateRFQ: React.FC = () => {
                             />
                         </div>
                         <div className="bd-field">
-                            <label className="bd-label">Name of Creator</label>
-                            <input
-                                className="bd-input"
-                                type="text"
-                                value={nameOfCreator}
-                                onChange={(e) => setNameOfCreator(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="bd-row-2">
-                        <div className="bd-field">
                             <label className="bd-label">Delivery Location</label>
                             <input
                                 className="bd-input"
@@ -949,8 +1039,11 @@ const CreateRFQ: React.FC = () => {
                                 onChange={(e) => setDeliveryLocation(e.target.value)}
                             />
                         </div>
+                    </div>
+
+                    <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Start Date &amp; Time</label>
+                            <label className="bd-label">Start Date &amp; Time (UTC)</label>
                             <div className="bd-input-icon-wrap">
                                 <input
                                     className="bd-input bd-input-with-icon"
@@ -973,11 +1066,8 @@ const CreateRFQ: React.FC = () => {
                                 </span>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">End Date &amp; Time</label>
+                            <label className="bd-label">End Date &amp; Time (UTC)</label>
                             <div className="bd-input-icon-wrap">
                                 <input
                                     className="bd-input bd-input-with-icon"
@@ -1000,8 +1090,11 @@ const CreateRFQ: React.FC = () => {
                                 </span>
                             </div>
                         </div>
+                    </div>
+
+                    <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Delivery Target Date</label>
+                            <label className="bd-label">Delivery Target Date (UTC)</label>
                             <div className="bd-input-icon-wrap">
                                 <input
                                     className="bd-input bd-input-with-icon"
@@ -1100,18 +1193,15 @@ const CreateRFQ: React.FC = () => {
                         </label>
                     </div>
 
-                    {!lotOption && (
-                        <div className="bd-field">
-                            <label className="bd-label">Total Budget (AED)</label>
-                            <input
-                                className="bd-input"
-                                type="text"
-                                value={totalBudget}
-                                onChange={(e) => setTotalBudget(e.target.value)}
-                            />
-                        </div>
-                    )}
-
+                    <div className="bd-field">
+                        <label className="bd-label">Total Budget (AED)</label>
+                        <input
+                            className="bd-input"
+                            type="text"
+                            value={totalBudget}
+                            onChange={(e) => setTotalBudget(e.target.value)}
+                        />
+                    </div>
                     <div className="bd-dsr-box">
                         <div className="bd-dsr-header">
                             <IconSourcing /> Dynamic Sourcing Requirements (Flexible Fields)
@@ -1301,9 +1391,10 @@ const CreateRFQ: React.FC = () => {
                                 <input
                                     className="bd-input-sm"
                                     type="text"
-                                    placeholder="e.g. Dell Latitude 5450, 256GB SSD"
+                                    placeholder="Select a material code to auto-fill"
                                     value={newItemDesc}
-                                    onChange={(e) => setNewItemDesc(e.target.value)}
+                                    readOnly
+                                    style={{ background: "#f8fafc", color: "#6b7280", cursor: "default" }}
                                 />
                             </div>
                             <div className="bd-item-add-field">
@@ -1347,7 +1438,7 @@ const CreateRFQ: React.FC = () => {
                                 <select
                                     className="bd-select-sm"
                                     value={newItemMaterialCode}
-                                    onChange={(e) => setNewItemMaterialCode(e.target.value)}
+                                    onChange={(e) => handleMaterialCodeChange(e.target.value)}
                                 >
                                     <option value="">Select Material Code</option>
                                     {materialCodeOptions.map((m: any, idx) => {
