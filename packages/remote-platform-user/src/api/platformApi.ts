@@ -26,14 +26,12 @@ export interface DepartmentListItemDto {
   department: string;
 }
 
-// ─── Cost Center List DTOs ───
 export interface CostCenterListItemDto {
   id: string;
   departmentId: string;
   costCenter: string;
 }
-// Re-export DTO types under their existing consumer-facing names so
-// components that already import { type Buyer, type Supplier } keep working.
+
 export type {
   BuyerDto as Buyer,
   SupplierDto as Supplier,
@@ -204,17 +202,9 @@ export const getDepartmentsByBuyer = async (
     });
     return response.data;
   } catch (error: any) {
-    // Log full error for debugging
-    console.error('getDepartmentsByBuyer error:', error);
-    console.error('Response:', error.response);
-    console.error('Response data:', error.response?.data);
-    console.error('Response status:', error.response?.status);
-    console.error('Response headers:', error.response?.headers);
-
     const status = error.response?.status || 'unknown';
     const responseData = error.response?.data;
 
-    // Handle different error shapes
     let errMsg = 'Failed to fetch departments.';
     if (typeof responseData === 'string') {
       errMsg = responseData;
@@ -242,10 +232,6 @@ export const getCostCentersByDepartment = async (
     });
     return response.data;
   } catch (error: any) {
-    console.error('getCostCentersByDepartment error:', error);
-    console.error('Response:', error.response);
-    console.error('Response data:', error.response?.data);
-    console.error('Response status:', error.response?.status);
 
     const status = error.response?.status || 'unknown';
     const responseData = error.response?.data;

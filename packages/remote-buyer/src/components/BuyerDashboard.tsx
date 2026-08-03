@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import "./BuyerDashBoard.css";
 import CreateRFQ from "./Create_RFQ.tsx";
-import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
 import { logoutBuyer } from "../api/Buyerapi";
 import Header from "./Header";
 
@@ -141,7 +140,6 @@ const BuyersDashboard: React.FC = () => {
       setLogoutError(error?.message || "Logout request failed, clearing session locally.");
     } finally {
       sessionStorage.clear();
-      useAuthStore.getState().logout();
       window.dispatchEvent(new CustomEvent("session:expired"));
       setLoggingOut(false);
     }
@@ -220,7 +218,6 @@ const BuyersDashboard: React.FC = () => {
             {activeNav === "createRFQ" ? (
               <CreateRFQ />
             ) : (
-              // Blank page for Dashboard and every other nav item that has no view yet
               <div className="bd-blank-page" />
             )}
           </main>

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom'; // Add this import
 import { getAllBuyers, getAllSuppliers, logoutPlatformUser } from '../api/platformApi';
 import type { BuyerDto, SupplierDto, BusinessProfileDto, PlatformEntityType, PlatformRecordDto } from '../dto/platformDto';
-import { useAuthStore } from '../../../host-app/src/store/useAuthStore';
 import {
   FaUser,
   FaBuilding,
@@ -152,7 +151,7 @@ const handleSettingsClick = () => {
     } catch (err) {
       console.error('Logout request failed:', err);
     } finally {
-      useAuthStore.getState().logout();
+      sessionStorage.clear();
       window.dispatchEvent(new CustomEvent('session:expired'));
       setLoggingOut(false);
     }
