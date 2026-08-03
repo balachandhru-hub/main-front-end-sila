@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { useAuthStore } from '../../../host-app/src/store/useAuthStore';
 
 const baseURL = import.meta.env.VITE_AUTH_API_BASE;
 const apiKey = 'N8qX2LmP7vRa5HdK9sWy4JcTf1AzNgEuXm6BpLr3YvCi0FoMsZaDhUk8QtGeXwPnV';
@@ -27,7 +26,6 @@ platformInstance.interceptors.request.use(
   }
 );
 
-
 platformInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -35,7 +33,7 @@ platformInstance.interceptors.response.use(
     if (error.response?.status === 401) {
       const isRefreshTokenRequest = originalRequest?.url?.includes('/refresh-token');
       if (isRefreshTokenRequest) {
-        useAuthStore.getState().logout();
+        sessionStorage.clear();
         window.dispatchEvent(new CustomEvent('session:expired'));
         return Promise.reject(error);
       }
@@ -59,7 +57,7 @@ platformInstance.interceptors.response.use(
         await (window as any).__vosox_refresh_promise;
         return platformInstance(originalRequest);
       } catch (refreshError) {
-        useAuthStore.getState().logout();
+        sessionStorage.clear();
         window.dispatchEvent(new CustomEvent('session:expired'));
         return Promise.reject(refreshError);
       }
