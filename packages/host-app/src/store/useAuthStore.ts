@@ -3,13 +3,13 @@ import { create } from 'zustand';
 export type UserRole = 'buyer' | 'supplier' |'supplier-admin'|'supplier-business-user'| 'platform-user'| 'buyer-admin' | 'buyer-business-user';
  
 export const ROLE_MAPPING: Record<string, UserRole> = {
-  '937aab61-b505-4e1c-a5a3-cd63e29c6db9': 'supplier',        // SUPPLIER_ADMINISTRATOR
-  '5a72f81e-a2c5-4f4a-bd55-6376c3c9ed73': 'buyer',           // BUYER_ADMINISTRATOR
+  '937aab61-b505-4e1c-a5a3-cd63e29c6db9': 'supplier',        // SUPPLIER
+  '5a72f81e-a2c5-4f4a-bd55-6376c3c9ed73': 'buyer',           // BUYER
   '113d8ead-40c2-425a-bc60-5989e6cdabca': 'platform-user',   // PLATFORM_ADMINISTRATOR
   '61eb9b97-1fca-4beb-beb8-dc4b379cfa3a': 'platform-user',   // BUYER_NETWORK_ADMIN
   '22067509-af24-48f8-a7e9-416a0b6a439b': 'platform-user',   // SUPPLIER_NETWORK_ADMIN
-  '735bb267-fec0-489f-8249-d3d65b3857ea': 'supplier-admin',         
-  'c95f5a1b-4aec-4647-9328-895a58193ec4': 'buyer-admin',
+  '735bb267-fec0-489f-8249-d3d65b3857ea': 'supplier-admin',  // SUPPLIER_ADMIN     
+  'c95f5a1b-4aec-4647-9328-895a58193ec4': 'buyer-admin',    // BUYER_ADMIN
 };
 export interface AuthState {
   isLoggedIn: boolean;

@@ -197,16 +197,22 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
   margin-bottom: 32px;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
   align-items: center;
   gap: 20px;
 }
 
 .nad-search-wrapper {
   position: relative;
-  min-width: 300px;
-  flex-grow: 0.5;
+  flex: 1;
+  min-width: 260px;
+}
+
+.nad-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .nad-search-input {
@@ -238,6 +244,7 @@
 .nad-create-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   background-color: #3182ce;
   color: #ffffff;
@@ -245,10 +252,11 @@
   border-radius: 10px;
   font-weight: 600;
   font-size: 0.88rem;
-  padding: 12px 24px;
+  padding: 12px 20px;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  min-width: 210px;
 }
 
 .nad-create-btn:hover:not(:disabled) {
@@ -264,6 +272,14 @@
 .nad-create-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.nad-create-user-btn {
+  background-color: #0f766e;
+}
+
+.nad-create-user-btn:hover:not(:disabled) {
+  background-color: #0d9488;
 }
 
 .nad-alert-error,
@@ -403,8 +419,15 @@
     min-width: 100%;
   }
 
+  .nad-action-buttons {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .nad-create-btn {
-    justify-content: center;
+    width: 100%;
+    min-width: 100%;
   }
 
   .nad-stats-grid {

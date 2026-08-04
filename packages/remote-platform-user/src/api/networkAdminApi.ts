@@ -5,7 +5,16 @@ import type {
   CountriesResponseDto,
 } from '../dto/networkAdminDto';
 import type { User } from '../types';
+import type {
+  NetworkAdminProfileResponse,
+  NetworkAdminOnboardingResponse,
+  NetworkAdminBuyerRegistrationPayload,
+  NetworkAdminUpdateRejectedBuyerPayload,
+  NetworkAdminSupplierRegistrationPayload,
+  NetworkAdminUpdateRejectedSupplierPayload,
+} from '../dto/networkAdminDto';
 
+export type NetworkAdminRole = 'BUYER_NETWORK_ADMIN' | 'SUPPLIER_NETWORK_ADMIN';
 
 export const getOrganizationUsers = async (organizationId: string): Promise<User[]> => {
   try {
@@ -107,5 +116,110 @@ export const logoutNetworkAdmin = async (): Promise<void> => {
     const responseData = error.response?.data;
     const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
     throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+
+export const getNetworkAdminProfile = async (
+  role: NetworkAdminRole
+): Promise<NetworkAdminProfileResponse | null> => {
+  const endpoint = role === 'BUYER_NETWORK_ADMIN' ? '/api/v1/buyer/profile' : '/api/v1/supplier/profile';
+
+  try {
+    const response = await platformInstance.get<NetworkAdminProfileResponse>(endpoint);
+
+    if (response.status === 204 || !response.data || Object.keys(response.data).length === 0) {
+      return null;
+    }
+
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 204 || error?.response?.status === 404) {
+      return null;
+    }
+    const errorMsg =
+      error.response?.data?.message ||
+      error.response?.data?.description ||
+      error.message ||
+      'Failed to fetch profile';
+    throw new Error(errorMsg);
+  }
+};
+
+export const getNetworkAdminOnboardingDetails = async (): Promise<NetworkAdminOnboardingResponse> => {
+  try {
+    const response = await platformInstance.get<NetworkAdminOnboardingResponse>('/api/v1/identity/onboarding');
+    return response.data;
+  } catch (error: any) {
+    const errorMsg =
+      error.response?.data?.message ||
+      error.response?.data?.description ||
+      error.message ||
+      'Failed to fetch onboarding details';
+    throw new Error(errorMsg);
+  }
+};
+
+export const createNetworkAdminBuyerProfile = async (
+  payload: NetworkAdminBuyerRegistrationPayload
+): Promise<any> => {
+  try {
+    const response = await platformInstance.post('/api/v1/buyer/register', payload);
+    return response.data;
+  } catch (error: any) {
+    const errorMsg =
+      error.response?.data?.message ||
+      error.response?.data?.description ||
+      error.message ||
+      'Failed to create buyer profile';
+    throw new Error(errorMsg);
+  }
+};
+
+export const createNetworkAdminSupplierProfile = async (
+  payload: NetworkAdminSupplierRegistrationPayload
+): Promise<any> => {
+  try {
+    const response = await platformInstance.post('/api/v1/supplier/register', payload);
+    return response.data;
+  } catch (error: any) {
+    const errorMsg =
+      error.response?.data?.message ||
+      error.response?.data?.description ||
+      error.message ||
+      'Failed to create supplier profile';
+    throw new Error(errorMsg);
+  }
+};
+
+export const updateRejectedNetworkAdminBuyer = async (
+  payload: NetworkAdminUpdateRejectedBuyerPayload
+): Promise<any> => {
+  try {
+    const response = await platformInstance.put('/api/v1/buyer/update-rejected-buyer', payload);
+    return response.data;
+  } catch (error: any) {
+    const errorMsg =
+      error.response?.data?.message ||
+      error.response?.data?.description ||
+      error.message ||
+      'Failed to update rejected buyer profile';
+    throw new Error(errorMsg);
+  }
+};
+
+export const updateRejectedNetworkAdminSupplier = async (
+  payload: NetworkAdminUpdateRejectedSupplierPayload
+): Promise<any> => {
+  try {
+    const response = await platformInstance.put('/api/v1/supplier/update-rejected-supplier', payload);
+    return response.data;
+  } catch (error: any) {
+    const errorMsg =
+      error.response?.data?.message ||
+      error.response?.data?.description ||
+      error.message ||
+      'Failed to update rejected supplier profile';
+    throw new Error(errorMsg);
   }
 };
