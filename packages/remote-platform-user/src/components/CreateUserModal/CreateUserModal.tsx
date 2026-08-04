@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { FaEye, FaEyeSlash, FaChevronDown, FaSearch } from 'react-icons/fa';
 import type { User, UserRole } from '../../types';
-import { getRoleIdForCreating } from '../../constants/roleMapping';
+import { ROLE_ID_MAPPING } from '../../constants/roleMapping';
 import { getCountries } from '../../api/networkAdminApi';
 import type { CountryDto } from '../../dto/networkAdminDto';
 import { toastService } from '@vosox/shared-ui';
@@ -11,7 +11,7 @@ interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (user: User) => void;
-  userRole: UserRole;
+  createRole: UserRole;
   isLoading?: boolean;
 }
 
@@ -26,8 +26,8 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
   isOpen,
   onClose,
   onCreate,
-  userRole,
   isLoading = false,
+  createRole,
 }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -214,19 +214,8 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
       return;
     }
 
-    let roleToCreate: UserRole;
-
-    if (userRole === 'BUYER_NETWORK_ADMIN') {
-      roleToCreate = 'BUYER_ADMINISTRATOR';
-    } else if (userRole === 'SUPPLIER_NETWORK_ADMIN') {
-      roleToCreate = 'SUPPLIER_ADMINISTRATOR';
-    } else if (userRole === 'BUYER_ADMINISTRATOR') {
-      roleToCreate = 'BUYER_USER';
-    } else {
-      roleToCreate = 'SUPPLIER_USER';
-    }
-
-    const roleIdToUse = getRoleIdForCreating(userRole);
+    const roleToCreate = createRole;
+    const roleIdToUse = ROLE_ID_MAPPING[createRole];
 
     const newUser: User = {
       id: `temp-${Date.now()}`,

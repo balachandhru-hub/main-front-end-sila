@@ -9,16 +9,20 @@ import { FaUser, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { login, getTokenClaims } from '../api/authApi';
 import './Login.css';
 
-
 type Role = 'supplier' | 'buyer' | 'platform-user';
 type View = 'role-select' | 'sign-in';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const NETWORK_ADMIN_ROLE_IDS = [
-  '61eb9b97-1fca-4beb-beb8-dc4b379cfa3a',
-  '22067509-af24-48f8-a7e9-416a0b6a439b',
-];
+const ROLE_IDS = {
+  SUPPLIER: '937aab61-b505-4e1c-a5a3-cd63e29c6db9',
+  BUYER: '5a72f81e-a2c5-4f4a-bd55-6376c3c9ed73',
+  PLATFORM_ADMIN: '113d8ead-40c2-425a-bc60-5989e6cdabca',
+  BUYER_NETWORK_ADMIN: '61eb9b97-1fca-4beb-beb8-dc4b379cfa3a',
+  SUPPLIER_NETWORK_ADMIN: '22067509-af24-48f8-a7e9-416a0b6a439b',
+  SUPPLIER_ADMIN: '735bb267-fec0-489f-8249-d3d65b3857ea',
+  BUYER_ADMIN: 'c95f5a1b-4aec-4647-9328-895a58193ec4',
+} as const;
 
 const CheckIcon = () => (
   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -58,6 +62,27 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
     }
   };
 
+  const getRedirectUrl = (roleId: string): string => {
+    switch (roleId) {
+      case ROLE_IDS.BUYER_ADMIN:
+        return '/platform-user/buyer-admin';
+      case ROLE_IDS.SUPPLIER_ADMIN:
+        return '/platform-user/supplier-admin';
+      case ROLE_IDS.BUYER_NETWORK_ADMIN:
+        return '/platform-user/buyer-network-admin';
+      case ROLE_IDS.SUPPLIER_NETWORK_ADMIN:
+        return '/platform-user/supplier-network-admin';
+      case ROLE_IDS.PLATFORM_ADMIN:
+        return '/platform-user';
+      case ROLE_IDS.SUPPLIER:
+        return '/supplier/dashboard';
+      case ROLE_IDS.BUYER:
+        return '/buyer/dashboard';
+      default:
+        return '/supplier/dashboard';
+    }
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -91,19 +116,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
 
           onLoginSuccess?.(details);
 
-          if (NETWORK_ADMIN_ROLE_IDS.includes(claims.roleId)) {
-            navigate('/platform-user/network-admin', { replace: true });
-          } else {
-            const userRole = claims.role || 'supplier';
-
-            if (userRole === 'supplier') {
-              navigate('/supplier/onboarding', { replace: true });
-            } else if (userRole === 'buyer') {
-              navigate('/buyer/onboarding', { replace: true });
-            } else {
-              navigate('/platform-user', { replace: true });
-            }
-          }
+          const redirectUrl = getRedirectUrl(claims.roleId);
+          navigate(redirectUrl, { replace: true });
         } else {
           setError('Failed to retrieve user claims. Role ID not found.');
         }
