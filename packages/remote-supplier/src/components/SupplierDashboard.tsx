@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import SilaLogo from "../assets/SILA_Logo.png";
 import "./SupplierDashboard.css";
-import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
 import {
   logoutSupplier,
   fetchRFQMasterData,

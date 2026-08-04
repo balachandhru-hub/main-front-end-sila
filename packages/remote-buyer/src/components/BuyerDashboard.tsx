@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./BuyerDashBoard.css";
 import CreateRFQ from "./Create_RFQ.tsx";
-import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
 import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById } from "../api/Buyerapi";
 import Header from "./Header";
 

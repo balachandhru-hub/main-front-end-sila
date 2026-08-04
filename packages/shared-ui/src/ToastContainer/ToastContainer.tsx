@@ -3,7 +3,20 @@ import { FaCheckCircle, FaExclamationCircle, FaInfoCircle, FaTimes } from 'react
 import { toastService, type Toast } from '../services/toastservice';
 import './ToastContainer.css';
 
-const ToastContainer: React.FC = () => {
+interface ToastContainerProps {
+  position?: string;
+  autoClose?: number | boolean;
+  hideProgressBar?: boolean;
+  newestOnTop?: boolean;
+  closeOnClick?: boolean;
+  rtl?: boolean;
+  pauseOnFocusLoss?: boolean;
+  draggable?: boolean;
+  pauseOnHover?: boolean;
+  [key: string]: any;
+}
+
+const ToastContainer: React.FC<ToastContainerProps> = () => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   useEffect(() => {

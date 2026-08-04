@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Loader } from '@vosox/shared-ui';
+import { Button, Loader, ToastContainer, toastService as toast } from '@vosox/shared-ui';
 import { createBusinessUser, getOrganizationUsers } from './api/departmentcostapi'; 
 import { Country } from 'country-state-city';
 import { CiMail } from 'react-icons/ci';
 import { FaUser, FaLock, FaEye, FaEyeSlash, FaPhone, FaMapMarkerAlt, FaGlobe } from 'react-icons/fa';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import './UserAdmin.css';
 import { useAuthStore } from '../../host-app/src/store/useAuthStore';
 

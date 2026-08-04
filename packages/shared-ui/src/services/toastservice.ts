@@ -36,19 +36,23 @@ export const toastService = {
     return id;
   },
 
-  success: (message: string, duration?: number) => {
+  success: (message: string, durationOrOptions?: number | any) => {
+    const duration = typeof durationOrOptions === 'number' ? durationOrOptions : (durationOrOptions?.autoClose ?? 3000);
     return toastService.show(message, 'success', duration);
   },
 
-  error: (message: string, duration?: number) => {
+  error: (message: string, durationOrOptions?: number | any) => {
+    const duration = typeof durationOrOptions === 'number' ? durationOrOptions : (durationOrOptions?.autoClose ?? 3000);
     return toastService.show(message, 'error', duration);
   },
 
-  info: (message: string, duration?: number) => {
+  info: (message: string, durationOrOptions?: number | any) => {
+    const duration = typeof durationOrOptions === 'number' ? durationOrOptions : (durationOrOptions?.autoClose ?? 3000);
     return toastService.show(message, 'info', duration);
   },
 
-  warning: (message: string, duration?: number) => {
+  warning: (message: string, durationOrOptions?: number | any) => {
+    const duration = typeof durationOrOptions === 'number' ? durationOrOptions : (durationOrOptions?.autoClose ?? 3000);
     return toastService.show(message, 'warning', duration);
   },
 

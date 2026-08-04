@@ -582,6 +582,21 @@ const CreateRFQ: React.FC = () => {
     const [newItemPrice, setNewItemPrice] = useState("");
     const [newItemMaterialCode, setNewItemMaterialCode] = useState("");
 
+    const handleMaterialCodeChange = (code: string) => {
+        setNewItemMaterialCode(code);
+        if (!code) return;
+        const selected = materialCodeOptions.find((m: any) => {
+            const mCode = typeof m === 'string' ? m : (m.materialCode || m.id);
+            return mCode === code;
+        });
+        if (selected) {
+            const desc = getMaterialCodeDescription(selected);
+            if (desc && !newItemDesc) {
+                setNewItemDesc(desc);
+            }
+        }
+    };
+
     const [suppliers, setSuppliers] = useState<VerifiedSupplierDto[]>([]);
     const [suppliersLoading, setSuppliersLoading] = useState(false);
     const [suppliersError, setSuppliersError] = useState<string | null>(null);
