@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { User } from '../../types';
+import type { User, UserRole } from '../../types';
 import { useNetworkAdminAuthStore } from '../../store/useAuthStore';
 import UserListTable from '../UserListTable/UserListTable';
 import CreateUserModal from '../CreateUserModal/CreateUserModal';
@@ -40,6 +40,11 @@ const NetworkAdminDashboard: React.FC = () => {
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [modalCreateRole, setModalCreateRole] = useState<UserRole>(
+  currentUser?.userRole === 'BUYER_NETWORK_ADMIN'
+      ? 'BUYER_ADMINISTRATOR'
+      : 'SUPPLIER_ADMINISTRATOR'
+  );
 
   useEffect(() => {
     useNetworkAdminAuthStore.getState().initializeFromSession();
@@ -257,25 +262,51 @@ const NetworkAdminDashboard: React.FC = () => {
           </div>
         </section>
 
-        <div className="nad-controls-bar">
-          <div className="nad-search-wrapper">
-            <FaSearch className="nad-search-icon" />
+        <div className='nad-controls-bar'>
+          <div className='nad-search-wrapper'>
+            <FaSearch className='nad-search-icon' />
             <input
-              type="text"
-              placeholder="Search by name, email or username..."
+              type='text'
+              placeholder='Search by name, email or username...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="nad-search-input"
+              className='nad-search-input'
             />
           </div>
-          <button
-            className="nad-create-btn"
-            onClick={() => setIsModalOpen(true)}
-            disabled={isCreatingUser}
-          >
-            <FaPlus />
-            Create New {adminLabel.slice(0, -1)}
-          </button>
+
+          <div className='nad-action-buttons'>
+            <button
+              className='nad-create-btn'
+              onClick={() => {
+                setModalCreateRole(
+                  currentUser.userRole === 'BUYER_NETWORK_ADMIN'
+                    ? 'BUYER_ADMINISTRATOR'
+                    : 'SUPPLIER_ADMINISTRATOR'
+                );
+                setIsModalOpen(true);
+              }}
+              disabled={isCreatingUser}
+            >
+              <FaPlus />
+              Create New {adminLabel.slice(0, -1)}
+            </button>
+
+            <button
+              className='nad-create-btn nad-create-user-btn'
+              onClick={() => {
+                setModalCreateRole(
+                  currentUser.userRole === 'BUYER_NETWORK_ADMIN'
+                    ? 'BUYER_USER'
+                    : 'SUPPLIER_USER'
+                );
+                setIsModalOpen(true);
+              }}
+              disabled={isCreatingUser}
+            >
+              <FaPlus />
+              Create New {userLabel.slice(0, -1)}
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -306,13 +337,13 @@ const NetworkAdminDashboard: React.FC = () => {
         )}
       </div>
 
-      <CreateUserModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onCreate={handleCreateUser}
-        userRole={currentUser.userRole}
-        isLoading={isCreatingUser}
-      />
+    <CreateUserModal
+      isOpen={isModalOpen}
+      onClose={() => setIsModalOpen(false)}
+      onCreate={handleCreateUser}
+      createRole={modalCreateRole}
+      isLoading={isCreatingUser}
+    />
     </div>
   );
 };
