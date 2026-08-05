@@ -8,12 +8,10 @@ import type {
   RFQMasterDataItem,
   RFQDetailResponse,
   SubmitQuotationPayload,
-  CreateSupplierCatalogPayload,
 } from '../dto/supplierDto';
 
 // re-export so existing imports elsewhere (e.g. SupplierApp.tsx) keep working
 export type { SupplierProfileResponse, RFQMasterDataItem, RFQDetailResponse, SubmitQuotationPayload } from '../dto/supplierDto';
-export type { CatalogAssetDto, CatalogDetailDto, CreateSupplierCatalogPayload } from '../dto/supplierDto';
 
 // ============================================================================
 // API: Create Supplier Profile (Register)
@@ -54,26 +52,6 @@ export const updateRejectedSupplier = async (
       responseData?.message ||
       responseData?.description ||
       'Failed to update rejected supplier profile.';
-    throw new Error(`${errMsg} (${status})`);
-  }
-};
-
-// ============================================================================
-// API: Create Supplier Catalog
-// ============================================================================
-export const createSupplierCatalog = async (
-  payload: CreateSupplierCatalogPayload
-): Promise<any> => {
-  try {
-    const response = await supplierInstance.post('/api/v1/supplier/catalog', payload);
-    return response.data;
-  } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    const responseData = error.response?.data;
-    const errMsg =
-      responseData?.message ||
-      responseData?.description ||
-      'Failed to create supplier catalog.';
     throw new Error(`${errMsg} (${status})`);
   }
 };
