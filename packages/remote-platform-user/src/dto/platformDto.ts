@@ -1,7 +1,3 @@
-// DTOs mirroring the exact shape returned by the platform API
-// (POST /api/v1/buyer/getAllbuyer, POST /api/v1/supplier/get-all-supplier,
-//  GET /api/v1/buyer/asset/{assetId}, GET /api/v1/supplier/asset/{assetId})
-
 export interface AssetDto {
   id?: string;
   assetType?: string | null;
@@ -112,7 +108,7 @@ export interface AssetDownloadResponseDto {
   assetId: string;
   fileName: string;
   contentType: string;
-  fileBytes: string; // base64-encoded file content
+  fileBytes: string;
 }
 
 export type PlatformEntityType = 'buyers' | 'suppliers';

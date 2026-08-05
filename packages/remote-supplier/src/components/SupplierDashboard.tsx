@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import SilaLogo from "../../../host-app/public/assets/SILA_Logo.png";
+import SilaLogo from "../assets/SILA_Logo.png";
 import "./SupplierDashboard.css";
 import Catalog from "./Catalog";
 import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
@@ -614,7 +614,6 @@ const SupplierDashboard: React.FC = () => {
       setLogoutError(error?.message || "Logout request failed, clearing session locally.");
     } finally {
       sessionStorage.clear();
-      useAuthStore.getState().logout();
       window.dispatchEvent(new CustomEvent("session:expired"));
       setLoggingOut(false);
     }

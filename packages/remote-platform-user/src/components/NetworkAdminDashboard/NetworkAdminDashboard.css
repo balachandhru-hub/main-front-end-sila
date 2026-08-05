@@ -1,0 +1,481 @@
+:global(html) {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #ffffff;
+}
+
+:global(html)::-webkit-scrollbar {
+  width: 10px;
+}
+
+:global(html)::-webkit-scrollbar-track {
+  background: #ffffff;
+}
+
+:global(html)::-webkit-scrollbar-thumb {
+  background-color: #cbd5e0;
+  border-radius: 8px;
+  border: 2px solid #ffffff;
+}
+
+:global(html)::-webkit-scrollbar-thumb:hover {
+  background-color: #a0aec0;
+}
+
+.nad-dashboard {
+  min-height: 100vh;
+  background-color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+    sans-serif;
+  color: #2c3e50;
+  padding: 0;
+}
+
+.nad-top-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.nad-top-logo {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
+}
+
+.nad-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nad-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #fff5f5;
+  color: #c53030;
+  border: 1px solid #fed7d7;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nad-logout-btn:hover:not(:disabled) {
+  background-color: #fed7d7;
+}
+
+.nad-logout-btn:focus-visible {
+  outline: 2px solid #c53030;
+  outline-offset: 2px;
+}
+
+.nad-logout-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.nad-content-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.nad-header {
+  margin-bottom: 32px;
+  border-bottom: 2px solid #eef2f5;
+  padding-bottom: 20px;
+}
+
+.nad-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #1a202c;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
+}
+
+.nad-subtitle {
+  color: #718096;
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.nad-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.nad-stat-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border: 1px solid #e2e8f0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.nad-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.08), 0 3px 6px -2px rgba(0, 0, 0, 0.04);
+}
+
+.nad-stat-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.nad-stat-icon-admins {
+  background-color: #ebf8ff;
+  color: #3182ce;
+}
+
+.nad-stat-icon-users {
+  background-color: #faf5ff;
+  color: #805ad5;
+}
+
+.nad-stat-icon-active {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.nad-stat-icon-total {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.nad-stat-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.nad-stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #2d3748;
+  line-height: 1.2;
+}
+
+.nad-stat-label {
+  font-size: 0.82rem;
+  color: #718096;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nad-controls-bar {
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 16px 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nad-search-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 260px;
+}
+
+.nad-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.nad-search-input {
+  width: 100%;
+  padding: 12px 16px 12px 40px;
+  border: 1px solid #cbd5e0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  color: #2d3748;
+  outline: none;
+  background-color: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.nad-search-input:focus {
+  border-color: #3182ce;
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+}
+
+.nad-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #a0aec0;
+  pointer-events: none;
+}
+
+.nad-create-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #3182ce;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-width: 210px;
+}
+
+.nad-create-btn:hover:not(:disabled) {
+  background-color: #2563eb;
+  box-shadow: 0 4px 12px rgba(49, 130, 206, 0.25);
+}
+
+.nad-create-btn:focus-visible {
+  outline: 2px solid #3182ce;
+  outline-offset: 2px;
+}
+
+.nad-create-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.nad-create-user-btn {
+  background-color: #0f766e;
+}
+
+.nad-create-user-btn:hover:not(:disabled) {
+  background-color: #0d9488;
+}
+
+.nad-alert-error,
+.nad-alert-success {
+  padding: 14px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 0.92rem;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.nad-alert-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #dc2626;
+}
+
+.nad-alert-success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  border-left: 4px solid #16a34a;
+}
+
+.nad-loading-container,
+.nad-not-auth-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  text-align: center;
+  background-color: #ffffff;
+  gap: 8px;
+}
+
+.nad-loading-data {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.nad-loading-data p {
+  margin-top: 16px;
+  color: #718096;
+  font-size: 0.95rem;
+}
+
+.nad-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #3182ce;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.nad-redirect-btn {
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: #3182ce;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.nad-redirect-btn:hover {
+  background: #2563eb;
+  box-shadow: 0 2px 8px rgba(49, 130, 206, 0.3);
+}
+
+.nad-lists-section {
+  background: transparent;
+}
+
+@media (max-width: 1024px) {
+  .nad-search-wrapper {
+    min-width: 280px;
+  }
+}
+
+@media (max-width: 768px) {
+  .nad-top-header {
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .nad-top-logo {
+    height: 40px;
+  }
+
+  .nad-logout-btn {
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+
+  .nad-content-wrapper {
+    padding: 24px 16px;
+  }
+
+  .nad-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nad-search-wrapper {
+    min-width: 100%;
+  }
+
+  .nad-action-buttons {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nad-create-btn {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .nad-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .nad-stat-card {
+    padding: 18px;
+    gap: 14px;
+  }
+
+  .nad-stat-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .nad-top-header {
+    padding: 12px 12px;
+    gap: 8px;
+  }
+
+  .nad-top-logo {
+    height: 32px;
+  }
+
+  .nad-content-wrapper {
+    padding: 20px 12px;
+  }
+
+  .nad-title {
+    font-size: 1.1rem;
+  }
+
+  .nad-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .nad-logout-btn {
+    font-size: 12px;
+    padding: 6px 10px;
+    gap: 4px;
+  }
+
+  .nad-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

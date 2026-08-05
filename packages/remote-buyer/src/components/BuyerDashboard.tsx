@@ -475,7 +475,6 @@ const BuyersDashboard: React.FC = () => {
       setLogoutError(error?.message || "Logout request failed, clearing session locally.");
     } finally {
       sessionStorage.clear();
-      useAuthStore.getState().logout();
       window.dispatchEvent(new CustomEvent("session:expired"));
       setLoggingOut(false);
     }
