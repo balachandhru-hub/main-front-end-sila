@@ -370,7 +370,7 @@ export const getVerifiedSuppliers = async (
 ): Promise<VerifiedSupplierDto[]> => {
   try {
     const response = await axiosInstance.post<VerifiedSupplierDto[]>(
-      '/api/v1/supplier/rfq-verfied-supplier',
+      '/api/v1/supplier/rfq-supplier',
       payload
     );
     return Array.isArray(response.data) ? response.data : [];
