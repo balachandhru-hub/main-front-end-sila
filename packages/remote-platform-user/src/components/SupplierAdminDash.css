@@ -99,23 +99,19 @@
 .sad-nav-item-active .sad-nav-badge {
     background: rgba(255, 255, 255, 0.25);
 }
-
-.sad-sidebar-toggle {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: #4b5563;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-    border-radius: 6px;
+.sad-nav-item-logout {
+    color: #dc2626;
+    margin-top: auto;
 }
 
-.sad-sidebar-toggle:hover {
-    background: #f3f4f6;
+.sad-nav-item-logout:hover {
+    background: #fef2f2;
+    color: #b91c1c;
 }
 
+.sad-nav-item-logout .sad-nav-icon {
+    color: #dc2626;
+}
 /* ---------- Main ---------- */
 .sad-main {
     flex: 1;
