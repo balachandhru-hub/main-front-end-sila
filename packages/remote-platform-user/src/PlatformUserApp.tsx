@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useNetworkAdminAuthStore } from './store/useAuthStore';
 import PlatformUserDashboard from './components/PlatformUserDashboard';
 import Department from './components/departmentbuyer';
 import DepartmentCostList from './components/DepartmentCostList';
-import { useAuthStore } from '../../host-app/src/store/useAuthStore';
 import NetworkAdminDashboard from './components/NetworkAdminDashboard/NetworkAdminDashboard';
 import NetworkAdminOnboarding from './components/NetworkAdminOnboarding/NetworkAdminOnboarding';
 import ItemMaster from './components/ItemMaster';
-import UserAdmin from './UserAdmin';
+import SupplierAdminDash from './components/SupplierAdminDash';
+import BuyerAdminDash from './components/BuyerAdminDash';
 import { fetchReferenceList } from './api/masterdataApi';
 import {
   getNetworkAdminProfile,
@@ -287,9 +287,6 @@ const NetworkAdminOnboardingRoute: React.FC<NetworkAdminOnboardingRouteProps> = 
 };
 
 const PlatformUserApp: React.FC = () => {
-  const { userRole } = useAuthStore();
-  const [searchParams] = useSearchParams();
-  const view = searchParams.get('view');
   const initializeFromSession = useNetworkAdminAuthStore((state) => state.initializeFromSession);
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const isLoading = useNetworkAdminAuthStore((state) => state.isLoading);
@@ -364,19 +361,6 @@ const PlatformUserApp: React.FC = () => {
     checkProfile();
   }, [isLoading, isNetworkAdmin, networkAdminRole, currentUser?.organizationId]);
 
-  if (userRole === 'buyer-admin' && view === 'admin') {
-    return <UserAdmin />;
-  }
-  if (userRole === 'supplier-admin' && view === 'supplier-admin') {
-    return <UserAdmin />;
-  }
-  if (userRole === 'buyer-admin') {
-    return <UserAdmin />;
-  }
-  if (userRole === 'supplier-admin') {
-    return <UserAdmin />;
-  }
-
   if (isLoading || (isNetworkAdmin && checkingProfile)) return null;
 
   const defaultRoute = isNetworkAdmin ? 'network-admin' : 'dashboard';
@@ -426,6 +410,9 @@ const PlatformUserApp: React.FC = () => {
           )
         }
       />
+
+      <Route path="buyer-admin" element={<BuyerAdminDash />} />
+      <Route path="supplier-admin" element={<SupplierAdminDash />} />
 
       <Route path="itemmaster" element={<ItemMaster />} />
       <Route path="*" element={<Navigate to={defaultRoute} replace />} />

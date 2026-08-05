@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Loader, ToastContainer, toastService as toast } from '@vosox/shared-ui';
 import { createBusinessUser, getOrganizationUsers } from './api/departmentcostapi'; 
 import { Country } from 'country-state-city';
 import { CiMail } from 'react-icons/ci';
-import { FaUser, FaLock, FaEye, FaEyeSlash, FaPhone, FaMapMarkerAlt, FaGlobe } from 'react-icons/fa';
+import { FaUser, FaLock, FaEye, FaEyeSlash, FaPhone, FaMapMarkerAlt, FaGlobe, FaSearch, FaPlus } from 'react-icons/fa';
 import './UserAdmin.css';
 import { useAuthStore } from '../../host-app/src/store/useAuthStore';
 
@@ -15,7 +15,6 @@ interface BusinessUser {
   userName: string;
   roleId: string;
   roleName: string;
-  // Optional: only present for newly created users before refresh
   phone?: string;
   country?: string;
   addressLine?: string;
@@ -41,6 +40,7 @@ const UserAdmin: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [users, setUsers] = useState<BusinessUser[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch real users on mount
   useEffect(() => {
@@ -241,8 +241,20 @@ const UserAdmin: React.FC = () => {
     }
   };
 
+  const filteredUsers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) =>
+      (u.name || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q) ||
+      (u.userName || '').toLowerCase().includes(q) ||
+      (u.phone || '').toLowerCase().includes(q) ||
+      (u.country || '').toLowerCase().includes(q)
+    );
+  }, [searchQuery, users]);
+
   return (
-    <div className="user-admin-container">
+    <div className="ua-dashboard">
       <ToastContainer
         position="top-right"
         autoClose={5000}
@@ -255,73 +267,68 @@ const UserAdmin: React.FC = () => {
         pauseOnHover
       />
 
-      <div className="user-admin-header">
-        <div className="user-admin-header-left">
-          <h1 className="user-admin-title">{getPageTitle()}</h1>
-          <p className="user-admin-subtitle">{getPageSubtitle()}</p>
-        </div>
-        <div className="user-admin-header-right">
-          <Button variant="primary" size="lg" onClick={handleCreateClick}>
-            Create User
-          </Button>
-        </div>
-      </div>
+      <div className="ua-content-wrapper">
+        <header className="ua-header">
+          <h1 className="ua-title">{getPageTitle()}</h1>
+          <p className="ua-subtitle">{getPageSubtitle()}</p>
+        </header>
 
-      <div className="user-admin-cards-grid">
-        {listLoading ? (
-          <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center', padding: '40px' }}>
-            <Loader color="#2f7cf6" />
+        <div className="ua-controls-bar">
+          <div className="ua-search-wrapper">
+            <FaSearch className="ua-search-icon" />
+            <input
+              type="text"
+              placeholder="Search by name, email, username, phone or country..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="ua-search-input"
+            />
           </div>
-        ) : users.length === 0 ? (
-          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-            No users found.
+
+          <div className="ua-action-buttons">
+            <button className="ua-create-btn" onClick={handleCreateClick} disabled={isLoading}>
+              <FaPlus />
+              Create {getUserTypeDisplayName()}
+            </button>
+          </div>
+        </div>
+
+        {listLoading ? (
+          <div className="ua-loading-data">
+            <div className="ua-spinner"></div>
+            <p>Loading your data...</p>
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="ua-empty-state">
+            {searchQuery ? 'No users match your search.' : 'No users found.'}
           </div>
         ) : (
-          users.map((user) => (
-            <div key={user.personId} className="user-admin-card">
-              <div className="card-header">
-                <h3 className="card-name">{user.name}</h3>
-              </div>
-              <div className="card-body">
-                <div className="card-field">
-                  <label className="card-label"><CiMail /> Email</label>
-                  <p className="card-value">{user.email}</p>
-                </div>
-                <div className="card-field">
-                  <label className="card-label"><FaUser /> Username</label>
-                  <p className="card-value">{user.userName}</p>
-                </div>
-                <div className="card-field">
-                  <label className="card-label"><FaUser /> Role</label>
-                  <p className="card-value">{user.roleName}</p>
-                </div>
-                {user.phone && (
-                  <div className="card-field">
-                    <label className="card-label"><FaPhone /> Phone</label>
-                    <p className="card-value">{user.phone}</p>
-                  </div>
-                )}
-                {user.country && (
-                  <div className="card-field">
-                    <label className="card-label"><FaGlobe /> Country</label>
-                    <p className="card-value">{user.country}</p>
-                  </div>
-                )}
-                {user.addressLine && (
-                  <div className="card-field">
-                    <label className="card-label"><FaMapMarkerAlt /> Address</label>
-                    <p className="card-value">{user.addressLine}</p>
-                  </div>
-                )}
-                {user.createdDate && (
-                  <div className="card-field">
-                    <label className="card-label">Created Date</label>
-                    <p className="card-value">{user.createdDate}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))
+          <div className="ua-table-wrapper">
+            <table className="ua-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Username</th>
+                  <th>User Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((user) => (
+                  <tr key={user.personId}>
+                    <td>
+                      <div className="ua-cell-name">{user.name}</div>
+                    </td>
+                    <td>{user.email}</td>
+                    <td>{user.userName}</td>
+                    <td>
+                      <span className="ua-role-badge">{user.roleName}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
