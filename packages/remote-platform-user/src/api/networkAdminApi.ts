@@ -94,9 +94,13 @@ export const createPerson = async (data: CreatePersonRequestDto): Promise<string
 };
 
 
-export const deleteUser = async (userId: string): Promise<void> => {
+export const deleteUser = async (personId: string): Promise<void> => {
   try {
-    await platformInstance.delete(`/api/v1/users/${userId}`);
+    await platformInstance.delete('/api/v1/identity/delete-person', {
+      params: {
+        personId,
+      },
+    });
   } catch (error: any) {
     const errorMsg =
       error.response?.data?.message ||
