@@ -157,7 +157,7 @@
   border-radius: 16px;
   padding: 16px 24px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
   margin-bottom: 32px;
   display: flex;
   flex-wrap: wrap;
@@ -355,44 +355,8 @@
 .plat-card-footer-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
-}
-
-.plat-card-footer-btns {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Settings icon button placed inside each card footer */
-.plat-card-settings-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: rgba(255, 255, 255, 0.55);
-  color: #3182ce;
-  font-size: 15px;
-  cursor: pointer;
-  flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  transition: all 0.25s ease;
-}
-
-.plat-card-settings-btn:hover {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.85), rgba(37, 99, 235, 0.85));
-  border-color: transparent;
-  color: #ffffff;
-  transform: rotate(20deg) scale(1.08);
-  box-shadow: 0 8px 18px -6px rgba(37, 99, 235, 0.55);
-}
-
-.plat-card-settings-btn:active {
-  transform: rotate(20deg) scale(0.92);
 }
 
 /* ===== "See More Details" — glass effect ===== */
@@ -450,13 +414,8 @@
 }
 
 @keyframes plat-spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .plat-error-banner {
