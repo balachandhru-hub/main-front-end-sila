@@ -24,29 +24,6 @@ import './NetworkAdminDashboard.css';
 
 const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;
 
-
-const IconMenu = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="3" y1="12" x2="21" y2="12"></line>
-    <line x1="3" y1="6" x2="21" y2="6"></line>
-    <line x1="3" y1="18" x2="21" y2="18"></line>
-  </svg>
-);
-
-const IconClose = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
-
-const NavIconHome = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-    <path d="M9 22V12h6v10" />
-  </svg>
-);
-
 const NavIconUsers = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -78,14 +55,11 @@ const LogoutIcon = () => (
   </svg>
 );
 
-
 const navItems: { key: string; icon: React.ReactNode; label: string }[] = [
-  { key: 'dashboard', icon: <NavIconHome />, label: 'Dashboard' },
   { key: 'manageUsers', icon: <NavIconUsers />, label: 'Manage Users' },
   { key: 'companyProfile', icon: <NavIconBuilding />, label: 'Company Profile' },
   { key: 'settings', icon: <NavIconSettings />, label: 'Settings' },
 ];
-
 
 const NetworkAdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -112,7 +86,6 @@ const NetworkAdminDashboard: React.FC = () => {
       : 'SUPPLIER_ADMINISTRATOR'
   );
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeNav, setActiveNav] = useState<string>('manageUsers');
 
   useEffect(() => {
@@ -182,6 +155,7 @@ const NetworkAdminDashboard: React.FC = () => {
     setUserToDelete(user);
     setIsDeleteModalOpen(true);
   };
+
   const confirmDeleteUser = async () => {
     if (!userToDelete) return;
 
@@ -253,6 +227,7 @@ const NetworkAdminDashboard: React.FC = () => {
     );
   }
 
+  const activeCount = allUsers.filter((u) => u.status === 'active').length;
   const administrators = allUsers.filter(
     (u) =>
       u.userRole === 'BUYER_ADMINISTRATOR' ||
@@ -273,11 +248,11 @@ const NetworkAdminDashboard: React.FC = () => {
       ? 'Buyer Users'
       : 'Supplier Users';
 
-  const activeCount = allUsers.filter((u) => u.status === 'active').length;
   const filteredAdministrators = filterUsers(administrators);
   const filteredUsers = filterUsers(regularUsers);
+  const allFilteredUsers = [...filteredAdministrators, ...filteredUsers];
 
-  const showUsersView = activeNav === 'dashboard' || activeNav === 'manageUsers';
+  const showUsersView = activeNav === 'manageUsers';
 
   return (
     <div className="nad-page">
@@ -287,17 +262,7 @@ const NetworkAdminDashboard: React.FC = () => {
         <img src={sila_logo} alt="SILA" className="nad-top-logo" />
       </header>
 
-      <div className={`nad-shell${isSidebarOpen ? '' : ' nad-sidebar-closed'}`}>
-          <div className="nad-toolbar">
-            <button
-              className="nad-sidebar-toggle"
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              title="Toggle Sidebar"
-              aria-label="Toggle sidebar"
-            >
-              {isSidebarOpen ? <IconClose /> : <IconMenu />}
-            </button>
-          </div>
+      <div className="nad-shell">
         <aside className="nad-sidebar">
           <nav className="nad-nav">
             {navItems.map((item) => (
@@ -328,8 +293,6 @@ const NetworkAdminDashboard: React.FC = () => {
         </aside>
 
         <div className="nad-main">
-
-
           <main className="nad-content">
             <header className="nad-content-header">
               <h1 className="nad-title">Network Admin Dashboard</h1>
@@ -442,13 +405,8 @@ const NetworkAdminDashboard: React.FC = () => {
                 ) : (
                   <div className="nad-lists-section">
                     <UserListTable
-                      users={filteredAdministrators}
-                      title={adminLabel}
-                      onDelete={handleDeleteUser}
-                    />
-                    <UserListTable
-                      users={filteredUsers}
-                      title={userLabel}
+                      users={allFilteredUsers}
+                      title="All Users"
                       onDelete={handleDeleteUser}
                     />
                   </div>
