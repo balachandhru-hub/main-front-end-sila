@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import "./BuyerDashBoard.css";
 import CreateRFQ from "./Create_RFQ.tsx";
+import Product from "./Product.tsx";
+import Header from "./Header";
 import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
 import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById } from "../api/Buyerapi";
-import Header from "./Header";
 
 /* ---------------------------------- Icons ---------------------------------- */
 
@@ -268,6 +269,7 @@ const navItems: { key: string; icon: React.ReactNode; label: string; badge?: num
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
   { key: "activeRFQs", icon: <NavIconFile />, label: "Active RFQs", badge: 2 },
   { key: "evaluateQuotations", icon: <NavIconFileCheck />, label: "Evaluate Quotations", badge: 2 },
+  { key: "product", icon: <NavIconFileCheck />, label: "Product" },
   { key: "purchaseOrders", icon: <NavIconBag />, label: "Purchase Orders" },
   { key: "supplierDirectory", icon: <NavIconUsers />, label: "Supplier Directory" },
   { key: "spendReports", icon: <NavIconBarChart />, label: "Procurement Spend Reports" },
@@ -551,6 +553,8 @@ const BuyersDashboard: React.FC = () => {
           <main className="pud-content">
             {activeNav === "createRFQ" ? (
               <CreateRFQ />
+            ) : activeNav === "product" ? (
+              <Product />
             ) : (
               // Blank page for Dashboard and every other nav item that has no view yet
               <>
@@ -923,30 +927,30 @@ const BuyersDashboard: React.FC = () => {
                       {/* Attached Documents */}
                       {((selectedRfq.technicalSpecificationDocuments && selectedRfq.technicalSpecificationDocuments.length > 0) ||
                         (selectedRfq.termsConditionDocuments && selectedRfq.termsConditionDocuments.length > 0)) && (
-                        <div>
-                          <div className="pud-modal-section-title" style={{ marginBottom: '10px' }}>Specifications & Terms Documents</div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-                            {selectedRfq.technicalSpecificationDocuments?.map((doc: any, i: number) => (
-                              <div key={`tech-${i}`} className="pud-rfq-doc-card">
-                                <div className="pud-rfq-doc-icon"><IconFile /></div>
-                                <div style={{ overflow: 'hidden' }}>
-                                  <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                  <div className="pud-rfq-doc-type">Tech Spec Doc</div>
+                          <div>
+                            <div className="pud-modal-section-title" style={{ marginBottom: '10px' }}>Specifications & Terms Documents</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                              {selectedRfq.technicalSpecificationDocuments?.map((doc: any, i: number) => (
+                                <div key={`tech-${i}`} className="pud-rfq-doc-card">
+                                  <div className="pud-rfq-doc-icon"><IconFile /></div>
+                                  <div style={{ overflow: 'hidden' }}>
+                                    <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                                    <div className="pud-rfq-doc-type">Tech Spec Doc</div>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
-                            {selectedRfq.termsConditionDocuments?.map((doc: any, i: number) => (
-                              <div key={`terms-${i}`} className="pud-rfq-doc-card">
-                                <div className="pud-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></div>
-                                <div style={{ overflow: 'hidden' }}>
-                                  <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                  <div className="pud-rfq-doc-type">Terms & Conditions</div>
+                              ))}
+                              {selectedRfq.termsConditionDocuments?.map((doc: any, i: number) => (
+                                <div key={`terms-${i}`} className="pud-rfq-doc-card">
+                                  <div className="pud-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></div>
+                                  <div style={{ overflow: 'hidden' }}>
+                                    <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                                    <div className="pud-rfq-doc-type">Terms & Conditions</div>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
                       {/* Questions */}
                       {selectedRfq.questions && selectedRfq.questions.length > 0 && (
@@ -977,19 +981,19 @@ const BuyersDashboard: React.FC = () => {
                       </div>
 
                       {/* Filter/check if we have actual valid quotations */}
-                      {selectedRfq.supplierQuotation && 
-                       selectedRfq.supplierQuotation.filter((q: any) => q.quotationId || q.totalPrice !== null).length > 0 ? (
+                      {selectedRfq.supplierQuotation &&
+                        selectedRfq.supplierQuotation.filter((q: any) => q.quotationId || q.totalPrice !== null).length > 0 ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '480px', overflowY: 'auto' }}>
                           {selectedRfq.supplierQuotation
                             .filter((q: any) => q.quotationId || q.totalPrice !== null)
                             .map((quote: any, index: number) => (
-                              <div 
-                                key={index} 
-                                style={{ 
-                                  background: '#ffffff', 
-                                  border: '1px solid #cbd5e1', 
-                                  borderRadius: '10px', 
-                                  padding: '16px', 
+                              <div
+                                key={index}
+                                style={{
+                                  background: '#ffffff',
+                                  border: '1px solid #cbd5e1',
+                                  borderRadius: '10px',
+                                  padding: '16px',
                                   boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
                                   transition: 'border-color 0.2s ease'
                                 }}
@@ -1003,7 +1007,7 @@ const BuyersDashboard: React.FC = () => {
                                       Delivery: {quote.deliveryType || "Standard"}
                                     </span>
                                   </div>
-                                  <span 
+                                  <span
                                     className={`pud-status-badge`}
                                     style={{
                                       background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',

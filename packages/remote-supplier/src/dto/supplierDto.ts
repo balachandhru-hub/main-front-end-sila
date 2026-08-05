@@ -8,7 +8,8 @@ export type MetadataReferenceType =
   | 'INDUSTRY'
   | 'BUSINESS_TYPE'
   | 'DOCUMENT_TYPE'
-  | 'ENTITY_TYPE';
+  | 'ENTITY_TYPE'
+  | 'CATALOG_TYPE';
 
 export interface MetadataReferenceItem {
   id: string;
@@ -168,6 +169,46 @@ export interface UpdateRejectedSupplierPayload {
 }
 
 // ============================================================================
+// SUPPLIER CATALOG (POST /supplier/catalog)
+// ============================================================================
+
+export interface CatalogAssetDto {
+  id?: string;
+  entityType: string;
+  entityId: string;
+  assetType: string;
+  fileBytes: string;
+  fileName: string;
+  contentType: string;
+  isSingletonAsset: boolean;
+}
+
+export interface CatalogDetailDto {
+  id?: string;
+  catalogName: string;
+  description: string;
+  price: number;
+  unitOfMeasure: string;
+  catalogType: string;
+  segment: number;
+  segmentTitle: string;
+  family: number;
+  familyTitle: string;
+  commodity: number;
+  commodityTitle: string;
+  class: number;
+  classTitle: string;
+  isPunchOut: boolean;
+  punchOutUrl: string;
+  assets: CatalogAssetDto[];
+}
+
+export interface CreateSupplierCatalogPayload {
+  organizationId: string;
+  catalog: CatalogDetailDto;
+}
+
+// ============================================================================
 // RFQ DATA DTOs
 // ============================================================================
 
@@ -252,4 +293,3 @@ export interface SubmitQuotationPayload {
     quotedPrice: number;
   }[];
 }
-

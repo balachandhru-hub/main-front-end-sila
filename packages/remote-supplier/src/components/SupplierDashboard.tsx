@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import SilaLogo from "../../../host-app/public/assets/SILA_Logo.png";
 import "./SupplierDashboard.css";
+import Catalog from "./Catalog";
 import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
 import {
   logoutSupplier,
@@ -274,11 +275,15 @@ const IconCheckCircle = () => (
   </svg>
 );
 
-const navItems = [
+
+const navItemsBeforeCatalog = [
   { icon: <NavIconHome />, label: "Dashboard", active: true },
   { icon: <NavIconMail />, label: "Invitations", badge: 2 },
   { icon: <NavIconFile />, label: "RFQs", badge: 2 },
   { icon: <NavIconUser />, label: "Quotations" },
+];
+
+const navItemsAfterCatalog = [
   { icon: <NavIconBag />, label: "Purchase Orders" },
   { icon: <NavIconContract />, label: "Contracts" },
   { icon: <NavIconInvoice />, label: "Invoices" },
@@ -287,6 +292,9 @@ const navItems = [
   { icon: <NavIconBuilding />, label: "Company Profile" },
   { icon: <NavIconSettings />, label: "Settings" },
 ];
+
+
+
 
 const statCards: StatCard[] = [
   { icon: <IconMail />, label: "INVITATIONS", value: 2, linkText: "Pending review >", colorClass: "pud-stat-icon-blue" },
@@ -381,6 +389,8 @@ const SupplierDashboard: React.FC = () => {
   const firstLetter = organizationName.trim().charAt(0).toUpperCase();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [activeView, setActiveView] = useState<"dashboard" | "catalogList">("dashboard");
+  const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -662,18 +672,37 @@ const SupplierDashboard: React.FC = () => {
 
         <aside className="pud-sidebar">
           <nav className="pud-nav" style={{ paddingTop: '40px' }}>
-            {navItems.map((item) => (
-              <div
-                key={item.label}
-                className={`pud-nav-item${item.active ? " pud-nav-item-active" : ""}`}
-                onClick={() => {
-                  if (item.label === "Dashboard") navigate("../dashboard");
-                  if (item.label === "Invitations") navigate("../invitations");
-                }}
-              >
+            {navItemsBeforeCatalog.map((item) => {
+              const isActive = item.label === "Dashboard" && activeView === "dashboard";
+              return (
+                <div
+                  key={item.label}
+                  className={`pud-nav-item${isActive ? " pud-nav-item-active" : ""}`}
+                  onClick={() => {
+                    // "Dashboard" navigates to the supplier dashboard route.
+                    // "Invitations" navigates to the supplier invitations route.
+                    if (item.label === "Dashboard") navigate("/supplier/dashboard");
+                    if (item.label === "Invitations") navigate("/supplier/invitations");
+                  }}
+                >
+                  <span className="pud-nav-icon">{item.icon}</span>
+                  <span className="pud-nav-label">{item.label}</span>
+                  {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
+                </div>
+              );
+            })}
+
+            <Catalog
+              onShowCatalogList={() => setActiveView("catalogList")}
+              onCloseCatalogList={() => setActiveView("dashboard")}
+              fullViewContainer={activeView === "catalogList" ? catalogViewContainer : null}
+            />
+
+            {navItemsAfterCatalog.map((item) => (
+              <div key={item.label} className="pud-nav-item">
                 <span className="pud-nav-icon">{item.icon}</span>
                 <span className="pud-nav-label">{item.label}</span>
-                {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
+                {/* {item.label && <span className="pud-nav-badge">{item.label}</span>} */}
               </div>
             ))}
             <div
@@ -699,178 +728,184 @@ const SupplierDashboard: React.FC = () => {
 
         <div className="pud-main">
           <main className="pud-content">
-            <h1 className="pud-title">Supplier Operations Command</h1>
-            <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
+            {activeView === "catalogList" ? (
+              <div ref={setCatalogViewContainer} />
+            ) : (
+              <>
+                <h1 className="pud-title">Supplier Operations Command</h1>
+                <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
 
-            <div className="pud-status-banner">
-              <span className="pud-status-dot" />
-              <div>
-                <div className="pud-status-title">Active Approved Supplier Portal Status (100%)</div>
-                <div className="pud-status-subtext">
-                  Your credentials, certification audit records, and bank routes are verified for secure bidding.
-                </div>
-              </div>
-            </div>
-
-            <div className="pud-stats-grid">
-              {statCards.map((stat) => (
-                <div className="pud-stat-card" key={stat.label}>
-                  <div className={`pud-stat-icon ${stat.colorClass}`}>{stat.icon}</div>
-                  <div className="pud-stat-label">{stat.label}</div>
-                  <div className="pud-stat-value">{stat.value}</div>
-                  <div className="pud-stat-link">{stat.linkText}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="pud-panels">
-              <section className="pud-panel">
-                <div className="pud-panel-header">
+                <div className="pud-status-banner">
+                  <span className="pud-status-dot" />
                   <div>
-                    <div className="pud-panel-title">Recent Sourcing Opportunities</div>
-                    <div className="pud-panel-subtitle">Newly listed RFQs matched to your industry categories</div>
+                    <div className="pud-status-title">Active Approved Supplier Portal Status (100%)</div>
+                    <div className="pud-status-subtext">
+                      Your credentials, certification audit records, and bank routes are verified for secure bidding.
+                    </div>
                   </div>
-                  <a className="pud-panel-link" href="#">View All RFQs →</a>
                 </div>
-                {loadingRfqs ? (
-                  <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px' }}>
-                    <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                      <div className="pud-spinner" />
-                      <span>Loading sourcing opportunities...</span>
-                    </div>
-                  </div>
-                ) : rfqsError ? (
-                  <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
-                    <div style={{ color: '#ef4444', fontSize: '14px', textAlign: 'center' }}>
-                      {rfqsError}
-                    </div>
-                  </div>
-                ) : rfqs.length === 0 ? (
-                  <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
-                    <div style={{ color: '#64748b', fontSize: '14px', textAlign: 'center' }}>
-                      No recent sourcing opportunities found.
-                    </div>
-                  </div>
-                ) : (
-                  <div className="pud-panel-list">
-                    {rfqs.map((rfq) => (
-                      <div className="pud-rfq-row" key={rfq.rfqId}>
-                        <div className="pud-rfq-info">
-                          <div className="pud-rfq-meta">
-                            <span className="pud-code-badge">{rfq.rfqNumber}</span>
-                            <span className="pud-dot-sep">•</span>
-                            <span className="pud-company">{rfq.organizationName}</span>
-                          </div>
-                          <div className="pud-rfq-title">{rfq.title}</div>
-                          <div className="pud-rfq-details">
-                            <span>
-                              <IconCalendar /> Closes: {new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                            </span>
-                            <span>
-                              <IconPin /> Deliv: {rfq.deliveryLocation}
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          className="pud-btn pud-btn-outline"
-                          onClick={() => handleViewRfqDetails(rfq.rfqId)}
-                        >
-                          View RFQ Details
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
 
-              <section className="pud-panel">
-                <div className="pud-panel-header">
-                  <div>
-                    <div className="pud-panel-title">Recent Purchase Orders</div>
-                    <div className="pud-panel-subtitle">New orders requiring attention</div>
-                  </div>
-                  <a className="pud-panel-link" href="#">View All →</a>
-                </div>
-                <div className="pud-panel-list">
-                  {poItems.map((po) => (
-                    <div className="pud-po-row" key={po.code}>
-                      <div className="pud-po-info">
-                        <div className="pud-po-meta">
-                          <span className="pud-po-code">{po.code}</span>
-                          <span className={`pud-status-badge pud-status-badge-${po.status.toLowerCase()}`}>
-                            {po.status}
-                          </span>
-                        </div>
-                        <div className="pud-po-company">{po.company}</div>
-                        <div className="pud-po-date"><IconCalendar /> Order Date: {po.orderDate}</div>
-                      </div>
-                      <div className="pud-po-right">
-                        <div className="pud-po-amount">{po.amount}</div>
-                        <a className="pud-po-process" href="#">Process →</a>
-                      </div>
+                <div className="pud-stats-grid">
+                  {statCards.map((stat) => (
+                    <div className="pud-stat-card" key={stat.label}>
+                      <div className={`pud-stat-icon ${stat.colorClass}`}>{stat.icon}</div>
+                      <div className="pud-stat-label">{stat.label}</div>
+                      <div className="pud-stat-value">{stat.value}</div>
+                      <div className="pud-stat-link">{stat.linkText}</div>
                     </div>
                   ))}
                 </div>
-              </section>
-            </div>
 
-            <section className="pud-matchmaker">
-              <div className="pud-matchmaker-header">
-                <div className="pud-matchmaker-title-row">
-                  <span className="pud-matchmaker-icon"><IconSparkles /></span>
-                  <div className="pud-matchmaker-title">Smart Sourcing Matchmaker</div>
-                </div>
-                <div className="pud-matchmaker-subtitle">
-                  Active enterprise buyers looking for products and services matching your certified categories and registered ship-to locations.
-                </div>
-              </div>
-
-              <div className="pud-match-grid">
-                {matchCards.map((card) => (
-                  <div className="pud-match-card" key={card.name}>
-                    <span className="pud-match-location"><IconPin /> {card.location}</span>
-                    <div className="pud-match-top">
-                      <div className="pud-match-avatar">{card.initials}</div>
+                <div className="pud-panels">
+                  <section className="pud-panel">
+                    <div className="pud-panel-header">
                       <div>
-                        <div className="pud-match-name">{card.name}</div>
-                        <div className="pud-match-seeking"><NavIconBuilding /> Seeking: {card.seeking}</div>
+                        <div className="pud-panel-title">Recent Sourcing Opportunities</div>
+                        <div className="pud-panel-subtitle">Newly listed RFQs matched to your industry categories</div>
                       </div>
+                      <a className="pud-panel-link" href="#">View All RFQs →</a>
                     </div>
-                    <p className="pud-match-desc">{card.description}</p>
-                    <div className="pud-match-rep-row">
-                      <span className="pud-match-rep-label">Representative:</span>
-                      <span className="pud-match-rep-name">{card.representative}</span>
+                    {loadingRfqs ? (
+                      <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px' }}>
+                        <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                          <div className="pud-spinner" />
+                          <span>Loading sourcing opportunities...</span>
+                        </div>
+                      </div>
+                    ) : rfqsError ? (
+                      <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
+                        <div style={{ color: '#ef4444', fontSize: '14px', textAlign: 'center' }}>
+                          {rfqsError}
+                        </div>
+                      </div>
+                    ) : rfqs.length === 0 ? (
+                      <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
+                        <div style={{ color: '#64748b', fontSize: '14px', textAlign: 'center' }}>
+                          No recent sourcing opportunities found.
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="pud-panel-list">
+                        {rfqs.map((rfq) => (
+                          <div className="pud-rfq-row" key={rfq.rfqId}>
+                            <div className="pud-rfq-info">
+                              <div className="pud-rfq-meta">
+                                <span className="pud-code-badge">{rfq.rfqNumber}</span>
+                                <span className="pud-dot-sep">•</span>
+                                <span className="pud-company">{rfq.organizationName}</span>
+                              </div>
+                              <div className="pud-rfq-title">{rfq.title}</div>
+                              <div className="pud-rfq-details">
+                                <span>
+                                  <IconCalendar /> Closes: {new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                </span>
+                                <span>
+                                  <IconPin /> Deliv: {rfq.deliveryLocation}
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              className="pud-btn pud-btn-outline"
+                              onClick={() => handleViewRfqDetails(rfq.rfqId)}
+                            >
+                              View RFQ Details
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="pud-panel">
+                    <div className="pud-panel-header">
+                      <div>
+                        <div className="pud-panel-title">Recent Purchase Orders</div>
+                        <div className="pud-panel-subtitle">New orders requiring attention</div>
+                      </div>
+                      <a className="pud-panel-link" href="#">View All →</a>
                     </div>
-                    <div className="pud-match-actions">
-                      <button
-                        className="pud-btn pud-btn-outline pud-btn-flex"
-                        onClick={() => setSelectedProfile(card)}
-                      >
-                        <IconEye /> Profile
-                      </button>
-                      {card.actionVariant === "message" ? (
-                        <button className="pud-btn pud-btn-message pud-btn-flex">
-                          <IconMessageSquare /> Message
-                        </button>
-                      ) : (
-                        <button className="pud-btn pud-btn-interest pud-btn-flex">
-                          <IconSend /> Send Interest
-                        </button>
-                      )}
+                    <div className="pud-panel-list">
+                      {poItems.map((po) => (
+                        <div className="pud-po-row" key={po.code}>
+                          <div className="pud-po-info">
+                            <div className="pud-po-meta">
+                              <span className="pud-po-code">{po.code}</span>
+                              <span className={`pud-status-badge pud-status-badge-${po.status.toLowerCase()}`}>
+                                {po.status}
+                              </span>
+                            </div>
+                            <div className="pud-po-company">{po.company}</div>
+                            <div className="pud-po-date"><IconCalendar /> Order Date: {po.orderDate}</div>
+                          </div>
+                          <div className="pud-po-right">
+                            <div className="pud-po-amount">{po.amount}</div>
+                            <a className="pud-po-process" href="#">Process →</a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+
+                <section className="pud-matchmaker">
+                  <div className="pud-matchmaker-header">
+                    <div className="pud-matchmaker-title-row">
+                      <span className="pud-matchmaker-icon"><IconSparkles /></span>
+                      <div className="pud-matchmaker-title">Smart Sourcing Matchmaker</div>
+                    </div>
+                    <div className="pud-matchmaker-subtitle">
+                      Active enterprise buyers looking for products and services matching your certified categories and registered ship-to locations.
                     </div>
                   </div>
-                ))}
-              </div>
 
-              <div className="pud-pagination">
-                <button className="pud-page-btn pud-page-btn-disabled" disabled>
-                  <IconChevronLeft />
-                </button>
-                <button className="pud-page-btn pud-page-btn-active">
-                  <IconChevronRight />
-                </button>
-              </div>
-            </section>
+                  <div className="pud-match-grid">
+                    {matchCards.map((card) => (
+                      <div className="pud-match-card" key={card.name}>
+                        <span className="pud-match-location"><IconPin /> {card.location}</span>
+                        <div className="pud-match-top">
+                          <div className="pud-match-avatar">{card.initials}</div>
+                          <div>
+                            <div className="pud-match-name">{card.name}</div>
+                            <div className="pud-match-seeking"><NavIconBuilding /> Seeking: {card.seeking}</div>
+                          </div>
+                        </div>
+                        <p className="pud-match-desc">{card.description}</p>
+                        <div className="pud-match-rep-row">
+                          <span className="pud-match-rep-label">Representative:</span>
+                          <span className="pud-match-rep-name">{card.representative}</span>
+                        </div>
+                        <div className="pud-match-actions">
+                          <button
+                            className="pud-btn pud-btn-outline pud-btn-flex"
+                            onClick={() => setSelectedProfile(card)}
+                          >
+                            <IconEye /> Profile
+                          </button>
+                          {card.actionVariant === "message" ? (
+                            <button className="pud-btn pud-btn-message pud-btn-flex">
+                              <IconMessageSquare /> Message
+                            </button>
+                          ) : (
+                            <button className="pud-btn pud-btn-interest pud-btn-flex">
+                              <IconSend /> Send Interest
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pud-pagination">
+                    <button className="pud-page-btn pud-page-btn-disabled" disabled>
+                      <IconChevronLeft />
+                    </button>
+                    <button className="pud-page-btn pud-page-btn-active">
+                      <IconChevronRight />
+                    </button>
+                  </div>
+                </section>
+              </>
+            )}
           </main>
         </div>
 
@@ -955,7 +990,7 @@ const SupplierDashboard: React.FC = () => {
         {selectedRfqId && (
           <div className="pud-modal-overlay" onClick={() => setSelectedRfqId(null)}>
             <div className="pud-modal pud-modal-rfq" onClick={(e) => e.stopPropagation()}>
-              
+
               {/* Modal Header */}
               <div className="pud-modal-header">
                 <span className="pud-modal-badge">
@@ -1000,14 +1035,14 @@ const SupplierDashboard: React.FC = () => {
 
                   {selectedRfq && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                      
+
                       {/* General Specs */}
                       <div>
                         <div className="pud-modal-section-title">Description</div>
                         <p className="pud-modal-desc" style={{ whiteSpace: 'pre-wrap' }}>
                           {selectedRfq.description || "No description provided."}
                         </p>
-                        
+
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
                           <div>
                             <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
@@ -1033,34 +1068,34 @@ const SupplierDashboard: React.FC = () => {
                       {/* Reference / Bid Documents */}
                       {((selectedRfq.technicalSpecificationDocuments?.length ?? 0) > 0 ||
                         (selectedRfq.termsConditionDocuments?.length ?? 0) > 0) && (
-                        <div>
-                          <div className="pud-modal-section-title">Reference Documents</div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginTop: '8px' }}>
-                            
-                            {/* Tech Documents */}
-                            {selectedRfq.technicalSpecificationDocuments?.map((doc) => (
-                              <div key={doc.id} className="pud-rfq-doc-card">
-                                <span className="pud-rfq-doc-icon"><IconFile /></span>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                  <div className="pud-rfq-doc-type">Tech Spec • {doc.fileType.toUpperCase()}</div>
-                                </div>
-                              </div>
-                            ))}
+                          <div>
+                            <div className="pud-modal-section-title">Reference Documents</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginTop: '8px' }}>
 
-                            {/* Terms Documents */}
-                            {selectedRfq.termsConditionDocuments?.map((doc) => (
-                              <div key={doc.id} className="pud-rfq-doc-card">
-                                <span className="pud-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></span>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                  <div className="pud-rfq-doc-type">Terms & Conditions • {doc.fileType.toUpperCase()}</div>
+                              {/* Tech Documents */}
+                              {selectedRfq.technicalSpecificationDocuments?.map((doc) => (
+                                <div key={doc.id} className="pud-rfq-doc-card">
+                                  <span className="pud-rfq-doc-icon"><IconFile /></span>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                                    <div className="pud-rfq-doc-type">Tech Spec • {doc.fileType.toUpperCase()}</div>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+
+                              {/* Terms Documents */}
+                              {selectedRfq.termsConditionDocuments?.map((doc) => (
+                                <div key={doc.id} className="pud-rfq-doc-card">
+                                  <span className="pud-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></span>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                                    <div className="pud-rfq-doc-type">Terms & Conditions • {doc.fileType.toUpperCase()}</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
                       {/* Sourcing Items Table */}
                       <div>
@@ -1142,7 +1177,7 @@ const SupplierDashboard: React.FC = () => {
                         <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                           <IconSparkles /> Commercial Proposal / Quotation Details
                         </div>
-                        
+
                         {submitQuoteSuccess && (
                           <div style={{ background: '#dcfce7', border: '1px solid #bbf7d0', color: '#15803d', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 500, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <IconCheckCircle /> Quotation submitted successfully!
@@ -1156,7 +1191,7 @@ const SupplierDashboard: React.FC = () => {
                         )}
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', background: '#f8fafc', padding: '20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                          
+
                           {/* Delivery Charge */}
                           <div>
                             <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
