@@ -361,7 +361,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
 
                 {isCountryDropdownOpen && (
                   <div className="nad-dropdown">
-                    <div className="nad-search-wrapper">
+                    <div className="nad-search-countries-wrapper">
                       <FaSearch className="nad-search-icon" />
                       <input
                         ref={searchInputRef}

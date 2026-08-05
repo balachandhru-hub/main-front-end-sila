@@ -1,10 +1,5 @@
 .nad-table-container {
   background: #ffffff;
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 32px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  border: 1px solid #e2e8f0;
 }
 
 .nad-table-title {
@@ -23,24 +18,42 @@
 }
 
 .nad-table-wrapper {
-  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .nad-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.nad-table thead,
+.nad-table tbody tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.nad-table thead {
+  width: calc(100% - 8px);
+}
+
+.nad-table tbody {
+  display: block;
+  max-height: 420px;
+  overflow-y: auto;
 }
 
 .nad-table th {
-  background-color: #f8fafc;
+  background: #f8fafc;
   padding: 14px 16px;
   text-align: left;
   font-weight: 600;
   font-size: 13px;
   color: #2d3748;
   border-bottom: 2px solid #e2e8f0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .nad-table td {
@@ -50,13 +63,10 @@
   color: #4a5568;
 }
 
-.nad-table tbody tr {
-  transition: background-color 0.2s ease;
+.nad-table tbody tr:hover {
+  background: #f8fafc;
 }
 
-.nad-table tbody tr:hover {
-  background-color: #f8fafc;
-}
 
 .nad-name-cell {
   font-weight: 500;
@@ -142,14 +152,48 @@
     margin-bottom: 24px;
   }
 
+  .nad-table-wrapper {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nad-table {
+    min-width: 720px;
+  }
+
+  .nad-table tbody {
+    max-height: 320px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
   .nad-table th,
   .nad-table td {
-    padding: 10px 8px;
+    padding: 10px 12px;
     font-size: 0.85rem;
+    white-space: nowrap;
   }
 
   .nad-btn-action {
     padding: 6px 10px;
     font-size: 12px;
+  }
+
+  .nad-table-wrapper::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .nad-table-wrapper::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+
+  .nad-table-wrapper::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 8px;
+  }
+
+  .nad-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
   }
 }
