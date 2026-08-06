@@ -1,3 +1,5 @@
+import type { BuyerDto, SupplierDto } from './platformDto';
+export type NetworkAdminProfileResponse = BuyerDto | SupplierDto;
 export interface OrganizationUserDto {
   personId: string;
   userId: string;
@@ -41,36 +43,36 @@ export interface ErrorResponseDto {
   description: string;
 }
 
-export interface NetworkAdminProfileResponse {
-  id: string;
-  organizationId: string;
-  businessProfile: {
-    organizationName: string;
-    email: string;
-    phone: string;
-    country: string;
-    addressLine1: string;
-    addressLine2: string;
-    city: string;
-    state: string;
-    pinCode: string;
-    industry: string;
-    businessType: string;
-    employeeCount: number;
-    annualTurnover: number;
-    currency: string;
-    yearEstablished: number;
-    website: string;
-    description: string;
-    status: string;
-    comments?: string;
-    comment?: string;
-  };
-  registrations: any[];
-  bankAccounts: any[];
-  dispatchLocations: any[];
-  categories: any[];
-}
+// export interface NetworkAdminProfileResponse {
+//   id: string;
+//   organizationId: string;
+//   businessProfile: {
+//     organizationName: string;
+//     email: string;
+//     phone: string;
+//     country: string;
+//     addressLine1: string;
+//     addressLine2: string;
+//     city: string;
+//     state: string;
+//     pinCode: string;
+//     industry: string;
+//     businessType: string;
+//     employeeCount: number;
+//     annualTurnover: number;
+//     currency: string;
+//     yearEstablished: number;
+//     website: string;
+//     description: string;
+//     status: string;
+//     comments?: string;
+//     comment?: string;
+//   };
+//   registrations: any[];
+//   bankAccounts: any[];
+//   dispatchLocations: any[];
+//   categories: any[];
+// }
 
 export interface NetworkAdminOnboardingResponse {
   id: string;

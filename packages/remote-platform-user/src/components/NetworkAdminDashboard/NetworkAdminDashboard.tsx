@@ -5,6 +5,7 @@ import { useNetworkAdminAuthStore } from '../../store/useAuthStore';
 import UserListTable from '../UserListTable/UserListTable';
 import CreateUserModal from '../CreateUserModal/CreateUserModal';
 import { ToastContainer, toastService } from '@vosox/shared-ui';
+import CompanyProfile from '../CompanyProfile/CompanyProfile';
 import {
   getOrganizationUsers,
   createPerson,
@@ -25,7 +26,7 @@ import './NetworkAdminDashboard.css';
 const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;
 
 const NavIconUsers = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
     <circle cx="9" cy="7" r="4" />
     <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
@@ -34,21 +35,21 @@ const NavIconUsers = () => (
 );
 
 const NavIconBuilding = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="4" y="2" width="16" height="20" rx="1" />
     <path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01" />
   </svg>
 );
 
 const NavIconSettings = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3" />
     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
   </svg>
 );
 
 const LogoutIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
     <polyline points="16 17 21 12 16 7" />
     <line x1="21" y1="12" x2="9" y2="12" />
@@ -60,6 +61,21 @@ const navItems: { key: string; icon: React.ReactNode; label: string }[] = [
   { key: 'companyProfile', icon: <NavIconBuilding />, label: 'Company Profile' },
   { key: 'settings', icon: <NavIconSettings />, label: 'Settings' },
 ];
+
+const sectionTitles: Record<string, { title: string; subtitle: string }> = {
+  manageUsers: {
+    title: 'Network Admin Dashboard',
+    subtitle: 'Manage your network users and settings',
+  },
+  companyProfile: {
+    title: 'Company Details',
+    subtitle: 'View and manage your company information',
+  },
+  settings: {
+    title: 'Settings',
+    subtitle: 'Configure your preferences and settings',
+  },
+};
 
 const NetworkAdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -253,6 +269,7 @@ const NetworkAdminDashboard: React.FC = () => {
   const allFilteredUsers = [...filteredAdministrators, ...filteredUsers];
 
   const showUsersView = activeNav === 'manageUsers';
+  const currentSectionInfo = sectionTitles[activeNav] || sectionTitles.manageUsers;
 
   return (
     <div className="nad-page">
@@ -271,6 +288,8 @@ const NetworkAdminDashboard: React.FC = () => {
                 className={`nad-nav-item${activeNav === item.key ? ' nad-nav-item-active' : ''}`}
                 onClick={() => setActiveNav(item.key)}
                 role="button"
+                tabIndex={0}
+                title={item.label}
               >
                 <span className="nad-nav-icon">{item.icon}</span>
                 <span className="nad-nav-label">{item.label}</span>
@@ -281,6 +300,7 @@ const NetworkAdminDashboard: React.FC = () => {
               className={`nad-nav-item nad-nav-item-logout${loggingOut ? ' nad-nav-item-disabled' : ''}`}
               onClick={handleLogout}
               role="button"
+              tabIndex={0}
               aria-disabled={loggingOut}
               title="Log out"
             >
@@ -295,8 +315,8 @@ const NetworkAdminDashboard: React.FC = () => {
         <div className="nad-main">
           <main className="nad-content">
             <header className="nad-content-header">
-              <h1 className="nad-title">Network Admin Dashboard</h1>
-              <p className="nad-subtitle">Manage your network users and settings</p>
+              <h1 className="nad-title">{currentSectionInfo.title}</h1>
+              <p className="nad-subtitle">{currentSectionInfo.subtitle}</p>
             </header>
 
             {showUsersView ? (
@@ -352,6 +372,7 @@ const NetworkAdminDashboard: React.FC = () => {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="nad-search-input"
+                      aria-label="Search users"
                     />
                   </div>
 
@@ -367,9 +388,10 @@ const NetworkAdminDashboard: React.FC = () => {
                         setIsModalOpen(true);
                       }}
                       disabled={isCreatingUser}
+                      title="Create a new administrator user"
                     >
                       <FaPlus />
-                      Create New {adminLabel.slice(0, -1)}
+                      Create {adminLabel.slice(0, -1)}
                     </button>
 
                     <button
@@ -383,9 +405,10 @@ const NetworkAdminDashboard: React.FC = () => {
                         setIsModalOpen(true);
                       }}
                       disabled={isCreatingUser}
+                      title="Create a new regular user"
                     >
                       <FaPlus />
-                      Create New {userLabel.slice(0, -1)}
+                      Create {userLabel.slice(0, -1)}
                     </button>
                   </div>
                 </div>
@@ -400,7 +423,7 @@ const NetworkAdminDashboard: React.FC = () => {
                 {isLoadingData ? (
                   <div className="nad-loading-data">
                     <div className="nad-spinner"></div>
-                    <p>Loading your data...</p>
+                    <p>Please wait...</p>
                   </div>
                 ) : (
                   <div className="nad-lists-section">
@@ -412,9 +435,11 @@ const NetworkAdminDashboard: React.FC = () => {
                   </div>
                 )}
               </>
+            ) : activeNav === 'companyProfile' ? (
+              <CompanyProfile mode="network-admin" showHeader={false} />
             ) : (
               <div className="nad-empty-state">
-                <p>This section is coming soon.</p>
+                <p>This section is coming soon. Check back later for more features.</p>
               </div>
             )}
           </main>
@@ -428,19 +453,13 @@ const NetworkAdminDashboard: React.FC = () => {
         createRole={modalCreateRole}
         isLoading={isCreatingUser}
       />
+
       {isDeleteModalOpen && (
         <div className="nad-modal-overlay">
           <div className="nad-delete-modal">
             <h3>Delete User</h3>
-
-            <p>
-              Are you sure you want to delete{' '}
-              <strong>{userToDelete?.name}</strong>?
-            </p>
-
-            <p className="nad-delete-warning">
-              This action cannot be undone.
-            </p>
+            <p>Are you sure you want to delete <strong>{userToDelete?.name}</strong>?</p>
+            <p className="nad-delete-warning">This action cannot be undone.</p>
 
             <div className="nad-delete-actions">
               <button
