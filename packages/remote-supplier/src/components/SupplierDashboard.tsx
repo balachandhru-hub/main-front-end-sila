@@ -282,10 +282,6 @@ const navItemsBeforeCatalog = [
 ];
 
 const navItemsAfterCatalog = [
-  { icon: <NavIconHome />, label: "Dashboard", active: true },
-  { icon: <NavIconMail />, label: "Invitations", badge: 2 },
-  { icon: <NavIconFile />, label: "RFQs", badge: 2 },
-  { icon: <NavIconUser />, label: "Quotations" },
   { icon: <NavIconBag />, label: "Purchase Orders" },
   { icon: <NavIconContract />, label: "Contracts" },
   { icon: <NavIconInvoice />, label: "Invoices" },
@@ -700,7 +696,6 @@ const SupplierDashboard: React.FC = () => {
               <div key={item.label} className="pud-nav-item">
                 <span className="pud-nav-icon">{item.icon}</span>
                 <span className="pud-nav-label">{item.label}</span>
-                {item.label && <span className="pud-nav-badge">{item.label}</span>}
               </div>
             ))}
             <div
