@@ -1509,7 +1509,7 @@ const SupplierDashboard: React.FC = () => {
                           {/* Delivery Charge */}
                           <div>
                             <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
-                              Delivery Charge ($)
+                              Delivery Charge
                             </label>
                             <input
                               type="number"
@@ -1542,7 +1542,7 @@ const SupplierDashboard: React.FC = () => {
                           {/* Discount */}
                           <div>
                             <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
-                              Discount ($)
+                              Discount
                             </label>
                             <input
                               type="number"
@@ -1575,7 +1575,7 @@ const SupplierDashboard: React.FC = () => {
                           {/* Tax */}
                           <div>
                             <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
-                              Tax ($)
+                              Tax
                             </label>
                             <input
                               type="number"
