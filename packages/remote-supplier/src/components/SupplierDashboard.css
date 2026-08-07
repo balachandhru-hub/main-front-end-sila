@@ -82,6 +82,10 @@
   flex: 1;
 }
 
+.bad-nav-item-logout {
+  color: #dc2626;
+}
+
 .pud-nav-badge {
   background: #2f6feb;
   color: #fff;
