@@ -9,11 +9,12 @@ import type {
   RFQDetailResponse,
   SubmitQuotationPayload,
   CreateSupplierCatalogPayload,
+  SubmitRfqAnswersPayload,
 } from '../dto/supplierDto';
 
 // re-export so existing imports elsewhere (e.g. SupplierApp.tsx) keep working
 export type { SupplierProfileResponse, RFQMasterDataItem, RFQDetailResponse, SubmitQuotationPayload } from '../dto/supplierDto';
-export type { CatalogAssetDto, CatalogDetailDto, CreateSupplierCatalogPayload } from '../dto/supplierDto';
+export type { CatalogAssetDto, CatalogDetailDto, CreateSupplierCatalogPayload, SubmitRfqAnswersPayload, RfqDocumentAssetDto } from '../dto/supplierDto';
 // ============================================================================
 // API: Create Supplier Profile (Register)
 // ============================================================================
@@ -220,5 +221,19 @@ export const fetchClasses = async (segment: number, family: number): Promise<any
   } catch (error: any) {
     console.error('Failed to fetch classes:', error);
     return [];
+  }
+};
+
+export const submitRfqAnswers = async (
+  payload: SubmitRfqAnswersPayload
+): Promise<any> => {
+  try {
+    const response = await supplierInstance.put('/api/v1/supplier/rfq-answer', payload);
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to submit RFQ answers.';
+    throw new Error(`${errMsg} (${status})`);
   }
 };
