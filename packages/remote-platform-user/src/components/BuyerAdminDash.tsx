@@ -3,6 +3,8 @@ import "./BuyerAdminDash.css";
 import Header from "../../../remote-buyer/src/components/Header";
 import UserAdmin from "../UserAdmin";
 import UserTemplate from "./usertemplate";
+import CompanyProfile from "./CompanyProfile/CompanyProfile";
+import { useNetworkAdminAuthStore } from "../store/useAuthStore";
 import { fetchBuyerRFQs, fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
 import CreateRFQ from "./UserListTable/CreateRFQ";
 
@@ -339,9 +341,6 @@ const BuyerAdminDash: React.FC = () => {
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
 
-  const [buyerId] = useState<string | null>(
-    sessionStorage.getItem("vosox_buyer_id")
-  );
   const [loadingRfqs, setLoadingRfqs] = useState(false);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
   const [rfqs, setRfqs] = useState<any[]>(mockRfqs);
@@ -351,21 +350,44 @@ const BuyerAdminDash: React.FC = () => {
   const RFQ_INITIAL_VISIBLE = 3;
   const RFQ_PAGE_SIZE = 5;
 
+  const [buyerId] = useState<string | null>(
+    sessionStorage.getItem("vosox_buyer_id")
+  );
+
+  const [loadingRfqDetails, setLoadingRfqDetails] = useState<boolean>(false);
+  const [rfqDetailsError, setRfqDetailsError] = useState<string | null>(null);
+  const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
+  const [selectedRfq, setSelectedRfq] = useState<any | null>(null);
+
+  useEffect(() => {
+    useNetworkAdminAuthStore.getState().initializeFromSession();
+  }, []);
+
   useEffect(() => {
     const loadRfqs = async () => {
-      if (!buyerId) return;
       setLoadingRfqs(true);
       setRfqsError(null);
       try {
-        const data = await fetchBuyerRFQs({
-          buyerId,
-          index: 0,
-          limit: RFQ_INITIAL_VISIBLE,
-        });
-        const finalData = data.length > 0 ? data : mockRfqs;
-        setRfqs(finalData);
-        setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, finalData.length));
-        setHasMoreRfqs(data.length === RFQ_INITIAL_VISIBLE);
+        if (buyerId) {
+          const data = await fetchBuyerRFQs({
+            buyerId,
+            index: 0,
+            limit: RFQ_INITIAL_VISIBLE,
+          });
+          if (data && data.length > 0) {
+            setRfqs(data);
+            setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
+            setHasMoreRfqs(data.length === RFQ_INITIAL_VISIBLE);
+          } else {
+            setRfqs(mockRfqs);
+            setVisibleRfqCount(mockRfqs.length);
+            setHasMoreRfqs(false);
+          }
+        } else {
+          setRfqs(mockRfqs);
+          setVisibleRfqCount(mockRfqs.length);
+          setHasMoreRfqs(false);
+        }
       } catch (err: any) {
         console.error("Failed to load RFQs", err);
         setRfqsError(err.message || "Failed to load sourcing opportunities.");
@@ -379,13 +401,11 @@ const BuyerAdminDash: React.FC = () => {
   const handleViewMoreRfqs = async () => {
     if (loadingMoreRfqs) return;
 
-    // If we already have more fetched than we're showing, just reveal more locally.
     if (visibleRfqCount < rfqs.length) {
       setVisibleRfqCount((v) => Math.min(v + RFQ_PAGE_SIZE, rfqs.length));
       return;
     }
 
-    // Otherwise, fetch the next page from the server.
     if (!buyerId || !hasMoreRfqs) return;
 
     setLoadingMoreRfqs(true);
@@ -406,11 +426,6 @@ const BuyerAdminDash: React.FC = () => {
     }
   };
 
-  const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
-  const [selectedRfq, setSelectedRfq] = useState<any | null>(null);
-  const [loadingRfqDetails, setLoadingRfqDetails] = useState<boolean>(false);
-  const [rfqDetailsError, setRfqDetailsError] = useState<string | null>(null);
-
   const handleViewRfqDetails = async (rfqId: string) => {
     setSelectedRfqId(rfqId);
     setLoadingRfqDetails(true);
@@ -421,7 +436,6 @@ const BuyerAdminDash: React.FC = () => {
     } catch (err: any) {
       console.error("Failed to load RFQ details from API", err);
       setRfqDetailsError(err.message || "Failed to fetch details.");
-      // Fallback to local list element (e.g. for mock items)
       const found = rfqs.find((r) => r.rfqId === rfqId) || null;
       setSelectedRfq(found);
     } finally {
@@ -491,6 +505,8 @@ const BuyerAdminDash: React.FC = () => {
               <UserAdmin />
             ) : activeNav === "template" ? (
               <UserTemplate />
+            ) : activeNav === "companyProfile" ? (
+              <CompanyProfile mode="network-admin" showHeader={false} />
             ) : activeNav === "createRFQ" ? (
               <CreateRFQ />
             ) : (

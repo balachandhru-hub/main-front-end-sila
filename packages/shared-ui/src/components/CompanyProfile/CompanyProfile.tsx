@@ -25,21 +25,20 @@ import {
   FaTags,
   FaUserCircle
 } from 'react-icons/fa';
-import { useNetworkAdminAuthStore } from '../../store/useAuthStore';
-import { getNetworkAdminProfile } from '../../api/networkAdminApi';
-import type { NetworkAdminRole } from '../../api/networkAdminApi';
-import type { NetworkAdminProfileResponse } from '../../dto/networkAdminDto';
 import type {
+  CompanyProfileData,
   CategoryDto,
   RegistrationDto,
   BankAccountDto,
   DispatchLocationDto,
-} from '../../dto/platformDto';
+} from './CompanyProfile.types';
 import './CompanyProfile.css';
 
 interface CompanyProfileProps {
   mode?: 'admin-review' | 'network-admin';
   showHeader?: boolean;
+  entityLabel: 'Buyer' | 'Supplier';
+  fetchProfile: () => Promise<CompanyProfileData | null>;
 }
 
 const formatCurrency = (amount?: number, currency?: string) => {
@@ -108,10 +107,10 @@ const MaskedAccountNumber: React.FC<{ accountNumber?: string }> = ({ accountNumb
 const CompanyProfile: React.FC<CompanyProfileProps> = ({
   mode = 'admin-review',
   showHeader = true,
+  entityLabel,
+  fetchProfile,
 }) => {
-  const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
-
-  const [profile, setProfile] = useState<NetworkAdminProfileResponse | null>(null);
+  const [profile, setProfile] = useState<CompanyProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -126,33 +125,29 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
   const toggleSection = (key: keyof typeof openSections) =>
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const isBuyer =
-    currentUser?.userRole === 'BUYER_NETWORK_ADMIN' ||
-    currentUser?.userRole === 'BUYER_ADMINISTRATOR' ||
-    currentUser?.userRole === 'BUYER_USER';
-
   useEffect(() => {
-    const fetchProfile = async () => {
+    let cancelled = false;
+
+    const load = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const userRole = currentUser?.userRole;
-        const role: NetworkAdminRole = userRole
-          ? userRole.includes('BUYER') ? 'BUYER_NETWORK_ADMIN' : 'SUPPLIER_NETWORK_ADMIN'
-          : 'SUPPLIER_NETWORK_ADMIN';
-        const data = await getNetworkAdminProfile(role);
-        setProfile(data);
+        const data = await fetchProfile();
+        if (!cancelled) setProfile(data);
       } catch (err: any) {
-        setError(err.message || 'Failed to load company profile');
+        if (!cancelled) setError(err.message || 'Failed to load company profile');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
-    fetchProfile();
-  }, [currentUser]);
+    load();
 
-  const entityLabel = isBuyer ? 'Buyer' : 'Supplier';
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchProfile]);
 
   if (isLoading) {
     return (
@@ -264,7 +259,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
         <div className="cp-body">
           <div className="cp-main-col">
-            {/* BUSINESS PROFILE SECTION */}
             <section className="cp-card">
               <SectionHeader
                 icon={<FaBuilding />}
@@ -344,34 +338,33 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                         <FaMapMarkerAlt />
                         Address
                       </span>
-                        <span className="cp-field-value">
+                      <span className="cp-field-value">
                         {bp.addressLine1 || '-'}
                         <br />
                         {bp.city || '-'}, {bp.state || '-'}
                         <br />
                         {bp.pinCode || '-'}, {bp.country || '-'}
-                        </span>
-                        <div className="cp-sub-grid">
+                      </span>
+                      <div className="cp-sub-grid">
                         <div className="cp-field">
-                            <span className="cp-field-label">Country</span>
-                            <span className="cp-field-value">{bp.country || '-'}</span>
-                        </div>
-                        <div className="cp-field">
-                            <span className="cp-field-label">State</span>
-                            <span className="cp-field-value">{bp.state || '-'}</span>
+                          <span className="cp-field-label">Country</span>
+                          <span className="cp-field-value">{bp.country || '-'}</span>
                         </div>
                         <div className="cp-field">
-                            <span className="cp-field-label">City</span>
-                            <span className="cp-field-value">{bp.city || '-'}</span>
+                          <span className="cp-field-label">State</span>
+                          <span className="cp-field-value">{bp.state || '-'}</span>
                         </div>
+                        <div className="cp-field">
+                          <span className="cp-field-label">City</span>
+                          <span className="cp-field-value">{bp.city || '-'}</span>
                         </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
             </section>
 
-            {/* BUSINESS REGISTRATIONS SECTION */}
             <section className="cp-card">
               <SectionHeader
                 icon={<FaFileContract />}
@@ -404,16 +397,15 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                               <td>{formatDate(reg.expiryDate)}</td>
                               <td>
                                 {reg.asset?.fileName ? (
-                                 <div className="cp-doc-link-wrapper">
-                                  <span className="cp-doc-link" title={reg.asset.fileName}>
-                                    <FaFilePdf className="cp-pdf-icon" />
-                                    {reg.asset.fileName}
-                                  </span>
-                                  <span className="cp-doc-actions">
-                                    <FaEye className="cp-eye-icon" />
-                                  </span>
-                                 </div>
-
+                                  <div className="cp-doc-link-wrapper">
+                                    <span className="cp-doc-link" title={reg.asset.fileName}>
+                                      <FaFilePdf className="cp-pdf-icon" />
+                                      {reg.asset.fileName}
+                                    </span>
+                                    <span className="cp-doc-actions">
+                                      <FaEye className="cp-eye-icon" />
+                                    </span>
+                                  </div>
                                 ) : (
                                   '-'
                                 )}
@@ -428,21 +420,20 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
               )}
             </section>
 
-            {/* BANK ACCOUNTS SECTION */}
             <section className="cp-card">
               <div className="cp-card-header-flex">
                 <SectionHeader
-                icon={<FaUniversity />}
-                title="3. Bank Accounts"
-                isOpen={openSections.bank}
-                onToggle={() => toggleSection('bank')}
-                extra={
+                  icon={<FaUniversity />}
+                  title="3. Bank Accounts"
+                  isOpen={openSections.bank}
+                  onToggle={() => toggleSection('bank')}
+                  extra={
                     bankAccounts.some((a) => a.isPrimary) ? (
-                    <span className="cp-pill cp-pill-yes">
+                      <span className="cp-pill cp-pill-yes">
                         <FaCheck /> Primary Account
-                    </span>
+                      </span>
                     ) : undefined
-                }
+                  }
                 />
               </div>
               {openSections.bank && (
@@ -478,7 +469,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                           <div className="cp-field">
                             <span className="cp-field-label">Primary Account</span>
                             <span className={`cp-status-pill ${acc.isPrimary ? 'cp-pill-green' : 'cp-pill-red'}`}>
-                            {acc.isPrimary ? 'Yes' : 'No'}
+                              {acc.isPrimary ? 'Yes' : 'No'}
                             </span>
                           </div>
 
@@ -504,7 +495,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
               )}
             </section>
 
-            {/* DISPATCH LOCATIONS SECTION */}
             <section className="cp-card">
               <SectionHeader
                 icon={<FaTruck />}
@@ -566,7 +556,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
               )}
             </section>
 
-            {/* PRODUCT CATEGORIES SECTION */}
             <section className="cp-card">
               <SectionHeader
                 icon={<FaThLarge />}
@@ -612,7 +601,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
             </section>
           </div>
 
-          {/* SIDEBAR SUMMARY CARD */}
           <aside className="cp-side-col">
             <div className="cp-card cp-summary-card">
               <div className="cp-card-title cp-card-title-static">

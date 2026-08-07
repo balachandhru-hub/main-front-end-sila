@@ -468,8 +468,9 @@ const Invitations: React.FC = () => {
                                 key={item.label}
                                 className={`pud-nav-item${item.active ? " pud-nav-item-active" : ""}`}
                                 onClick={() => {
-                                    if (item.label === "Dashboard") navigate("/dashboard");
-                                    if (item.label === "Invitations") navigate("/invitations");
+                                if (item.label === "Dashboard") navigate("/dashboard");
+                                if (item.label === "Invitations") navigate("/invitations");
+                                if (item.label === "Company Profile") navigate("/dashboard", { state: { view: "companyProfile" } });
                                 }}
                             >
                                 <span className="pud-nav-icon">{item.icon}</span>

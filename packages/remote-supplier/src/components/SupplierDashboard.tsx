@@ -3,6 +3,7 @@ import SilaLogo from "../assets/SILA_Logo.png";
 import "./SupplierDashboard.css";
 import Catalog from "./Catalog.tsx";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
+import { CompanyProfile } from '@vosox/shared-ui';
 import {
   logoutSupplier,
   fetchRFQMasterData,
@@ -16,7 +17,7 @@ import {
   type SubmitQuotationPayload,
   type RfqDocumentAssetDto
 } from "../api/supplierApi";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 interface StatCard {
   icon: React.ReactNode;
   label: string;
@@ -391,7 +392,7 @@ const SupplierDashboard: React.FC = () => {
     sessionStorage.getItem("vosox_organization_name") || "Apex Office & Technology Supp...";
   const firstLetter = organizationName.trim().charAt(0).toUpperCase();
 
-  const [activeView, setActiveView] = useState<"dashboard" | "catalogList" | "template">("dashboard");
+  const [activeView, setActiveView] = useState<"dashboard" | "catalogList" | "template" | "companyProfile">("dashboard");
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
   // Sidebar toggle removed; sidebar always open.
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
@@ -481,6 +482,15 @@ const SupplierDashboard: React.FC = () => {
     };
     loadRfqs();
   }, [supplierId]);
+
+  const location = useLocation();
+
+  useEffect(() => {
+    const intendedView = (location.state as { view?: string })?.view;
+    if (intendedView === "companyProfile") {
+      setActiveView("companyProfile");
+    }
+  }, [location.state]);
 
   const handleViewMoreRfqs = async () => {
     if (loadingMoreRfqs) return;
@@ -885,13 +895,16 @@ const SupplierDashboard: React.FC = () => {
             />
 
             {navItemsAfterCatalog.map((item) => {
-              const isActive = item.label === "Template" && activeView === "template";
+              const isActive =
+                (item.label === "Template" && activeView === "template") ||
+                (item.label === "Company Profile" && activeView === "companyProfile");
               return (
                 <div
                   key={item.label}
                   className={`pud-nav-item${isActive ? " pud-nav-item-active" : ""}`}
                   onClick={() => {
                     if (item.label === "Template") setActiveView("template");
+                    if (item.label === "Company Profile") setActiveView("companyProfile");
                   }}
                 >
                   <span className="pud-nav-icon">{item.icon}</span>
@@ -926,6 +939,12 @@ const SupplierDashboard: React.FC = () => {
               <UserTemplate />
             ) : activeView === "catalogList" ? (
               <div ref={setCatalogViewContainer} />
+            ) : activeView === "companyProfile" ? (
+              <CompanyProfile
+                mode="network-admin"
+                entityLabel="Supplier"
+                fetchProfile={getSupplierProfile}
+              />
             ) : (
               <>
                 <h1 className="pud-title">Supplier Operations Command</h1>
