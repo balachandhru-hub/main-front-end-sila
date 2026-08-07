@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  FaArrowLeft,
   FaBuilding,
   FaEnvelope,
   FaPhone,
@@ -12,7 +13,6 @@ import {
   FaChevronUp,
   FaChevronDown,
   FaCheck,
-  FaPen,
   FaTimes,
   FaFilePdf,
   FaEye,
@@ -40,6 +40,14 @@ import './CompanyProfile.css';
 interface CompanyProfileProps {
   mode?: 'admin-review' | 'network-admin';
   showHeader?: boolean;
+  entityLabel?: 'Buyer' | 'Supplier';
+  fetchProfile?: () => Promise<any>;
+  onBack?: () => void;
+  onVerify?: () => void;
+  onReject?: () => void;
+  isStatusLoading?: boolean;
+  statusError?: string | null;
+  onViewDocument?: (assetId: string, fileName?: string) => void;
 }
 
 const formatCurrency = (amount?: number, currency?: string) => {
@@ -57,13 +65,17 @@ const formatDate = (dateString?: string | null) => {
 
 const statusClassMap: Record<string, string> = {
   PENDING_VERIFICATION: 'cp-status-pending',
+  PENDING: 'cp-status-pending',
   VERIFIED: 'cp-status-verified',
+  APPROVED: 'cp-status-verified',
   REJECTED: 'cp-status-rejected',
 };
 
 const statusLabelMap: Record<string, string> = {
   PENDING_VERIFICATION: 'Pending Verification',
+  PENDING: 'Pending Verification',
   VERIFIED: 'Verified',
+  APPROVED: 'Approved',
   REJECTED: 'Rejected',
 };
 
@@ -108,10 +120,18 @@ const MaskedAccountNumber: React.FC<{ accountNumber?: string }> = ({ accountNumb
 const CompanyProfile: React.FC<CompanyProfileProps> = ({
   mode = 'admin-review',
   showHeader = true,
+  entityLabel: propsEntityLabel,
+  fetchProfile,
+  onBack,
+  onVerify,
+  onReject,
+  isStatusLoading = false,
+  statusError = null,
+  onViewDocument,
 }) => {
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
 
-  const [profile, setProfile] = useState<NetworkAdminProfileResponse | null>(null);
+  const [profile, setProfile] = useState<NetworkAdminProfileResponse | any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -132,27 +152,38 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
     currentUser?.userRole === 'BUYER_USER';
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    let cancelled = false;
+
+    const loadProfile = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const userRole = currentUser?.userRole;
-        const role: NetworkAdminRole = userRole
-          ? userRole.includes('BUYER') ? 'BUYER_NETWORK_ADMIN' : 'SUPPLIER_NETWORK_ADMIN'
-          : 'SUPPLIER_NETWORK_ADMIN';
-        const data = await getNetworkAdminProfile(role);
-        setProfile(data);
+        if (fetchProfile) {
+          const data = await fetchProfile();
+          if (!cancelled) setProfile(data);
+        } else {
+          const userRole = currentUser?.userRole;
+          const role: NetworkAdminRole = userRole
+            ? userRole.includes('BUYER') ? 'BUYER_NETWORK_ADMIN' : 'SUPPLIER_NETWORK_ADMIN'
+            : 'SUPPLIER_NETWORK_ADMIN';
+          const data = await getNetworkAdminProfile(role);
+          if (!cancelled) setProfile(data);
+        }
       } catch (err: any) {
-        setError(err.message || 'Failed to load company profile');
+        if (!cancelled) setError(err.message || 'Failed to load company profile');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
-    fetchProfile();
-  }, [currentUser]);
+    loadProfile();
 
-  const entityLabel = isBuyer ? 'Buyer' : 'Supplier';
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchProfile, currentUser]);
+
+  const entityLabel = propsEntityLabel || (isBuyer ? 'Buyer' : 'Supplier');
 
   if (isLoading) {
     return (
@@ -192,20 +223,74 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
     [];
 
   const statusKey = bp.status || '';
-  const statusClass = statusClassMap[statusKey] || 'cp-status-pending';
-  const statusLabel = statusLabelMap[statusKey] || statusKey || '-';
+  const statusUpper = statusKey.toUpperCase();
+  const isPending = statusUpper === 'PENDING_VERIFICATION' || statusUpper === 'PENDING' || statusUpper === '' || statusUpper === 'PENDING_REVIEW';
+  const statusClass = statusClassMap[statusKey] || statusClassMap[statusUpper] || 'cp-status-pending';
+  const statusLabel = statusLabelMap[statusKey] || statusLabelMap[statusUpper] || statusKey || '-';
 
   return (
     <div className="cp-page">
       {showHeader && (
-        <div className="cp-page-header">
-          <h1 className="cp-page-title">Company Details</h1>
-          <p className="cp-page-subtitle">View and manage {entityLabel.toLowerCase()} information</p>
+        <div className="cp-page-header" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {onBack && (
+            <button
+              onClick={onBack}
+              title="Back to Dashboard"
+              style={{
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '8px 14px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                color: '#334155',
+                fontSize: '14px',
+                fontWeight: 600,
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <FaArrowLeft style={{ marginRight: '6px' }} /> Back
+            </button>
+          )}
+          <div>
+            <h1 className="cp-page-title">Company Details</h1>
+            <p className="cp-page-subtitle">View and manage {entityLabel.toLowerCase()} information</p>
+          </div>
+        </div>
+      )}
+
+      {statusError && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '14px' }}>
+          {statusError}
         </div>
       )}
 
       <div className="cp-container">
         <div className="cp-header-card">
+          {onBack && !showHeader && (
+            <div style={{ marginBottom: '12px' }}>
+              <button
+                onClick={onBack}
+                title="Back to Dashboard"
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  padding: '6px 14px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  color: '#334155',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                }}
+              >
+                <FaArrowLeft style={{ marginRight: '6px' }} /> Back
+              </button>
+            </div>
+          )}
           <div className="cp-header-top">
             <div className="cp-header-left">
               <div className="cp-org-icon">
@@ -230,24 +315,30 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
               </div>
             </div>
 
-            {mode === 'admin-review' && (
+            {mode === 'admin-review' && isPending && (
               <div className="cp-header-actions">
-                <button className="cp-btn cp-btn-verify" title="Verify this company">
-                  <FaCheck />
-                  Verify
-                </button>
-                <button className="cp-btn cp-btn-edit" title="Edit company details">
-                  <FaPen />
-                  Edit
-                </button>
-                <button className="cp-btn cp-btn-reject" title="Reject this company">
-                  <FaTimes />
-                  Reject
-                </button>
-                <button className="cp-btn cp-btn-more" title="More actions">
-                  More
-                  <FaChevronDown className="cp-btn-chevron" />
-                </button>
+                {onVerify && (
+                  <button
+                    className="cp-btn cp-btn-verify"
+                    title="Verify this company"
+                    onClick={onVerify}
+                    disabled={isStatusLoading}
+                  >
+                    <FaCheck />
+                    Verify
+                  </button>
+                )}
+                {onReject && (
+                  <button
+                    className="cp-btn cp-btn-reject"
+                    title="Reject this company"
+                    onClick={onReject}
+                    disabled={isStatusLoading}
+                  >
+                    <FaTimes />
+                    Reject
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -403,17 +494,26 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                               <td>{reg.registrationName || '-'}</td>
                               <td>{formatDate(reg.expiryDate)}</td>
                               <td>
-                                {reg.asset?.fileName ? (
-                                 <div className="cp-doc-link-wrapper">
-                                  <span className="cp-doc-link" title={reg.asset.fileName}>
-                                    <FaFilePdf className="cp-pdf-icon" />
-                                    {reg.asset.fileName}
-                                  </span>
-                                  <span className="cp-doc-actions">
-                                    <FaEye className="cp-eye-icon" />
-                                  </span>
-                                 </div>
-
+                                {reg.asset?.fileName || (reg.asset as any)?.id ? (
+                                  <div className="cp-doc-link-wrapper">
+                                    <span className="cp-doc-link" title={reg.asset?.fileName}>
+                                      <FaFilePdf className="cp-pdf-icon" />
+                                      {reg.asset?.fileName || 'Document'}
+                                    </span>
+                                    <span
+                                      className="cp-doc-actions"
+                                      onClick={() => {
+                                        const assetId = reg.asset?.id || (reg.asset as any)?.id;
+                                        if (assetId && onViewDocument) {
+                                          onViewDocument(assetId, reg.asset?.fileName);
+                                        }
+                                      }}
+                                      style={{ cursor: onViewDocument ? 'pointer' : 'default' }}
+                                      title="View Document"
+                                    >
+                                      <FaEye className="cp-eye-icon" />
+                                    </span>
+                                  </div>
                                 ) : (
                                   '-'
                                 )}

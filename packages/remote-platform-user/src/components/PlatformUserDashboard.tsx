@@ -287,6 +287,7 @@ export const PlatformUserDashboard: React.FC = () => {
             className={`plat-nav-item ${activeTab === 'buyers' ? 'active' : ''}`}
             onClick={() => {
               setActiveTab('buyers');
+              setSelectedDetail(null);
               setSidebarOpen(false);
             }}
           >
@@ -300,6 +301,7 @@ export const PlatformUserDashboard: React.FC = () => {
             className={`plat-nav-item ${activeTab === 'suppliers' ? 'active active-supplier' : ''}`}
             onClick={() => {
               setActiveTab('suppliers');
+              setSelectedDetail(null);
               setSidebarOpen(false);
             }}
           >
