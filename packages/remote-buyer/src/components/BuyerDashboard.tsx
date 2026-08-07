@@ -44,14 +44,6 @@ interface MatchCard {
 }
 
 
-const IconMenu = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="3" y1="12" x2="21" y2="12"></line>
-    <line x1="3" y1="6" x2="21" y2="6"></line>
-    <line x1="3" y1="18" x2="21" y2="18"></line>
-  </svg>
-);
-
 const IconClose = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <line x1="18" y1="6" x2="6" y2="18" />
@@ -263,14 +255,6 @@ const NavIconBarChart = () => (
   </svg>
 );
 
-// <-- ADDED: Template icon for sidebar
-const NavIconTemplate = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <path d="M3 9h18" />
-    <path d="M9 3v18" />
-  </svg>
-);
 
 /* ---------------------------------- Static data ---------------------------------- */
 
@@ -285,7 +269,6 @@ const navItems: { key: string; icon: React.ReactNode; label: string; badge?: num
   { key: "spendReports", icon: <NavIconBarChart />, label: "Procurement Spend Reports" },
   { key: "messages", icon: <NavIconMessage />, label: "Messages" },
   { key: "companyProfile", icon: <NavIconBuilding />, label: "Company Profile" },
-  { key: "template", icon: <NavIconTemplate />, label: "Template" }, // <-- ADDED Template nav item
   { key: "settings", icon: <NavIconSettings />, label: "Settings" },
 ];
 
@@ -394,7 +377,7 @@ const mockRfqs = [
 
 const BuyersDashboard: React.FC = () => {
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // Sidebar toggle removed; sidebar always open.
   const [activeNav, setActiveNav] = useState<string>("dashboard");
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -405,6 +388,11 @@ const BuyersDashboard: React.FC = () => {
 
   // const [rfqs, setRfqs] = useState<any[]>([]);
   const [rfqs, setRfqs] = useState<any[]>(mockRfqs);
+  const [visibleRfqCount, setVisibleRfqCount] = useState(3);
+  const [hasMoreRfqs, setHasMoreRfqs] = useState(true);
+  const [loadingMoreRfqs, setLoadingMoreRfqs] = useState(false);
+  const RFQ_INITIAL_VISIBLE = 3;
+  const RFQ_PAGE_SIZE = 5;
 
   const [buyerId, setBuyerId] = useState<string | null>(
     sessionStorage.getItem("vosox_buyer_id")
@@ -442,9 +430,17 @@ const BuyersDashboard: React.FC = () => {
         const data = await fetchBuyerRFQs({
           buyerId,
           index: 0,
-          limit: 10,
+          limit: RFQ_INITIAL_VISIBLE,
         });
-        setRfqs(data.length > 0 ? data : mockRfqs);
+        if (data.length > 0) {
+          setRfqs(data);
+          setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
+          setHasMoreRfqs(data.length === RFQ_INITIAL_VISIBLE);
+        } else {
+          setRfqs(mockRfqs);
+          setVisibleRfqCount(mockRfqs.length);
+          setHasMoreRfqs(false);
+        }
       } catch (err: any) {
         console.error("Failed to load RFQs", err);
         setRfqsError(err.message || "Failed to load sourcing opportunities.");
@@ -454,6 +450,36 @@ const BuyersDashboard: React.FC = () => {
     };
     loadRfqs();
   }, [buyerId]);
+
+  const handleViewMoreRfqs = async () => {
+    if (loadingMoreRfqs) return;
+
+    // If we already have more fetched than we're showing, just reveal more locally.
+    if (visibleRfqCount < rfqs.length) {
+      setVisibleRfqCount((v) => Math.min(v + RFQ_PAGE_SIZE, rfqs.length));
+      return;
+    }
+
+    // Otherwise, fetch the next page from the server.
+    if (!buyerId || !hasMoreRfqs) return;
+
+    setLoadingMoreRfqs(true);
+    try {
+      const nextPage = await fetchBuyerRFQs({
+        buyerId,
+        index: rfqs.length,
+        limit: RFQ_PAGE_SIZE,
+      });
+      setRfqs((prev) => [...prev, ...nextPage]);
+      setVisibleRfqCount((v) => v + nextPage.length);
+      setHasMoreRfqs(nextPage.length === RFQ_PAGE_SIZE);
+    } catch (err: any) {
+      console.error("Failed to load more RFQs", err);
+      setRfqsError(err.message || "Failed to load more sourcing opportunities.");
+    } finally {
+      setLoadingMoreRfqs(false);
+    }
+  };
 
   const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
   const [selectedRfq, setSelectedRfq] = useState<any | null>(null);
@@ -498,32 +524,10 @@ const BuyersDashboard: React.FC = () => {
 
       {/* ---------------- Body: sidebar + content ---------------- */}
       <div
-        className={`pud-shell ${isSidebarOpen ? "" : "pud-sidebar-closed"}`}
+        className="pud-shell"
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
       >
-        <button
-          className="pud-sidebar-toggle"
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          style={{
-            position: "absolute",
-            top: "5px",
-            left: "5px",
-            zIndex: 1001,
-            background: "#ffffff",
-            border: "1px solid #e6e8ec",
-            borderRadius: "6px",
-            width: "30px",
-            height: "30px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
-            padding: 0,
-          }}
-          title="Toggle Sidebar"
-        >
-          {isSidebarOpen ? <IconClose /> : <IconMenu />}
-        </button>
+
 
         <aside className="pud-sidebar">
           <nav className="pud-nav" style={{ paddingTop: "40px" }}>
@@ -551,10 +555,10 @@ const BuyersDashboard: React.FC = () => {
               aria-disabled={loggingOut}
               title={logoutError || undefined}
             >
-              <span className="pud-nav-icon" style={{ transform: "rotate(180deg)" }}>
+              <span className="bad-nav-item-logout" style={{ transform: "rotate(180deg)" }}>
                 <LogoutIcon />
               </span>
-              <span className="pud-nav-label">{loggingOut ? "Logging out..." : "Log Out"}</span>
+              <span className="bad-nav-item-logout">{loggingOut ? "Logging out..." : "Log Out"}</span>
             </div>
           </nav>
         </aside>
@@ -607,7 +611,19 @@ const BuyersDashboard: React.FC = () => {
                         <div className="pud-panel-title">Recent RFQs</div>
                         <div className="pud-panel-subtitle">RFQs you've posted, awaiting supplier quotations</div>
                       </div>
-                      <a className="pud-panel-link" href="#">View All RFQs →</a>
+                      {!loadingRfqs && !rfqsError && rfqs.length > 0 && (visibleRfqCount < rfqs.length || hasMoreRfqs) && (
+                        <a
+                          className="pud-panel-link"
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleViewMoreRfqs();
+                          }}
+                          style={loadingMoreRfqs ? { opacity: 0.6, pointerEvents: "none" } : undefined}
+                        >
+                          {loadingMoreRfqs ? "Loading..." : "View All RFQs →"}
+                        </a>
+                      )}
                     </div>
                     {loadingRfqs ? (
                       <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px' }}>
@@ -630,7 +646,7 @@ const BuyersDashboard: React.FC = () => {
                       </div>
                     ) : (
                       <div className="pud-panel-list">
-                        {rfqs.map((rfq) => (
+                        {rfqs.slice(0, visibleRfqCount).map((rfq) => (
                           <div className="pud-rfq-row" key={rfq.rfqId}>
                             <div className="pud-rfq-info">
                               <div className="pud-rfq-meta">

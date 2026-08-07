@@ -52,13 +52,7 @@ interface MatchCard {
   destinationNote: string;
 }
 
-const IconMenu = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="3" y1="12" x2="21" y2="12"></line>
-    <line x1="3" y1="6" x2="21" y2="6"></line>
-    <line x1="3" y1="18" x2="21" y2="18"></line>
-  </svg>
-);
+
 
 const IconMail = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -400,7 +394,7 @@ const SupplierDashboard: React.FC = () => {
 
   const [activeView, setActiveView] = useState<"dashboard" | "catalogList" | "template" | "companyProfile">("dashboard");
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // Sidebar toggle removed; sidebar always open.
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -411,6 +405,11 @@ const SupplierDashboard: React.FC = () => {
   const [rfqs, setRfqs] = useState<RFQMasterDataItem[]>([]);
   const [loadingRfqs, setLoadingRfqs] = useState(true);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
+  const [visibleRfqCount, setVisibleRfqCount] = useState(3);
+  const [hasMoreRfqs, setHasMoreRfqs] = useState(true);
+  const [loadingMoreRfqs, setLoadingMoreRfqs] = useState(false);
+  const RFQ_INITIAL_VISIBLE = 3;
+  const RFQ_PAGE_SIZE = 5;
 
   const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
   const [selectedRfq, setSelectedRfq] = useState<RFQDetailResponse | null>(null);
@@ -465,12 +464,15 @@ const SupplierDashboard: React.FC = () => {
 
       try {
         //const ix = supplierId || sessionStorage.getItem("vosox_supplier_id") || "";
+        const initialLimit = RFQ_INITIAL_VISIBLE;
         const data = await fetchRFQMasterData({
           supplierId,
           index: 0,
-          limit: 10,
+          limit: initialLimit,
         });
         setRfqs(data);
+        setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
+        setHasMoreRfqs(data.length === initialLimit);
       } catch (err: any) {
         console.error("Failed to load RFQs", err);
         setRfqsError(err.message || "Failed to load sourcing opportunities.");
@@ -489,6 +491,36 @@ const SupplierDashboard: React.FC = () => {
       setActiveView("companyProfile");
     }
   }, [location.state]);
+
+  const handleViewMoreRfqs = async () => {
+    if (loadingMoreRfqs) return;
+
+    // If we already have more fetched than we're showing, just reveal more locally.
+    if (visibleRfqCount < rfqs.length) {
+      setVisibleRfqCount((v) => Math.min(v + RFQ_PAGE_SIZE, rfqs.length));
+      return;
+    }
+
+    // Otherwise, fetch the next page from the server.
+    if (!supplierId || !hasMoreRfqs) return;
+
+    setLoadingMoreRfqs(true);
+    try {
+      const nextPage = await fetchRFQMasterData({
+        supplierId,
+        index: rfqs.length,
+        limit: RFQ_PAGE_SIZE,
+      });
+      setRfqs((prev) => [...prev, ...nextPage]);
+      setVisibleRfqCount((v) => v + nextPage.length);
+      setHasMoreRfqs(nextPage.length === RFQ_PAGE_SIZE);
+    } catch (err: any) {
+      console.error("Failed to load more RFQs", err);
+      setRfqsError(err.message || "Failed to load more sourcing opportunities.");
+    } finally {
+      setLoadingMoreRfqs(false);
+    }
+  };
 
   const handleViewRfqDetails = async (rfqId: string) => {
     setSelectedRfqId(rfqId);
@@ -833,30 +865,8 @@ const SupplierDashboard: React.FC = () => {
         </div>
       </header>
 
-      <div className={`pud-shell ${isSidebarOpen ? "" : "pud-sidebar-closed"}`} style={{ flex: 1, position: 'relative', minHeight: 'calc(100vh - 64px)' }}>
-        <button
-          className="pud-sidebar-toggle"
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          style={{
-            position: 'absolute',
-            top: '5px',
-            left: '5px',
-            zIndex: 1001,
-            background: '#ffffff',
-            border: '1px solid #e6e8ec',
-            borderRadius: '6px',
-            width: '30px',
-            height: '30px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-            padding: 0
-          }}
-          title="Toggle Sidebar"
-        >
-          {isSidebarOpen ? <IconClose /> : <IconMenu />}
-        </button>
+      <div className="pud-shell" style={{ flex: 1, position: 'relative', minHeight: 'calc(100vh - 64px)' }}>
+
 
         <aside className="pud-sidebar">
           <nav className="pud-nav" style={{ paddingTop: '40px' }}>
@@ -915,10 +925,10 @@ const SupplierDashboard: React.FC = () => {
               aria-disabled={loggingOut}
               title={logoutError || undefined}
             >
-              <span className="pud-nav-icon" style={{ transform: "rotate(180deg)" }}>
+              <span className="bad-nav-item-logout" style={{ transform: "rotate(180deg)" }}>
                 <LogoutIcon />
               </span>
-              <span className="pud-nav-label">{loggingOut ? "Logging out..." : "Log Out"}</span>
+              <span className="bad-nav-item-logout">{loggingOut ? "Logging out..." : "Log Out"}</span>
             </div>
           </nav>
         </aside>
@@ -968,7 +978,19 @@ const SupplierDashboard: React.FC = () => {
                         <div className="pud-panel-title">Recent Sourcing Opportunities</div>
                         <div className="pud-panel-subtitle">Newly listed RFQs matched to your industry categories</div>
                       </div>
-                      <a className="pud-panel-link" href="#">View All RFQs →</a>
+                      {!loadingRfqs && !rfqsError && rfqs.length > 0 && (visibleRfqCount < rfqs.length || hasMoreRfqs) && (
+                        <a
+                          className="pud-panel-link"
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleViewMoreRfqs();
+                          }}
+                          style={loadingMoreRfqs ? { opacity: 0.6, pointerEvents: "none" } : undefined}
+                        >
+                          {loadingMoreRfqs ? "Loading..." : "View All RFQs →"}
+                        </a>
+                      )}
                     </div>
                     {loadingRfqs ? (
                       <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px' }}>
@@ -991,7 +1013,7 @@ const SupplierDashboard: React.FC = () => {
                       </div>
                     ) : (
                       <div className="pud-panel-list">
-                        {rfqs.map((rfq) => (
+                        {rfqs.slice(0, visibleRfqCount).map((rfq) => (
                           <div className="pud-rfq-row" key={rfq.rfqId}>
                             <div className="pud-rfq-info">
                               <div className="pud-rfq-meta">
