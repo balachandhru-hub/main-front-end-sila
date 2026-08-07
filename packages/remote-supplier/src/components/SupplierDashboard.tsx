@@ -8,9 +8,12 @@ import {
   fetchRFQById,
   getSupplierProfile,
   submitSupplierQuotation,
+  submitRfqAnswers,
+  fetchMetadataReferenceList,
   type RFQMasterDataItem,
   type RFQDetailResponse,
-  type SubmitQuotationPayload
+  type SubmitQuotationPayload,
+  type RfqDocumentAssetDto
 } from "../api/supplierApi";
 import { useNavigate } from "react-router-dom";
 interface StatCard {
@@ -402,6 +405,21 @@ const SupplierDashboard: React.FC = () => {
   const [loadingRfqDetail, setLoadingRfqDetail] = useState(false);
   const [rfqDetailError, setRfqDetailError] = useState<string | null>(null);
 
+  const [rfqAnswers, setRfqAnswers] = useState<{
+    [questionId: string]: {
+      rfqQuestionId: string;
+      answer: string;
+      questionOptionId: string | null;
+      questionOptionIds: string[];
+      file?: File;
+      fileBase64?: string;
+      contentType?: string;
+    };
+  }>({});
+  const [submittingAnswers, setSubmittingAnswers] = useState(false);
+  const [submitAnswersError, setSubmitAnswersError] = useState<string | null>(null);
+  const [submitAnswersSuccess, setSubmitAnswersSuccess] = useState(false);
+
   // Fetch supplier profile if supplierId is not in sessionStorage
   useEffect(() => {
     const loadSupplierProfile = async () => {
@@ -429,9 +447,12 @@ const SupplierDashboard: React.FC = () => {
   useEffect(() => {
     const loadRfqs = async () => {
       if (!supplierId) return;
+
       setLoadingRfqs(true);
       setRfqsError(null);
+
       try {
+        //const ix = supplierId || sessionStorage.getItem("vosox_supplier_id") || "";
         const data = await fetchRFQMasterData({
           supplierId,
           index: 0,
@@ -512,6 +533,18 @@ const SupplierDashboard: React.FC = () => {
       setQuoteItemPrices(prices);
       setSubmitQuoteSuccess(false);
       setSubmitQuoteError(null);
+      const answers: typeof rfqAnswers = {};
+      selectedRfq.questions?.forEach((q) => {
+        answers[q.questionId] = {
+          rfqQuestionId: q.questionId,
+          answer: "",
+          questionOptionId: null,
+          questionOptionIds: [],
+        };
+      });
+      setRfqAnswers(answers);
+      setSubmitAnswersSuccess(false);
+      setSubmitAnswersError(null);
     }
   }, [selectedRfq]);
 
@@ -536,6 +569,148 @@ const SupplierDashboard: React.FC = () => {
       setQuoteTaxType(value);
     } else if (field === "totalPrice") {
       setQuoteTotalPrice(Number(value) || 0);
+    }
+  };
+
+  const handleTextAnswerChange = (questionId: string, value: string) => {
+    setRfqAnswers((prev) => ({
+      ...prev,
+      [questionId]: {
+        ...(prev[questionId] || { rfqQuestionId: questionId, questionOptionId: null, questionOptionIds: [] }),
+        rfqQuestionId: questionId,
+        answer: value,
+      },
+    }));
+  };
+
+  const handleRadioAnswerChange = (questionId: string, optionId: string) => {
+    setRfqAnswers((prev) => ({
+      ...prev,
+      [questionId]: {
+        ...(prev[questionId] || { rfqQuestionId: questionId, answer: "" }),
+        rfqQuestionId: questionId,
+        questionOptionId: optionId,
+        questionOptionIds: [optionId],
+      },
+    }));
+  };
+
+  const handleCheckboxAnswerChange = (questionId: string, optionId: string, checked: boolean) => {
+    setRfqAnswers((prev) => {
+      const current = prev[questionId]?.questionOptionIds || [];
+      const updated = checked ? [...current, optionId] : current.filter((id) => id !== optionId);
+      return {
+        ...prev,
+        [questionId]: {
+          ...(prev[questionId] || { rfqQuestionId: questionId, answer: "", questionOptionId: null }),
+          rfqQuestionId: questionId,
+          questionOptionIds: updated,
+        },
+      };
+    });
+  };
+
+  const handleFileAnswerChange = (questionId: string, file: File | null) => {
+    if (!file) {
+      setRfqAnswers((prev) => ({
+        ...prev,
+        [questionId]: {
+          ...(prev[questionId] || { rfqQuestionId: questionId, answer: "", questionOptionId: null, questionOptionIds: [] }),
+          rfqQuestionId: questionId,
+          answer: "",
+          file: undefined,
+          fileBase64: "",
+          contentType: "",
+        },
+      }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const base64Data = result.split(',')[1] || result;
+      setRfqAnswers((prev) => ({
+        ...prev,
+        [questionId]: {
+          ...(prev[questionId] || { rfqQuestionId: questionId, answer: "", questionOptionId: null, questionOptionIds: [] }),
+          rfqQuestionId: questionId,
+          answer: file.name,
+          file: file,
+          fileBase64: base64Data,
+          contentType: file.type,
+        },
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmitRfqAnswers = async () => {
+    if (!selectedRfq) return;
+    const supplierRFQId = selectedRfq.items?.[0]?.supplierRFQId || null;
+
+    // Basic validation: make sure every required question has been answered
+    const unanswered = (selectedRfq.questions || []).find((q) => {
+      if (!q.isRequired) return false;
+      const a = rfqAnswers[q.questionId];
+      if (!a) return true;
+      if (q.questionType === "Text") return !a.answer?.trim();
+      if (q.questionType === "Radio") return !a.questionOptionId;
+      if (q.questionType === "File" || q.questionType === "FILE") return !a.file;
+      return (a.questionOptionIds?.length ?? 0) === 0;
+    });
+    if (unanswered) {
+      setSubmitAnswersError(`Please answer the required question: "${unanswered.question}"`);
+      return;
+    }
+
+    setSubmittingAnswers(true);
+    setSubmitAnswersError(null);
+    setSubmitAnswersSuccess(false);
+    try {
+      // Resolve the SUPPLIER entity type/id once for all file answers in this submission
+      const entityTypes = await fetchMetadataReferenceList(['ENTITY_TYPE']);
+      const supplierEntityId =
+        entityTypes.find((e) => e.key === 'SUPPLIER')?.id || '59476530-3c10-438b-b3b3-9db9e96e8d93';
+      const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
+
+      const payload = {
+        supplierRFQId: supplierRFQId as string,
+        answers: Object.values(rfqAnswers).map((a) => {
+          const question = selectedRfq.questions?.find(q => q.questionId === a.rfqQuestionId);
+          const allOptionIds = question?.options?.map(opt => opt.optionId) || [];
+
+          // Build the attachment from the file the supplier actually uploaded for this answer
+          const answerAttachment: RfqDocumentAssetDto | null =
+            a.file && a.fileBase64
+              ? {
+                entityType: entityType,
+                entityId: supplierEntityId,
+                assetType: "RFQ_ANSWER_ATTACHMENT",
+                fileBytes: a.fileBase64,
+                fileName: a.file.name,
+                contentType: a.contentType || a.file.type,
+                isSingletonAsset: true,
+              }
+              : null;
+
+          return {
+            rfqQuestionId: a.rfqQuestionId,
+            answer: a.answer || "",
+            questionOptionId: a.questionOptionId || (a.questionOptionIds?.length ? a.questionOptionIds[0] : null),
+            questionOptionIds: allOptionIds,
+            attachment: answerAttachment
+          };
+        }),
+      };
+
+      await submitRfqAnswers(payload);
+      setSubmitAnswersSuccess(true);
+    } catch (err: any) {
+      console.error("Failed to submit RFQ answers", err);
+      setSubmitAnswersError(err.message || "Failed to submit answers.");
+    } finally {
+      setSubmittingAnswers(false);
     }
   };
 
@@ -1100,7 +1275,7 @@ const SupplierDashboard: React.FC = () => {
                                 <th>Material Info</th>
                                 <th>Group / Code</th>
                                 <th style={{ textAlign: 'right' }}>Qty Required</th>
-                                {!selectedRfq.addLotOption && <th style={{ textAlign: 'right', width: '130px' }}>Your Unit Quote ($)</th>}
+                                {!selectedRfq.addLotOption && <th style={{ textAlign: 'right', width: '130px' }}>Your Unit Quote</th>}
                               </tr>
                             </thead>
                             <tbody>
@@ -1164,6 +1339,134 @@ const SupplierDashboard: React.FC = () => {
                           </table>
                         </div>
                       </div>
+
+                      {(selectedRfq.questions?.length ?? 0) > 0 && (
+                        <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+                          <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                            <IconMessageSquare /> Additional Questions from Buyer
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            {submitAnswersSuccess && (
+                              <div style={{ color: '#15803d', fontSize: '13px', fontWeight: 500, background: '#dcfce7', padding: '8px 12px', borderRadius: '6px' }}>
+                                <IconCheckCircle /> All answers successfully saved!
+                              </div>
+                            )}
+                            {submitAnswersError && (
+                              <div style={{ color: '#ef4444', fontSize: '13px', fontWeight: 500, background: '#fee2e2', padding: '8px 12px', borderRadius: '6px' }}>
+                                {submitAnswersError}
+                              </div>
+                            )}
+                            {[...selectedRfq.questions]
+                              .sort((a, b) => a.displayOrder - b.displayOrder)
+                              .map((q, index) => {
+                                const current = rfqAnswers[q.questionId];
+                                return (
+                                  <div key={q.questionId} style={{ background: '#ffffff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
+                                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b', marginBottom: '12px' }}>
+                                      <span style={{ color: '#2563eb', marginRight: '4px' }}>Q{index + 1}.</span> {q.question}
+                                      {q.isRequired && <span style={{ color: '#ef4444' }}> *</span>}
+                                    </div>
+
+                                    {q.questionType === 'Text' && (
+                                      <input
+                                        type="text"
+                                        className="pud-rfq-item-input"
+                                        value={current?.answer || ''}
+                                        onChange={(e) => handleTextAnswerChange(q.questionId, e.target.value)}
+                                        placeholder="Type your answer..."
+                                        required={q.isRequired}
+                                        style={{
+                                          width: '100%',
+                                          padding: '8px 12px',
+                                          border: '1px solid #cbd5e1',
+                                          borderRadius: '6px',
+                                          fontSize: '13px',
+                                          color: '#0f172a',
+                                          background: '#ffffff',
+                                        }}
+                                      />
+                                    )}
+
+                                    {q.questionType === 'Radio' && (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        {[...(q.options || [])]
+                                          .sort((a, b) => a.displayOrder - b.displayOrder)
+                                          .map((opt) => (
+                                            <label
+                                              key={opt.optionId}
+                                              style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155', cursor: 'pointer' }}
+                                            >
+                                              <input
+                                                type="radio"
+                                                name={`rfq-question-${q.questionId}`}
+                                                checked={current?.questionOptionId === opt.optionId}
+                                                onChange={() => handleRadioAnswerChange(q.questionId, opt.optionId)}
+                                                required={q.isRequired}
+                                              />
+                                              {opt.optionText}
+                                            </label>
+                                          ))}
+                                      </div>
+                                    )}
+
+                                    {q.questionType === 'FILE' && (
+                                      <input
+                                        type="file"
+                                        className="pud-rfq-item-input"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0] || null;
+                                          handleFileAnswerChange(q.questionId, file);
+                                        }}
+                                        required={q.isRequired}
+                                        style={{
+                                          width: '100%',
+                                          padding: '8px 12px',
+                                          border: '1px solid #cbd5e1',
+                                          borderRadius: '6px',
+                                          fontSize: '13px',
+                                          color: '#0f172a',
+                                          background: '#ffffff',
+                                        }}
+                                      />
+                                    )}
+
+                                    {q.questionType !== 'Text' && q.questionType !== 'Radio' && q.questionType !== 'File' && (q.options?.length ?? 0) > 0 && (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        {[...(q.options || [])]
+                                          .sort((a, b) => a.displayOrder - b.displayOrder)
+                                          .map((opt) => (
+                                            <label
+                                              key={opt.optionId}
+                                              style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155', cursor: 'pointer' }}
+                                            >
+                                              <input
+                                                type="checkbox"
+                                                checked={current?.questionOptionIds?.includes(opt.optionId) || false}
+                                                onChange={(e) => handleCheckboxAnswerChange(q.questionId, opt.optionId, e.target.checked)}
+                                              />
+                                              {opt.optionText}
+                                            </label>
+                                          ))}
+                                      </div>
+                                    )}
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
+                                      <button
+                                        type="button"
+                                        className="pud-btn pud-btn-outline"
+                                        onClick={handleSubmitRfqAnswers}
+                                        disabled={submittingAnswers}
+                                        style={{ padding: '6px 14px', fontSize: '12px' }}
+                                      >
+                                        {submittingAnswers ? 'Saving...' : 'Save Answer'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      )}
+
 
                       {/* Quotation Pricing & Details Form */}
                       <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>

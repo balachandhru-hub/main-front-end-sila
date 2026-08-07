@@ -21,7 +21,7 @@ interface LineItem {
 
 type StepKey = "details" | "suppliers" | "summary";
 
-type FieldType = "INPUT" | "RADIO_BUTTON" | "CHECK_BOX";
+type FieldType = "INPUT" | "RADIO_BUTTON" | "CHECK_BOX" | "FILE";
 
 interface CustomField {
     id: string;
@@ -561,7 +561,7 @@ const CreateRFQ: React.FC = () => {
             try {
                 const data = await fetchReferenceList(["QUESTION_TYPE"]);
                 const filtered = data.filter((item: any) =>
-                    ["INPUT", "RADIO_BUTTON", "CHECK_BOX"].includes(item.key)
+                    ["INPUT", "RADIO_BUTTON", "CHECK_BOX", "FILE"].includes(item.key)
                 );
                 setFieldTypeOptions(filtered);
             } catch (err) {
@@ -903,7 +903,7 @@ const CreateRFQ: React.FC = () => {
                                     setDepartmentSearchTerm("");
                                 }}
                                 loading={false}
-                                onScrollBottom={() => {}}
+                                onScrollBottom={() => { }}
                                 searchPlaceholder="Search department..."
                             />
                         </div>
@@ -928,7 +928,7 @@ const CreateRFQ: React.FC = () => {
                                     setCostCenterSearchTerm("");
                                 }}
                                 loading={false}
-                                onScrollBottom={() => {}}
+                                onScrollBottom={() => { }}
                                 searchPlaceholder="Search cost center..."
                                 disabled={!department}
                             />
@@ -955,7 +955,7 @@ const CreateRFQ: React.FC = () => {
                                     setSegmentSearchTerm("");
                                 }}
                                 loading={false}
-                                onScrollBottom={() => {}}
+                                onScrollBottom={() => { }}
                                 searchPlaceholder="Search segment..."
                             />
                         </div>
@@ -978,7 +978,7 @@ const CreateRFQ: React.FC = () => {
                                     setFamilySearchTerm("");
                                 }}
                                 loading={false}
-                                onScrollBottom={() => {}}
+                                onScrollBottom={() => { }}
                                 searchPlaceholder="Search family..."
                                 disabled={!segmentCode}
                             />
@@ -1261,6 +1261,15 @@ const CreateRFQ: React.FC = () => {
                                     <label className="bd-label-sm">OPTIONS</label>
 
                                     {newFieldType === "INPUT" && (
+                                        <input
+                                            className="bd-input-sm"
+                                            type="text"
+                                            disabled
+                                            placeholder="No options required"
+                                        />
+                                    )}
+
+                                    {newFieldType === "FILE" && (
                                         <input
                                             className="bd-input-sm"
                                             type="text"
