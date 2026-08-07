@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./BuyerAdminDash.css";
 import Header from "../../../remote-buyer/src/components/Header";
 import UserAdmin from "../UserAdmin";
 import UserTemplate from "./usertemplate";
+import CompanyProfile from "./CompanyProfile/CompanyProfile";
+import { useNetworkAdminAuthStore } from "../store/useAuthStore";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -312,6 +314,10 @@ const BuyerAdminDash: React.FC = () => {
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
 
+  useEffect(() => {
+    useNetworkAdminAuthStore.getState().initializeFromSession();
+  }, []);
+
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
@@ -374,6 +380,8 @@ const BuyerAdminDash: React.FC = () => {
               <UserAdmin />
             ) : activeNav === "template" ? (
               <UserTemplate />
+            ) : activeNav === "companyProfile" ? (
+              <CompanyProfile mode="network-admin" showHeader={false} />
             ) : (
               <>
                 <h1 className="bad-title">Buyer Admin Command Center</h1>

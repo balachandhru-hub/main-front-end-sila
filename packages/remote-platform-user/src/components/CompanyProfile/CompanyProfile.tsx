@@ -27,6 +27,7 @@ import {
 } from 'react-icons/fa';
 import { useNetworkAdminAuthStore } from '../../store/useAuthStore';
 import { getNetworkAdminProfile } from '../../api/networkAdminApi';
+import type { NetworkAdminRole } from '../../api/networkAdminApi';
 import type { NetworkAdminProfileResponse } from '../../dto/networkAdminDto';
 import type {
   CategoryDto,
@@ -131,13 +132,14 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
     currentUser?.userRole === 'BUYER_USER';
 
   useEffect(() => {
-    if (!currentUser?.userRole) return;
-    const role = isBuyer ? 'BUYER_NETWORK_ADMIN' : 'SUPPLIER_NETWORK_ADMIN';
-
     const fetchProfile = async () => {
       setIsLoading(true);
       setError(null);
       try {
+        const userRole = currentUser?.userRole;
+        const role: NetworkAdminRole = userRole
+          ? userRole.includes('BUYER') ? 'BUYER_NETWORK_ADMIN' : 'SUPPLIER_NETWORK_ADMIN'
+          : 'SUPPLIER_NETWORK_ADMIN';
         const data = await getNetworkAdminProfile(role);
         setProfile(data);
       } catch (err: any) {
