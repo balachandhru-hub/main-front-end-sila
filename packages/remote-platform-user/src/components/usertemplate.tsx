@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, Edit2, Trash2, Plus } from 'lucide-react';
+import { FaEye as Eye, FaEdit as Edit2, FaTrash as Trash2, FaPlus as Plus } from 'react-icons/fa';
 import './usertemplate.css';
 
 interface Template {

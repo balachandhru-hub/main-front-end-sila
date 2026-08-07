@@ -20,7 +20,6 @@ import {
   FaArrowLeft,
   FaDownload,
   FaCheck,
-  FaEdit,
   FaTimes,
   FaChevronDown,
   FaChevronUp,
