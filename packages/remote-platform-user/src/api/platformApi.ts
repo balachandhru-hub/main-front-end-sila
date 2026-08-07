@@ -252,3 +252,33 @@ export const getCostCentersByDepartment = async (
     throw new Error(`${errMsg} (${status})`);
   }
 };
+
+export const getSupplierProfileByOrgId = async (organizationId: string): Promise<SupplierDto> => {
+  try {
+    const response = await platformInstance.get('/api/v1/supplier/profile', {
+      params: { organizationId },
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 405 || error.response?.status === 400 || error.response?.status === 404) {
+      const postResponse = await platformInstance.post('/api/v1/supplier/profile', { organizationId });
+      return postResponse.data;
+    }
+    throw error;
+  }
+};
+
+export const getBuyerProfileByOrgId = async (organizationId: string): Promise<BuyerDto> => {
+  try {
+    const response = await platformInstance.get('/api/v1/buyer/profile', {
+      params: { organizationId },
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 405 || error.response?.status === 400 || error.response?.status === 404) {
+      const postResponse = await platformInstance.post('/api/v1/buyer/profile', { organizationId });
+      return postResponse.data;
+    }
+    throw error;
+  }
+};

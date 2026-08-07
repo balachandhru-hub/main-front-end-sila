@@ -106,11 +106,27 @@ interface AttachmentEntry {
 }
 
 export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, record, onClose, onStatusUpdated }) => {
-  const profile: BusinessProfileDto = record.businessProfile || {};
-  const registrations: RegistrationDto[] = record.registrations || [];
-  const bankAccounts: BankAccountDto[] = record.bankAccounts || [];
-  const dispatchLocations: DispatchLocationDto[] = record.dispatchLocations || [];
-  const categories: CategoryDto[] = record.categories || (record as any).buyerCategories || (record as any).supplierCategories || [];
+  const raw = record as any;
+  const profile: BusinessProfileDto = {
+    organizationName: record.businessProfile?.organizationName || raw.organizationName || raw.name || 'Unnamed Business',
+    email: record.businessProfile?.email || raw.email,
+    phone: record.businessProfile?.phone || raw.phone,
+    country: record.businessProfile?.country || raw.country,
+    city: record.businessProfile?.city || raw.city,
+    state: record.businessProfile?.state || raw.state,
+    industry: record.businessProfile?.industry || raw.industry,
+    businessType: record.businessProfile?.businessType || raw.businessType,
+    yearEstablished: record.businessProfile?.yearEstablished || raw.yearEstablished,
+    website: record.businessProfile?.website || raw.website,
+    description: record.businessProfile?.description || raw.description,
+    status: record.businessProfile?.status || raw.status || 'ACTIVE',
+    isActive: record.isActive ?? record.businessProfile?.isActive ?? true,
+    ...record.businessProfile,
+  };
+  const registrations: RegistrationDto[] = record.registrations || raw.registrations || [];
+  const bankAccounts: BankAccountDto[] = record.bankAccounts || raw.bankAccounts || [];
+  const dispatchLocations: DispatchLocationDto[] = record.dispatchLocations || raw.dispatchLocations || [];
+  const categories: CategoryDto[] = record.categories || raw.buyerCategories || raw.supplierCategories || [];
 
   const [actionState, setActionState] = useState<Record<string, 'view' | 'download' | null>>({});
   const [actionError, setActionError] = useState<string | null>(null);
