@@ -289,6 +289,82 @@
     flex-direction: column;
 }
 
+/* ---------- RFQ rows ---------- */
+.bad-rfq-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 0;
+    border-top: 1px solid #eef0f3;
+}
+
+.bad-rfq-row:first-child {
+    border-top: none;
+    padding-top: 4px;
+}
+
+.bad-rfq-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.bad-rfq-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.bad-code-badge {
+    background: #eef2ff;
+    color: #2f6feb;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 6px;
+    line-height: 1.3;
+    white-space: normal;
+}
+
+.bad-dot-sep {
+    color: #cbd5e1;
+    font-size: 12px;
+}
+
+.bad-company {
+    font-size: 13.5px;
+    color: #6b7280;
+}
+
+.bad-rfq-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 8px;
+}
+
+.bad-rfq-details {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-size: 12.5px;
+    color: #94a3b8;
+    flex-wrap: wrap;
+}
+
+.bad-rfq-details span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.bad-rfq-row .bad-btn {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
 /* PO rows */
 .bad-po-row {
     display: flex;
@@ -796,6 +872,7 @@
     padding: 11px 22px;
     font-size: 14px;
 }
+
 .bad-nav-item-logout {
     color: #dc2626;
 }
@@ -808,6 +885,7 @@
 .bad-nav-item-logout .bad-nav-icon {
     color: #dc2626;
 }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1200px) {
     .bad-stats-grid {
@@ -844,6 +922,16 @@
         margin-top: 8px;
     }
 
+    .bad-rfq-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .bad-rfq-row .bad-btn {
+        margin-top: 12px;
+        align-self: flex-start;
+    }
+
     .bad-match-top {
         flex-direction: column;
     }
@@ -872,6 +960,7 @@
 }
 
 @media (max-width: 560px) {
+
     .bad-modal-analytics-grid,
     .bad-modal-info-grid {
         grid-template-columns: 1fr;
