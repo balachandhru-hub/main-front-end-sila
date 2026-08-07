@@ -1,0 +1,741 @@
+/* ==========================================================================
+   Platform User Detail View - Responsive Full-Page Component Stylesheet
+   ========================================================================== */
+
+.pudv-container {
+  padding: 24px 32px 48px;
+  background-color: #f8fafc;
+  min-height: calc(100vh - 76px);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #1e293b;
+}
+
+/* Error Banner */
+.pudv-error-banner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* 1. TOP TITLE BAR */
+.pudv-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.pudv-top-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pudv-back-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pudv-back-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.pudv-top-title {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.pudv-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pudv-btn-secondary {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pudv-btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.pudv-btn-icon {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  cursor: pointer;
+}
+
+/* 2. HERO BANNER CARD */
+.pudv-hero-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.pudv-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.pudv-hero-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  border: 1px solid #dbeafe;
+}
+
+.pudv-hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pudv-hero-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.pudv-hero-contacts {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 0.88rem;
+  color: #475569;
+}
+
+.pudv-hero-contact-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pudv-hero-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.pudv-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pudv-chip-status {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.pudv-chip-status.approved {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.pudv-chip-type {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.pudv-chip-industry {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.pudv-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pudv-btn-verify {
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.pudv-btn-verify:hover:not(:disabled) {
+  background: #059669;
+}
+
+.pudv-btn-edit {
+  background: #ffffff;
+  border: 1px solid #2563eb;
+  color: #2563eb;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pudv-btn-reject {
+  background: #ffffff;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pudv-btn-reject:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+/* 3. TWO-COLUMN GRID LAYOUT */
+.pudv-grid-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+}
+
+/* LEFT COLUMN CARDS */
+.pudv-main-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pudv-section-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.pudv-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pudv-section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pudv-sec-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pudv-section-title h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.pudv-tag-primary {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #059669;
+  background: #d1fae5;
+  padding: 4px 10px;
+  border-radius: 6px;
+  margin-left: auto;
+  margin-right: 16px;
+}
+
+.pudv-chevron-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.pudv-section-body {
+  padding: 20px 24px 24px;
+}
+
+/* Details Grid */
+.pudv-details-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px 24px;
+}
+
+.pudv-details-grid.pudv-3col {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.pudv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pudv-address-field {
+  grid-column: span 1;
+}
+
+.pudv-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.pudv-val {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.pudv-val-bold {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pudv-val-muted {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.pudv-link {
+  color: #2563eb;
+  font-size: 0.88rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.pudv-link:hover {
+  text-decoration: underline;
+}
+
+.pudv-address-box {
+  background: #f8fafc;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.86rem;
+  color: #334155;
+  line-height: 1.4;
+}
+
+/* Tables */
+.pudv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.pudv-table th {
+  text-align: left;
+  padding: 10px 14px;
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.pudv-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+
+.pudv-doc-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #334155;
+}
+
+.pudv-doc-btn:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+/* Bank & Location cards */
+.pudv-bank-card,
+.pudv-location-card {
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.pudv-bank-card:last-child,
+.pudv-location-card:last-child {
+  margin-bottom: 0;
+}
+
+.pudv-pill-yes {
+  background: #d1fae5;
+  color: #059669;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.pudv-pill-no {
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+/* Product Categories Flow Boxes */
+.pudv-categories-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pudv-flow-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.pudv-flow-box {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 12px 16px;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pudv-flow-family {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.pudv-flow-class {
+  background: #fffbebf5;
+  border-color: #fde68a;
+}
+
+.pudv-flow-commodity {
+  background: #f5f3ff;
+  border-color: #ddd6fe;
+}
+
+.pudv-flow-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.pudv-flow-code {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pudv-flow-title {
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.pudv-flow-arrow {
+  color: #94a3b8;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.pudv-empty-msg {
+  color: #64748b;
+  font-size: 0.88rem;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+/* RIGHT COLUMN: SUMMARY SIDEBAR */
+.pudv-summary-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  position: sticky;
+  top: 96px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.pudv-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 16px;
+}
+
+.pudv-summary-icon {
+  color: #2563eb;
+  font-size: 18px;
+}
+
+.pudv-summary-header h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.pudv-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pudv-sum-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.86rem;
+}
+
+.pudv-sum-label {
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.pudv-sum-ic {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.pudv-sum-val {
+  font-weight: 600;
+  color: #0f172a;
+  text-align: right;
+}
+
+.pudv-sum-val-sm {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #334155;
+  word-break: break-all;
+}
+
+.pudv-sum-val-code {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: #475569;
+  word-break: break-all;
+  background: #f8fafc;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.pudv-sum-status-dot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: #d97706;
+  font-size: 0.82rem;
+}
+
+.pudv-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d97706;
+}
+
+.pudv-sum-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 4px 0;
+}
+
+/* REJECT MODAL */
+.pudv-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pudv-reject-dialog {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 24px;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.pudv-reject-dialog h3 {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  color: #0f172a;
+}
+
+.pudv-reject-dialog p {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+}
+
+.pudv-textarea {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-family: inherit;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.pudv-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.pudv-btn-cancel {
+  background: #f1f5f9;
+  border: none;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pudv-btn-confirm-reject {
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pudv-spin {
+  animation: pudv-spin 1s linear infinite;
+}
+
+@keyframes pudv-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 1024px) {
+  .pudv-grid-layout {
+    grid-template-columns: 1fr;
+  }
+  .pudv-details-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .pudv-hero-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+}
