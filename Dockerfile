@@ -20,7 +20,14 @@ COPY packages/remote-supplier/package.json     packages/remote-supplier/package.
 COPY packages/remote-platform-user/package.json packages/remote-platform-user/package.json
 COPY packages/shared-ui/package.json           packages/shared-ui/package.json
 
-RUN npm install --include=dev --legacy-peer-deps --ignore-scripts
+# npm's optional-dependency bug (npm/cli#4828) leaves Rollup's platform
+# native binary (@rollup/rollup-linux-x64-musl on Alpine) uninstalled,
+# breaking `vite build` with "Cannot find module @rollup/rollup-linux-x64-musl".
+# Both `npm install` and `npm ci` reproduce it against the committed
+# lockfile. The documented remedy (printed in the error itself) is to drop
+# the lockfile and let npm resolve the correct platform binary fresh.
+# Verified building all four remotes + host on the Alpine build image.
+RUN rm -f package-lock.json && npm install --include=dev --legacy-peer-deps
 
 COPY . .
 

@@ -8,7 +8,7 @@ import { Loader } from '@vosox/shared-ui';
 
 const BuyerApp = React.lazy(() => import('remoteBuyer/BuyerApp'));
 const SupplierApp = React.lazy(() => import('remoteSupplier/SupplierApp'));
-const PlatformUserApp = React.lazy(() => import('remotePlatformUser/PlatformUserApp'));
+const PlatformUserApp = React.lazy(() => import('remotePlatformUser/PlatformUserApp')); 
 
 const Protected: React.FC<{ 
   children: React.ReactNode; 
