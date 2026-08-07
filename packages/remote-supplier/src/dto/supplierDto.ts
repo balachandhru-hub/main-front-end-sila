@@ -188,6 +188,28 @@ export interface RFQDetailDocument {
   fileType: string;
   fileName: string;
 }
+export interface RFQQuestionOption {
+  optionId: string;
+  optionText: string;
+  displayOrder: number;
+}
+
+export interface RFQQuestionAttachment {
+  id: string;
+  assetType: string;
+  assetName: string;
+  fileType: string;
+  fileName: string;
+}
+export interface RFQQuestion {
+  questionId: string;
+  question: string;
+  questionType: string;
+  isRequired: boolean;
+  displayOrder: number;
+  options: RFQQuestionOption[];
+  attachments: RFQQuestionAttachment[];
+}
 
 export interface RFQDetailItem {
   id?: string;
@@ -201,6 +223,7 @@ export interface RFQDetailItem {
   materialGroup: string;
   costCenter: string;
   attachments: RFQDetailDocument[];
+  questions: RFQQuestion[];
 }
 
 export interface RFQSupplierQuotation {
@@ -230,6 +253,7 @@ export interface RFQDetailResponse {
   startDate: string;
   endDate: string;
   addLotOption: boolean;
+  questions: RFQQuestion[];
   technicalSpecificationDocuments: RFQDetailDocument[];
   termsConditionDocuments: RFQDetailDocument[];
   items: RFQDetailItem[];
@@ -293,3 +317,26 @@ export interface CreateSupplierCatalogPayload {
   catalog: CatalogDetailDto;
 }
 
+export interface RfqDocumentAssetDto {
+  entityType: string;
+  entityId: string;
+  assetType: string;
+  fileBytes: string;
+  fileName: string;
+  contentType: string;
+  isSingletonAsset?: boolean;
+  id?: string;
+}
+
+export interface SubmitRfqAnswerItemDto {
+  rfqQuestionId: string;
+  answer?: string;
+  questionOptionId?: string | null;
+  questionOptionIds?: string[];
+  attachment?: RfqDocumentAssetDto | null;
+}
+
+export interface SubmitRfqAnswersPayload {
+  supplierRFQId: string;
+  answers: SubmitRfqAnswerItemDto[];
+}
