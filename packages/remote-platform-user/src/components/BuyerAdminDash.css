@@ -974,7 +974,6 @@
     }
 }
 
-/* ---------- RFQ modal sizing, spinner, and document cards (fills a pre-existing gap) ---------- */
 .bad-modal-rfq {
     max-width: 850px;
 }
@@ -1099,7 +1098,6 @@
     text-align: center;
 }
 
-/* ---------- All RFQs full-page list ---------- */
 .bad-allrfqs-table th,
 .bad-allrfqs-table td {
     white-space: nowrap;

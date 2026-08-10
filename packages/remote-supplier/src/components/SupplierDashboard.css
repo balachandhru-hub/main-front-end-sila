@@ -1193,7 +1193,6 @@
   transition: all 0.2s ease;
 }
 
-/* ---------- Catalog: sidebar sub-items ---------- */
 .pud-nav-chevron {
   display: flex;
   align-items: center;
@@ -1229,7 +1228,6 @@
   border-left-color: #2f6feb;
 }
 
-/* ---------- All RFQs full-page list & full-page RFQ detail ---------- */
 .pud-allrfqs-table th,
 .pud-allrfqs-table td {
   white-space: nowrap;

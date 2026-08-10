@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import "./BuyerAdminDash.css";
 import Header from "../../../remote-buyer/src/components/Header";
 import UserAdmin from "../UserAdmin";
-import UserTemplate from "./usertemplate";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import { useNetworkAdminAuthStore } from "../store/useAuthStore";
 import { fetchBuyerRFQs, fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
@@ -398,7 +397,6 @@ const BuyerAdminDash: React.FC = () => {
   }, [buyerId]);
 
 
-  /* ---- Full-page "All RFQs" list + full-page RFQ detail view ---- */
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
 
   const [allRfqsList, setAllRfqsList] = useState<any[]>([]);
@@ -406,7 +404,6 @@ const BuyerAdminDash: React.FC = () => {
   const [allRfqsError, setAllRfqsError] = useState<string | null>(null);
   const [allRfqsLoaded, setAllRfqsLoaded] = useState(false);
 
-  // const [fullPageRfqId, setFullPageRfqId] = useState<string | null>(null);
   const [fullPageRfq, setFullPageRfq] = useState<any | null>(null);
   const [loadingFullPageRfq, setLoadingFullPageRfq] = useState(false);
   const [fullPageRfqError, setFullPageRfqError] = useState<string | null>(null);
@@ -462,7 +459,6 @@ const BuyerAdminDash: React.FC = () => {
 
   const handleBackToAllRfqs = () => {
     setRfqPageView("allRfqs");
-    // setFullPageRfqId(null);
     setFullPageRfq(null);
     setFullPageRfqError(null);
   };
@@ -565,8 +561,6 @@ const BuyerAdminDash: React.FC = () => {
           <main className="bad-content">
             {activeNav === "userList" ? (
               <UserAdmin />
-            ) : activeNav === "template" ? (
-              <UserTemplate />
             ) : activeNav === "companyProfile" ? (
               <CompanyProfile mode="network-admin" showHeader={false} />
             ) : activeNav === "createRFQ" ? (

@@ -186,7 +186,6 @@ const LogoutIcon = () => (
   </svg>
 );
 
-// <-- ADDED: Template icon for sidebar
 const NavIconTemplate = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -395,7 +394,6 @@ const SupplierDashboard: React.FC = () => {
 
   const [activeView, setActiveView] = useState<"dashboard" | "catalogList" | "template" | "companyProfile">("dashboard");
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
-  // Sidebar toggle removed; sidebar always open.
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -407,10 +405,7 @@ const SupplierDashboard: React.FC = () => {
   const [loadingRfqs, setLoadingRfqs] = useState(true);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
-  // const [hasMoreRfqs, setHasMoreRfqs] = useState(true);
-  // const [loadingMoreRfqs, setLoadingMoreRfqs] = useState(false);
   const RFQ_INITIAL_VISIBLE = 3;
-  // const RFQ_PAGE_SIZE = 5;
 
   const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
   const [selectedRfq, setSelectedRfq] = useState<RFQDetailResponse | null>(null);
@@ -432,7 +427,6 @@ const SupplierDashboard: React.FC = () => {
   const [submitAnswersError, setSubmitAnswersError] = useState<string | null>(null);
   const [submitAnswersSuccess, setSubmitAnswersSuccess] = useState(false);
 
-  // Fetch supplier profile if supplierId is not in sessionStorage
   useEffect(() => {
     const loadSupplierProfile = async () => {
       if (!supplierId) {
@@ -455,7 +449,6 @@ const SupplierDashboard: React.FC = () => {
     loadSupplierProfile();
   }, [supplierId]);
 
-  // Fetch Recent Sourcing Opportunities
   useEffect(() => {
     const loadRfqs = async () => {
       if (!supplierId) return;
@@ -464,7 +457,6 @@ const SupplierDashboard: React.FC = () => {
       setRfqsError(null);
 
       try {
-        //const ix = supplierId || sessionStorage.getItem("vosox_supplier_id") || "";
         const initialLimit = RFQ_INITIAL_VISIBLE;
         const data = await fetchRFQMasterData({
           supplierId,
@@ -473,7 +465,6 @@ const SupplierDashboard: React.FC = () => {
         });
         setRfqs(data);
         setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
-        // setHasMoreRfqs(data.length === initialLimit);
       } catch (err: any) {
         console.error("Failed to load RFQs", err);
         setRfqsError(err.message || "Failed to load sourcing opportunities.");
@@ -500,7 +491,6 @@ const SupplierDashboard: React.FC = () => {
     }
   };
 
-  /* ---- Full-page "All RFQs" list + full-page RFQ detail view ---- */
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
 
   const [allRfqsList, setAllRfqsList] = useState<RFQMasterDataItem[]>([]);
@@ -549,7 +539,6 @@ const SupplierDashboard: React.FC = () => {
     setRfqDetailError(null);
   };
 
-  // Quotation form fields states
   const [quoteQuotationId, setQuoteQuotationId] = useState<string | null>(null);
   const [quoteTotalPrice, setQuoteTotalPrice] = useState<number>(0);
   const [quoteDeliveryCharge, setQuoteDeliveryCharge] = useState<number>(0);
@@ -564,7 +553,6 @@ const SupplierDashboard: React.FC = () => {
   const [submitQuoteError, setSubmitQuoteError] = useState<string | null>(null);
   const [submitQuoteSuccess, setSubmitQuoteSuccess] = useState(false);
 
-  // Initialize/Populate quotation form state when selectedRfq changes
   useEffect(() => {
     if (selectedRfq) {
       const activeQuote = selectedRfq.supplierQuotation?.[0];
@@ -612,7 +600,6 @@ const SupplierDashboard: React.FC = () => {
     }
   }, [selectedRfq]);
 
-  // Price Calculation helpers
   const handleItemPriceChange = (key: string, value: number) => {
     const updatedPrices = { ...quoteItemPrices, [key]: value };
     setQuoteItemPrices(updatedPrices);
@@ -713,7 +700,6 @@ const SupplierDashboard: React.FC = () => {
     if (!selectedRfq) return;
     const supplierRFQId = selectedRfq.items?.[0]?.supplierRFQId || null;
 
-    // Basic validation: make sure every required question has been answered
     const unanswered = (selectedRfq.questions || []).find((q) => {
       if (!q.isRequired) return false;
       const a = rfqAnswers[q.questionId];
@@ -732,7 +718,6 @@ const SupplierDashboard: React.FC = () => {
     setSubmitAnswersError(null);
     setSubmitAnswersSuccess(false);
     try {
-      // Resolve the SUPPLIER entity type/id once for all file answers in this submission
       const entityTypes = await fetchMetadataReferenceList(['ENTITY_TYPE']);
       const supplierEntityId =
         entityTypes.find((e) => e.key === 'SUPPLIER')?.id || '59476530-3c10-438b-b3b3-9db9e96e8d93';
@@ -744,7 +729,6 @@ const SupplierDashboard: React.FC = () => {
           const question = selectedRfq.questions?.find(q => q.questionId === a.rfqQuestionId);
           const allOptionIds = question?.options?.map(opt => opt.optionId) || [];
 
-          // Build the attachment from the file the supplier actually uploaded for this answer
           const answerAttachment: RfqDocumentAssetDto | null =
             a.file && a.fileBase64
               ? {
@@ -873,7 +857,6 @@ const SupplierDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Modal Body & Form */}
       <form onSubmit={handleSubmitQuotation}>
         <div className="pud-modal-body">
           {loadingRfqDetail && (
@@ -899,7 +882,6 @@ const SupplierDashboard: React.FC = () => {
           {selectedRfq && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-              {/* General Specs */}
               <div>
                 <div className="pud-modal-section-title">Description</div>
                 <p className="pud-modal-desc" style={{ whiteSpace: 'pre-wrap' }}>
@@ -928,14 +910,12 @@ const SupplierDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Reference / Bid Documents */}
               {((selectedRfq.technicalSpecificationDocuments?.length ?? 0) > 0 ||
                 (selectedRfq.termsConditionDocuments?.length ?? 0) > 0) && (
                   <div>
                     <div className="pud-modal-section-title">Reference Documents</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginTop: '8px' }}>
 
-                      {/* Tech Documents */}
                       {selectedRfq.technicalSpecificationDocuments?.map((doc) => (
                         <div key={doc.id} className="pud-rfq-doc-card">
                           <span className="pud-rfq-doc-icon"><IconFile /></span>
@@ -946,7 +926,6 @@ const SupplierDashboard: React.FC = () => {
                         </div>
                       ))}
 
-                      {/* Terms Documents */}
                       {selectedRfq.termsConditionDocuments?.map((doc) => (
                         <div key={doc.id} className="pud-rfq-doc-card">
                           <span className="pud-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></span>

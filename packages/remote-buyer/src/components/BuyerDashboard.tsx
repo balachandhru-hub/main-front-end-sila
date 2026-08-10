@@ -377,7 +377,6 @@ const mockRfqs = [
 
 const BuyersDashboard: React.FC = () => {
 
-  // Sidebar toggle removed; sidebar always open.
   const [activeNav, setActiveNav] = useState<string>("dashboard");
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -386,7 +385,6 @@ const BuyersDashboard: React.FC = () => {
   const [loadingRfqs, setLoadingRfqs] = useState(false);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
 
-  // const [rfqs, setRfqs] = useState<any[]>([]);
   const [rfqs, setRfqs] = useState<any[]>(mockRfqs);
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
   const RFQ_INITIAL_VISIBLE = 3;
@@ -443,7 +441,6 @@ const BuyersDashboard: React.FC = () => {
   }, [buyerId]);
 
 
-  /* ---- Full-page "All RFQs" list + full-page RFQ detail view ---- */
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
 
   const [allRfqsList, setAllRfqsList] = useState<any[]>([]);
@@ -451,7 +448,6 @@ const BuyersDashboard: React.FC = () => {
   const [allRfqsError, setAllRfqsError] = useState<string | null>(null);
   const [allRfqsLoaded, setAllRfqsLoaded] = useState(false);
 
-  // const [fullPageRfqId, setFullPageRfqId] = useState<string | null>(null);
   const [fullPageRfq, setFullPageRfq] = useState<any | null>(null);
   const [loadingFullPageRfq, setLoadingFullPageRfq] = useState(false);
   const [fullPageRfqError, setFullPageRfqError] = useState<string | null>(null);
@@ -484,7 +480,6 @@ const BuyersDashboard: React.FC = () => {
   };
 
   const handleViewRfqDetailsFullPage = async (rfqId: string) => {
-    //setFullPageRfqId(rfqId);
     setRfqPageView("rfqDetail");
     setLoadingFullPageRfq(true);
     setFullPageRfqError(null);
@@ -501,13 +496,11 @@ const BuyersDashboard: React.FC = () => {
       setFullPageRfq(found);
     } finally {
       setLoadingFullPageRfq(false);
-      // setLoadingRfqDetails(false);
     }
   };
 
   const handleBackToAllRfqs = () => {
     setRfqPageView("allRfqs");
-    // setFullPageRfqId(null);
     setFullPageRfq(null);
     setFullPageRfqError(null);
   };
