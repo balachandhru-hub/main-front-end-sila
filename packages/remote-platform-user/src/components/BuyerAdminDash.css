@@ -973,3 +973,143 @@
         padding-right: 20px;
     }
 }
+
+/* ---------- RFQ modal sizing, spinner, and document cards (fills a pre-existing gap) ---------- */
+.bad-modal-rfq {
+    max-width: 850px;
+}
+
+.bad-rfq-fullpage {
+    max-width: 100%;
+    max-height: none;
+    overflow: visible;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+}
+
+.bad-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #e2e8f0;
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    animation: bad-spin 0.8s linear infinite;
+}
+
+@keyframes bad-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.bad-rfq-doc-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.bad-rfq-doc-card:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.bad-rfq-doc-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background: #dbeafe;
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.bad-rfq-doc-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #1e293b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bad-rfq-doc-type {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 1px;
+}
+
+.bad-rfq-table-container {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.bad-rfq-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 13px;
+}
+
+.bad-rfq-items-table th {
+    background: #f8fafc;
+    padding: 10px 14px;
+    font-weight: 600;
+    color: #475569;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.bad-rfq-items-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+}
+
+.bad-rfq-items-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.bad-rfq-items-table tbody tr:hover td {
+    background: #f8fafc;
+}
+
+.bad-rfq-quote-box {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    padding: 18px 20px;
+}
+
+.bad-rfq-no-quote-box {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+}
+
+/* ---------- All RFQs full-page list ---------- */
+.bad-allrfqs-table th,
+.bad-allrfqs-table td {
+    white-space: nowrap;
+}
+
+.bad-allrfqs-table td:nth-child(3) {
+    white-space: normal;
+    min-width: 200px;
+}
+
+.bad-allrfqs-table tbody tr:hover td {
+    background: #f8fafc;
+}

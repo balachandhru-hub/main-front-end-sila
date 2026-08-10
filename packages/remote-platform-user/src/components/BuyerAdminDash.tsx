@@ -222,8 +222,8 @@ const NavIconFilePlus = () => (
 
 const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
-  { key: "activeRFQs", icon: <IconFile />, label: "Active RFQs" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
+  { key: "activeRFQs", icon: <IconFile />, label: "Active RFQs" },
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
   { key: "template", icon: <NavIconTemplate />, label: "Template" },
   { key: "purchaseOrders", icon: <IconBag />, label: "Purchase Orders" },
@@ -346,10 +346,7 @@ const BuyerAdminDash: React.FC = () => {
   const [rfqsError, setRfqsError] = useState<string | null>(null);
   const [rfqs, setRfqs] = useState<any[]>(mockRfqs);
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
-  const [hasMoreRfqs, setHasMoreRfqs] = useState(true);
-  const [loadingMoreRfqs, setLoadingMoreRfqs] = useState(false);
   const RFQ_INITIAL_VISIBLE = 3;
-  const RFQ_PAGE_SIZE = 5;
 
   useEffect(() => {
     const loadRfqs = async () => {
@@ -365,7 +362,6 @@ const BuyerAdminDash: React.FC = () => {
         const finalData = data.length > 0 ? data : mockRfqs;
         setRfqs(finalData);
         setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, finalData.length));
-        setHasMoreRfqs(data.length === RFQ_INITIAL_VISIBLE);
       } catch (err: any) {
         console.error("Failed to load RFQs", err);
         setRfqsError(err.message || "Failed to load sourcing opportunities.");
@@ -376,58 +372,81 @@ const BuyerAdminDash: React.FC = () => {
     loadRfqs();
   }, [buyerId]);
 
-  const handleViewMoreRfqs = async () => {
-    if (loadingMoreRfqs) return;
+  // const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
+  // const [selectedRfq, setSelectedRfq] = useState<any | null>(null);
+  // const [loadingRfqDetails, setLoadingRfqDetails] = useState<boolean>(false);
+  // const [rfqDetailsError, setRfqDetailsError] = useState<string | null>(null);
 
-    // If we already have more fetched than we're showing, just reveal more locally.
-    if (visibleRfqCount < rfqs.length) {
-      setVisibleRfqCount((v) => Math.min(v + RFQ_PAGE_SIZE, rfqs.length));
-      return;
-    }
+  /* ---- Full-page "All RFQs" list + full-page RFQ detail view ---- */
+  const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
 
-    // Otherwise, fetch the next page from the server.
-    if (!buyerId || !hasMoreRfqs) return;
+  const [allRfqsList, setAllRfqsList] = useState<any[]>([]);
+  const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
+  const [allRfqsError, setAllRfqsError] = useState<string | null>(null);
+  const [allRfqsLoaded, setAllRfqsLoaded] = useState(false);
 
-    setLoadingMoreRfqs(true);
+  // const [fullPageRfqId, setFullPageRfqId] = useState<string | null>(null);
+  const [fullPageRfq, setFullPageRfq] = useState<any | null>(null);
+  const [loadingFullPageRfq, setLoadingFullPageRfq] = useState(false);
+  const [fullPageRfqError, setFullPageRfqError] = useState<string | null>(null);
+
+  const handleOpenAllRfqs = async () => {
+    setRfqPageView("allRfqs");
+    if (allRfqsLoaded || loadingAllRfqs) return;
+
+    setLoadingAllRfqs(true);
+    setAllRfqsError(null);
     try {
-      const nextPage = await fetchBuyerRFQs({
-        buyerId,
-        index: rfqs.length,
-        limit: RFQ_PAGE_SIZE,
-      });
-      setRfqs((prev) => [...prev, ...nextPage]);
-      setVisibleRfqCount((v) => v + nextPage.length);
-      setHasMoreRfqs(nextPage.length === RFQ_PAGE_SIZE);
+      if (!buyerId) {
+        setAllRfqsList(rfqs.length > 0 ? rfqs : mockRfqs);
+      } else {
+        const data = await fetchBuyerRFQs({ buyerId, index: 0, limit: 100 });
+        setAllRfqsList(data.length > 0 ? data : mockRfqs);
+      }
     } catch (err: any) {
-      console.error("Failed to load more RFQs", err);
-      setRfqsError(err.message || "Failed to load more sourcing opportunities.");
+      console.error("Failed to load full RFQ list", err);
+      setAllRfqsError(err.message || "Failed to load the full RFQ list.");
+      setAllRfqsList(rfqs.length > 0 ? rfqs : mockRfqs);
     } finally {
-      setLoadingMoreRfqs(false);
+      setLoadingAllRfqs(false);
+      setAllRfqsLoaded(true);
     }
   };
 
-  const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
-  const [selectedRfq, setSelectedRfq] = useState<any | null>(null);
-  const [loadingRfqDetails, setLoadingRfqDetails] = useState<boolean>(false);
-  const [rfqDetailsError, setRfqDetailsError] = useState<string | null>(null);
+  const handleBackToDashboard = () => {
+    setRfqPageView("dashboard");
+  };
 
-  const handleViewRfqDetails = async (rfqId: string) => {
-    setSelectedRfqId(rfqId);
-    setLoadingRfqDetails(true);
-    setRfqDetailsError(null);
+  const handleViewRfqDetailsFullPage = async (rfqId: string) => {
+    // setFullPageRfqId(rfqId);
+    setRfqPageView("rfqDetail");
+    setLoadingFullPageRfq(true);
+    setFullPageRfqError(null);
+
     try {
       const details = await fetchBuyerRFQById(rfqId);
-      setSelectedRfq(details);
+      setFullPageRfq(details);
     } catch (err: any) {
       console.error("Failed to load RFQ details from API", err);
-      setRfqDetailsError(err.message || "Failed to fetch details.");
-      // Fallback to local list element (e.g. for mock items)
-      const found = rfqs.find((r) => r.rfqId === rfqId) || null;
-      setSelectedRfq(found);
+      setFullPageRfqError(err.message || "Failed to fetch details.");
+      const found =
+        allRfqsList.find((r) => r.rfqId === rfqId) ||
+        rfqs.find((r) => r.rfqId === rfqId) ||
+        null;
+      setFullPageRfq(found);
     } finally {
-      setLoadingRfqDetails(false);
+      setLoadingFullPageRfq(false);
     }
   };
+
+  const handleBackToAllRfqs = () => {
+    setRfqPageView("allRfqs");
+    // setFullPageRfqId(null);
+    setFullPageRfq(null);
+    setFullPageRfqError(null);
+  };
+
+
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -441,6 +460,42 @@ const BuyerAdminDash: React.FC = () => {
     } finally {
       setLoggingOut(false);
     }
+  };
+
+  const resolveAnswersForQuestion = (
+    rfq: any,
+    question: any,
+    _index: number
+  ): { supplierName: string | null; display: string }[] => {
+    const answerList = rfq?.supplierAnswers?.answers;
+    if (!Array.isArray(answerList) || !question?.id) return [];
+
+    const match = answerList.find((a: any) => a?.rfqQuestionId === question.id);
+    if (!match) return [];
+
+    const resolveOptionLabels = (ids: string[]): string[] => {
+      const optionList = question?.questionOptions;
+      if (!Array.isArray(optionList)) return [];
+      return ids
+        .map((id) => optionList.find((opt: any) => opt?.id === id)?.label)
+        .filter((label: any): label is string => Boolean(label));
+    };
+
+    let display: string | null = null;
+
+    if (match.attachment) {
+      display = match.attachment.fileName || match.answer || "Attached file";
+    } else if (match.answer) {
+      display = match.answer;
+    } else if (Array.isArray(match.questionOptionIds) && match.questionOptionIds.length > 0) {
+      const labels = resolveOptionLabels(match.questionOptionIds);
+      display = labels.length > 0 ? labels.join(", ") : match.questionOptionIds.join(", ");
+    } else if (match.questionOptionId) {
+      const labels = resolveOptionLabels([match.questionOptionId]);
+      display = labels[0] || match.questionOptionId;
+    }
+
+    return display ? [{ supplierName: null, display }] : [];
   };
 
   return (
@@ -493,6 +548,366 @@ const BuyerAdminDash: React.FC = () => {
               <UserTemplate />
             ) : activeNav === "createRFQ" ? (
               <CreateRFQ />
+            ) : rfqPageView === "allRfqs" ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
+                  <div>
+                    <h1 className="bad-title">All RFQs</h1>
+                    <p className="bad-subtitle" style={{ marginBottom: 0 }}>
+                      RFQs posted across your organization, awaiting supplier quotations.
+                    </p>
+                  </div>
+                  <button className="bad-btn bad-btn-outline" onClick={handleBackToDashboard}>
+                    ← Back to Dashboard
+                  </button>
+                </div>
+
+                {loadingAllRfqs ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
+                    <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                      <div className="bad-spinner" />
+                      <span>Loading all sourcing opportunities...</span>
+                    </div>
+                  </div>
+                ) : allRfqsError && allRfqsList.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>{allRfqsError}</div>
+                ) : allRfqsList.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                    No RFQs found.
+                  </div>
+                ) : (
+                  <div className="bad-rfq-table-container">
+                    <table className="bad-rfq-items-table bad-allrfqs-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '48px' }}>#</th>
+                          <th>RFQ Number</th>
+                          <th>Title</th>
+                          <th>Organization</th>
+                          <th>Delivery Location</th>
+                          <th>Closing Date</th>
+                          <th style={{ textAlign: 'right' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allRfqsList.map((rfq: any, idx: number) => (
+                          <tr key={rfq.rfqId || idx}>
+                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
+                            <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
+                            <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                            <td>{rfq.organizationName}</td>
+                            <td>{rfq.deliveryLocation}</td>
+                            <td>
+                              {rfq.endDate
+                                ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                : "—"}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              <button
+                                className="bad-btn bad-btn-outline"
+                                onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                              >
+                                View RFQ Details
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            ) : rfqPageView === "rfqDetail" ? (
+              <>
+                <button
+                  className="bad-btn bad-btn-outline"
+                  onClick={handleBackToAllRfqs}
+                  style={{ marginBottom: '16px' }}
+                >
+                  ← Back to All RFQs
+                </button>
+
+                <div className="bad-modal bad-rfq-fullpage">
+                  <div className="bad-modal-header">
+                    <span className="bad-modal-badge">
+                      <IconFile /> RFQ Specification
+                    </span>
+                    <button className="bad-modal-close" onClick={handleBackToAllRfqs}>
+                      <IconClose />
+                    </button>
+                    <h2 className="bad-modal-name">
+                      {loadingFullPageRfq ? "Loading RFQ Details..." : fullPageRfq?.title || "RFQ Details"}
+                    </h2>
+                    {fullPageRfq && (
+                      <div className="bad-modal-meta">
+                        <span><IconCalendar /> Closes: {new Date(fullPageRfq.endDate).toLocaleDateString()}</span>
+                        <span><IconPin /> Delivery: {fullPageRfq.deliveryLocation}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bad-modal-body">
+                    {loadingFullPageRfq ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+                        <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                          <div className="bad-spinner" style={{ width: '32px', height: '32px' }} />
+                          <span>Fetching RFQ specification details...</span>
+                        </div>
+                      </div>
+                    ) : fullPageRfqError && !fullPageRfq ? (
+                      <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
+                        {fullPageRfqError}
+                      </div>
+                    ) : fullPageRfq ? (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px' }}>
+                        {/* Left Column: RFQ Specifications & Materials */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                          <div>
+                            <div className="bad-modal-section-title">Description</div>
+                            <p className="bad-modal-desc" style={{ whiteSpace: 'pre-wrap', fontSize: '13.5px', color: '#334155', lineHeight: '1.6' }}>
+                              {fullPageRfq.description || "No description provided."}
+                            </p>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px 18px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
+                              <div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
+                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                                  {new Date(fullPageRfq.startDate).toLocaleString()}
+                                </div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>End Date</div>
+                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                                  {new Date(fullPageRfq.endDate).toLocaleString()}
+                                </div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Add Lot Option</div>
+                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                                  {fullPageRfq.addLotOption ? "Allowed" : "Not Allowed"}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Items table */}
+                          {fullPageRfq.items && fullPageRfq.items.length > 0 && (
+                            <div>
+                              <div className="bad-modal-section-title" style={{ marginBottom: '10px' }}>Required Materials & Services</div>
+                              <div className="bad-rfq-table-container" style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                                <table className="bad-rfq-items-table">
+                                  <thead>
+                                    <tr>
+                                      <th>Material Info</th>
+                                      <th>Group / Code</th>
+                                      <th style={{ textAlign: 'right' }}>Qty</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {fullPageRfq.items.map((item: any, idx: number) => (
+                                      <tr key={idx}>
+                                        <td>
+                                          <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
+                                          {item.costCenter && (
+                                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                              Cost Center: {item.costCenter}
+                                            </div>
+                                          )}
+                                        </td>
+                                        <td>
+                                          <div style={{ fontSize: '12px', color: '#334155' }}>
+                                            {item.materialGroup || "N/A"}
+                                          </div>
+                                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                            Code: {item.materialCode || "N/A"}
+                                          </div>
+                                        </td>
+                                        <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>
+                                          {item.quantity} <span style={{ fontSize: '11px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Attached Documents */}
+                          {((fullPageRfq.technicalSpecificationDocuments && fullPageRfq.technicalSpecificationDocuments.length > 0) ||
+                            (fullPageRfq.termsConditionDocuments && fullPageRfq.termsConditionDocuments.length > 0)) && (
+                              <div>
+                                <div className="bad-modal-section-title" style={{ marginBottom: '10px' }}>Specifications & Terms Documents</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                                  {fullPageRfq.technicalSpecificationDocuments?.map((doc: any, i: number) => (
+                                    <div key={`tech-${i}`} className="bad-rfq-doc-card">
+                                      <div className="bad-rfq-doc-icon"><IconFile /></div>
+                                      <div style={{ overflow: 'hidden' }}>
+                                        <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                                        <div className="bad-rfq-doc-type">Tech Spec Doc</div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {fullPageRfq.termsConditionDocuments?.map((doc: any, i: number) => (
+                                    <div key={`terms-${i}`} className="bad-rfq-doc-card">
+                                      <div className="bad-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></div>
+                                      <div style={{ overflow: 'hidden' }}>
+                                        <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                                        <div className="bad-rfq-doc-type">Terms & Conditions</div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                          {/* Supplier Quotations Received */}
+                          <div>
+                            <div className="bad-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                              <IconSparkles /> Supplier Quotations Received
+                            </div>
+                            {fullPageRfq.supplierQuotation &&
+                              fullPageRfq.supplierQuotation.filter((q: any) => q.quotationId || q.totalPrice !== null).length > 0 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '480px', overflowY: 'auto' }}>
+                                {fullPageRfq.supplierQuotation
+                                  .filter((q: any) => q.quotationId || q.totalPrice !== null)
+                                  .map((quote: any, index: number) => (
+                                    <div
+                                      key={index}
+                                      style={{
+                                        background: '#ffffff',
+                                        border: '1px solid #cbd5e1',
+                                        borderRadius: '10px',
+                                        padding: '16px',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                                        transition: 'border-color 0.2s ease'
+                                      }}
+                                    >
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
+                                            Quote ID: {quote.quotationId ? `${quote.quotationId.substring(0, 8)}...` : `Quote #${index + 1}`}
+                                          </span>
+                                          <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                            Delivery: {quote.deliveryType || "Standard"}
+                                          </span>
+                                        </div>
+                                        <span
+                                          className={`bad-status-badge`}
+                                          style={{
+                                            background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
+                                            color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
+                                            padding: '3px 8px',
+                                            borderRadius: '6px',
+                                            fontSize: '11px',
+                                            fontWeight: 600
+                                          }}
+                                        >
+                                          {quote.status || "RECEIVED"}
+                                        </span>
+                                      </div>
+
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #f1f5f9', marginBottom: '12px', fontSize: '12px' }}>
+                                        <div>
+                                          <span style={{ color: '#64748b' }}>Delivery Charge:</span>
+                                          <div style={{ fontWeight: 600, color: '#334155', marginTop: '2px' }}>${quote.deliveryCharge ?? 0}</div>
+                                        </div>
+                                        <div>
+                                          <span style={{ color: '#64748b' }}>Tax:</span>
+                                          <div style={{ fontWeight: 600, color: '#334155', marginTop: '2px' }}>${quote.tax ?? 0}</div>
+                                        </div>
+                                        <div>
+                                          <span style={{ color: '#64748b' }}>Discount:</span>
+                                          <div style={{ fontWeight: 600, color: '#dc2626', marginTop: '2px' }}>-${quote.discount ?? 0}</div>
+                                        </div>
+                                        <div>
+                                          <span style={{ color: '#64748b' }}>Total Quote:</span>
+                                          <div style={{ fontWeight: 700, color: '#16a34a', marginTop: '2px', fontSize: '13px' }}>${quote.totalPrice ?? 0}</div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            ) : (
+                              <div className="bad-rfq-no-quote-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 20px' }}>
+                                <IconMail />
+                                <div style={{ fontWeight: 600, color: '#475569', marginTop: '12px' }}>No Quotations Received Yet</div>
+                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', lineHeight: '1.5', maxWidth: '240px' }}>
+                                  When suppliers submit commercial bids, they will populate here in real-time.
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                        </div>
+
+                        {/* Right Column: Evaluation Questions & Answers */}
+                        <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                          <div className="bad-modal-section-title">Evaluation Questions & Answers</div>
+
+                          {fullPageRfq.questions && fullPageRfq.questions.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '600px', overflowY: 'auto' }}>
+                              {fullPageRfq.questions.map((q: any, i: number) => {
+                                const answers = resolveAnswersForQuestion(fullPageRfq, q, i);
+                                return (
+                                  <div key={i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+                                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
+                                        Q{i + 1}: {q.question}
+                                      </span>
+                                      <span style={{ fontSize: '11px', color: '#64748b', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                                        {q.questionType} {q.isRequired ? "(Required)" : ""}
+                                      </span>
+                                    </div>
+
+                                    {answers.length > 0 ? (
+                                      <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        {answers.map((ans, ai) => (
+                                          <div key={ai} style={{ background: '#ffffff', border: '1px solid #dbeafe', borderRadius: '6px', padding: '8px 10px' }}>
+                                            {ans.supplierName && (
+                                              <div style={{ fontSize: '10.5px', fontWeight: 600, color: '#2563eb', marginBottom: '3px' }}>
+                                                {ans.supplierName}
+                                              </div>
+                                            )}
+                                            <div style={{ fontSize: '12.5px', color: '#334155' }}>
+                                              {ans.display}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div style={{ marginTop: '8px', fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
+                                        No response yet.
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '13px', color: '#64748b' }}>No evaluation questions were configured for this RFQ.</div>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {fullPageRfq && (
+                    <div className="bad-modal-footer">
+                      <button
+                        className="bad-btn bad-btn-outline"
+                        onClick={handleBackToAllRfqs}
+                        style={{ marginRight: '10px' }}
+                      >
+                        Close
+                      </button>
+                      <button className="bad-btn bad-btn-message" style={{ background: '#2563eb', color: '#ffffff' }}>
+                        Evaluate Quotations
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
             ) : (
               <>
                 <h1 className="bad-title">Buyer Admin Command Center</h1>
@@ -526,17 +941,16 @@ const BuyerAdminDash: React.FC = () => {
                         <div className="bad-panel-title">Recent RFQs</div>
                         <div className="bad-panel-subtitle">RFQs posted across your organization, awaiting supplier quotations</div>
                       </div>
-                      {!loadingRfqs && !rfqsError && rfqs.length > 0 && (visibleRfqCount < rfqs.length || hasMoreRfqs) && (
+                      {!loadingRfqs && !rfqsError && rfqs.length > 0 && (
                         <a
                           className="bad-panel-link"
                           href="#"
                           onClick={(e) => {
                             e.preventDefault();
-                            handleViewMoreRfqs();
+                            handleOpenAllRfqs();
                           }}
-                          style={loadingMoreRfqs ? { opacity: 0.6, pointerEvents: "none" } : undefined}
                         >
-                          {loadingMoreRfqs ? "Loading..." : "View All RFQs →"}
+                          View All RFQs →
                         </a>
                       )}
                     </div>
@@ -581,7 +995,7 @@ const BuyerAdminDash: React.FC = () => {
                             </div>
                             <button
                               className="bad-btn bad-btn-outline"
-                              onClick={() => handleViewRfqDetails(rfq.rfqId)}
+                              onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
                             >
                               View RFQ Details
                             </button>
@@ -785,267 +1199,7 @@ const BuyerAdminDash: React.FC = () => {
           </div>
         )}
 
-        {selectedRfqId && (
-          <div className="bad-modal-overlay" onClick={() => setSelectedRfqId(null)}>
-            <div className="bad-modal bad-modal-rfq" onClick={(e) => e.stopPropagation()}>
 
-              {/* Modal Header */}
-              <div className="bad-modal-header">
-                <span className="bad-modal-badge">
-                  <IconFile /> RFQ Specification
-                </span>
-                <button className="bad-modal-close" onClick={() => setSelectedRfqId(null)}>
-                  <IconClose />
-                </button>
-                <h2 className="bad-modal-name">
-                  {selectedRfq?.title || "RFQ Details"}
-                </h2>
-                {selectedRfq && (
-                  <div className="bad-modal-meta">
-                    <span><IconCalendar /> Closes: {new Date(selectedRfq.endDate).toLocaleDateString()}</span>
-                    <span><IconPin /> Delivery: {selectedRfq.deliveryLocation}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Modal Body */}
-              <div className="bad-modal-body">
-                {loadingRfqDetails ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
-                    <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <div className="bad-spinner" style={{ width: '32px', height: '32px' }} />
-                      <span>Fetching RFQ specification details...</span>
-                    </div>
-                  </div>
-                ) : rfqDetailsError && !selectedRfq ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
-                    {rfqDetailsError}
-                  </div>
-                ) : selectedRfq ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px' }}>
-                    {/* Left Column: RFQ Specifications & Materials */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                      <div>
-                        <div className="bad-modal-section-title">Description</div>
-                        <p className="bad-modal-desc" style={{ whiteSpace: 'pre-wrap', fontSize: '13.5px', color: '#334155', lineHeight: '1.6' }}>
-                          {selectedRfq.description || "No description provided."}
-                        </p>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px 18px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
-                          <div>
-                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
-                            <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                              {new Date(selectedRfq.startDate).toLocaleString()}
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>End Date</div>
-                            <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                              {new Date(selectedRfq.endDate).toLocaleString()}
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Add Lot Option</div>
-                            <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                              {selectedRfq.addLotOption ? "Allowed" : "Not Allowed"}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Items table */}
-                      {selectedRfq.items && selectedRfq.items.length > 0 && (
-                        <div>
-                          <div className="bad-modal-section-title" style={{ marginBottom: '10px' }}>Required Materials & Services</div>
-                          <div className="bad-rfq-table-container" style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                            <table className="bad-rfq-items-table">
-                              <thead>
-                                <tr>
-                                  <th>Material Info</th>
-                                  <th>Group / Code</th>
-                                  <th style={{ textAlign: 'right' }}>Qty</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {selectedRfq.items.map((item: any, idx: number) => (
-                                  <tr key={idx}>
-                                    <td>
-                                      <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
-                                      {item.costCenter && (
-                                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                          Cost Center: {item.costCenter}
-                                        </div>
-                                      )}
-                                    </td>
-                                    <td>
-                                      <div style={{ fontSize: '12px', color: '#334155' }}>
-                                        {item.materialGroup || "N/A"}
-                                      </div>
-                                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                        Code: {item.materialCode || "N/A"}
-                                      </div>
-                                    </td>
-                                    <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>
-                                      {item.quantity} <span style={{ fontSize: '11px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Attached Documents */}
-                      {((selectedRfq.technicalSpecificationDocuments && selectedRfq.technicalSpecificationDocuments.length > 0) ||
-                        (selectedRfq.termsConditionDocuments && selectedRfq.termsConditionDocuments.length > 0)) && (
-                          <div>
-                            <div className="bad-modal-section-title" style={{ marginBottom: '10px' }}>Specifications & Terms Documents</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-                              {selectedRfq.technicalSpecificationDocuments?.map((doc: any, i: number) => (
-                                <div key={`tech-${i}`} className="bad-rfq-doc-card">
-                                  <div className="bad-rfq-doc-icon"><IconFile /></div>
-                                  <div style={{ overflow: 'hidden' }}>
-                                    <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                    <div className="bad-rfq-doc-type">Tech Spec Doc</div>
-                                  </div>
-                                </div>
-                              ))}
-                              {selectedRfq.termsConditionDocuments?.map((doc: any, i: number) => (
-                                <div key={`terms-${i}`} className="bad-rfq-doc-card">
-                                  <div className="bad-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></div>
-                                  <div style={{ overflow: 'hidden' }}>
-                                    <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                    <div className="bad-rfq-doc-type">Terms & Conditions</div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                      {/* Questions */}
-                      {selectedRfq.questions && selectedRfq.questions.length > 0 && (
-                        <div>
-                          <div className="bad-modal-section-title" style={{ marginBottom: '10px' }}>Evaluation Questions Posed</div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {selectedRfq.questions.map((q: any, i: number) => (
-                              <div key={i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
-                                    Q{i + 1}: {q.question}
-                                  </span>
-                                  <span style={{ fontSize: '11px', color: '#64748b', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px' }}>
-                                    {q.questionType} {q.isRequired ? "(Required)" : ""}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Right Column: Received Supplier Bids / Quotations */}
-                    <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                      <div className="bad-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <IconSparkles /> Supplier Quotations Received
-                      </div>
-
-                      {/* Filter/check if we have actual valid quotations */}
-                      {selectedRfq.supplierQuotation &&
-                        selectedRfq.supplierQuotation.filter((q: any) => q.quotationId || q.totalPrice !== null).length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '480px', overflowY: 'auto' }}>
-                          {selectedRfq.supplierQuotation
-                            .filter((q: any) => q.quotationId || q.totalPrice !== null)
-                            .map((quote: any, index: number) => (
-                              <div
-                                key={index}
-                                style={{
-                                  background: '#ffffff',
-                                  border: '1px solid #cbd5e1',
-                                  borderRadius: '10px',
-                                  padding: '16px',
-                                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                                  transition: 'border-color 0.2s ease'
-                                }}
-                              >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
-                                      Quote ID: {quote.quotationId ? `${quote.quotationId.substring(0, 8)}...` : `Quote #${index + 1}`}
-                                    </span>
-                                    <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                      Delivery: {quote.deliveryType || "Standard"}
-                                    </span>
-                                  </div>
-                                  <span
-                                    className={`bad-status-badge`}
-                                    style={{
-                                      background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
-                                      color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
-                                      padding: '3px 8px',
-                                      borderRadius: '6px',
-                                      fontSize: '11px',
-                                      fontWeight: 600
-                                    }}
-                                  >
-                                    {quote.status || "RECEIVED"}
-                                  </span>
-                                </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #f1f5f9', marginBottom: '12px', fontSize: '12px' }}>
-                                  <div>
-                                    <span style={{ color: '#64748b' }}>Delivery Charge:</span>
-                                    <div style={{ fontWeight: 600, color: '#334155', marginTop: '2px' }}>${quote.deliveryCharge ?? 0}</div>
-                                  </div>
-                                  <div>
-                                    <span style={{ color: '#64748b' }}>Tax:</span>
-                                    <div style={{ fontWeight: 600, color: '#334155', marginTop: '2px' }}>${quote.tax ?? 0}</div>
-                                  </div>
-                                  <div>
-                                    <span style={{ color: '#64748b' }}>Discount:</span>
-                                    <div style={{ fontWeight: 600, color: '#dc2626', marginTop: '2px' }}>-${quote.discount ?? 0}</div>
-                                  </div>
-                                  <div>
-                                    <span style={{ color: '#64748b' }}>Total Quote:</span>
-                                    <div style={{ fontWeight: 700, color: '#16a34a', marginTop: '2px', fontSize: '13px' }}>${quote.totalPrice ?? 0}</div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      ) : (
-                        <div className="bad-rfq-no-quote-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 20px' }}>
-                          <IconMail />
-                          <div style={{ fontWeight: 600, color: '#475569', marginTop: '12px' }}>No Quotations Received Yet</div>
-                          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', lineHeight: '1.5', maxWidth: '240px' }}>
-                            When suppliers submit commercial bids, they will populate here in real-time.
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-
-              {/* Modal Footer */}
-              <div className="bad-modal-footer">
-                <button
-                  className="bad-btn bad-btn-outline"
-                  onClick={() => setSelectedRfqId(null)}
-                  style={{ marginRight: '10px' }}
-                >
-                  Close
-                </button>
-                <button className="bad-btn bad-btn-message" style={{ background: '#2563eb', color: '#ffffff' }}>
-                  Evaluate Quotations
-                </button>
-              </div>
-
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
