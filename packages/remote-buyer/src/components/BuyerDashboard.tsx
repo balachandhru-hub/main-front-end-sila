@@ -5,6 +5,7 @@ import Product from "./Product.tsx";
 import Header from "./Header";
 import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById } from "../api/Buyerapi";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
+import { CompanyProfile } from '@vosox/shared-ui';
 
 /* ---------------------------------- Icons ---------------------------------- */
 
@@ -997,6 +998,12 @@ const BuyersDashboard: React.FC = () => {
                   )}
                 </div>
               </>
+            ) : activeNav === "companyProfile" ? (
+              <CompanyProfile
+                mode="network-admin"
+                entityLabel="Buyer"
+                fetchProfile={getBuyerProfile}
+              />
             ) : (
               // Blank page for Dashboard and every other nav item that has no view yet
               <>

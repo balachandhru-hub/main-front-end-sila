@@ -50,6 +50,7 @@ interface MatchCard {
   categoryNote: string;
   destinationNote: string;
 }
+import { CompanyProfile } from '@vosox/shared-ui';
 
 
 
@@ -296,6 +297,7 @@ const navItemsAfterCatalog = [
   { icon: <NavIconMessage />, label: "Messages" },
   { icon: <NavIconBuilding />, label: "Company Profile" },
   { icon: <NavIconTemplate />, label: "Template" },
+  { icon: <NavIconTemplate />, label: "Company Profile" },
   { icon: <NavIconSettings />, label: "Settings" },
 ];
 
@@ -391,7 +393,7 @@ const SupplierDashboard: React.FC = () => {
     sessionStorage.getItem("vosox_organization_name") || "Apex Office & Technology Supp...";
   const firstLetter = organizationName.trim().charAt(0).toUpperCase();
 
-  const [activeView, setActiveView] = useState<"dashboard" | "catalogList" | "template">("dashboard");
+  const [activeView, setActiveView] = useState<"dashboard" | "catalogList" | "template" | "companyProfile">("dashboard");
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
   // Sidebar toggle removed; sidebar always open.
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
@@ -481,36 +483,6 @@ const SupplierDashboard: React.FC = () => {
     };
     loadRfqs();
   }, [supplierId]);
-
-  // const handleViewMoreRfqs = async () => {
-  //   if (loadingMoreRfqs) return;
-
-  //   // If we already have more fetched than we're showing, just reveal more locally.
-  //   if (visibleRfqCount < rfqs.length) {
-  //     setVisibleRfqCount((v) => Math.min(v + RFQ_PAGE_SIZE, rfqs.length));
-  //     return;
-  //   }
-
-  //   // Otherwise, fetch the next page from the server.
-  //   if (!supplierId || !hasMoreRfqs) return;
-
-  //   setLoadingMoreRfqs(true);
-  //   try {
-  //     const nextPage = await fetchRFQMasterData({
-  //       supplierId,
-  //       index: rfqs.length,
-  //       limit: RFQ_PAGE_SIZE,
-  //     });
-  //     setRfqs((prev) => [...prev, ...nextPage]);
-  //     setVisibleRfqCount((v) => v + nextPage.length);
-  //     setHasMoreRfqs(nextPage.length === RFQ_PAGE_SIZE);
-  //   } catch (err: any) {
-  //     console.error("Failed to load more RFQs", err);
-  //     setRfqsError(err.message || "Failed to load more sourcing opportunities.");
-  //   } finally {
-  //     setLoadingMoreRfqs(false);
-  //   }
-  // };
 
   const handleViewRfqDetails = async (rfqId: string) => {
     setSelectedRfqId(rfqId);
@@ -1536,6 +1508,12 @@ const SupplierDashboard: React.FC = () => {
                   {renderRfqDetailInner()}
                 </div>
               </>
+            ) : activeView === "companyProfile" ? (
+              <CompanyProfile
+                mode="network-admin"
+                entityLabel="Supplier"
+                fetchProfile={getSupplierProfile}
+              />
             ) : (
               <>
                 <h1 className="pud-title">Supplier Operations Command</h1>

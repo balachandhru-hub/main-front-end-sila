@@ -3,6 +3,8 @@ import "./BuyerAdminDash.css";
 import Header from "../../../remote-buyer/src/components/Header";
 import UserAdmin from "../UserAdmin";
 import UserTemplate from "./usertemplate";
+import CompanyProfile from "./CompanyProfile/CompanyProfile";
+import { useNetworkAdminAuthStore } from "../store/useAuthStore";
 import { fetchBuyerRFQs, fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
 import CreateRFQ from "./UserListTable/CreateRFQ";
 
@@ -339,43 +341,62 @@ const BuyerAdminDash: React.FC = () => {
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
 
-  const [buyerId] = useState<string | null>(
-    sessionStorage.getItem("vosox_buyer_id")
-  );
   const [loadingRfqs, setLoadingRfqs] = useState(false);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
   const [rfqs, setRfqs] = useState<any[]>(mockRfqs);
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
   const RFQ_INITIAL_VISIBLE = 3;
 
+  const buyerId = sessionStorage.getItem("vosox_buyer_id");
+
+  useEffect(() => {
+    useNetworkAdminAuthStore.getState().initializeFromSession();
+  }, []);
+
   useEffect(() => {
     const loadRfqs = async () => {
-      if (!buyerId) return;
+      if (!buyerId) {
+        console.warn("Buyer ID not found in sessionStorage.");
+        setRfqs(mockRfqs);
+        setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, mockRfqs.length));
+        return;
+      }
+
       setLoadingRfqs(true);
       setRfqsError(null);
+
       try {
         const data = await fetchBuyerRFQs({
           buyerId,
           index: 0,
           limit: RFQ_INITIAL_VISIBLE,
         });
+
         const finalData = data.length > 0 ? data : mockRfqs;
+
         setRfqs(finalData);
-        setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, finalData.length));
+        setVisibleRfqCount(
+          Math.min(RFQ_INITIAL_VISIBLE, finalData.length)
+        );
       } catch (err: any) {
-        console.error("Failed to load RFQs", err);
-        setRfqsError(err.message || "Failed to load sourcing opportunities.");
+        console.error("Failed to load RFQs:", err);
+
+        setRfqsError(
+          err?.message || "Failed to load sourcing opportunities."
+        );
+
+        setRfqs(mockRfqs);
+        setVisibleRfqCount(
+          Math.min(RFQ_INITIAL_VISIBLE, mockRfqs.length)
+        );
       } finally {
         setLoadingRfqs(false);
       }
     };
+
     loadRfqs();
   }, [buyerId]);
 
-  // const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
-  // const [selectedRfq, setSelectedRfq] = useState<any | null>(null);
-  // const [loadingRfqDetails, setLoadingRfqDetails] = useState<boolean>(false);
-  // const [rfqDetailsError, setRfqDetailsError] = useState<string | null>(null);
 
   /* ---- Full-page "All RFQs" list + full-page RFQ detail view ---- */
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
@@ -546,6 +567,8 @@ const BuyerAdminDash: React.FC = () => {
               <UserAdmin />
             ) : activeNav === "template" ? (
               <UserTemplate />
+            ) : activeNav === "companyProfile" ? (
+              <CompanyProfile mode="network-admin" showHeader={false} />
             ) : activeNav === "createRFQ" ? (
               <CreateRFQ />
             ) : rfqPageView === "allRfqs" ? (
