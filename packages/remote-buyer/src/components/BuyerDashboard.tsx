@@ -630,7 +630,7 @@ const BuyersDashboard: React.FC = () => {
               <CreateRFQ />
             ) : activeNav === "product" ? (
               <Product />
-            ) : activeNav === "template" ? ( // <-- ADDED: Template route handler
+            ) : activeNav === "template" ? (
               <UserTemplate />
             ) : rfqPageView === "allRfqs" ? (
               <>
@@ -998,7 +998,6 @@ const BuyersDashboard: React.FC = () => {
                 fetchProfile={getBuyerProfile}
               />
             ) : (
-              // Blank page for Dashboard and every other nav item that has no view yet
               <>
                 <h1 className="pud-title">Buyer Operations Command</h1>
                 <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
