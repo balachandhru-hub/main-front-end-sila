@@ -1068,6 +1068,13 @@
     max-width: 850px;
 }
 
+.pud-rfq-fullpage {
+    max-width: 100%;
+    max-height: none;
+    overflow: visible;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+}
+
 .pud-spinner {
     width: 24px;
     height: 24px;
@@ -1184,4 +1191,18 @@
 .bad-nav-item-logout {
     color: red;
     font-style: bold;
+}
+
+.pud-allrfqs-table th,
+.pud-allrfqs-table td {
+    white-space: nowrap;
+}
+
+.pud-allrfqs-table td:nth-child(3) {
+    white-space: normal;
+    min-width: 200px;
+}
+
+.pud-allrfqs-table tbody tr:hover td {
+    background: #f8fafc;
 }

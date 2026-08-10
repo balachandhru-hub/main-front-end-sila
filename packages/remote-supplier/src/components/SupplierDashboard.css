@@ -1193,7 +1193,6 @@
   transition: all 0.2s ease;
 }
 
-/* ---------- Catalog: sidebar sub-items ---------- */
 .pud-nav-chevron {
   display: flex;
   align-items: center;
@@ -1227,4 +1226,26 @@
   background: #eef2ff;
   color: #2f6feb;
   border-left-color: #2f6feb;
+}
+
+.pud-allrfqs-table th,
+.pud-allrfqs-table td {
+  white-space: nowrap;
+}
+
+.pud-allrfqs-table td:nth-child(3) {
+  white-space: normal;
+  min-width: 200px;
+}
+
+.pud-allrfqs-table tbody tr:hover td {
+  background: #f8fafc;
+}
+
+.pud-rfq-fullpage {
+  background: #ffffff;
+  border: 1px solid #e6e8ec;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }

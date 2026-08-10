@@ -209,8 +209,8 @@ const IconBookOpen = () => (
 
 const navItems = [
     { icon: <NavIconHome />, label: "Dashboard" },
-    { icon: <NavIconMail />, label: "Invitations", badge: 2, active: true },
-    { icon: <NavIconFile />, label: "RFQs", badge: 2 },
+    { icon: <NavIconMail />, label: "Invitations", active: true },
+    { icon: <NavIconFile />, label: "RFQs" },
     { icon: <NavIconUser />, label: "Quotations" },
     { icon: <NavIconBag />, label: "Purchase Orders" },
     { icon: <NavIconContract />, label: "Contracts" },
@@ -468,14 +468,13 @@ const Invitations: React.FC = () => {
                                 key={item.label}
                                 className={`pud-nav-item${item.active ? " pud-nav-item-active" : ""}`}
                                 onClick={() => {
-                                if (item.label === "Dashboard") navigate("/dashboard");
-                                if (item.label === "Invitations") navigate("/invitations");
-                                if (item.label === "Company Profile") navigate("/dashboard", { state: { view: "companyProfile" } });
+                                    if (item.label === "Dashboard") navigate("/dashboard");
+                                    if (item.label === "Invitations") navigate("/invitations");
+                                    if (item.label === "Company Profile") navigate("/dashboard", { state: { view: "companyProfile" } });
                                 }}
                             >
                                 <span className="pud-nav-icon">{item.icon}</span>
                                 <span className="pud-nav-label">{item.label}</span>
-                                {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
                             </div>
                         ))}
                         <div

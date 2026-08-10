@@ -2,19 +2,28 @@ export interface RfqDocumentAssetDto {
   entityType: string;
   entityId: string;
   assetType: string;
-  fileBytes: string; 
+  fileBytes: string;
   fileName: string;
   contentType: string;
   isSingletonAsset: boolean;
   id?: string;
 }
 
+export interface RfqQuestionOptionDto {
+  id: string;
+  label: string;
+}
+
 export interface RfqQuestionDto {
+  id?: string; 
+  rfqQuestionId?: string; 
   question: string;
-  questionType: string; 
+  questionType: string;
   isRequired: boolean;
   displayOrder: number;
   options: string[];
+  
+  questionOptions?: RfqQuestionOptionDto[];
 }
 
 export interface RfqItemDto {
@@ -34,9 +43,9 @@ export interface CreateRFQPayload {
   region: string;
   currency: string;
   deliveryLocation: string;
-  startDate: string; // ISO 8601
-  endDate: string; // ISO 8601
-  deliveryTargetDate: string; // ISO 8601
+  startDate: string; 
+  endDate: string; 
+  deliveryTargetDate: string; 
   budget: number;
   addLotOption: boolean;
   technicalSpecificationDocuments: RfqDocumentAssetDto[];
@@ -87,6 +96,19 @@ export interface BuyerSupplierQuotationItem {
   quotedPrice: number;
 }
 
+export interface RfqAnswerDto {
+  rfqQuestionId: string;
+  answer: string;
+  attachment: RfqDocumentAssetDto | null;
+  questionOptionId: string | null;
+  questionOptionIds: string[];
+}
+
+export interface RfqSupplierAnswersDto {
+  supplierRFQId: string;
+  answers: RfqAnswerDto[];
+}
+
 export interface BuyerSupplierQuotation {
   totalPrice: number | null;
   deliveryCharge: number | null;
@@ -96,6 +118,8 @@ export interface BuyerSupplierQuotation {
   status: string | null;
   supplierQuotationItems: BuyerSupplierQuotationItem[] | null;
   quotationId: string | null;
+  supplierId?: string | null;
+  supplierName?: string | null;
 }
 
 export interface BuyerRFQDetailResponse {
@@ -117,5 +141,5 @@ export interface BuyerRFQDetailResponse {
   supplierIds: string[];
   rfqVerificationTemplateId: string | null;
   supplierQuotation: BuyerSupplierQuotation[];
-  supplierQuotationItems: any[];
-}
+  supplierAnswers?: RfqSupplierAnswersDto | null;
+}
