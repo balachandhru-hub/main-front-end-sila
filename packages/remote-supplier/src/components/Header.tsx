@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SilaLogo from "../../../host-app/public/assets/SILA_Logo.png";
-import { getPersonDetail } from '../api/Buyerapi';
+import SilaLogo from "../assets/SILA_Logo.png";
+import { getPersonDetail } from '../api/supplierApi';
 import "./Header.css";
+import { toast } from 'react-toastify';
 
 const IconEdit = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -39,7 +40,7 @@ const Header: React.FC = () => {
         setOrgName(detail.organizationName || '');
         setOrgEmail(detail.organizationEmail || '');
       })
-      .catch((err) => console.error('Failed to load organization details for header', err));
+      .catch(() => toast.error("Failed to fetch person details"));
   }, []);
 
   const firstLetter = orgName ? orgName.trim().charAt(0).toUpperCase() : '';
@@ -63,17 +64,15 @@ const Header: React.FC = () => {
 
   const handleEditProfile = () => {
     setIsDropdownOpen(false);
-    navigate('/buyer/profile');
+    navigate('/supplier/profile');
   };
 
   const handleResetPassword = () => {
     setIsDropdownOpen(false);
-    console.log("Reset password clicked");
   };
 
   const handleSupport = () => {
     setIsDropdownOpen(false);
-    console.log("Support clicked");
   };
 
   return (

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import SilaLogo from "../assets/SILA_Logo.png";
 import "./SupplierDashboard.css";
 import Catalog from "./Catalog.tsx";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
 import { CompanyProfile } from '@vosox/shared-ui';
+import Invitations from "./Invitations.tsx";
 import {
   logoutSupplier,
   fetchRFQMasterData,
@@ -18,6 +18,7 @@ import {
   type RfqDocumentAssetDto
 } from "../api/supplierApi";
 import { useNavigate, useLocation } from "react-router-dom";
+import Header from "./Header.tsx";
 interface StatCard {
   icon: React.ReactNode;
   label: string;
@@ -186,7 +187,6 @@ const LogoutIcon = () => (
   </svg>
 );
 
-// <-- ADDED: Template icon for sidebar
 const NavIconTemplate = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -195,11 +195,6 @@ const NavIconTemplate = () => (
   </svg>
 );
 
-const IconCheck = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 6 9 17l-5-5" />
-  </svg>
-);
 
 const IconCalendar = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -296,7 +291,7 @@ const navItemsAfterCatalog = [
   { icon: <NavIconPayment />, label: "Payments" },
   { icon: <NavIconMessage />, label: "Messages" },
   { icon: <NavIconBuilding />, label: "Company Profile" },
-  { icon: <NavIconTemplate />, label: "Template" }, // <-- ADDED Template nav item
+  { icon: <NavIconTemplate />, label: "Template" },
   { icon: <NavIconSettings />, label: "Settings" },
 ];
 
@@ -388,13 +383,8 @@ const matchCards: MatchCard[] = [
 
 const SupplierDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const organizationName =
-    sessionStorage.getItem("vosox_organization_name") || "Apex Office & Technology Supp...";
-  const firstLetter = organizationName.trim().charAt(0).toUpperCase();
-
-  const [activeView, setActiveView] = useState<"dashboard" | "catalogList" | "template" | "companyProfile">("dashboard");
+  const [activeView, setActiveView] = useState<"dashboard" | "catalogList" | "template" | "invitations" | "companyProfile">("dashboard");
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
-  // Sidebar toggle removed; sidebar always open.
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -431,7 +421,6 @@ const SupplierDashboard: React.FC = () => {
   const [submitAnswersError, setSubmitAnswersError] = useState<string | null>(null);
   const [submitAnswersSuccess, setSubmitAnswersSuccess] = useState(false);
 
-  // Fetch supplier profile if supplierId is not in sessionStorage
   useEffect(() => {
     const loadSupplierProfile = async () => {
       if (!supplierId) {
@@ -454,7 +443,6 @@ const SupplierDashboard: React.FC = () => {
     loadSupplierProfile();
   }, [supplierId]);
 
-  // Fetch Recent Sourcing Opportunities
   useEffect(() => {
     const loadRfqs = async () => {
       if (!supplierId) return;
@@ -463,7 +451,6 @@ const SupplierDashboard: React.FC = () => {
       setRfqsError(null);
 
       try {
-        //const ix = supplierId || sessionStorage.getItem("vosox_supplier_id") || "";
         const initialLimit = RFQ_INITIAL_VISIBLE;
         const data = await fetchRFQMasterData({
           supplierId,
@@ -495,13 +482,11 @@ const SupplierDashboard: React.FC = () => {
   const handleViewMoreRfqs = async () => {
     if (loadingMoreRfqs) return;
 
-    // If we already have more fetched than we're showing, just reveal more locally.
     if (visibleRfqCount < rfqs.length) {
       setVisibleRfqCount((v) => Math.min(v + RFQ_PAGE_SIZE, rfqs.length));
       return;
     }
 
-    // Otherwise, fetch the next page from the server.
     if (!supplierId || !hasMoreRfqs) return;
 
     setLoadingMoreRfqs(true);
@@ -538,7 +523,6 @@ const SupplierDashboard: React.FC = () => {
     }
   };
 
-  // Quotation form fields states
   const [quoteQuotationId, setQuoteQuotationId] = useState<string | null>(null);
   const [quoteTotalPrice, setQuoteTotalPrice] = useState<number>(0);
   const [quoteDeliveryCharge, setQuoteDeliveryCharge] = useState<number>(0);
@@ -553,7 +537,6 @@ const SupplierDashboard: React.FC = () => {
   const [submitQuoteError, setSubmitQuoteError] = useState<string | null>(null);
   const [submitQuoteSuccess, setSubmitQuoteSuccess] = useState(false);
 
-  // Initialize/Populate quotation form state when selectedRfq changes
   useEffect(() => {
     if (selectedRfq) {
       const activeQuote = selectedRfq.supplierQuotation?.[0];
@@ -601,7 +584,6 @@ const SupplierDashboard: React.FC = () => {
     }
   }, [selectedRfq]);
 
-  // Price Calculation helpers
   const handleItemPriceChange = (key: string, value: number) => {
     const updatedPrices = { ...quoteItemPrices, [key]: value };
     setQuoteItemPrices(updatedPrices);
@@ -702,7 +684,6 @@ const SupplierDashboard: React.FC = () => {
     if (!selectedRfq) return;
     const supplierRFQId = selectedRfq.items?.[0]?.supplierRFQId || null;
 
-    // Basic validation: make sure every required question has been answered
     const unanswered = (selectedRfq.questions || []).find((q) => {
       if (!q.isRequired) return false;
       const a = rfqAnswers[q.questionId];
@@ -721,7 +702,6 @@ const SupplierDashboard: React.FC = () => {
     setSubmitAnswersError(null);
     setSubmitAnswersSuccess(false);
     try {
-      // Resolve the SUPPLIER entity type/id once for all file answers in this submission
       const entityTypes = await fetchMetadataReferenceList(['ENTITY_TYPE']);
       const supplierEntityId =
         entityTypes.find((e) => e.key === 'SUPPLIER')?.id || '59476530-3c10-438b-b3b3-9db9e96e8d93';
@@ -733,7 +713,6 @@ const SupplierDashboard: React.FC = () => {
           const question = selectedRfq.questions?.find(q => q.questionId === a.rfqQuestionId);
           const allOptionIds = question?.options?.map(opt => opt.optionId) || [];
 
-          // Build the attachment from the file the supplier actually uploaded for this answer
           const answerAttachment: RfqDocumentAssetDto | null =
             a.file && a.fileBase64
               ? {
@@ -804,11 +783,9 @@ const SupplierDashboard: React.FC = () => {
       await submitSupplierQuotation(payload);
       setSubmitQuoteSuccess(true);
 
-      // Refresh the RFQ details
       const updatedDetails = await fetchRFQById(selectedRfqId!);
       setSelectedRfq(updatedDetails);
 
-      // Refresh RFQ list
       if (supplierId) {
         const listData = await fetchRFQMasterData({
           supplierId,
@@ -842,43 +819,29 @@ const SupplierDashboard: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9' }}>
-      <header className="pud-header" style={{ width: '100%', zIndex: 10, position: 'relative' }}>
-        <div className="pud-header-left">
-          <div className="pud-logo">
-            <img src={SilaLogo} alt="SILA Logo" className="pud-logo-img" />
-          </div>
-        </div>
-        <div className="pud-header-spacer" />
-        <div className="pud-header-right">
-          <span className="pud-header-bell">
-            <IconBell />
-          </span>
-          <div className="pud-header-account">
-            <span className="pud-header-account-name" title={organizationName}>
-              {organizationName}
-            </span>
-            <span className="pud-header-account-verified">
-              <IconCheck /> Verified Vendor
-            </span>
-          </div>
-          <div className="pud-header-avatar">{firstLetter}</div>
-        </div>
-      </header>
+      <Header/>
 
-      <div className="pud-shell" style={{ flex: 1, position: 'relative', minHeight: 'calc(100vh - 64px)' }}>
-
-
+      <div className="pud-shell">
         <aside className="pud-sidebar">
-          <nav className="pud-nav" style={{ paddingTop: '40px' }}>
+          <nav className="pud-nav">
             {navItemsBeforeCatalog.map((item) => {
-              const isActive = item.label === "Dashboard" && activeView === "dashboard";
+              const isActive =
+                (item.label === "Dashboard" && activeView === "dashboard") ||
+                (item.label === "Invitations" && activeView === "invitations");
+
               return (
                 <div
                   key={item.label}
                   className={`pud-nav-item${isActive ? " pud-nav-item-active" : ""}`}
                   onClick={() => {
-                    if (item.label === "Dashboard") navigate("/supplier/dashboard");
-                    if (item.label === "Invitations") navigate("/supplier/invitations");
+                    if (item.label === "Dashboard") {
+                      setActiveView("dashboard");
+                      navigate("/supplier/dashboard");
+                    }
+
+                    if (item.label === "Invitations") {
+                      setActiveView("invitations");
+                    }
                   }}
                 >
                   <span className="pud-nav-icon">{item.icon}</span>
@@ -897,7 +860,8 @@ const SupplierDashboard: React.FC = () => {
             {navItemsAfterCatalog.map((item) => {
               const isActive =
                 (item.label === "Template" && activeView === "template") ||
-                (item.label === "Company Profile" && activeView === "companyProfile");
+                (item.label === "Company Profile" && activeView === "companyProfile") ||
+                (item.label === "Invitations" && activeView === "invitations");
               return (
                 <div
                   key={item.label}
@@ -905,6 +869,7 @@ const SupplierDashboard: React.FC = () => {
                   onClick={() => {
                     if (item.label === "Template") setActiveView("template");
                     if (item.label === "Company Profile") setActiveView("companyProfile");
+                    if (item.label === "Invitations") setActiveView("invitations");
                   }}
                 >
                   <span className="pud-nav-icon">{item.icon}</span>
@@ -945,6 +910,8 @@ const SupplierDashboard: React.FC = () => {
                 entityLabel="Supplier"
                 fetchProfile={getSupplierProfile}
               />
+            ) : activeView === "invitations" ? (
+              <Invitations />
             ) : (
               <>
                 <h1 className="pud-title">Supplier Operations Command</h1>

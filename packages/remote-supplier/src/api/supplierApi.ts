@@ -12,12 +12,25 @@ import type {
   SubmitRfqAnswersPayload,
 } from '../dto/supplierDto';
 
-// re-export so existing imports elsewhere (e.g. SupplierApp.tsx) keep working
+export interface PersonDetailDto {
+  personId: string;
+  userId: string;
+  organizationId: string;
+  name: string;
+  email: string;
+  phone: string;
+  userName: string;
+  addressLine: string;
+  country: string;
+  roleId: string;
+  roleName: string;
+  organizationName: string;
+  organizationEmail: string;
+}
+
 export type { SupplierProfileResponse, RFQMasterDataItem, RFQDetailResponse, SubmitQuotationPayload } from '../dto/supplierDto';
 export type { CatalogAssetDto, CatalogDetailDto, CreateSupplierCatalogPayload, SubmitRfqAnswersPayload, RfqDocumentAssetDto } from '../dto/supplierDto';
-// ============================================================================
-// API: Create Supplier Profile (Register)
-// ============================================================================
+
 export const createSupplierProfile = async (
   payload: CreateSupplierProfilePayload
 ): Promise<any> => {
@@ -35,9 +48,6 @@ export const createSupplierProfile = async (
   }
 };
 
-// ============================================================================
-// API: Create Supplier Catalog
-// ============================================================================
 export const createSupplierCatalog = async (
   payload: CreateSupplierCatalogPayload
 ): Promise<any> => {
@@ -55,10 +65,6 @@ export const createSupplierCatalog = async (
   }
 };
 
-
-// ============================================================================
-// API: Update Rejected Supplier (resubmission after REJECTED status)
-// ============================================================================
 export const updateRejectedSupplier = async (
   payload: UpdateRejectedSupplierPayload
 ): Promise<any> => {
@@ -79,9 +85,6 @@ export const updateRejectedSupplier = async (
   }
 };
 
-// ============================================================================
-// API: Get Onboarding Details (Auto-fill company info)
-// ============================================================================
 export const fetchOnboardingDetails = async (): Promise<any> => {
   try {
     const response = await supplierInstance.get('/api/v1/identity/onboarding');
@@ -92,9 +95,6 @@ export const fetchOnboardingDetails = async (): Promise<any> => {
   }
 };
 
-// ============================================================================
-// API: Get Metadata Reference List (Industry / Business Type / Document Type / Entity Type)
-// ============================================================================
 export const fetchMetadataReferenceList = async (
   types: MetadataReferenceType[]
 ): Promise<MetadataReferenceItem[]> => {
@@ -110,10 +110,6 @@ export const fetchMetadataReferenceList = async (
   }
 };
 
-// ============================================================================
-// API: Get Supplier Profile (Check if profile exists)
-// Returns null if 204 No Content (profile not found)
-// ============================================================================
 export const getSupplierProfile = async (): Promise<SupplierProfileResponse | null> => {
   try {
     const response = await supplierInstance.get<SupplierProfileResponse>(
@@ -133,9 +129,6 @@ export const getSupplierProfile = async (): Promise<SupplierProfileResponse | nu
   }
 };
 
-// ============================================================================
-// API: Logout Supplier
-// ============================================================================
 export const logoutSupplier = async (): Promise<void> => {
   try {
     await supplierInstance.put('/api/v1/identity/auth/logout');
@@ -147,9 +140,6 @@ export const logoutSupplier = async (): Promise<void> => {
   }
 };
 
-// ============================================================================
-// API: Get RFQ Master Data (Recent Sourcing Opportunities)
-// ============================================================================
 export const fetchRFQMasterData = async (payload: {
   supplierId: string;
   index: number;
@@ -164,9 +154,6 @@ export const fetchRFQMasterData = async (payload: {
   }
 };
 
-// ============================================================================
-// API: Get RFQ By ID
-// ============================================================================
 export const fetchRFQById = async (rfqId: string): Promise<RFQDetailResponse> => {
   try {
     const response = await supplierInstance.get('/api/v1/supplier/rfq-by-id', {
@@ -179,9 +166,6 @@ export const fetchRFQById = async (rfqId: string): Promise<RFQDetailResponse> =>
   }
 };
 
-// ============================================================================
-// API: Submit Supplier Quotation (Create/Update Quotation)
-// ============================================================================
 export const submitSupplierQuotation = async (
   payload: SubmitQuotationPayload
 ): Promise<any> => {
@@ -196,9 +180,6 @@ export const submitSupplierQuotation = async (
   }
 };
 
-// ============================================================================
-// API: UNSPSC segments and classes for product/sub-product categorization
-// ============================================================================
 export const fetchSegments = async (): Promise<any[]> => {
   try {
     const res = await supplierInstance.get(`/api/v1/masterdata/unspsc?pageIndex=1&pageSize=10`);
@@ -234,6 +215,41 @@ export const submitRfqAnswers = async (
     const status = error.response?.status || 'unknown';
     const responseData = error.response?.data;
     const errMsg = responseData?.message || responseData?.description || 'Failed to submit RFQ answers.';
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+
+
+export const getPersonDetail = async (personId: string): Promise<PersonDetailDto> => {
+  try {
+    const response = await supplierInstance.get<PersonDetailDto>(
+      '/api/v1/identity/person-detail',
+      { params: { personId } }
+    );
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to fetch person details';
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+export const updatePersonDetail = async (
+  personId: string,
+  data: Partial<PersonDetailDto>
+): Promise<PersonDetailDto> => {
+  try {
+    const response = await supplierInstance.put<PersonDetailDto>(
+      '/api/v1/identity/person-detail',
+      { personId, ...data }
+    );
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to update person details';
     throw new Error(`${errMsg} (${status})`);
   }
 };

@@ -175,6 +175,22 @@ export interface BuyerRegistrationPayload {
   }[];
 }
 
+export interface PersonDetailDto {
+  personId: string;
+  userId: string;
+  organizationId: string;
+  name: string;
+  email: string;
+  phone: string;
+  userName: string;
+  addressLine: string;
+  country: string;
+  roleId: string;
+  roleName: string;
+  organizationName: string;
+  organizationEmail: string;
+}
+
 export interface UpdateRejectedBuyerPayload {
   buyer: {
     buyerId: string;
@@ -451,3 +467,50 @@ export const fetchBuyerRFQById = async (rfqId: string): Promise<BuyerRFQDetailRe
     throw new Error('Could not reach the server. Please check your connection and try again.');
   }
 };
+
+export const getPersonDetail = async (personId: string): Promise<PersonDetailDto> => {
+  try {
+    const response = await axiosInstance.get<PersonDetailDto>(
+      '/api/v1/identity/person-detail',
+      {
+        params: { personId },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    const errorMsg =
+      error.response?.data?.message ||
+      error.response?.data?.description ||
+      error.message ||
+      'Failed to fetch person details';
+    throw new Error(errorMsg);
+  }
+};
+ 
+/**
+ * Update person details
+ * Endpoint: PUT /api/v1/identity/person-detail
+ */
+export const updatePersonDetail = async (
+  personId: string,
+  data: Partial<PersonDetailDto>
+): Promise<PersonDetailDto> => {
+  try {
+    const response = await axiosInstance.put<PersonDetailDto>(
+      '/api/v1/identity/person-detail',
+      {
+        personId,
+        ...data,
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    const errorMsg =
+      error.response?.data?.message ||
+      error.response?.data?.description ||
+      error.message ||
+      'Failed to update person details';
+    throw new Error(errorMsg);
+  }
+};
+ 

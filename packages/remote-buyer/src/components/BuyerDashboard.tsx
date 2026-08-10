@@ -530,7 +530,7 @@ const BuyersDashboard: React.FC = () => {
 
 
         <aside className="pud-sidebar">
-          <nav className="pud-nav" style={{ paddingTop: "40px" }}>
+          <nav className="pud-nav">
             {navItems.map((item) => (
               <div
                 key={item.key}

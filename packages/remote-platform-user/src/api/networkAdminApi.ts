@@ -16,6 +16,22 @@ import type {
 
 export type NetworkAdminRole = 'BUYER_NETWORK_ADMIN' | 'SUPPLIER_NETWORK_ADMIN';
 
+export interface PersonDetailDto {
+  personId: string;
+  userId: string;
+  organizationId: string;
+  name: string;
+  email: string;
+  phone: string;
+  userName: string;
+  addressLine: string;
+  country: string;
+  roleId: string;
+  roleName: string;
+  organizationName: string;
+  organizationEmail: string;
+}
+
 export const getOrganizationUsers = async (organizationId: string): Promise<User[]> => {
   try {
     const response = await platformInstance.get<OrganizationUserDto[]>(
@@ -224,6 +240,45 @@ export const updateRejectedNetworkAdminSupplier = async (
       error.response?.data?.description ||
       error.message ||
       'Failed to update rejected supplier profile';
+    throw new Error(errorMsg);
+  }
+};
+
+
+
+export const getPersonDetail = async (personId: string): Promise<PersonDetailDto> => {
+  try {
+    const response = await platformInstance.get<PersonDetailDto>(
+      '/api/v1/identity/person-detail',
+      { params: { personId } }
+    );
+    return response.data;
+  } catch (error: any) {
+    const errorMsg =
+      error.response?.data?.message ||
+      error.response?.data?.description ||
+      error.message ||
+      'Failed to fetch person details';
+    throw new Error(errorMsg);
+  }
+};
+
+export const updatePersonDetail = async (
+  personId: string,
+  data: Partial<PersonDetailDto>
+): Promise<PersonDetailDto> => {
+  try {
+    const response = await platformInstance.put<PersonDetailDto>(
+      '/api/v1/identity/person-detail',
+      { personId, ...data }
+    );
+    return response.data;
+  } catch (error: any) {
+    const errorMsg =
+      error.response?.data?.message ||
+      error.response?.data?.description ||
+      error.message ||
+      'Failed to update person details';
     throw new Error(errorMsg);
   }
 };

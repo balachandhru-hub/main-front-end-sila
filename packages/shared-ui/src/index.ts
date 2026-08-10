@@ -4,3 +4,5 @@ export { default as ToastContainer } from './ToastContainer/ToastContainer';
 export { toastService } from './services/toastservice';
 export { default as CompanyProfile } from './components/CompanyProfile/CompanyProfile';
 export * from './components/CompanyProfile/CompanyProfile.types';
+export { ProfileView } from './components/ProfileView';
+export * from './types/profile';
