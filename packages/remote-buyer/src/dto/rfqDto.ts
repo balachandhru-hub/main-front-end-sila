@@ -85,6 +85,7 @@ export interface VerifiedSupplierSearchPayload {
 export interface VerifiedSupplierDto {
   supplierId: string;
   supplierName: string;
+  snid: string;
   email: string;
   isVerified: boolean;
 }
