@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import "./SupplierAdminDash.css";
-import Header from "../../../remote-buyer/src/components/Header";
+import Header from "./Header";
 import UserAdmin from "../UserAdmin";
 import UserTemplate from "./usertemplate";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import { useNetworkAdminAuthStore } from "../store/useAuthStore";
+import { logoutPlatformUser } from "../api/platformApi";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -324,17 +325,18 @@ const SupplierAdminDash: React.FC = () => {
     setLoggingOut(true);
     setLogoutError(null);
     try {
-      sessionStorage.clear();
-      window.dispatchEvent(new CustomEvent("session:expired"));
+      await logoutPlatformUser();
     } catch (error: any) {
       setLogoutError(error?.message || "Logout request failed, clearing session locally.");
     } finally {
+      sessionStorage.clear();
+      window.dispatchEvent(new CustomEvent("session:expired"));
       setLoggingOut(false);
     }
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#ffffff" }}>
       <Header />
 
       <div
@@ -342,7 +344,7 @@ const SupplierAdminDash: React.FC = () => {
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
       >
         <aside className="sad-sidebar">
-          <nav className="sad-nav" style={{ paddingTop: "40px" }}>
+          <nav className="sad-nav" >
             {navItems.map((item) => (
               <div
                 key={item.key}

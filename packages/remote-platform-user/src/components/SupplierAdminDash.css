@@ -6,17 +6,20 @@
     color: #1f2937;
 }
 
-/* ---------- Sidebar ---------- */
 .sad-sidebar {
+    position: fixed;            
+    top: 64px;                 
+    left: 0;
     width: 248px;
-    flex-shrink: 0;
+    height: calc(100vh - 64px); 
     background: #ffffff;
     border-right: 1px solid #e6e8ec;
     padding: 20px 0;
     display: flex;
     flex-direction: column;
+    z-index: 100;
+    overflow-y: auto;          
     transition: width 0.3s ease, padding 0.3s ease, border 0.3s ease;
-    overflow: hidden;
 }
 
 .sad-sidebar-closed .sad-sidebar {
@@ -112,16 +115,17 @@
 .sad-nav-item-logout .sad-nav-icon {
     color: #dc2626;
 }
-/* ---------- Main ---------- */
+
 .sad-main {
     flex: 1;
+    margin-left: 248px;       
+    margin-top: 64px;          
     display: flex;
     flex-direction: column;
     min-width: 0;
 }
 
 .sad-content {
-    padding: 32px 40px 56px 40px;
     max-width: 100%;
     width: 100%;
 }
@@ -141,7 +145,7 @@
     margin: 0 0 20px 0;
 }
 
-/* ---------- Status banner ---------- */
+
 .sad-status-banner {
     background: #eafaf0;
     border: 1px solid #c9f0d9;
@@ -186,7 +190,6 @@
     font-weight: 500;
 }
 
-/* ---------- Stat cards ---------- */
 .sad-stats-grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
@@ -261,7 +264,6 @@
     color: #94a3b8;
 }
 
-/* ---------- Panels ---------- */
 .sad-panels {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -315,7 +317,6 @@
     flex-direction: column;
 }
 
-/* PO rows */
 .sad-po-row {
     display: flex;
     align-items: flex-start;
@@ -394,7 +395,6 @@
     text-decoration: none;
 }
 
-/* ---------- Buttons ---------- */
 .sad-btn {
     border-radius: 7px;
     font-size: 13.5px;
@@ -442,7 +442,6 @@
     background: #255bcc;
 }
 
-/* ---------- Matchmaker ---------- */
 .sad-matchmaker {
     background: #ffffff;
     border: 1px solid #e6e8ec;
@@ -588,7 +587,6 @@
     gap: 10px;
 }
 
-/* ---------- Pagination ---------- */
 .sad-pagination {
     display: flex;
     justify-content: flex-end;
@@ -620,7 +618,6 @@
     color: #ffffff;
 }
 
-/* ---------- Modal ---------- */
 .sad-modal-overlay {
     position: fixed;
     inset: 0;
@@ -823,7 +820,6 @@
     font-size: 14px;
 }
 
-/* ---------- Responsive ---------- */
 @media (max-width: 1200px) {
     .sad-stats-grid {
         grid-template-columns: repeat(3, 1fr);
@@ -856,10 +852,6 @@
         width: 248px !important;
         border-right: 1px solid #e6e8ec;
         padding: 20px 0;
-    }
-
-    .sad-content {
-        padding: 60px 16px 32px 16px;
     }
 
     .sad-stats-grid {

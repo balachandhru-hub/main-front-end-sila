@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import "./BuyerAdminDash.css";
-import Header from "../../../remote-buyer/src/components/Header";
+import Header from "./Header";
 import UserAdmin from "../UserAdmin";
 import UserTemplate from "./usertemplate";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import { useNetworkAdminAuthStore } from "../store/useAuthStore";
 import { fetchBuyerRFQs, fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
 import CreateRFQ from "./UserListTable/CreateRFQ";
+import { logoutPlatformUser } from "../api/platformApi";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -448,11 +449,12 @@ const BuyerAdminDash: React.FC = () => {
     setLoggingOut(true);
     setLogoutError(null);
     try {
-      sessionStorage.clear();
-      window.dispatchEvent(new CustomEvent("session:expired"));
+      await logoutPlatformUser();
     } catch (error: any) {
       setLogoutError(error?.message || "Logout request failed, clearing session locally.");
     } finally {
+      sessionStorage.clear();
+      window.dispatchEvent(new CustomEvent("session:expired"));
       setLoggingOut(false);
     }
   };
@@ -466,7 +468,7 @@ const BuyerAdminDash: React.FC = () => {
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
       >
         <aside className="bad-sidebar">
-          <nav className="bad-nav" style={{ paddingTop: "40px" }}>
+          <nav className="bad-nav" >
             {navItems.map((item) => (
               <div
                 key={item.key}
