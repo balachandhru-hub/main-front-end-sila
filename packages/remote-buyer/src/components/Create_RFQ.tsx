@@ -1209,7 +1209,7 @@ const CreateRFQ: React.FC = () => {
                     </div>
 
                     <div className="bd-field">
-                        <label className="bd-label">Total Budget (AED)</label>
+                        <label className="bd-label">Total Budget</label>
                         <input
                             className="bd-input"
                             type="text"
@@ -1581,6 +1581,7 @@ const CreateRFQ: React.FC = () => {
                                 <tr>
                                     <th className="bd-checkbox-cell">Select</th>
                                     <th>Supplier Name</th>
+                                    <th>SN ID</th>
                                     <th>Email</th>
                                     <th>Verification Status</th>
                                     <th>Pipeline Actions On Submit</th>
@@ -1598,6 +1599,9 @@ const CreateRFQ: React.FC = () => {
                                         </td>
                                         <td>
                                             <div className="bd-supplier-name">{s.supplierName}</div>
+                                        </td>
+                                        <td>
+                                            <div className="bd-supplier-sn-id">{s.snid}</div>
                                         </td>
                                         <td>
                                             <span className="bd-supplier-email">{s.email}</span>
