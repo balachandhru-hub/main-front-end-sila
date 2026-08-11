@@ -3,7 +3,6 @@ import "./SupplierAdminDash.css";
 import "../../../remote-supplier/src/components/SupplierDashboard.css"
 import Header from "./Header";
 import UserAdmin from "../UserAdmin";
-import UserTemplate from "./usertemplate";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import { useNetworkAdminAuthStore } from "../store/useAuthStore";
 import Catalog from "./Catalog";
@@ -138,13 +137,6 @@ const NavIconSettings = () => (
   </svg>
 );
 
-const NavIconTemplate = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <path d="M3 9h18" />
-    <path d="M9 3v18" />
-  </svg>
-);
 
 const NavIconFile = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -238,7 +230,6 @@ const navItemsBeforeCatalog: { key: string; icon: React.ReactNode; label: string
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
   { key: "rfqs", icon: <NavIconFile />, label: "RFQs" },
-  { key: "template", icon: <NavIconTemplate />, label: "Template" },
 ];
 
 const navItemsAfterCatalog: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
@@ -1337,8 +1328,6 @@ const SupplierAdminDash: React.FC = () => {
           <main className="sad-content">
             {activeNav === "userList" ? (
               <UserAdmin />
-            ) : activeNav === "template" ? (
-              <UserTemplate />
             ) : activeNav === "catalogList" ? (
               <div ref={setCatalogViewContainer} />
             ) : activeNav === "companyProfile" ? (

@@ -4,7 +4,6 @@ import CreateRFQ from "./Create_RFQ.tsx";
 import Product from "./Product.tsx";
 import Header from "./Header";
 import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById } from "../api/Buyerapi";
-import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
 import { CompanyProfile } from '@vosox/shared-ui';
 
 /* ---------------------------------- Icons ---------------------------------- */
@@ -412,8 +411,6 @@ const BuyersDashboard: React.FC = () => {
     loadBuyerProfile();
   }, [buyerId]);
 
-  // const [loadingRfqDetails, setLoadingRfqDetails] = useState<boolean>(false);
-  // const [rfqDetailsError, setRfqDetailsError] = useState<string | null>(null);
   const hasLoadedRfqsRef = useRef(false);
 
   useEffect(() => {
@@ -433,7 +430,6 @@ const BuyersDashboard: React.FC = () => {
         if (result.length > 0) {
           setRfqs(result);
           setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, result.length));
-          // setHasMoreRfqs(result.length === RFQ_INITIAL_VISIBLE);
         } else {
           setRfqs(mockRfqs);
           setVisibleRfqCount(mockRfqs.length);
@@ -441,7 +437,6 @@ const BuyersDashboard: React.FC = () => {
       } else if (result && typeof result === 'object' && 'statusCode' in result) {
         setRfqs(mockRfqs);
         setVisibleRfqCount(mockRfqs.length);
-        // setHasMoreRfqs(false);
       }
       setLoadingRfqs(false);
     };
@@ -620,7 +615,6 @@ const BuyersDashboard: React.FC = () => {
                   </div>
                 )}
 
-              {/* Supplier Quotations Received */}
               <div>
                 <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                   <IconSparkles /> Supplier Quotations Received
@@ -699,7 +693,6 @@ const BuyersDashboard: React.FC = () => {
               </div>
 
             </div>
-            {/* Right Column: Evaluation Questions & Answers */}
             <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div className="pud-modal-section-title">Evaluation Questions & Answers</div>
 
@@ -789,7 +782,6 @@ const BuyersDashboard: React.FC = () => {
       setLoadingAllRfqs(false);
       setAllRfqsLoaded(true);
     }
-    // setLoadingMoreRfqs(false);
   };
 
   const handleBackToDashboard = () => {
@@ -805,16 +797,12 @@ const BuyersDashboard: React.FC = () => {
     setRfqPageView("dashboard");
   };
 
-  // "View RFQ Details" from the All RFQs page — opens the RFQ as a full page.
   const handleViewRfqDetailsFullPage = (rfqId: string) => {
     setRfqPageView("rfqDetail");
     setSelectedRfqId(rfqId);
     fetchRfqDetail(rfqId);
   };
 
-  // Shared close handler for both the popup and the full page. If we're on
-  // the full-page RFQ detail view, drop back to the All RFQs list; either
-  // way, clear the selected RFQ so a stale popup/page doesn't linger.
   const closeRfqDetail = () => {
     if (rfqPageView === "rfqDetail") {
       setRfqPageView("allRfqs");
@@ -946,8 +934,6 @@ const BuyersDashboard: React.FC = () => {
               <CreateRFQ />
             ) : activeNav === "product" ? (
               <Product />
-            ) : activeNav === "template" ? (
-              <UserTemplate />
             ) : rfqPageView === "allRfqs" ? (
               <>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
