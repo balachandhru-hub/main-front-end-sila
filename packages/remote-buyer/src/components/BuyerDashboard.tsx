@@ -463,7 +463,6 @@ const BuyersDashboard: React.FC = () => {
       const details = await fetchBuyerRFQById(rfqId);
       setSelectedRfq(details);
     } catch (err: any) {
-      console.error("Failed to load RFQ details from API", err);
       setRfqDetailError(err.message || "Failed to fetch details.");
       const found =
         allRfqsList.find((r) => r.rfqId === rfqId) ||
@@ -775,7 +774,6 @@ const BuyersDashboard: React.FC = () => {
         setAllRfqsList(data.length > 0 ? data : mockRfqs);
       }
     } catch (err: any) {
-      console.error("Failed to load full RFQ list", err);
       setAllRfqsError(err.message || "Failed to load the full RFQ list.");
       setAllRfqsList(rfqs.length > 0 ? rfqs : mockRfqs);
     } finally {
