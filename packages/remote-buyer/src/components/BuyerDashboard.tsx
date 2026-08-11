@@ -856,7 +856,6 @@ const BuyersDashboard: React.FC = () => {
       window.open(url, "_blank", "noopener,noreferrer");
       setTimeout(() => URL.revokeObjectURL(url), 30000);
     } catch (err) {
-      console.error("Failed to open attachment", err);
     }
   };
 
