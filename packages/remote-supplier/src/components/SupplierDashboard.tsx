@@ -16,7 +16,7 @@ import {
   type SubmitQuotationPayload,
   type RfqDocumentAssetDto
 } from "../api/supplierApi";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import Header from "./Header.tsx";
 interface StatCard {
   icon: React.ReactNode;
@@ -51,7 +51,6 @@ interface MatchCard {
   categoryNote: string;
   destinationNote: string;
 }
-
 
 
 const IconMail = () => (
@@ -187,7 +186,6 @@ const LogoutIcon = () => (
 );
 
 
-
 const IconCalendar = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -269,21 +267,19 @@ const IconCheckCircle = () => (
   </svg>
 );
 
-const navItemsBeforeCatalog = [
-  { icon: <NavIconHome />, label: "Dashboard", active: true },
-  { icon: <NavIconMail />, label: "Invitations" },
-  { icon: <NavIconFile />, label: "RFQs" },
-  { icon: <NavIconUser />, label: "Quotations" },
-];
-
-const navItemsAfterCatalog = [
-  { icon: <NavIconBag />, label: "Purchase Orders" },
-  { icon: <NavIconContract />, label: "Contracts" },
-  { icon: <NavIconInvoice />, label: "Invoices" },
-  { icon: <NavIconPayment />, label: "Payments" },
-  { icon: <NavIconMessage />, label: "Messages" },
-  { icon: <NavIconBuilding />, label: "Company Profile" },
-  { icon: <NavIconSettings />, label: "Settings" },
+const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
+  { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
+  { key: "invitations", icon: <NavIconMail />, label: "Invitations" },
+  { key: "rfqs", icon: <NavIconFile />, label: "RFQs" },
+  { key: "quotations", icon: <NavIconUser />, label: "Quotations" },
+  { key: "purchaseOrders", icon: <NavIconBag />, label: "Purchase Orders" },
+  { key: "contracts", icon: <NavIconContract />, label: "Contracts" },
+  { key: "invoices", icon: <NavIconInvoice />, label: "Invoices" },
+  { key: "payments", icon: <NavIconPayment />, label: "Payments" },
+  { key: "messages", icon: <NavIconMessage />, label: "Messages" },
+  { key: "companyProfile", icon: <NavIconBuilding />, label: "Company Profile" },
+  // { key: "template", icon: <NavIconTemplate />, label: "Template" },
+  { key: "settings", icon: <NavIconSettings />, label: "Settings" },
 ];
 
 const statCards: StatCard[] = [
@@ -373,12 +369,13 @@ const matchCards: MatchCard[] = [
 ];
 
 const SupplierDashboard: React.FC = () => {
-  const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<"dashboard" | "catalogList" | "template" | "invitations" | "companyProfile">("dashboard");
-  const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
+
+
+  const [activeNav, setActiveNav] = useState<string>("dashboard");
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
 
   const [supplierId, setSupplierId] = useState<string | null>(
     sessionStorage.getItem("vosox_supplier_id")
@@ -462,11 +459,12 @@ const SupplierDashboard: React.FC = () => {
   useEffect(() => {
     const intendedView = (location.state as { view?: string })?.view;
     if (intendedView === "companyProfile") {
-      setActiveView("companyProfile");
+      setActiveNav("companyProfile");
     }
   }, [location.state]);
 
- 
+
+
   const handleViewRfqDetails = async (rfqId: string) => {
     setSelectedRfqId(rfqId);
     setLoadingRfqDetail(true);
@@ -491,6 +489,7 @@ const SupplierDashboard: React.FC = () => {
   const [allRfqsLoaded, setAllRfqsLoaded] = useState(false);
 
   const handleOpenAllRfqs = async () => {
+    setActiveNav("rfqs");
     setRfqPageView("allRfqs");
     if (allRfqsLoaded || loadingAllRfqs) return;
 
@@ -514,6 +513,19 @@ const SupplierDashboard: React.FC = () => {
   };
 
   const handleBackToDashboard = () => {
+    setRfqPageView("dashboard");
+    setActiveNav("dashboard");
+  };
+
+  // Sidebar nav click: "RFQs" opens the full-page RFQ list; every other item
+  // behaves as before, but also resets rfqPageView so a stale "All RFQs" /
+  // "RFQ Details" view doesn't linger in the background.
+  const handleNavClick = (key: string) => {
+    if (key === "rfqs") {
+      handleOpenAllRfqs();
+      return;
+    }
+    setActiveNav(key);
     setRfqPageView("dashboard");
   };
 
@@ -938,8 +950,8 @@ const SupplierDashboard: React.FC = () => {
                       <tr>
                         <th>Material Info</th>
                         <th>Group / Code</th>
-                        <th style={{ textAlign: 'center' }}>Qty Required</th>
-                        {!selectedRfq.addLotOption && <th style={{ textAlign: 'right', width: '130px' }}>Your Unit Quote</th>}
+                        <th style={{ textAlign: 'left' }}>Qty Required</th>
+                        {!selectedRfq.addLotOption && <th style={{ textAlign: 'left', width: '130px' }}>Your Unit Quote</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -962,18 +974,18 @@ const SupplierDashboard: React.FC = () => {
                               ))}
                             </td>
                             <td>
-                              <div style={{ fontSize: '13px', color: '#334155' }}>
+                              <div style={{ textAlign: 'left', fontSize: '13px', color: '#334155' }}>
                                 {item.materialGroup || "N/A"}
                               </div>
-                              <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                              <div style={{ textAlign: 'left', fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
                                 Code: {item.materialCode || "N/A"}
                               </div>
                             </td>
-                            <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>
+                            <td style={{ textAlign: 'left', fontWeight: 600, color: '#0f172a' }}>
                               {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
                             </td>
                             {!selectedRfq.addLotOption && (
-                              <td style={{ textAlign: 'right' }}>
+                              <td style={{ textAlign: 'left' }}>
                                 <input
                                   type="number"
                                   step="0.01"
@@ -987,7 +999,7 @@ const SupplierDashboard: React.FC = () => {
                                     padding: '6px 10px',
                                     border: '1px solid #cbd5e1',
                                     borderRadius: '6px',
-                                    textAlign: 'right',
+                                    textAlign: 'left',
                                     fontSize: '13px',
                                     fontWeight: 600,
                                     color: '#0f172a'
@@ -1303,63 +1315,29 @@ const SupplierDashboard: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9' }}>
-      <Header/>
+      <Header />
 
       <div className="pud-shell">
         <aside className="pud-sidebar">
           <nav className="pud-nav">
-            {navItemsBeforeCatalog.map((item) => {
-              const isActive =
-                (item.label === "Dashboard" && activeView === "dashboard") ||
-                (item.label === "Invitations" && activeView === "invitations");
-
-              return (
-                <div
-                  key={item.label}
-                  className={`pud-nav-item${isActive ? " pud-nav-item-active" : ""}`}
-                  onClick={() => {
-                    if (item.label === "Dashboard") {
-                      setActiveView("dashboard");
-                      navigate("/supplier/dashboard");
-                    }
-
-                    if (item.label === "Invitations") {
-                      setActiveView("invitations");
-                    }
-                  }}
-                >
-                  <span className="pud-nav-icon">{item.icon}</span>
-                  <span className="pud-nav-label">{item.label}</span>
-                  {/* {item.badge && <span className="pud-nav-badge">{item.badge}</span>} */}
-                </div>
-              );
-            })}
+            {navItems.map((item) => (
+              <div
+                key={item.key}
+                className={`pud-nav-item${activeNav === item.key ? " pud-nav-item-active" : ""}`}
+                onClick={() => handleNavClick(item.key)}
+              >
+                <span className="pud-nav-icon">{item.icon}</span>
+                <span className="pud-nav-label">{item.label}</span>
+                {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
+              </div>
+            ))}
 
             <Catalog
-              onShowCatalogList={() => setActiveView("catalogList")}
-              onCloseCatalogList={() => setActiveView("dashboard")}
-              fullViewContainer={activeView === "catalogList" ? catalogViewContainer : null}
+              onShowCatalogList={() => setActiveNav("catalogList")}
+              onCloseCatalogList={() => setActiveNav("dashboard")}
+              fullViewContainer={activeNav === "catalogList" ? catalogViewContainer : null}
             />
 
-            {navItemsAfterCatalog.map((item) => {
-              const isActive =
-                (item.label === "Template" && activeView === "template") ||
-                (item.label === "Company Profile" && activeView === "companyProfile") ||
-                (item.label === "Invitations" && activeView === "invitations");
-              return (
-                <div
-                  key={item.label}
-                  className={`pud-nav-item${isActive ? " pud-nav-item-active" : ""}`}
-                  onClick={() => {
-                    if (item.label === "Company Profile") setActiveView("companyProfile");
-                    if (item.label === "Invitations") setActiveView("invitations");
-                  }}
-                >
-                  <span className="pud-nav-icon">{item.icon}</span>
-                  <span className="pud-nav-label">{item.label}</span>
-                </div>
-              );
-            })}
             <div
               className="pud-nav-item pud-nav-item-logout"
               style={{
@@ -1383,7 +1361,7 @@ const SupplierDashboard: React.FC = () => {
 
         <div className="pud-main">
           <main className="pud-content">
-            {activeView === "catalogList" ? (
+            {activeNav === "catalogList" ? (
               <div ref={setCatalogViewContainer} />
             ) : rfqPageView === "allRfqs" ? (
               <>
@@ -1465,13 +1443,13 @@ const SupplierDashboard: React.FC = () => {
                   {renderRfqDetailInner()}
                 </div>
               </>
-            ) : activeView === "companyProfile" ? (
+            ) : activeNav === "companyProfile" ? (
               <CompanyProfile
                 mode="network-admin"
                 entityLabel="Supplier"
                 fetchProfile={getSupplierProfile}
               />
-            ) : activeView === "invitations" ? (
+            ) : activeNav === "invitations" ? (
               <Invitations />
             ) : (
               <>
@@ -1560,7 +1538,7 @@ const SupplierDashboard: React.FC = () => {
                             </div>
                             <button
                               className="pud-btn pud-btn-outline"
-                              onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                              onClick={() => handleViewRfqDetails(rfq.rfqId)}
                             >
                               View RFQ Details
                             </button>

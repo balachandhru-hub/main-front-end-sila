@@ -457,7 +457,7 @@
 
 .bd-btn-add {
     width: fit-content;
-    background: #111827;
+    background: #2f6feb;
     color: #ffffff;
     border: none;
     border-radius: 7px;
@@ -470,10 +470,6 @@
     gap: 6px;
     white-space: nowrap;
     height: 38px;
-}
-
-.bd-btn-add:hover {
-    background: #1f2937;
 }
 
 /* ---------- Line items table ---------- */
