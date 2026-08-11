@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SilaLogo from "../../../host-app/public/assets/SILA_Logo.png";
-import { getPersonDetail } from '../api/Buyerapi';
+import { getPersonDetailCached } from '../api/Buyerapi';
+import { isErrorResponse } from '@vosox/shared-ui';
 import "./Header.css";
 
 const IconEdit = () => (
@@ -26,20 +27,27 @@ const IconHelpCircle = () => (
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
+  const hasLoadedRef = useRef(false);
 
   const [orgName, setOrgName] = useState<string>('');
   const [orgEmail, setOrgEmail] = useState<string>('');
 
   useEffect(() => {
-    const personId = sessionStorage.getItem('vosox_person_id');
-    if (!personId) return;
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
 
-    getPersonDetail(personId)
-      .then((detail: any) => {
-        setOrgName(detail.organizationName || '');
-        setOrgEmail(detail.organizationEmail || '');
-      })
-      .catch((err) => console.error('Failed to load organization details for header', err));
+    const loadPersonDetail = async () => {
+      const result = await getPersonDetailCached();
+
+      if (isErrorResponse(result)) {
+        return;
+      }
+
+      setOrgName(result.organizationName || '');
+      setOrgEmail(result.organizationEmail || '');
+    };
+
+    loadPersonDetail();
   }, []);
 
   const firstLetter = orgName ? orgName.trim().charAt(0).toUpperCase() : '';
@@ -68,12 +76,10 @@ const Header: React.FC = () => {
 
   const handleResetPassword = () => {
     setIsDropdownOpen(false);
-    console.log("Reset password clicked");
   };
 
   const handleSupport = () => {
     setIsDropdownOpen(false);
-    console.log("Support clicked");
   };
 
   return (

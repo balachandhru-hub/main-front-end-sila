@@ -1,13 +1,14 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ProfileView} from '@vosox/shared-ui';
+import { ProfileView } from '@vosox/shared-ui';
 import type { PersonDetail, PersonDetailUpdate } from '@vosox/shared-ui';
-import { getPersonDetail, updatePersonDetail } from '../api/supplierApi';
+import { isErrorResponse } from '@vosox/shared-ui';
+import { getPersonDetailCached, updatePersonDetail, invalidatePersonDetailCache } from '../api/supplierApi';
 import Header from '../components/Header';
 
 const SupplierProfilePage: React.FC = () => {
   const navigate = useNavigate();
-  const personId = typeof window !== 'undefined' ? sessionStorage.getItem('vosox_person_id') : null;
+  const hasLoadedRef = useRef(false);
 
   const [personDetail, setPersonDetail] = useState<PersonDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -15,39 +16,41 @@ const SupplierProfilePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const loadProfile = useCallback(async () => {
-    if (!personId) {
-      setError('No person ID found in session.');
-      setLoading(false);
-      return;
-    }
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
+
     setLoading(true);
     setError(null);
-    try {
-      const data = await getPersonDetail(personId);
-      setPersonDetail(data);
-    } catch (e: any) {
-      setError(e.message || 'Failed to load profile.');
-    } finally {
-      setLoading(false);
+
+    const result = await getPersonDetailCached();
+
+    if (isErrorResponse(result)) {
+      setError(result.message || 'Failed to load profile.');
+    } else {
+      setPersonDetail(result as unknown as PersonDetail);
     }
-  }, [personId]);
+
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
 
   const handleSave = async (updates: PersonDetailUpdate) => {
-    if (!personId) return;
     setSaving(true);
     setError(null);
-    try {
-      const updated = await updatePersonDetail(personId, updates);
-      setPersonDetail(updated);
-    } catch (e: any) {
-      setError(e.message || 'Failed to update profile.');
-    } finally {
-      setSaving(false);
+
+    const result = await updatePersonDetail(updates);
+
+    if (isErrorResponse(result)) {
+      setError(result.message || 'Failed to update profile.');
+    } else {
+      invalidatePersonDetailCache();
+      setPersonDetail(result as unknown as PersonDetail);
     }
+
+    setSaving(false);
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import "./BuyerDashBoard.css";
 import CreateRFQ from "./Create_RFQ.tsx";
 import Product from "./Product.tsx";
@@ -377,7 +377,6 @@ const mockRfqs = [
 
 const BuyersDashboard: React.FC = () => {
 
-  // Sidebar toggle removed; sidebar always open.
   const [activeNav, setActiveNav] = useState<string>("dashboard");
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -386,7 +385,6 @@ const BuyersDashboard: React.FC = () => {
   const [loadingRfqs, setLoadingRfqs] = useState(false);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
 
-  // const [rfqs, setRfqs] = useState<any[]>([]);
   const [rfqs, setRfqs] = useState<any[]>(mockRfqs);
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
   const [hasMoreRfqs, setHasMoreRfqs] = useState(true);
@@ -397,21 +395,20 @@ const BuyersDashboard: React.FC = () => {
   const [buyerId, setBuyerId] = useState<string | null>(
     sessionStorage.getItem("vosox_buyer_id")
   );
+  const hasLoadedBuyerRef = useRef(false);
 
   useEffect(() => {
+    if (hasLoadedBuyerRef.current) return;
+    hasLoadedBuyerRef.current = true;
+
     const loadBuyerProfile = async () => {
       if (!buyerId) {
-        try {
-          const profile = await getBuyerProfile();
-          if (profile?.id) {
-            sessionStorage.setItem("vosox_buyer_id", profile.id);
-            setBuyerId(profile.id);
-          } else {
-            setRfqsError("Buyer profile not found. Please complete onboarding.");
-          }
-        } catch (err: any) {
-          console.error("Failed to load buyer profile", err);
-          setRfqsError("Failed to load buyer profile details.");
+        const result = await getBuyerProfile();
+        if (result && typeof result === 'object' && 'id' in result && result.id) {
+          sessionStorage.setItem("vosox_buyer_id", result.id);
+          setBuyerId(result.id);
+        } else if (result && typeof result === 'object' && 'statusCode' in result) {
+          setRfqsError("Unable to load buyer profile. Please try again.");
         }
       }
     };
@@ -420,33 +417,37 @@ const BuyersDashboard: React.FC = () => {
 
   const [loadingRfqDetails, setLoadingRfqDetails] = useState<boolean>(false);
   const [rfqDetailsError, setRfqDetailsError] = useState<string | null>(null);
+  const hasLoadedRfqsRef = useRef(false);
 
   useEffect(() => {
+    if (hasLoadedRfqsRef.current) return;
+    if (!buyerId) return;
+    hasLoadedRfqsRef.current = true;
+
     const loadRfqs = async () => {
-      if (!buyerId) return;
       setLoadingRfqs(true);
       setRfqsError(null);
-      try {
-        const data = await fetchBuyerRFQs({
-          buyerId,
-          index: 0,
-          limit: RFQ_INITIAL_VISIBLE,
-        });
-        if (data.length > 0) {
-          setRfqs(data);
-          setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
-          setHasMoreRfqs(data.length === RFQ_INITIAL_VISIBLE);
+      const result = await fetchBuyerRFQs({
+        buyerId,
+        index: 0,
+        limit: RFQ_INITIAL_VISIBLE,
+      });
+      if (Array.isArray(result)) {
+        if (result.length > 0) {
+          setRfqs(result);
+          setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, result.length));
+          setHasMoreRfqs(result.length === RFQ_INITIAL_VISIBLE);
         } else {
           setRfqs(mockRfqs);
           setVisibleRfqCount(mockRfqs.length);
           setHasMoreRfqs(false);
         }
-      } catch (err: any) {
-        console.error("Failed to load RFQs", err);
-        setRfqsError(err.message || "Failed to load sourcing opportunities.");
-      } finally {
-        setLoadingRfqs(false);
+      } else if (result && typeof result === 'object' && 'statusCode' in result) {
+        setRfqs(mockRfqs);
+        setVisibleRfqCount(mockRfqs.length);
+        setHasMoreRfqs(false);
       }
+      setLoadingRfqs(false);
     };
     loadRfqs();
   }, [buyerId]);
@@ -454,31 +455,27 @@ const BuyersDashboard: React.FC = () => {
   const handleViewMoreRfqs = async () => {
     if (loadingMoreRfqs) return;
 
-    // If we already have more fetched than we're showing, just reveal more locally.
     if (visibleRfqCount < rfqs.length) {
       setVisibleRfqCount((v) => Math.min(v + RFQ_PAGE_SIZE, rfqs.length));
       return;
     }
 
-    // Otherwise, fetch the next page from the server.
     if (!buyerId || !hasMoreRfqs) return;
 
     setLoadingMoreRfqs(true);
-    try {
-      const nextPage = await fetchBuyerRFQs({
-        buyerId,
-        index: rfqs.length,
-        limit: RFQ_PAGE_SIZE,
-      });
-      setRfqs((prev) => [...prev, ...nextPage]);
-      setVisibleRfqCount((v) => v + nextPage.length);
-      setHasMoreRfqs(nextPage.length === RFQ_PAGE_SIZE);
-    } catch (err: any) {
-      console.error("Failed to load more RFQs", err);
-      setRfqsError(err.message || "Failed to load more sourcing opportunities.");
-    } finally {
-      setLoadingMoreRfqs(false);
+    const result = await fetchBuyerRFQs({
+      buyerId,
+      index: rfqs.length,
+      limit: RFQ_PAGE_SIZE,
+    });
+    if (Array.isArray(result)) {
+      setRfqs((prev) => [...prev, ...result]);
+      setVisibleRfqCount((v) => v + result.length);
+      setHasMoreRfqs(result.length === RFQ_PAGE_SIZE);
+    } else if (result && typeof result === 'object' && 'statusCode' in result) {
+      setRfqsError("Failed to load more sourcing opportunities.");
     }
+    setLoadingMoreRfqs(false);
   };
 
   const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
@@ -488,46 +485,43 @@ const BuyersDashboard: React.FC = () => {
     setSelectedRfqId(rfqId);
     setLoadingRfqDetails(true);
     setRfqDetailsError(null);
-    try {
-      const details = await fetchBuyerRFQById(rfqId);
-      setSelectedRfq(details);
-    } catch (err: any) {
-      console.error("Failed to load RFQ details from API", err);
-      setRfqDetailsError(err.message || "Failed to fetch details.");
-      // Fallback to local list element (e.g. for mock items)
+    const result = await fetchBuyerRFQById(rfqId);
+    if (result && typeof result === 'object' && !('statusCode' in result)) {
+      setSelectedRfq(result);
+    } else if (result && typeof result === 'object' && 'statusCode' in result) {
+      setRfqDetailsError("Unable to fetch details.");
       const found = rfqs.find((r) => r.rfqId === rfqId) || null;
       setSelectedRfq(found);
-    } finally {
-      setLoadingRfqDetails(false);
+    } else {
+      const found = rfqs.find((r) => r.rfqId === rfqId) || null;
+      setSelectedRfq(found);
     }
+    setLoadingRfqDetails(false);
   };
 
   const handleLogout = async () => {
-    if (loggingOut) return;
-    setLoggingOut(true);
-    setLogoutError(null);
-    try {
-      await logoutBuyer();
-    } catch (error: any) {
-      setLogoutError(error?.message || "Logout request failed, clearing session locally.");
-    } finally {
-      sessionStorage.clear();
-      window.dispatchEvent(new CustomEvent("session:expired"));
-      setLoggingOut(false);
-    }
-  };
+      if (loggingOut) return;
+      setLoggingOut(true);
+      setLogoutError(null);
+      try {
+        await logoutBuyer();
+      } catch (error: any) {
+        setLogoutError(error?.message || "Logout request failed, clearing session locally.");
+      } finally {
+        sessionStorage.clear();
+        window.dispatchEvent(new CustomEvent("session:expired"));
+        setLoggingOut(false);
+      }
+    };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
-      {/* ---------------- Header ---------------- */}
       <Header />
 
-      {/* ---------------- Body: sidebar + content ---------------- */}
       <div
         className="pud-shell"
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
       >
-
 
         <aside className="pud-sidebar">
           <nav className="pud-nav">
@@ -569,7 +563,7 @@ const BuyersDashboard: React.FC = () => {
               <CreateRFQ />
             ) : activeNav === "product" ? (
               <Product />
-            ) : activeNav === "template" ? ( // <-- ADDED: Template route handler
+            ) : activeNav === "template" ? (
               <UserTemplate />
             ) : activeNav === "companyProfile" ? (
               <CompanyProfile
@@ -578,7 +572,6 @@ const BuyersDashboard: React.FC = () => {
                 fetchProfile={getBuyerProfile}
               />
             ) : (
-              // Blank page for Dashboard and every other nav item that has no view yet
               <>
                 <h1 className="pud-title">Buyer Operations Command</h1>
                 <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
@@ -851,7 +844,6 @@ const BuyersDashboard: React.FC = () => {
           <div className="pud-modal-overlay" onClick={() => setSelectedRfqId(null)}>
             <div className="pud-modal pud-modal-rfq" onClick={(e) => e.stopPropagation()}>
 
-              {/* Modal Header */}
               <div className="pud-modal-header">
                 <span className="pud-modal-badge">
                   <IconFile /> RFQ Specification
@@ -870,7 +862,6 @@ const BuyersDashboard: React.FC = () => {
                 )}
               </div>
 
-              {/* Modal Body */}
               <div className="pud-modal-body">
                 {loadingRfqDetails ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
@@ -885,7 +876,6 @@ const BuyersDashboard: React.FC = () => {
                   </div>
                 ) : selectedRfq ? (
                   <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px' }}>
-                    {/* Left Column: RFQ Specifications & Materials */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                       <div>
                         <div className="pud-modal-section-title">Description</div>
@@ -915,7 +905,6 @@ const BuyersDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Items table */}
                       {selectedRfq.items && selectedRfq.items.length > 0 && (
                         <div>
                           <div className="pud-modal-section-title" style={{ marginBottom: '10px' }}>Required Materials & Services</div>
@@ -958,7 +947,6 @@ const BuyersDashboard: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Attached Documents */}
                       {((selectedRfq.technicalSpecificationDocuments && selectedRfq.technicalSpecificationDocuments.length > 0) ||
                         (selectedRfq.termsConditionDocuments && selectedRfq.termsConditionDocuments.length > 0)) && (
                           <div>
@@ -986,7 +974,6 @@ const BuyersDashboard: React.FC = () => {
                           </div>
                         )}
 
-                      {/* Questions */}
                       {selectedRfq.questions && selectedRfq.questions.length > 0 && (
                         <div>
                           <div className="pud-modal-section-title" style={{ marginBottom: '10px' }}>Evaluation Questions Posed</div>
@@ -1008,13 +995,11 @@ const BuyersDashboard: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Right Column: Received Supplier Bids / Quotations */}
                     <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                       <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <IconSparkles /> Supplier Quotations Received
                       </div>
 
-                      {/* Filter/check if we have actual valid quotations */}
                       {selectedRfq.supplierQuotation &&
                         selectedRfq.supplierQuotation.filter((q: any) => q.quotationId || q.totalPrice !== null).length > 0 ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '480px', overflowY: 'auto' }}>
@@ -1091,7 +1076,6 @@ const BuyersDashboard: React.FC = () => {
                 ) : null}
               </div>
 
-              {/* Modal Footer */}
               <div className="pud-modal-footer">
                 <button
                   className="pud-btn pud-btn-outline"

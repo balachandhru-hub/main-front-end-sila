@@ -5,6 +5,7 @@ import UserAdmin from "../UserAdmin";
 import UserTemplate from "./usertemplate";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import { useNetworkAdminAuthStore } from "../store/useAuthStore";
+import { logoutPlatformUser } from "../api/platformApi";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -324,11 +325,12 @@ const SupplierAdminDash: React.FC = () => {
     setLoggingOut(true);
     setLogoutError(null);
     try {
-      sessionStorage.clear();
-      window.dispatchEvent(new CustomEvent("session:expired"));
+      await logoutPlatformUser();
     } catch (error: any) {
       setLogoutError(error?.message || "Logout request failed, clearing session locally.");
     } finally {
+      sessionStorage.clear();
+      window.dispatchEvent(new CustomEvent("session:expired"));
       setLoggingOut(false);
     }
   };

@@ -1,18 +1,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ProfileView} from '@vosox/shared-ui';
+import { ProfileView } from '@vosox/shared-ui';
 import type { PersonDetail, PersonDetailUpdate } from '@vosox/shared-ui';
-import { getPersonDetail, updatePersonDetail } from '../api/networkAdminApi';
+import { isErrorResponse } from '@vosox/shared-ui';
+import { getPersonDetailCached, updatePersonDetail, invalidatePersonDetailCache } from '../api/networkAdminApi';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
 import Header from '../components/Header';
 
 const SupplierAdminProfilePage: React.FC = () => {
   const navigate = useNavigate();
-  const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const authLoading = useNetworkAdminAuthStore((state) => state.isLoading);
   const initializeFromSession = useNetworkAdminAuthStore((state) => state.initializeFromSession);
-
-  const personId = currentUser?.personId ?? null;
 
   const [personDetail, setPersonDetail] = useState<PersonDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,21 +22,20 @@ const SupplierAdminProfilePage: React.FC = () => {
   }, [initializeFromSession]);
 
   const loadProfile = useCallback(async () => {
-    if (!personId) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     setError(null);
-    try {
-      const data = await getPersonDetail(personId);
-      setPersonDetail(data);
-    } catch (e: any) {
-      setError(e.message || 'Failed to load profile.');
-    } finally {
-      setLoading(false);
+
+    const result = await getPersonDetailCached();
+
+    if (isErrorResponse(result)) {
+      setError(result.message || 'Failed to load profile.');
+      setPersonDetail(null);
+    } else {
+      setPersonDetail(result as unknown as PersonDetail);
     }
-  }, [personId]);
+
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     if (!authLoading) {
@@ -47,17 +44,19 @@ const SupplierAdminProfilePage: React.FC = () => {
   }, [authLoading, loadProfile]);
 
   const handleSave = async (updates: PersonDetailUpdate) => {
-    if (!personId) return;
     setSaving(true);
     setError(null);
-    try {
-      const updated = await updatePersonDetail(personId, updates);
-      setPersonDetail(updated);
-    } catch (e: any) {
-      setError(e.message || 'Failed to update profile.');
-    } finally {
-      setSaving(false);
+
+    const result = await updatePersonDetail(updates);
+
+    if (isErrorResponse(result)) {
+      setError(result.message || 'Failed to update profile.');
+    } else {
+      invalidatePersonDetailCache();
+      setPersonDetail(result as unknown as PersonDetail);
     }
+
+    setSaving(false);
   };
 
   if (authLoading) {

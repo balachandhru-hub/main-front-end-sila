@@ -6,3 +6,5 @@ export { default as CompanyProfile } from './components/CompanyProfile/CompanyPr
 export * from './components/CompanyProfile/CompanyProfile.types';
 export { ProfileView } from './components/ProfileView';
 export * from './types/profile';
+export * from './types/SuccessResponseDto';
+export * from './types/ErrorResponseDto';

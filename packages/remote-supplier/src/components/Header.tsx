@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SilaLogo from "../assets/SILA_Logo.png";
-import { getPersonDetail } from '../api/supplierApi';
+import { getPersonDetailCached } from '../api/supplierApi';
+import { isErrorResponse } from '@vosox/shared-ui';
 import "./Header.css";
-import { toast } from 'react-toastify';
 
 const IconEdit = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -27,20 +27,27 @@ const IconHelpCircle = () => (
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
+  const hasLoadedRef = useRef(false);
 
   const [orgName, setOrgName] = useState<string>('');
   const [orgEmail, setOrgEmail] = useState<string>('');
 
   useEffect(() => {
-    const personId = sessionStorage.getItem('vosox_person_id');
-    if (!personId) return;
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
 
-    getPersonDetail(personId)
-      .then((detail: any) => {
-        setOrgName(detail.organizationName || '');
-        setOrgEmail(detail.organizationEmail || '');
-      })
-      .catch(() => toast.error("Failed to fetch person details"));
+    const loadPersonDetail = async () => {
+      const result = await getPersonDetailCached();
+
+      if (isErrorResponse(result)) {
+        return;
+      }
+
+      setOrgName(result.organizationName || '');
+      setOrgEmail(result.organizationEmail || '');
+    };
+
+    loadPersonDetail();
   }, []);
 
   const firstLetter = orgName ? orgName.trim().charAt(0).toUpperCase() : '';

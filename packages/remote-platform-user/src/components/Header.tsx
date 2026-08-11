@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
-import { getPersonDetail } from '../api/networkAdminApi';
+import { getPersonDetailCached } from '../api/networkAdminApi';
+import { isErrorResponse } from '@vosox/shared-ui';
 import './Header.css';
 
 const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;
@@ -29,21 +30,29 @@ const IconHelpCircle = () => (
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
+  const hasLoadedRef = useRef(false);
 
   const [orgName, setOrgName] = useState<string>('');
   const [orgEmail, setOrgEmail] = useState<string>('');
 
   useEffect(() => {
-    const personId = currentUser?.personId;
-    if (!personId) return;
+    if (!currentUser) return;
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
 
-    getPersonDetail(personId)
-      .then((detail: any) => {
-        setOrgName(detail.organizationName || '');
-        setOrgEmail(detail.organizationEmail || '');
-      })
-      .catch((err) => console.error('Failed to load organization details for header', err));
-  }, [currentUser?.personId]);
+    const loadPersonDetail = async () => {
+      const result = await getPersonDetailCached();
+
+      if (isErrorResponse(result)) {
+        return;
+      }
+
+      setOrgName(result.organizationName || '');
+      setOrgEmail(result.organizationEmail || '');
+    };
+
+    loadPersonDetail();
+  }, [currentUser]);
 
   const firstLetter = orgName ? orgName.trim().charAt(0).toUpperCase() : '';
 
@@ -81,12 +90,10 @@ const Header: React.FC = () => {
 
   const handleResetPassword = () => {
     setIsDropdownOpen(false);
-    console.log('Reset password clicked');
   };
 
   const handleSupport = () => {
     setIsDropdownOpen(false);
-    console.log('Support clicked');
   };
 
   return (
