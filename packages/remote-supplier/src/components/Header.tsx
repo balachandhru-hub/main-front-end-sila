@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SilaLogo from "../../../host-app/public/assets/SILA_Logo.png";
-import { getPersonDetailCached } from '../api/Buyerapi';
+import SilaLogo from "../assets/SILA_Logo.png";
+import { getPersonDetailCached } from '../api/supplierApi';
 import { isErrorResponse } from '@vosox/shared-ui';
 import "./Header.css";
 
@@ -71,7 +71,7 @@ const Header: React.FC = () => {
 
   const handleEditProfile = () => {
     setIsDropdownOpen(false);
-    navigate('/buyer/profile');
+    navigate('/supplier/profile');
   };
 
   const handleResetPassword = () => {

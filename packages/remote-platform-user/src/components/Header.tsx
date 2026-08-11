@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SilaLogo from "../../../host-app/public/assets/SILA_Logo.png";
-import { getPersonDetailCached } from '../api/Buyerapi';
+import { useNetworkAdminAuthStore } from '../store/useAuthStore';
+import { getPersonDetailCached } from '../api/networkAdminApi';
 import { isErrorResponse } from '@vosox/shared-ui';
-import "./Header.css";
+import './Header.css';
+
+const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;
 
 const IconEdit = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -27,12 +29,14 @@ const IconHelpCircle = () => (
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
+  const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const hasLoadedRef = useRef(false);
 
   const [orgName, setOrgName] = useState<string>('');
   const [orgEmail, setOrgEmail] = useState<string>('');
 
   useEffect(() => {
+    if (!currentUser) return;
     if (hasLoadedRef.current) return;
     hasLoadedRef.current = true;
 
@@ -48,7 +52,7 @@ const Header: React.FC = () => {
     };
 
     loadPersonDetail();
-  }, []);
+  }, [currentUser]);
 
   const firstLetter = orgName ? orgName.trim().charAt(0).toUpperCase() : '';
 
@@ -62,16 +66,26 @@ const Header: React.FC = () => {
       }
     };
     if (isDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside);
     }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isDropdownOpen]);
 
   const handleAvatarClick = () => setIsDropdownOpen((prev) => !prev);
 
   const handleEditProfile = () => {
     setIsDropdownOpen(false);
-    navigate('/buyer/profile');
+    const role = currentUser?.userRole;
+
+    if (role === 'BUYER_ADMINISTRATOR') {
+      navigate('/platform-user/buyer-admin/profile');
+    } else if (role === 'SUPPLIER_ADMINISTRATOR') {
+      navigate('/platform-user/supplier-admin/profile');
+    } else if (role === 'BUYER_NETWORK_ADMIN' || role === 'SUPPLIER_NETWORK_ADMIN') {
+      navigate('/platform-user/network-admin/profile');
+    } else {
+      navigate('/platform-user/dashboard');
+    }
   };
 
   const handleResetPassword = () => {
@@ -84,7 +98,7 @@ const Header: React.FC = () => {
 
   return (
     <header className="vsx-header">
-      <img src={SilaLogo} alt="SILA Logo" className="vsx-header-logo" />
+      <img src={sila_logo} alt="SILA" className="vsx-header-logo" />
 
       <div className="vsx-header-spacer" />
 
@@ -94,13 +108,8 @@ const Header: React.FC = () => {
           <span className="vsx-header-account-email" title={orgEmail}>{orgEmail}</span>
         </div>
 
-        <div style={{ position: "relative" }}>
-          <div
-            className="vsx-header-avatar"
-            onClick={handleAvatarClick}
-            role="button"
-            tabIndex={0}
-          >
+        <div style={{ position: 'relative' }}>
+          <div className="vsx-header-avatar" onClick={handleAvatarClick} role="button" tabIndex={0}>
             {firstLetter}
           </div>
 

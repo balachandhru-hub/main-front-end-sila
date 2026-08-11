@@ -1,10 +1,6 @@
 import React, { useState } from "react";
-import SilaLogo from "../assets/SILA - Logo.png";
 import "./SupplierDashboard.css";
 import "./Invitations.css";
-import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
-import { logoutSupplier } from "../api/supplierApi";
-import { useNavigate } from "react-router-dom";
 
 /* ---------------- Types ---------------- */
 
@@ -21,108 +17,6 @@ interface Invitation {
 }
 
 type TabKey = "all" | "open" | "accepted" | "declined";
-
-/* ---------------- Icons (shared header / sidebar) ---------------- */
-
-const IconBell = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-    </svg>
-);
-
-const IconCheck = () => (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 6 9 17l-5-5" />
-    </svg>
-);
-
-const NavIconHome = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-        <path d="M9 22V12h6v10" />
-    </svg>
-);
-
-const NavIconMail = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="4" width="20" height="16" rx="2" />
-        <path d="m22 6-10 7L2 6" />
-    </svg>
-);
-
-const NavIconFile = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <path d="M14 2v6h6" />
-    </svg>
-);
-
-const NavIconUser = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
-    </svg>
-);
-
-const NavIconBag = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-        <path d="M3 6h18" />
-        <path d="M16 10a4 4 0 0 1-8 0" />
-    </svg>
-);
-
-const NavIconContract = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M8 2h8l4 4v16H4V2z" />
-        <path d="M8 2v4H4" />
-    </svg>
-);
-
-const NavIconInvoice = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-    </svg>
-);
-
-const NavIconPayment = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="5" width="20" height="14" rx="2" />
-        <path d="M2 10h20" />
-    </svg>
-);
-
-const NavIconMessage = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-);
-
-const NavIconBuilding = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="4" y="2" width="16" height="20" rx="1" />
-        <path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01" />
-    </svg>
-);
-
-const NavIconSettings = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-);
-
-const LogoutIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-        <polyline points="16 17 21 12 16 7" />
-        <line x1="21" y1="12" x2="9" y2="12" />
-    </svg>
-);
 
 /* ---------------- Icons (page content) ---------------- */
 
@@ -190,21 +84,7 @@ const IconBookOpen = () => (
     </svg>
 );
 
-/* ---------------- Static data ---------------- */
-
-const navItems = [
-    { icon: <NavIconHome />, label: "Dashboard" },
-    { icon: <NavIconMail />, label: "Invitations", active: true },
-    { icon: <NavIconFile />, label: "RFQs" },
-    { icon: <NavIconUser />, label: "Quotations" },
-    { icon: <NavIconBag />, label: "Purchase Orders" },
-    { icon: <NavIconContract />, label: "Contracts" },
-    { icon: <NavIconInvoice />, label: "Invoices" },
-    { icon: <NavIconPayment />, label: "Payments" },
-    { icon: <NavIconMessage />, label: "Messages" },
-    { icon: <NavIconBuilding />, label: "Company Profile" },
-    { icon: <NavIconSettings />, label: "Settings" },
-];
+/* ---------------- Sample data ---------------- */
 
 const officeFurniture: Invitation = {
     code: "RFQ-1024",
@@ -261,7 +141,6 @@ const recycledStationeryDeclined: Invitation = {
     closing: "2026-06-07",
 };
 
-/* Card lists per tab — matched exactly to the reference screenshots */
 const tabInvitations: Record<TabKey, Invitation[]> = {
     all: [
         officeFurniture,
@@ -353,34 +232,18 @@ const InvitationCard: React.FC<{ invitation: Invitation }> = ({ invitation }) =>
     );
 };
 
-/* ---------------- Page ---------------- */
+/* ---------------- Page content ---------------- */
+/*
+ * NOTE: This component renders ONLY the page content (title, tabs, search,
+ * invitation grid). It is embedded inside SupplierDashboard's existing
+ * <main className="pud-content"> area — the same way <CompanyProfile /> and
+ * <UserTemplate /> are — so it must NOT render its own Header, sidebar, or
+ * page shell. Doing so would nest a second sidebar inside the dashboard.
+ */
 
 const Invitations: React.FC = () => {
-    const navigate = useNavigate();
-    const organizationName =
-        sessionStorage.getItem("vosox_organization_name") || "Apex Office & Technology Supp...";
-    const firstLetter = organizationName.trim().charAt(0).toUpperCase();
-
     const [activeTab, setActiveTab] = useState<TabKey>("all");
     const [searchQuery, setSearchQuery] = useState("");
-    const [loggingOut, setLoggingOut] = useState(false);
-    const [logoutError, setLogoutError] = useState<string | null>(null);
-
-    const handleLogout = async () => {
-        if (loggingOut) return;
-        setLoggingOut(true);
-        setLogoutError(null);
-        try {
-            await logoutSupplier();
-        } catch (error: any) {
-            setLogoutError(error?.message || "Logout request failed, clearing session locally.");
-        } finally {
-            sessionStorage.removeItem("vosox_organization_name");
-            useAuthStore.getState().logout();
-            window.dispatchEvent(new CustomEvent("session:expired"));
-            setLoggingOut(false);
-        }
-    };
 
     const query = searchQuery.trim().toLowerCase();
     const invitations = tabInvitations[activeTab].filter((inv) => {
@@ -393,120 +256,51 @@ const Invitations: React.FC = () => {
     });
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
-            <header className="pud-header" style={{ width: "100%", zIndex: 10, position: "relative" }}>
-                <div className="pud-header-left">
-                    <div className="pud-logo">
-                        <img src={SilaLogo} alt="SILA Logo" className="pud-logo-img" />
-                    </div>
-                </div>
-                <div className="pud-header-spacer" />
-                <div className="pud-header-right">
-                    <span className="pud-header-bell">
-                        <IconBell />
-                    </span>
-                    <div className="pud-header-account">
-                        <span className="pud-header-account-name" title={organizationName}>
-                            {organizationName}
-                        </span>
-                        <span className="pud-header-account-verified">
-                            <IconCheck /> Verified Vendor
-                        </span>
-                    </div>
-                    <div className="pud-header-avatar">{firstLetter}</div>
-                </div>
-            </header>
+        <>
+            <h1 className="pud-title">Sourcing Invitations</h1>
+            <p className="pud-subtitle">Direct invitations from buyers asking you to submit price bids and proposals.</p>
 
-            <div
-                className="pud-shell"
-                style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
-            >
-                <aside className="pud-sidebar">
-                    <nav className="pud-nav" style={{ paddingTop: "40px" }}>
-                        {navItems.map((item) => (
-                            <div
-                                key={item.label}
-                                className={`pud-nav-item${item.active ? " pud-nav-item-active" : ""}`}
-                                onClick={() => {
-                                    if (item.label === "Dashboard") navigate("/dashboard");
-                                    if (item.label === "Invitations") navigate("/invitations");
-                                    if (item.label === "Company Profile") navigate("/dashboard", { state: { view: "companyProfile" } });
-                                }}
-                            >
-                                <span className="pud-nav-icon">{item.icon}</span>
-                                <span className="pud-nav-label">{item.label}</span>
-                            </div>
-                        ))}
-                        <div
-                            className="pud-nav-item pud-nav-item-logout"
-                            style={{
-                                marginTop: "auto",
-                                opacity: loggingOut ? 0.6 : 1,
-                                cursor: loggingOut ? "not-allowed" : "pointer",
-                                pointerEvents: loggingOut ? "none" : "auto",
-                            }}
-                            onClick={handleLogout}
-                            role="button"
-                            aria-disabled={loggingOut}
-                            title={logoutError || undefined}
+            <div className="inv-tabs-bar">
+                <div className="inv-tabs">
+                    {tabs.map((tab) => (
+                        <button
+                            key={tab.key}
+                            className={`inv-tab${activeTab === tab.key ? " inv-tab-active" : ""}`}
+                            onClick={() => setActiveTab(tab.key)}
                         >
-                            <span className="pud-nav-icon" style={{ transform: "rotate(180deg)" }}>
-                                <LogoutIcon />
-                            </span>
-                            <span className="pud-nav-label">{loggingOut ? "Logging out..." : "Log Out"}</span>
-                        </div>
-                    </nav>
-                </aside>
-
-                <div className="pud-main">
-                    <main className="pud-content">
-                        <h1 className="pud-title">Sourcing Invitations</h1>
-                        <p className="pud-subtitle">Direct invitations from buyers asking you to submit price bids and proposals.</p>
-
-                        <div className="inv-tabs-bar">
-                            <div className="inv-tabs">
-                                {tabs.map((tab) => (
-                                    <button
-                                        key={tab.key}
-                                        className={`inv-tab${activeTab === tab.key ? " inv-tab-active" : ""}`}
-                                        onClick={() => setActiveTab(tab.key)}
-                                    >
-                                        {tab.label}
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="inv-search">
-                                <IconSearch />
-                                <input
-                                    type="text"
-                                    placeholder="Search buyer, ID or category..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
-                        </div>
-
-                        {invitations.length > 0 ? (
-                            <div className="inv-grid">
-                                {invitations.map((inv) => (
-                                    <InvitationCard key={inv.code} invitation={inv} />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="inv-empty">
-                                <span className="inv-empty-icon">
-                                    <IconBookOpen />
-                                </span>
-                                <div className="inv-empty-title">No Invitations Found</div>
-                                <div className="inv-empty-subtitle">
-                                    There are no sourcing invitations matching your search criteria or filter at this time.
-                                </div>
-                            </div>
-                        )}
-                    </main>
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+                <div className="inv-search">
+                    <IconSearch />
+                    <input
+                        type="text"
+                        placeholder="Search buyer, ID or category..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                 </div>
             </div>
-        </div>
+
+            {invitations.length > 0 ? (
+                <div className="inv-grid">
+                    {invitations.map((inv) => (
+                        <InvitationCard key={inv.code} invitation={inv} />
+                    ))}
+                </div>
+            ) : (
+                <div className="inv-empty">
+                    <span className="inv-empty-icon">
+                        <IconBookOpen />
+                    </span>
+                    <div className="inv-empty-title">No Invitations Found</div>
+                    <div className="inv-empty-subtitle">
+                        There are no sourcing invitations matching your search criteria or filter at this time.
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 

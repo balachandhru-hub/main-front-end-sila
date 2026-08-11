@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import "./BuyerDashBoard.css";
 import CreateRFQ from "./Create_RFQ.tsx";
 import Product from "./Product.tsx";
@@ -392,50 +392,58 @@ const BuyersDashboard: React.FC = () => {
   const [buyerId, setBuyerId] = useState<string | null>(
     sessionStorage.getItem("vosox_buyer_id")
   );
+  const hasLoadedBuyerRef = useRef(false);
 
   useEffect(() => {
+    if (hasLoadedBuyerRef.current) return;
+    hasLoadedBuyerRef.current = true;
+
     const loadBuyerProfile = async () => {
       if (!buyerId) {
-        try {
-          const profile = await getBuyerProfile();
-          if (profile?.id) {
-            sessionStorage.setItem("vosox_buyer_id", profile.id);
-            setBuyerId(profile.id);
-          } else {
-            setRfqsError("Buyer profile not found. Please complete onboarding.");
-          }
-        } catch (err: any) {
-          console.error("Failed to load buyer profile", err);
-          setRfqsError("Failed to load buyer profile details.");
+        const result = await getBuyerProfile();
+        if (result && typeof result === 'object' && 'id' in result && result.id) {
+          sessionStorage.setItem("vosox_buyer_id", result.id);
+          setBuyerId(result.id);
+        } else if (result && typeof result === 'object' && 'statusCode' in result) {
+          setRfqsError("Unable to load buyer profile. Please try again.");
         }
       }
     };
     loadBuyerProfile();
   }, [buyerId]);
+
+  // const [loadingRfqDetails, setLoadingRfqDetails] = useState<boolean>(false);
+  // const [rfqDetailsError, setRfqDetailsError] = useState<string | null>(null);
+  const hasLoadedRfqsRef = useRef(false);
+
   useEffect(() => {
+    if (hasLoadedRfqsRef.current) return;
+    if (!buyerId) return;
+    hasLoadedRfqsRef.current = true;
+
     const loadRfqs = async () => {
-      if (!buyerId) return;
       setLoadingRfqs(true);
       setRfqsError(null);
-      try {
-        const data = await fetchBuyerRFQs({
-          buyerId,
-          index: 0,
-          limit: RFQ_INITIAL_VISIBLE,
-        });
-        if (data.length > 0) {
-          setRfqs(data);
-          setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
+      const result = await fetchBuyerRFQs({
+        buyerId,
+        index: 0,
+        limit: RFQ_INITIAL_VISIBLE,
+      });
+      if (Array.isArray(result)) {
+        if (result.length > 0) {
+          setRfqs(result);
+          setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, result.length));
+          // setHasMoreRfqs(result.length === RFQ_INITIAL_VISIBLE);
         } else {
           setRfqs(mockRfqs);
           setVisibleRfqCount(mockRfqs.length);
         }
-      } catch (err: any) {
-        console.error("Failed to load RFQs", err);
-        setRfqsError(err.message || "Failed to load sourcing opportunities.");
-      } finally {
-        setLoadingRfqs(false);
+      } else if (result && typeof result === 'object' && 'statusCode' in result) {
+        setRfqs(mockRfqs);
+        setVisibleRfqCount(mockRfqs.length);
+        // setHasMoreRfqs(false);
       }
+      setLoadingRfqs(false);
     };
     loadRfqs();
   }, [buyerId]);
@@ -781,6 +789,7 @@ const BuyersDashboard: React.FC = () => {
       setLoadingAllRfqs(false);
       setAllRfqsLoaded(true);
     }
+    // setLoadingMoreRfqs(false);
   };
 
   const handleBackToDashboard = () => {
@@ -890,18 +899,15 @@ const BuyersDashboard: React.FC = () => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
-      {/* ---------------- Header ---------------- */}
       <Header />
 
-      {/* ---------------- Body: sidebar + content ---------------- */}
       <div
         className="pud-shell"
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
       >
 
-
         <aside className="pud-sidebar">
-          <nav className="pud-nav" style={{ paddingTop: "40px" }}>
+          <nav className="pud-nav">
             {navItems.map((item) => (
               <div
                 key={item.key}

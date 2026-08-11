@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./SupplierAdminDash.css";
-import "../../../remote-supplier/src/components/SupplierDashboard.css";
-import Header from "../../../remote-buyer/src/components/Header";
+import "../../../remote-supplier/src/components/SupplierDashboard.css"
+import Header from "./Header";
 import UserAdmin from "../UserAdmin";
 import UserTemplate from "./usertemplate";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
@@ -19,6 +19,7 @@ import {
   type SubmitQuotationPayload,
   type RfqDocumentAssetDto
 } from "../../../remote-supplier/src/api/supplierApi";
+import { logoutPlatformUser } from "../api/platformApi";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -475,9 +476,6 @@ const SupplierAdminDash: React.FC = () => {
     setActiveNav("dashboard");
   };
 
-  // Sidebar nav click: "RFQs" opens the full-page RFQ list; every other item
-  // behaves as before, but also resets rfqPageView so a stale "All RFQs" /
-  // "RFQ Details" view doesn't linger in the background.
   const handleNavClick = (key: string) => {
     if (key === "rfqs") {
       handleOpenAllRfqs();
@@ -788,11 +786,12 @@ const SupplierAdminDash: React.FC = () => {
     setLoggingOut(true);
     setLogoutError(null);
     try {
-      sessionStorage.clear();
-      window.dispatchEvent(new CustomEvent("session:expired"));
+      await logoutPlatformUser();
     } catch (error: any) {
       setLogoutError(error?.message || "Logout request failed, clearing session locally.");
     } finally {
+      sessionStorage.clear();
+      window.dispatchEvent(new CustomEvent("session:expired"));
       setLoggingOut(false);
     }
   };
@@ -1275,7 +1274,7 @@ const SupplierAdminDash: React.FC = () => {
 
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#ffffff" }}>
       <Header />
 
       <div
@@ -1560,15 +1559,15 @@ const SupplierAdminDash: React.FC = () => {
                     <div className="sad-panel-list" style={{ padding: "20px 0" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #eef0f3" }}>
                         <span style={{ color: "#6b7280", fontWeight: 500 }}>Total Suppliers</span>
-                        <span style={{ fontWeight: 700, fontSize: "18px", color: "#111827" }}>48</span>
+                        <span style={{ fontWeight: 500, fontSize: "18px", color: "#2f6feb" }}>48</span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #eef0f3" }}>
                         <span style={{ color: "#6b7280", fontWeight: 500 }}>Active Users</span>
-                        <span style={{ fontWeight: 700, fontSize: "18px", color: "#111827" }}>234</span>
+                        <span style={{ fontWeight: 500, fontSize: "18px", color: "#2f6feb" }}>234</span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0" }}>
                         <span style={{ color: "#6b7280", fontWeight: 500 }}>Bids Received</span>
-                        <span style={{ fontWeight: 700, fontSize: "18px", color: "#111827" }}>156</span>
+                        <span style={{ fontWeight: 500, fontSize: "18px", color: "#2f6feb" }}>156</span>
                       </div>
                     </div>
                   </section>

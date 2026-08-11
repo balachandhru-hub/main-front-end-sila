@@ -45,11 +45,11 @@
 }
 
 .ua-title {
-  font-size: 1.3rem;
-  font-weight: 800;
-  color: #1a202c;
-  margin: 0 0 8px 0;
-  letter-spacing: -0.5px;
+  font-size: 23px;
+  font-weight: 500;
+  color: #111827;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.02em;
 }
 
 .ua-subtitle {
@@ -60,12 +60,7 @@
 
 /* ── Controls bar (search + button) ── */
 .ua-controls-bar {
-  background: #f8fafc;
-  border-radius: 16px;
-  padding: 16px 24px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-  margin-bottom: 32px;
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
   gap: 20px;
@@ -116,7 +111,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background-color: #3182ce;
+  background-color: #2f6feb;
   color: #ffffff;
   border: none;
   border-radius: 10px;

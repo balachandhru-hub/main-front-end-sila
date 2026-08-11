@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import SilaLogo from "../assets/SILA_Logo.png";
 import "./SupplierDashboard.css";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
+import CompanyProfile from '../../../../packages/shared-ui/src/components/CompanyProfile/CompanyProfile.tsx';
+import Invitations from "./Invitations.tsx";
 import {
   logoutSupplier,
   fetchRFQMasterData,
@@ -15,7 +16,8 @@ import {
   type SubmitQuotationPayload,
   type RfqDocumentAssetDto
 } from "../api/supplierApi";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import Header from "./Header.tsx";
 interface StatCard {
   icon: React.ReactNode;
   label: string;
@@ -49,8 +51,6 @@ interface MatchCard {
   categoryNote: string;
   destinationNote: string;
 }
-import { CompanyProfile } from '@vosox/shared-ui';
-
 
 
 const IconMail = () => (
@@ -193,11 +193,6 @@ const NavIconTemplate = () => (
   </svg>
 );
 
-const IconCheck = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 6 9 17l-5-5" />
-  </svg>
-);
 
 const IconCalendar = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -382,10 +377,7 @@ const matchCards: MatchCard[] = [
 ];
 
 const SupplierDashboard: React.FC = () => {
-  const navigate = useNavigate();
-  const organizationName =
-    sessionStorage.getItem("vosox_organization_name") || "Apex Office & Technology Supp...";
-  const firstLetter = organizationName.trim().charAt(0).toUpperCase();
+
 
   const [activeNav, setActiveNav] = useState<string>("dashboard");
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
@@ -469,6 +461,17 @@ const SupplierDashboard: React.FC = () => {
     loadRfqs();
   }, [supplierId]);
 
+  const location = useLocation();
+
+  useEffect(() => {
+    const intendedView = (location.state as { view?: string })?.view;
+    if (intendedView === "companyProfile") {
+      setActiveNav("companyProfile");
+    }
+  }, [location.state]);
+
+
+
   const handleViewRfqDetails = async (rfqId: string) => {
     setSelectedRfqId(rfqId);
     setLoadingRfqDetail(true);
@@ -525,10 +528,6 @@ const SupplierDashboard: React.FC = () => {
   // behaves as before, but also resets rfqPageView so a stale "All RFQs" /
   // "RFQ Details" view doesn't linger in the background.
   const handleNavClick = (key: string) => {
-    if (key === "invitations") {
-      navigate("/supplier/invitations");
-      return;
-    }
     if (key === "rfqs") {
       handleOpenAllRfqs();
       return;
@@ -811,11 +810,9 @@ const SupplierDashboard: React.FC = () => {
       await submitSupplierQuotation(payload);
       setSubmitQuoteSuccess(true);
 
-      // Refresh the RFQ details
       const updatedDetails = await fetchRFQById(selectedRfqId!);
       setSelectedRfq(updatedDetails);
 
-      // Refresh RFQ list
       if (supplierId) {
         const listData = await fetchRFQMasterData({
           supplierId,
@@ -1325,32 +1322,9 @@ const SupplierDashboard: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9' }}>
-      <header className="pud-header" style={{ width: '100%', zIndex: 10, position: 'relative' }}>
-        <div className="pud-header-left">
-          <div className="pud-logo">
-            <img src={SilaLogo} alt="SILA Logo" className="pud-logo-img" />
-          </div>
-        </div>
-        <div className="pud-header-spacer" />
-        <div className="pud-header-right">
-          <span className="pud-header-bell">
-            <IconBell />
-          </span>
-          <div className="pud-header-account">
-            <span className="pud-header-account-name" title={organizationName}>
-              {organizationName}
-            </span>
-            <span className="pud-header-account-verified">
-              <IconCheck /> Verified Vendor
-            </span>
-          </div>
-          <div className="pud-header-avatar">{firstLetter}</div>
-        </div>
-      </header>
+      <Header />
 
-      <div className="pud-shell" style={{ flex: 1, position: 'relative', minHeight: 'calc(100vh - 64px)' }}>
-
-
+      <div className="pud-shell">
         <aside className="pud-sidebar">
           <nav className="pud-nav" style={{ paddingTop: '40px' }}>
             {navItems.map((item) => (
@@ -1475,6 +1449,8 @@ const SupplierDashboard: React.FC = () => {
                 entityLabel="Supplier"
                 fetchProfile={getSupplierProfile}
               />
+            ) : activeNav === "invitations" ? (
+              <Invitations />
             ) : (
               <>
                 <h1 className="pud-title">Supplier Operations Command</h1>

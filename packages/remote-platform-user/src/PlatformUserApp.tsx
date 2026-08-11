@@ -10,6 +10,7 @@ import ItemMaster from './components/ItemMaster';
 import SupplierAdminDash from './components/SupplierAdminDash';
 import BuyerAdminDash from './components/BuyerAdminDash';
 import { fetchReferenceList } from './api/masterdataApi';
+import NetworkAdminProfilePage from './pages/NetworkAdminProfilePage';
 import {
   getNetworkAdminProfile,
   getNetworkAdminOnboardingDetails,
@@ -23,6 +24,8 @@ import type {
   NetworkAdminProfileResponse,
   NetworkAdminOnboardingResponse,
 } from './dto/networkAdminDto';
+import BuyerAdminProfilePage from './pages/BuyerAdminProfilePage';
+import SupplierAdminProfilePage from './pages/SupplierAdminProfilePage';
 
 const NETWORK_ADMIN_ROLES: NetworkAdminRole[] = ['BUYER_NETWORK_ADMIN', 'SUPPLIER_NETWORK_ADMIN'];
 
@@ -401,6 +404,16 @@ const PlatformUserApp: React.FC = () => {
         }
       />
       <Route
+        path="network-admin/profile"
+        element={
+          isNetworkAdmin && profileComplete === false ? (
+            <Navigate to="/platform-user/network-admin/onboarding" replace />
+          ) : (
+            <NetworkAdminProfilePage />
+          )
+        }
+      />
+      <Route
         path="network-admin/*"
         element={
           isNetworkAdmin && profileComplete === false ? (
@@ -412,7 +425,9 @@ const PlatformUserApp: React.FC = () => {
       />
 
       <Route path="buyer-admin" element={<BuyerAdminDash />} />
+      <Route path="buyer-admin/profile" element={<BuyerAdminProfilePage />} />
       <Route path="supplier-admin" element={<SupplierAdminDash />} />
+      <Route path="supplier-admin/profile" element={<SupplierAdminProfilePage />} />
 
       <Route path="itemmaster" element={<ItemMaster />} />
       <Route path="*" element={<Navigate to={defaultRoute} replace />} />
