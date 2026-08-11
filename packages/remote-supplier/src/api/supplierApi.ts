@@ -10,11 +10,13 @@ import type {
   SubmitQuotationPayload,
   CreateSupplierCatalogPayload,
   SubmitRfqAnswersPayload,
+  CurrencyListResponse,
+  SupplierCatalogListItem,
 } from '../dto/supplierDto';
 
 // re-export so existing imports elsewhere (e.g. SupplierApp.tsx) keep working
 export type { SupplierProfileResponse, RFQMasterDataItem, RFQDetailResponse, SubmitQuotationPayload } from '../dto/supplierDto';
-export type { CatalogAssetDto, CatalogDetailDto, CreateSupplierCatalogPayload, SubmitRfqAnswersPayload, RfqDocumentAssetDto } from '../dto/supplierDto';
+export type { CatalogAssetDto, CatalogDetailDto, CreateSupplierCatalogPayload, SubmitRfqAnswersPayload, RfqDocumentAssetDto, SupplierCatalogListItem } from '../dto/supplierDto';
 // ============================================================================
 // API: Create Supplier Profile (Register)
 // ============================================================================
@@ -201,7 +203,7 @@ export const submitSupplierQuotation = async (
 // ============================================================================
 export const fetchSegments = async (): Promise<any[]> => {
   try {
-    const res = await supplierInstance.get(`/api/v1/masterdata/unspsc?pageIndex=1&pageSize=10`);
+    const res = await supplierInstance.get(`/api/v1/masterdata/unspsc/segment?pageIndex=1&pageSize=10`);
     return Array.isArray(res.data) ? res.data : [];
   } catch (error: any) {
     console.error('Failed to fetch segments:', error);
@@ -234,6 +236,119 @@ export const submitRfqAnswers = async (
     const status = error.response?.status || 'unknown';
     const responseData = error.response?.data;
     const errMsg = responseData?.message || responseData?.description || 'Failed to submit RFQ answers.';
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+export const fetchCurrencies = async (payload?: {
+  index?: number;
+  limit?: number;
+}): Promise<CurrencyListResponse> => {
+  try {
+    const response = await supplierInstance.get<CurrencyListResponse>(
+      '/api/v1/masterdata/currencies',
+      {
+        params: {
+          index: payload?.index ?? 0,
+          limit: payload?.limit ?? 10,
+        },
+      }
+    );
+    return response.data ?? { items: [], totalCount: 0, index: 0, limit: 0 };
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    throw new Error(`Failed to fetch currencies (${status})`);
+  }
+};
+ 
+// Fetch Families for a selected Segment
+export const fetchFamilies = async (
+  segment: number,
+  payload?: { pageIndex?: number; pageSize?: number }
+): Promise<any[]> => {
+  try {
+    const res = await supplierInstance.get(
+      `/api/v1/masterdata/unspsc/family`,
+      {
+        params: {
+          segment,
+          pageIndex: payload?.pageIndex ?? 1,
+          pageSize: payload?.pageSize ?? 100,
+        },
+      }
+    );
+    if (Array.isArray(res.data)) {
+      return res.data.filter((item) => item && item.family !== null && item.title !== '');
+    }
+    return [];
+  } catch (error: any) {
+    console.error('Failed to fetch families:', error);
+    return [];
+  }
+};
+ 
+// Fetch Classes for a selected Family
+export const fetchClassifications = async (
+  family: number,
+  payload?: { pageIndex?: number; pageSize?: number }
+): Promise<any[]> => {
+  try {
+    const res = await supplierInstance.get(
+      `/api/v1/masterdata/unspsc/class`,
+      {
+        params: {
+          family,
+          pageIndex: payload?.pageIndex ?? 1,
+          pageSize: payload?.pageSize ?? 100,
+        },
+      }
+    );
+    if (Array.isArray(res.data)) {
+      return res.data.filter((item) => item && item.class !== null && item.title !== '');
+    }
+    return [];
+  } catch (error: any) {
+    console.error('Failed to fetch classes:', error);
+    return [];
+  }
+};
+ 
+// Fetch Commodities for a selected Class
+export const fetchCommodities = async (
+  classId: number,
+  payload?: { pageIndex?: number; pageSize?: number }
+): Promise<any[]> => {
+  try {
+    const res = await supplierInstance.get(
+      `/api/v1/masterdata/unspsc/commodity`,
+      {
+        params: {
+          class: classId,
+          pageIndex: payload?.pageIndex ?? 1,
+          pageSize: payload?.pageSize ?? 100,
+        },
+      }
+    );
+    if (Array.isArray(res.data)) {
+      return res.data.filter((item) => item && item.commodity !== null && item.title !== '');
+    }
+    return [];
+  } catch (error: any) {
+    console.error('Failed to fetch commodities:', error);
+    return [];
+  }
+};
+export const fetchSupplierCatalog = async (): Promise<SupplierCatalogListItem[]> => {
+  try {
+    const response = await supplierInstance.get<SupplierCatalogListItem[]>('/api/v1/supplier/catalog');
+    return response.data ?? [];
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg =
+      responseData?.message ||
+      responseData?.description ||
+      'Failed to fetch supplier catalog.';
     throw new Error(`${errMsg} (${status})`);
   }
 };

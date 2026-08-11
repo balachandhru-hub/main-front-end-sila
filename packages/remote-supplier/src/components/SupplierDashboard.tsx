@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import SilaLogo from "../assets/SILA_Logo.png";
 import "./SupplierDashboard.css";
 import Catalog from "./Catalog.tsx";
-import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
 import { CompanyProfile } from '@vosox/shared-ui';
 import {
   logoutSupplier,
@@ -18,6 +17,7 @@ import {
   type RfqDocumentAssetDto
 } from "../api/supplierApi";
 import { useNavigate, useLocation } from "react-router-dom";
+
 interface StatCard {
   icon: React.ReactNode;
   label: string;
@@ -51,8 +51,6 @@ interface MatchCard {
   categoryNote: string;
   destinationNote: string;
 }
-
-
 
 const IconMail = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -186,15 +184,6 @@ const LogoutIcon = () => (
   </svg>
 );
 
-// <-- ADDED: Template icon for sidebar
-const NavIconTemplate = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <path d="M3 9h18" />
-    <path d="M9 3v18" />
-  </svg>
-);
-
 const IconCheck = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 6 9 17l-5-5" />
@@ -296,7 +285,6 @@ const navItemsAfterCatalog = [
   { icon: <NavIconPayment />, label: "Payments" },
   { icon: <NavIconMessage />, label: "Messages" },
   { icon: <NavIconBuilding />, label: "Company Profile" },
-  { icon: <NavIconTemplate />, label: "Template" }, // <-- ADDED Template nav item
   { icon: <NavIconSettings />, label: "Settings" },
 ];
 
@@ -392,9 +380,8 @@ const SupplierDashboard: React.FC = () => {
     sessionStorage.getItem("vosox_organization_name") || "Apex Office & Technology Supp...";
   const firstLetter = organizationName.trim().charAt(0).toUpperCase();
 
-  const [activeView, setActiveView] = useState<"dashboard" | "catalogList" | "template" | "companyProfile">("dashboard");
+  const [activeView, setActiveView] = useState<"dashboard" | "catalogList" | "companyProfile">("dashboard");
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
-  // Sidebar toggle removed; sidebar always open.
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -463,7 +450,6 @@ const SupplierDashboard: React.FC = () => {
       setRfqsError(null);
 
       try {
-        //const ix = supplierId || sessionStorage.getItem("vosox_supplier_id") || "";
         const initialLimit = RFQ_INITIAL_VISIBLE;
         const data = await fetchRFQMasterData({
           supplierId,
@@ -495,13 +481,11 @@ const SupplierDashboard: React.FC = () => {
   const handleViewMoreRfqs = async () => {
     if (loadingMoreRfqs) return;
 
-    // If we already have more fetched than we're showing, just reveal more locally.
     if (visibleRfqCount < rfqs.length) {
       setVisibleRfqCount((v) => Math.min(v + RFQ_PAGE_SIZE, rfqs.length));
       return;
     }
 
-    // Otherwise, fetch the next page from the server.
     if (!supplierId || !hasMoreRfqs) return;
 
     setLoadingMoreRfqs(true);
@@ -866,8 +850,6 @@ const SupplierDashboard: React.FC = () => {
       </header>
 
       <div className="pud-shell" style={{ flex: 1, position: 'relative', minHeight: 'calc(100vh - 64px)' }}>
-
-
         <aside className="pud-sidebar">
           <nav className="pud-nav" style={{ paddingTop: '40px' }}>
             {navItemsBeforeCatalog.map((item) => {
@@ -889,21 +871,19 @@ const SupplierDashboard: React.FC = () => {
             })}
 
             <Catalog
+              isAdmin={false}
               onShowCatalogList={() => setActiveView("catalogList")}
               onCloseCatalogList={() => setActiveView("dashboard")}
               fullViewContainer={activeView === "catalogList" ? catalogViewContainer : null}
             />
 
             {navItemsAfterCatalog.map((item) => {
-              const isActive =
-                (item.label === "Template" && activeView === "template") ||
-                (item.label === "Company Profile" && activeView === "companyProfile");
+              const isActive = item.label === "Company Profile" && activeView === "companyProfile";
               return (
                 <div
                   key={item.label}
                   className={`pud-nav-item${isActive ? " pud-nav-item-active" : ""}`}
                   onClick={() => {
-                    if (item.label === "Template") setActiveView("template");
                     if (item.label === "Company Profile") setActiveView("companyProfile");
                   }}
                 >
@@ -935,9 +915,7 @@ const SupplierDashboard: React.FC = () => {
 
         <div className="pud-main">
           <main className="pud-content">
-            {activeView === "template" ? (
-              <UserTemplate />
-            ) : activeView === "catalogList" ? (
+            {activeView === "catalogList" ? (
               <div ref={setCatalogViewContainer} />
             ) : activeView === "companyProfile" ? (
               <CompanyProfile
@@ -1363,7 +1341,7 @@ const SupplierDashboard: React.FC = () => {
                                       <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
                                         Code: {item.materialCode || "N/A"}
                                       </div>
-                                    </td>
+                                    </td> 
                                     <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>
                                       {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
                                     </td>

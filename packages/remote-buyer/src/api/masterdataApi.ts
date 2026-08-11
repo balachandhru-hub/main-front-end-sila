@@ -17,7 +17,7 @@ export interface SelectedSubProduct {
 }
 
 export async function fetchSegments(): Promise<any[]> {
-    const res = await axiosInstance.get(`/api/v1/masterdata/unspsc?pageIndex=1&pageSize=10`);
+    const res = await axiosInstance.get(`/api/v1/masterdata/unspsc/segment?pageIndex=1&pageSize=10`);
     return Array.isArray(res.data) ? res.data : [];
 }
 
@@ -115,3 +115,82 @@ export async function getCurrencies(
     const res = await axiosInstance.get(`/api/v1/masterdata/currencies`, { params });
     return res.data;
 }
+
+// Fetch Families for a selected Segment
+export const fetchFamilies = async (
+  segment: number,
+  payload?: { pageIndex?: number; pageSize?: number }
+): Promise<any[]> => {
+  try {
+    const res = await axiosInstance.get(
+      `/api/v1/masterdata/unspsc/family`,
+      {
+        params: {
+          segment,
+          pageIndex: payload?.pageIndex ?? 1,
+          pageSize: payload?.pageSize ?? 100,
+        },
+      }
+    );
+    if (Array.isArray(res.data)) {
+      return res.data.filter((item) => item && item.family !== null && item.title !== '');
+    }
+    return [];
+  } catch (error: any) {
+    console.error('Failed to fetch families:', error);
+    return [];
+  }
+};
+ 
+// Fetch Classes for a selected Family
+export const fetchClassifications = async (
+  family: number,
+  payload?: { pageIndex?: number; pageSize?: number }
+): Promise<any[]> => {
+  try {
+    const res = await axiosInstance.get(
+      `/api/v1/masterdata/unspsc/class`,
+      {
+        params: {
+          family,
+          pageIndex: payload?.pageIndex ?? 1,
+          pageSize: payload?.pageSize ?? 100,
+        },
+      }
+    );
+    if (Array.isArray(res.data)) {
+      return res.data.filter((item) => item && item.class !== null && item.title !== '');
+    }
+    return [];
+  } catch (error: any) {
+    console.error('Failed to fetch classes:', error);
+    return [];
+  }
+};
+ 
+// Fetch Commodities for a selected Class
+export const fetchCommodities = async (
+  classId: number,
+  payload?: { pageIndex?: number; pageSize?: number }
+): Promise<any[]> => {
+  try {
+    const res = await axiosInstance.get(
+      `/api/v1/masterdata/unspsc/commodity`,
+      {
+        params: {
+          class: classId,
+          pageIndex: payload?.pageIndex ?? 1,
+          pageSize: payload?.pageSize ?? 100,
+        },
+      }
+    );
+    if (Array.isArray(res.data)) {
+      return res.data.filter((item) => item && item.commodity !== null && item.title !== '');
+    }
+    return [];
+  } catch (error: any) {
+    console.error('Failed to fetch commodities:', error);
+    return [];
+  }
+};
+ 

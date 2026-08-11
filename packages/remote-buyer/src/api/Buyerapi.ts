@@ -8,6 +8,28 @@ import type {
 } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
 
+export interface BuyerCatalogResponse {
+  supplierId: string;
+  catalogId: string;
+  supplierName: string;
+  catalogName: string;
+  description: string;
+  price: number;
+  currency: string;
+  unitOfMeasure: string;
+  segment: number;
+  segmentTitle: string;
+  family: number;
+  familyTitle: string;
+  commodity: number;
+  commodityTitle: string;
+  class: number;
+  classTitle: string;
+  catalogType: string;
+  isPunchOut: boolean;
+  punchOutUrl: string;
+  hasCatalog: boolean;
+}
 
 export interface BuyerProfileResponse {
   id: string;
@@ -449,5 +471,38 @@ export const fetchBuyerRFQById = async (rfqId: string): Promise<BuyerRFQDetailRe
       throw new Error(data?.message || data?.description || `Failed to fetch RFQ details (${error.response.status}).`);
     }
     throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+export const fetchBuyerCatalog = async (payload: {
+  segment?: number;
+  family?: number;
+  class?: number;
+  commodity?: number;
+  search?: string;
+  index?: number;
+  limit?: number;
+}): Promise<BuyerCatalogResponse[]> => {
+  try {
+    const response = await axiosInstance.get<BuyerCatalogResponse[]>(
+      '/api/v1/supplier/buyer-catalog',
+      {
+        params: {
+          segment: payload.segment || undefined,
+          family: payload.family || undefined,
+          class: payload.class || undefined,
+          commodity: payload.commodity || undefined,
+          search: payload.search || undefined,
+          index: payload.index ?? 0,
+          limit: payload.limit ?? 20,
+        },
+      }
+    );
+    return response.data ?? [];
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to fetch buyer catalog.';
+    throw new Error(`${errMsg} (${status})`);
   }
 };

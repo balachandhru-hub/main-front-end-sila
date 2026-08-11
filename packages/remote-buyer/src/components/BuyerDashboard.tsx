@@ -5,6 +5,7 @@ import Product from "./Product.tsx";
 import Header from "./Header";
 import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById } from "../api/Buyerapi";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx"; 
+import Invitations from "../../../remote-supplier/src/components/Invitations";
 import {CompanyProfile} from '@vosox/shared-ui';
 
 /* ---------------------------------- Icons ---------------------------------- */
@@ -260,6 +261,7 @@ const NavIconBarChart = () => (
 
 const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
+  { key: "invitations", icon: <IconMail />, label: "Invitations", badge: 2 },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
   { key: "activeRFQs", icon: <NavIconFile />, label: "Active RFQs", badge: 2 },
   { key: "evaluateQuotations", icon: <NavIconFileCheck />, label: "Evaluate Quotations", badge: 2 },
@@ -517,6 +519,18 @@ const BuyersDashboard: React.FC = () => {
     }
   };
 
+  const renderNavItem = (item: { key: string; icon: React.ReactNode; label: string; badge?: number }) => (
+    <div
+      key={item.key}
+      className={`pud-nav-item${activeNav === item.key ? " pud-nav-item-active" : ""}`}
+      onClick={() => setActiveNav(item.key)}
+    >
+      <span className="pud-nav-icon">{item.icon}</span>
+      <span className="pud-nav-label">{item.label}</span>
+      {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
+    </div>
+  );
+
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
       {/* ---------------- Header ---------------- */}
@@ -531,17 +545,8 @@ const BuyersDashboard: React.FC = () => {
 
         <aside className="pud-sidebar">
           <nav className="pud-nav" style={{ paddingTop: "40px" }}>
-            {navItems.map((item) => (
-              <div
-                key={item.key}
-                className={`pud-nav-item${activeNav === item.key ? " pud-nav-item-active" : ""}`}
-                onClick={() => setActiveNav(item.key)}
-              >
-                <span className="pud-nav-icon">{item.icon}</span>
-                <span className="pud-nav-label">{item.label}</span>
-                {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
-              </div>
-            ))}
+            {navItems.map(renderNavItem)}
+
             <div
               className="pud-nav-item pud-nav-item-logout"
               style={{
@@ -569,7 +574,9 @@ const BuyersDashboard: React.FC = () => {
               <CreateRFQ />
             ) : activeNav === "product" ? (
               <Product />
-            ) : activeNav === "template" ? ( // <-- ADDED: Template route handler
+            ) : activeNav === "invitations" ? (
+              <Invitations />
+            ): activeNav === "template" ? ( // <-- ADDED: Template route handler
               <UserTemplate />
             ) : activeNav === "companyProfile" ? (
               <CompanyProfile

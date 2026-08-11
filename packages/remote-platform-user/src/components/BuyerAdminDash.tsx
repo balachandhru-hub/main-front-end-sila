@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import "./BuyerAdminDash.css";
 import Header from "../../../remote-buyer/src/components/Header";
+import Product from "../../../remote-buyer/src/components/Product";
 import UserAdmin from "../UserAdmin";
+import Invitations from "../../../remote-supplier/src/components/Invitations";
 import UserTemplate from "./usertemplate";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import { useNetworkAdminAuthStore } from "../store/useAuthStore";
-import { fetchBuyerRFQs, fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
+import { getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
 import CreateRFQ from "./UserListTable/CreateRFQ";
 
 interface StatCard {
@@ -132,6 +134,14 @@ const NavIconTemplate = () => (
   </svg>
 );
 
+const NavIconFileCheck = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <path d="M14 2v6h6" />
+    <path d="m9 15 2 2 4-4" />
+  </svg>
+);
+
 const LogoutIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -224,8 +234,10 @@ const NavIconFilePlus = () => (
 
 const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
+  { key: "invitations", icon: <IconMail />, label: "Invitations", badge: 2 },
   { key: "activeRFQs", icon: <IconFile />, label: "Active RFQs" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
+  { key: "product", icon: <NavIconFileCheck />, label: "Product" },
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
   { key: "template", icon: <NavIconTemplate />, label: "Template" },
   { key: "purchaseOrders", icon: <IconBag />, label: "Purchase Orders" },
@@ -350,7 +362,7 @@ const BuyerAdminDash: React.FC = () => {
   const RFQ_INITIAL_VISIBLE = 3;
   const RFQ_PAGE_SIZE = 5;
 
-  const [buyerId] = useState<string | null>(
+  const [buyerId, setBuyerId] = useState<string | null>(
     sessionStorage.getItem("vosox_buyer_id")
   );
 
@@ -362,6 +374,26 @@ const BuyerAdminDash: React.FC = () => {
   useEffect(() => {
     useNetworkAdminAuthStore.getState().initializeFromSession();
   }, []);
+
+  useEffect(() => {
+    const loadBuyerProfile = async () => {
+      if (!buyerId) {
+        try {
+          const profile = await getBuyerProfile();
+          if (profile?.id) {
+            sessionStorage.setItem("vosox_buyer_id", profile.id);
+            setBuyerId(profile.id);
+          } else {
+            setRfqsError("Buyer profile not found. Please complete onboarding.");
+          }
+        } catch (err: any) {
+          console.error("Failed to load buyer profile", err);
+          setRfqsError("Failed to load buyer profile details.");
+        }
+      }
+    };
+    loadBuyerProfile();
+  }, [buyerId]);
 
   useEffect(() => {
     const loadRfqs = async () => {
@@ -457,6 +489,18 @@ const BuyerAdminDash: React.FC = () => {
     }
   };
 
+  const renderNavItem = (item: { key: string; icon: React.ReactNode; label: string; badge?: number }) => (
+    <div
+      key={item.key}
+      className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
+      onClick={() => setActiveNav(item.key)}
+    >
+      <span className="bad-nav-icon">{item.icon}</span>
+      <span className="bad-nav-label">{item.label}</span>
+      {item.badge && <span className="bad-nav-badge">{item.badge}</span>}
+    </div>
+  );
+
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
       <Header />
@@ -467,17 +511,8 @@ const BuyerAdminDash: React.FC = () => {
       >
         <aside className="bad-sidebar">
           <nav className="bad-nav" style={{ paddingTop: "40px" }}>
-            {navItems.map((item) => (
-              <div
-                key={item.key}
-                className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
-                onClick={() => setActiveNav(item.key)}
-              >
-                <span className="bad-nav-icon">{item.icon}</span>
-                <span className="bad-nav-label">{item.label}</span>
-                {item.badge && <span className="bad-nav-badge">{item.badge}</span>}
-              </div>
-            ))}
+            {navItems.map(renderNavItem)}
+
             <div
               className="bad-nav-item bad-nav-item-logout"
               style={{
@@ -505,10 +540,14 @@ const BuyerAdminDash: React.FC = () => {
               <UserAdmin />
             ) : activeNav === "template" ? (
               <UserTemplate />
-            ) : activeNav === "companyProfile" ? (
+            )  : activeNav === "invitations" ? (
+  <Invitations />
+): activeNav === "companyProfile" ? (
               <CompanyProfile mode="network-admin" showHeader={false} />
             ) : activeNav === "createRFQ" ? (
               <CreateRFQ />
+            ) : activeNav === "product" ? (
+              <Product />
             ) : (
               <>
                 <h1 className="bad-title">Buyer Admin Command Center</h1>
