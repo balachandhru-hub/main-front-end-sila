@@ -387,7 +387,6 @@ const BuyerAdminDash: React.FC = () => {
             setRfqsError("Buyer profile not found. Please complete onboarding.");
           }
         } catch (err: any) {
-          console.error("Failed to load buyer profile", err);
           setRfqsError("Failed to load buyer profile details.");
         }
       }
@@ -421,7 +420,6 @@ const BuyerAdminDash: React.FC = () => {
           setHasMoreRfqs(false);
         }
       } catch (err: any) {
-        console.error("Failed to load RFQs", err);
         setRfqsError(err.message || "Failed to load sourcing opportunities.");
       } finally {
         setLoadingRfqs(false);
@@ -451,7 +449,6 @@ const BuyerAdminDash: React.FC = () => {
       setVisibleRfqCount((v) => v + nextPage.length);
       setHasMoreRfqs(nextPage.length === RFQ_PAGE_SIZE);
     } catch (err: any) {
-      console.error("Failed to load more RFQs", err);
       setRfqsError(err.message || "Failed to load more sourcing opportunities.");
     } finally {
       setLoadingMoreRfqs(false);
@@ -466,7 +463,6 @@ const BuyerAdminDash: React.FC = () => {
       const details = await fetchBuyerRFQById(rfqId);
       setSelectedRfq(details);
     } catch (err: any) {
-      console.error("Failed to load RFQ details from API", err);
       setRfqDetailsError(err.message || "Failed to fetch details.");
       const found = rfqs.find((r) => r.rfqId === rfqId) || null;
       setSelectedRfq(found);

@@ -432,7 +432,7 @@ const SupplierDashboard: React.FC = () => {
             setLoadingRfqs(false);
           }
         } catch (err: any) {
-          console.error("Failed to load supplier profile", err);
+          
           setRfqsError("Failed to load supplier profile details.");
           setLoadingRfqs(false);
         }
@@ -460,7 +460,7 @@ const SupplierDashboard: React.FC = () => {
         setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
         setHasMoreRfqs(data.length === initialLimit);
       } catch (err: any) {
-        console.error("Failed to load RFQs", err);
+       
         setRfqsError(err.message || "Failed to load sourcing opportunities.");
       } finally {
         setLoadingRfqs(false);
@@ -499,7 +499,7 @@ const SupplierDashboard: React.FC = () => {
       setVisibleRfqCount((v) => v + nextPage.length);
       setHasMoreRfqs(nextPage.length === RFQ_PAGE_SIZE);
     } catch (err: any) {
-      console.error("Failed to load more RFQs", err);
+      
       setRfqsError(err.message || "Failed to load more sourcing opportunities.");
     } finally {
       setLoadingMoreRfqs(false);
@@ -515,7 +515,7 @@ const SupplierDashboard: React.FC = () => {
       const data = await fetchRFQById(rfqId);
       setSelectedRfq(data);
     } catch (err: any) {
-      console.error("Failed to fetch RFQ details", err);
+     
       setRfqDetailError(err.message || "Failed to load RFQ details.");
     } finally {
       setLoadingRfqDetail(false);
@@ -744,7 +744,7 @@ const SupplierDashboard: React.FC = () => {
       await submitRfqAnswers(payload);
       setSubmitAnswersSuccess(true);
     } catch (err: any) {
-      console.error("Failed to submit RFQ answers", err);
+     
       setSubmitAnswersError(err.message || "Failed to submit answers.");
     } finally {
       setSubmittingAnswers(false);
@@ -802,7 +802,7 @@ const SupplierDashboard: React.FC = () => {
         setRfqs(listData);
       }
     } catch (err: any) {
-      console.error("Failed to submit quotation", err);
+    
       setSubmitQuoteError(err.message || "Failed to submit quotation.");
     } finally {
       setSubmittingQuote(false);

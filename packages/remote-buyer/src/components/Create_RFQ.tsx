@@ -231,7 +231,7 @@ function usePaginatedSearchSelect<T>(
                     setPageIndex(0);
                     setHasMore(items.length === limit);
                 } catch (err) {
-                    console.error("Failed to fetch options", err);
+                
                     setOptions([]);
                     setHasMore(false);
                 } finally {
@@ -254,7 +254,7 @@ function usePaginatedSearchSelect<T>(
             setPageIndex(nextIndex);
             setHasMore(items.length === limit);
         } catch (err) {
-            console.error("Failed to fetch more options", err);
+            
         } finally {
             setLoading(false);
         }
@@ -403,7 +403,7 @@ const CreateRFQ: React.FC = () => {
                     setMaterialCodeOptions(Array.isArray(itemData) ? itemData : []);
                 }
             } catch (err) {
-                console.error("Failed to fetch initial data", err);
+            
             }
         };
         fetchInitialData();
@@ -422,7 +422,7 @@ const CreateRFQ: React.FC = () => {
                 const data = res?.data?.data || res?.data || res || [];
                 setCostCenterOptions(Array.isArray(data) ? data : []);
             } catch (err) {
-                console.error("Failed to fetch cost centers", err);
+            
             }
         };
         fetchCostCenters();
@@ -468,7 +468,7 @@ const CreateRFQ: React.FC = () => {
                 const data = await getUnspscSegments(1, 200);
                 setSegmentOptions(data);
             } catch (err) {
-                console.error("Failed to fetch UNSPSC segments", err);
+              
             }
         };
         fetchSegments();
@@ -484,7 +484,6 @@ const CreateRFQ: React.FC = () => {
                 const data = await getUnspscFamilies(Number(segmentCode), 1, 200);
                 setFamilyOptions(data);
             } catch (err) {
-                console.error("Failed to fetch UNSPSC families", err);
             }
         };
         fetchFamilies();
@@ -565,7 +564,6 @@ const CreateRFQ: React.FC = () => {
                 );
                 setFieldTypeOptions(filtered);
             } catch (err) {
-                console.error("Failed to fetch question types", err);
             }
         };
         loadFieldTypes();

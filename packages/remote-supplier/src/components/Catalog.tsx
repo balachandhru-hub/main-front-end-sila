@@ -239,7 +239,7 @@ const Catalog: React.FC<CatalogProps> = ({
             const data = await fetchSupplierCatalog();
             setCatalogList(data);
         } catch (error: any) {
-            console.error("Failed to load supplier catalog", error);
+        
             setCatalogListError(error?.message || "Failed to load catalogs. Please try again.");
         } finally {
             setLoadingCatalogList(false);
@@ -287,7 +287,7 @@ const Catalog: React.FC<CatalogProps> = ({
             const result = await fetchCurrencies({ index: 0, limit: 100 });
             setCurrencyOptions(result.items || []);
         } catch (error) {
-            console.error("Failed to load currencies", error);
+            
         } finally {
             setLoadingCurrencies(false);
         }
@@ -301,7 +301,7 @@ const Catalog: React.FC<CatalogProps> = ({
             const segments = await fetchSegments();
             setSegmentOptions(segments);
         } catch (error) {
-            console.error("Failed to load segments", error);
+          
         } finally {
             setLoadingSegments(false);
         }
@@ -333,7 +333,7 @@ const Catalog: React.FC<CatalogProps> = ({
                 const families = await fetchFamilies(segmentNum);
                 setFamilyOptions(families);
             } catch (error) {
-                console.error("Failed to load families", error);
+              
             } finally {
                 setLoadingFamilies(false);
             }
@@ -363,7 +363,7 @@ const Catalog: React.FC<CatalogProps> = ({
                 const classes = await fetchClassifications(familyNum);
                 setClassOptions(classes);
             } catch (error) {
-                console.error("Failed to load classes", error);
+              
             } finally {
                 setLoadingClasses(false);
             }
@@ -390,7 +390,7 @@ const Catalog: React.FC<CatalogProps> = ({
                 const commodities = await fetchCommodities(classNum);
                 setCommodityOptions(commodities);
             } catch (error) {
-                console.error("Failed to load commodities", error);
+             
             } finally {
                 setLoadingCommodities(false);
             }

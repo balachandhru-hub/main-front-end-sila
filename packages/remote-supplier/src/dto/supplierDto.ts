@@ -379,3 +379,8 @@ export interface SubmitRfqAnswersPayload {
   supplierRFQId: string;
   answers: SubmitRfqAnswerItemDto[];
 }
+export interface ErrorResponseDto {
+  status_code: number;
+  message: string;
+  description: string;
+}

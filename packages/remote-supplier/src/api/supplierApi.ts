@@ -12,11 +12,26 @@ import type {
   SubmitRfqAnswersPayload,
   CurrencyListResponse,
   SupplierCatalogListItem,
+  ErrorResponseDto,
 } from '../dto/supplierDto';
 
 // re-export so existing imports elsewhere (e.g. SupplierApp.tsx) keep working
 export type { SupplierProfileResponse, RFQMasterDataItem, RFQDetailResponse, SubmitQuotationPayload } from '../dto/supplierDto';
 export type { CatalogAssetDto, CatalogDetailDto, CreateSupplierCatalogPayload, SubmitRfqAnswersPayload, RfqDocumentAssetDto, SupplierCatalogListItem } from '../dto/supplierDto';
+export type { ErrorResponseDto } from '../dto/supplierDto';
+
+// ============================================================================
+// HELPER: Extract Error Response
+// ============================================================================
+const extractErrorResponse = (error: any): ErrorResponseDto => {
+  const responseData = error.response?.data;
+  return {
+    status_code: error.response?.status || 500,
+    message: responseData?.message || 'An error occurred',
+    description: responseData?.description || responseData?.message || 'An error occurred',
+  };
+};
+
 // ============================================================================
 // API: Create Supplier Profile (Register)
 // ============================================================================
@@ -27,13 +42,7 @@ export const createSupplierProfile = async (
     const response = await supplierInstance.post('/api/v1/supplier/register', payload);
     return response;
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    const responseData = error.response?.data;
-    let errMsg = 'Failed to submit supplier profile.';
-    if (responseData) {
-      errMsg = responseData.message || responseData.description || errMsg;
-    }
-    throw new Error(`${errMsg} (${status})`);
+    throw extractErrorResponse(error);
   }
 };
 
@@ -47,16 +56,9 @@ export const createSupplierCatalog = async (
     const response = await supplierInstance.post('/api/v1/supplier/catalog', payload);
     return response.data;
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    const responseData = error.response?.data;
-    const errMsg =
-      responseData?.message ||
-      responseData?.description ||
-      'Failed to create supplier catalog.';
-    throw new Error(`${errMsg} (${status})`);
+    throw extractErrorResponse(error);
   }
 };
-
 
 // ============================================================================
 // API: Update Rejected Supplier (resubmission after REJECTED status)
@@ -71,13 +73,7 @@ export const updateRejectedSupplier = async (
     );
     return response.data;
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    const responseData = error.response?.data;
-    const errMsg =
-      responseData?.message ||
-      responseData?.description ||
-      'Failed to update rejected supplier profile.';
-    throw new Error(`${errMsg} (${status})`);
+    throw extractErrorResponse(error);
   }
 };
 
@@ -89,8 +85,7 @@ export const fetchOnboardingDetails = async (): Promise<any> => {
     const response = await supplierInstance.get('/api/v1/identity/onboarding');
     return response.data;
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    throw new Error(`Failed to fetch onboarding details (${status})`);
+    throw extractErrorResponse(error);
   }
 };
 
@@ -107,8 +102,7 @@ export const fetchMetadataReferenceList = async (
     );
     return response.data ?? [];
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    throw new Error(`Failed to fetch metadata reference list (${status})`);
+    throw extractErrorResponse(error);
   }
 };
 
@@ -131,7 +125,7 @@ export const getSupplierProfile = async (): Promise<SupplierProfileResponse | nu
     if (error?.response?.status === 204) {
       return null;
     }
-    throw error;
+    throw extractErrorResponse(error);
   }
 };
 
@@ -142,10 +136,7 @@ export const logoutSupplier = async (): Promise<void> => {
   try {
     await supplierInstance.put('/api/v1/identity/auth/logout');
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    const responseData = error.response?.data;
-    const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
-    throw new Error(`${errMsg} (${status})`);
+    throw extractErrorResponse(error);
   }
 };
 
@@ -161,8 +152,7 @@ export const fetchRFQMasterData = async (payload: {
     const response = await supplierInstance.post('/api/v1/supplier/rfq-master-data', payload);
     return response.data ?? [];
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    throw new Error(`Failed to fetch RFQ master data (${status})`);
+    throw extractErrorResponse(error);
   }
 };
 
@@ -176,8 +166,7 @@ export const fetchRFQById = async (rfqId: string): Promise<RFQDetailResponse> =>
     });
     return response.data;
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    throw new Error(`Failed to fetch RFQ details (${status})`);
+    throw extractErrorResponse(error);
   }
 };
 
@@ -191,10 +180,7 @@ export const submitSupplierQuotation = async (
     const response = await supplierInstance.put('/api/v1/supplier/quotation', payload);
     return response.data;
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    const responseData = error.response?.data;
-    const errMsg = responseData?.message || responseData?.description || 'Failed to submit quotation.';
-    throw new Error(`${errMsg} (${status})`);
+    throw extractErrorResponse(error);
   }
 };
 
@@ -206,8 +192,7 @@ export const fetchSegments = async (): Promise<any[]> => {
     const res = await supplierInstance.get(`/api/v1/masterdata/unspsc/segment?pageIndex=1&pageSize=10`);
     return Array.isArray(res.data) ? res.data : [];
   } catch (error: any) {
-    console.error('Failed to fetch segments:', error);
-    return [];
+    throw extractErrorResponse(error);
   }
 };
 
@@ -221,11 +206,13 @@ export const fetchClasses = async (segment: number, family: number): Promise<any
     }
     return [];
   } catch (error: any) {
-    console.error('Failed to fetch classes:', error);
-    return [];
+    throw extractErrorResponse(error);
   }
 };
 
+// ============================================================================
+// API: Submit RFQ Answers
+// ============================================================================
 export const submitRfqAnswers = async (
   payload: SubmitRfqAnswersPayload
 ): Promise<any> => {
@@ -233,13 +220,13 @@ export const submitRfqAnswers = async (
     const response = await supplierInstance.put('/api/v1/supplier/rfq-answer', payload);
     return response.data;
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    const responseData = error.response?.data;
-    const errMsg = responseData?.message || responseData?.description || 'Failed to submit RFQ answers.';
-    throw new Error(`${errMsg} (${status})`);
+    throw extractErrorResponse(error);
   }
 };
 
+// ============================================================================
+// API: Fetch Currencies
+// ============================================================================
 export const fetchCurrencies = async (payload?: {
   index?: number;
   limit?: number;
@@ -256,12 +243,13 @@ export const fetchCurrencies = async (payload?: {
     );
     return response.data ?? { items: [], totalCount: 0, index: 0, limit: 0 };
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    throw new Error(`Failed to fetch currencies (${status})`);
+    throw extractErrorResponse(error);
   }
 };
- 
-// Fetch Families for a selected Segment
+
+// ============================================================================
+// API: Fetch Families for a selected Segment
+// ============================================================================
 export const fetchFamilies = async (
   segment: number,
   payload?: { pageIndex?: number; pageSize?: number }
@@ -282,12 +270,13 @@ export const fetchFamilies = async (
     }
     return [];
   } catch (error: any) {
-    console.error('Failed to fetch families:', error);
-    return [];
+    throw extractErrorResponse(error);
   }
 };
- 
-// Fetch Classes for a selected Family
+
+// ============================================================================
+// API: Fetch Classes for a selected Family
+// ============================================================================
 export const fetchClassifications = async (
   family: number,
   payload?: { pageIndex?: number; pageSize?: number }
@@ -308,12 +297,13 @@ export const fetchClassifications = async (
     }
     return [];
   } catch (error: any) {
-    console.error('Failed to fetch classes:', error);
-    return [];
+    throw extractErrorResponse(error);
   }
 };
- 
-// Fetch Commodities for a selected Class
+
+// ============================================================================
+// API: Fetch Commodities for a selected Class
+// ============================================================================
 export const fetchCommodities = async (
   classId: number,
   payload?: { pageIndex?: number; pageSize?: number }
@@ -334,21 +324,18 @@ export const fetchCommodities = async (
     }
     return [];
   } catch (error: any) {
-    console.error('Failed to fetch commodities:', error);
-    return [];
+    throw extractErrorResponse(error);
   }
 };
+
+// ============================================================================
+// API: Fetch Supplier Catalog
+// ============================================================================
 export const fetchSupplierCatalog = async (): Promise<SupplierCatalogListItem[]> => {
   try {
     const response = await supplierInstance.get<SupplierCatalogListItem[]>('/api/v1/supplier/catalog');
     return response.data ?? [];
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    const responseData = error.response?.data;
-    const errMsg =
-      responseData?.message ||
-      responseData?.description ||
-      'Failed to fetch supplier catalog.';
-    throw new Error(`${errMsg} (${status})`);
+    throw extractErrorResponse(error);
   }
 };
