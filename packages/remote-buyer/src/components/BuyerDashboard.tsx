@@ -412,8 +412,8 @@ const BuyersDashboard: React.FC = () => {
     loadBuyerProfile();
   }, [buyerId]);
 
-  const [loadingRfqDetails, setLoadingRfqDetails] = useState<boolean>(false);
-  const [rfqDetailsError, setRfqDetailsError] = useState<string | null>(null);
+  // const [loadingRfqDetails, setLoadingRfqDetails] = useState<boolean>(false);
+  // const [rfqDetailsError, setRfqDetailsError] = useState<string | null>(null);
   const hasLoadedRfqsRef = useRef(false);
 
   useEffect(() => {
@@ -433,7 +433,7 @@ const BuyersDashboard: React.FC = () => {
         if (result.length > 0) {
           setRfqs(result);
           setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, result.length));
-          setHasMoreRfqs(result.length === RFQ_INITIAL_VISIBLE);
+          // setHasMoreRfqs(result.length === RFQ_INITIAL_VISIBLE);
         } else {
           setRfqs(mockRfqs);
           setVisibleRfqCount(mockRfqs.length);
@@ -441,7 +441,7 @@ const BuyersDashboard: React.FC = () => {
       } else if (result && typeof result === 'object' && 'statusCode' in result) {
         setRfqs(mockRfqs);
         setVisibleRfqCount(mockRfqs.length);
-        setHasMoreRfqs(false);
+        // setHasMoreRfqs(false);
       }
       setLoadingRfqs(false);
     };
@@ -481,7 +481,7 @@ const BuyersDashboard: React.FC = () => {
       setLoadingAllRfqs(false);
       setAllRfqsLoaded(true);
     }
-    setLoadingMoreRfqs(false);
+    // setLoadingMoreRfqs(false);
   };
 
   const handleBackToDashboard = () => {
@@ -506,7 +506,7 @@ const BuyersDashboard: React.FC = () => {
     } finally {
       setLoadingFullPageRfq(false);
     }
-    setLoadingRfqDetails(false);
+    // setLoadingRfqDetails(false);
   };
 
   const handleBackToAllRfqs = () => {
