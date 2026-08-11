@@ -13,8 +13,26 @@ import type {
   NetworkAdminSupplierRegistrationPayload,
   NetworkAdminUpdateRejectedSupplierPayload,
 } from '../dto/networkAdminDto';
+import type { ErrorResponseDto } from "@vosox/shared-ui";
+import { isErrorResponse } from "@vosox/shared-ui";
 
 export type NetworkAdminRole = 'BUYER_NETWORK_ADMIN' | 'SUPPLIER_NETWORK_ADMIN';
+
+export interface PersonDetailDto {
+  personId: string;
+  userId: string;
+  organizationId: string;
+  name: string;
+  email: string;
+  phone: string;
+  userName: string;
+  addressLine: string;
+  country: string;
+  roleId: string;
+  roleName: string;
+  organizationName: string;
+  organizationEmail: string;
+}
 
 export const getOrganizationUsers = async (organizationId: string): Promise<User[]> => {
   try {
@@ -120,6 +138,8 @@ export const logoutNetworkAdmin = async (): Promise<void> => {
     const responseData = error.response?.data;
     const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
     throw new Error(`${errMsg} (${status})`);
+  } finally {
+    invalidatePersonDetailCache();
   }
 };
 
@@ -226,4 +246,98 @@ export const updateRejectedNetworkAdminSupplier = async (
       'Failed to update rejected supplier profile';
     throw new Error(errorMsg);
   }
+};
+
+
+export const getPersonDetail = async (): Promise<PersonDetailDto | ErrorResponseDto> => {
+  try {
+    const response = await platformInstance.get<PersonDetailDto>(
+      '/api/v1/identity/person-detail'
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch person details',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching person details.',
+    };
+  }
+};
+
+
+export const updatePersonDetail = async (
+  data: Partial<PersonDetailDto>
+): Promise<PersonDetailDto | ErrorResponseDto> => {
+  try {
+    const response = await platformInstance.put<PersonDetailDto>(
+      '/api/v1/identity/person-detail',
+      data
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to update person details',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while updating person details.',
+    };
+  }
+};
+
+
+let personDetailCache: PersonDetailDto | null = null;
+let personDetailInFlight: Promise<PersonDetailDto | ErrorResponseDto> | null = null;
+
+export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorResponseDto> => {
+  if (personDetailCache) return personDetailCache;
+  if (personDetailInFlight) return personDetailInFlight;
+
+  personDetailInFlight = getPersonDetail().then((result) => {
+    if (!isErrorResponse(result)) {
+      personDetailCache = result;
+    }
+    personDetailInFlight = null;
+    return result;
+  });
+
+  return personDetailInFlight;
+};
+
+export const invalidatePersonDetailCache = () => {
+  personDetailCache = null;
 };

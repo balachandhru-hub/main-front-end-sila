@@ -5,6 +5,7 @@ import type {
   PaginationParamsDto,
   AssetDownloadResponseDto,
 } from '../dto/platformDto';
+import { invalidatePersonDetailCache } from './networkAdminApi';
 export interface CreateDepartmentRequestDto {
   organizationId: string;
   department: string;
@@ -72,6 +73,8 @@ export const logoutPlatformUser = async (): Promise<void> => {
     const responseData = error.response?.data;
     const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
     throw new Error(`${errMsg} (${status})`);
+  } finally {
+    invalidatePersonDetailCache();
   }
 };
 

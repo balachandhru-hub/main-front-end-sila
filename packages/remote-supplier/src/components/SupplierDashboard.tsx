@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import SilaLogo from "../assets/SILA_Logo.png";
 import "./SupplierDashboard.css";
 import Catalog from "./Catalog.tsx";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
+import { CompanyProfile } from '@vosox/shared-ui';
+import Invitations from "./Invitations.tsx";
 import {
   logoutSupplier,
   fetchRFQMasterData,
@@ -16,7 +17,8 @@ import {
   type SubmitQuotationPayload,
   type RfqDocumentAssetDto
 } from "../api/supplierApi";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import Header from "./Header.tsx";
 interface StatCard {
   icon: React.ReactNode;
   label: string;
@@ -194,11 +196,6 @@ const NavIconTemplate = () => (
   </svg>
 );
 
-const IconCheck = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 6 9 17l-5-5" />
-  </svg>
-);
 
 const IconCalendar = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -296,7 +293,6 @@ const navItemsAfterCatalog = [
   { icon: <NavIconMessage />, label: "Messages" },
   { icon: <NavIconBuilding />, label: "Company Profile" },
   { icon: <NavIconTemplate />, label: "Template" },
-  { icon: <NavIconTemplate />, label: "Company Profile" },
   { icon: <NavIconSettings />, label: "Settings" },
 ];
 
@@ -388,11 +384,7 @@ const matchCards: MatchCard[] = [
 
 const SupplierDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const organizationName =
-    sessionStorage.getItem("vosox_organization_name") || "Apex Office & Technology Supp...";
-  const firstLetter = organizationName.trim().charAt(0).toUpperCase();
-
-  const [activeView, setActiveView] = useState<"dashboard" | "catalogList" | "template" | "companyProfile">("dashboard");
+  const [activeView, setActiveView] = useState<"dashboard" | "catalogList" | "template" | "invitations" | "companyProfile">("dashboard");
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -474,6 +466,43 @@ const SupplierDashboard: React.FC = () => {
     };
     loadRfqs();
   }, [supplierId]);
+
+  const location = useLocation();
+
+  useEffect(() => {
+    const intendedView = (location.state as { view?: string })?.view;
+    if (intendedView === "companyProfile") {
+      setActiveView("companyProfile");
+    }
+  }, [location.state]);
+
+  const handleViewMoreRfqs = async () => {
+    if (loadingMoreRfqs) return;
+
+    if (visibleRfqCount < rfqs.length) {
+      setVisibleRfqCount((v) => Math.min(v + RFQ_PAGE_SIZE, rfqs.length));
+      return;
+    }
+
+    if (!supplierId || !hasMoreRfqs) return;
+
+    setLoadingMoreRfqs(true);
+    try {
+      const nextPage = await fetchRFQMasterData({
+        supplierId,
+        index: rfqs.length,
+        limit: RFQ_PAGE_SIZE,
+      });
+      setRfqs((prev) => [...prev, ...nextPage]);
+      setVisibleRfqCount((v) => v + nextPage.length);
+      setHasMoreRfqs(nextPage.length === RFQ_PAGE_SIZE);
+    } catch (err: any) {
+      console.error("Failed to load more RFQs", err);
+      setRfqsError(err.message || "Failed to load more sourcing opportunities.");
+    } finally {
+      setLoadingMoreRfqs(false);
+    }
+  };
 
   const handleViewRfqDetails = async (rfqId: string) => {
     setSelectedRfqId(rfqId);
@@ -799,11 +828,9 @@ const SupplierDashboard: React.FC = () => {
       await submitSupplierQuotation(payload);
       setSubmitQuoteSuccess(true);
 
-      // Refresh the RFQ details
       const updatedDetails = await fetchRFQById(selectedRfqId!);
       setSelectedRfq(updatedDetails);
 
-      // Refresh RFQ list
       if (supplierId) {
         const listData = await fetchRFQMasterData({
           supplierId,
@@ -1313,43 +1340,29 @@ const SupplierDashboard: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9' }}>
-      <header className="pud-header" style={{ width: '100%', zIndex: 10, position: 'relative' }}>
-        <div className="pud-header-left">
-          <div className="pud-logo">
-            <img src={SilaLogo} alt="SILA Logo" className="pud-logo-img" />
-          </div>
-        </div>
-        <div className="pud-header-spacer" />
-        <div className="pud-header-right">
-          <span className="pud-header-bell">
-            <IconBell />
-          </span>
-          <div className="pud-header-account">
-            <span className="pud-header-account-name" title={organizationName}>
-              {organizationName}
-            </span>
-            <span className="pud-header-account-verified">
-              <IconCheck /> Verified Vendor
-            </span>
-          </div>
-          <div className="pud-header-avatar">{firstLetter}</div>
-        </div>
-      </header>
+      <Header/>
 
-      <div className="pud-shell" style={{ flex: 1, position: 'relative', minHeight: 'calc(100vh - 64px)' }}>
-
-
+      <div className="pud-shell">
         <aside className="pud-sidebar">
-          <nav className="pud-nav" style={{ paddingTop: '40px' }}>
+          <nav className="pud-nav">
             {navItemsBeforeCatalog.map((item) => {
-              const isActive = item.label === "Dashboard" && activeView === "dashboard";
+              const isActive =
+                (item.label === "Dashboard" && activeView === "dashboard") ||
+                (item.label === "Invitations" && activeView === "invitations");
+
               return (
                 <div
                   key={item.label}
                   className={`pud-nav-item${isActive ? " pud-nav-item-active" : ""}`}
                   onClick={() => {
-                    if (item.label === "Dashboard") navigate("/supplier/dashboard");
-                    if (item.label === "Invitations") navigate("/supplier/invitations");
+                    if (item.label === "Dashboard") {
+                      setActiveView("dashboard");
+                      navigate("/supplier/dashboard");
+                    }
+
+                    if (item.label === "Invitations") {
+                      setActiveView("invitations");
+                    }
                   }}
                 >
                   <span className="pud-nav-icon">{item.icon}</span>
@@ -1366,13 +1379,18 @@ const SupplierDashboard: React.FC = () => {
             />
 
             {navItemsAfterCatalog.map((item) => {
-              const isActive = item.label === "Template" && activeView === "template";
+              const isActive =
+                (item.label === "Template" && activeView === "template") ||
+                (item.label === "Company Profile" && activeView === "companyProfile") ||
+                (item.label === "Invitations" && activeView === "invitations");
               return (
                 <div
                   key={item.label}
                   className={`pud-nav-item${isActive ? " pud-nav-item-active" : ""}`}
                   onClick={() => {
                     if (item.label === "Template") setActiveView("template");
+                    if (item.label === "Company Profile") setActiveView("companyProfile");
+                    if (item.label === "Invitations") setActiveView("invitations");
                   }}
                 >
                   <span className="pud-nav-icon">{item.icon}</span>
@@ -1493,6 +1511,8 @@ const SupplierDashboard: React.FC = () => {
                 entityLabel="Supplier"
                 fetchProfile={getSupplierProfile}
               />
+            ) : activeView === "invitations" ? (
+              <Invitations />
             ) : (
               <>
                 <h1 className="pud-title">Supplier Operations Command</h1>

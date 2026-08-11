@@ -1,0 +1,72 @@
+import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ProfileView } from '@vosox/shared-ui';
+import type { PersonDetail, PersonDetailUpdate } from '@vosox/shared-ui';
+import { isErrorResponse } from '@vosox/shared-ui';
+import { getPersonDetailCached, updatePersonDetail, invalidatePersonDetailCache } from '../api/Buyerapi';
+import Header from '../components/Header';
+
+const BuyerProfilePage: React.FC = () => {
+  const navigate = useNavigate();
+  const hasLoadedRef = useRef(false);
+
+  const [personDetail, setPersonDetail] = useState<PersonDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
+
+    const loadProfile = async () => {
+      setLoading(true);
+      setError(null);
+
+      const result = await getPersonDetailCached();
+
+      if (isErrorResponse(result)) {
+        setError(result.message || 'Failed to load profile.');
+      } else {
+        setPersonDetail(result as PersonDetail);
+      }
+
+      setLoading(false);
+    };
+
+    loadProfile();
+  }, []);
+
+  const handleSave = async (updates: PersonDetailUpdate) => {
+    setSaving(true);
+    setError(null);
+
+    const result = await updatePersonDetail(updates);
+
+    if (isErrorResponse(result)) {
+      setError(result.message || 'Failed to update profile.');
+      setSaving(false);
+      return;
+    }
+
+    invalidatePersonDetailCache();
+    setPersonDetail(result as PersonDetail);
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9' }}>
+      <Header />
+      <ProfileView
+        personDetail={personDetail}
+        loading={loading}
+        saving={saving}
+        error={error}
+        onSave={handleSave}
+        onBack={() => navigate('/buyer/dashboard')}
+      />
+    </div>
+  );
+};
+
+export default BuyerProfilePage;

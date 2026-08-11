@@ -24,26 +24,14 @@
 .nad-page {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #ffffff;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   color: #1f2937;
 }
 
-.nad-top-header {
-  height: 4rem;
-  background-color: #ffffff;
-  border-bottom: 0.0625rem solid #e5e7eb;
-  display: flex;
-  align-items: center;
-  padding: 0 1.5rem;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 30;
-  box-shadow: 0 0.0625rem 0.125rem 0 rgba(0, 0, 0, 0.05);
-}
+
 
 .nad-top-logo {
   height: 3rem;
@@ -55,25 +43,46 @@
 .nad-shell {
   display: flex;
   flex: 1;
-  margin-top: 4rem;
-  min-height: calc(100vh - 4rem);
+  margin-top: 4rem; /* Restores clearance under fixed header */
+  height: calc(100vh - 4rem);
+  overflow: hidden;
 }
 
 .nad-sidebar {
+  position: fixed; /* Pins sidebar back to the screen */
+  top: 4rem;
+  left: 0;
   width: 15rem;
-  flex-shrink: 0;
+  height: calc(100vh - 4rem);
   background: #ffffff;
   border-right: 0.0625rem solid #e5e7eb;
   padding: 1.25rem 0;
   display: flex;
   flex-direction: column;
-  position: fixed;
-  left: 0;
-  top: 4rem;
-  height: calc(100vh - 4rem);
-  overflow-y: auto;
   z-index: 20;
   box-shadow: 0.0625rem 0 0.125rem 0 rgba(0, 0, 0, 0.05);
+}
+
+.nad-main {
+  flex: 1;
+  margin-left: 15rem; /* Offsets content so it sits cleanly next to fixed sidebar */
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.nad-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  max-width: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .nad-sidebar::-webkit-scrollbar {
@@ -165,26 +174,6 @@
 }
 
 
-.nad-main {
-  flex: 1;
-  margin-left: 15rem;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  background:#ffff;
-}
-
-.nad-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1rem;
-  max-width: 100%;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
 .nad-content::-webkit-scrollbar {
   width: 0.5rem;
 }
@@ -204,9 +193,7 @@
 
 .nad-content-header {
   padding-bottom: 1rem;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  background-color: #ffffff; /* Solid white prevents text overlap when scrolling */
 }
 
 .nad-title {
