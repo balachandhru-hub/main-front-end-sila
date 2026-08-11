@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./SupplierAdminDash.css";
-import Header from "../../../remote-buyer/src/components/Header";
+import Header from "./Header";
 import UserAdmin from "../UserAdmin";
 import Invitations from "../../../remote-supplier/src/components/Invitations";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
@@ -17,6 +17,7 @@ import {
   type SubmitQuotationPayload,
   type RfqDocumentAssetDto,
 } from "../../../remote-supplier/src/api/supplierApi";
+import { logoutPlatformUser } from "../api/platformApi";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -740,11 +741,12 @@ const SupplierAdminDash: React.FC = () => {
     setLoggingOut(true);
     setLogoutError(null);
     try {
-      sessionStorage.clear();
-      window.dispatchEvent(new CustomEvent("session:expired"));
+      await logoutPlatformUser();
     } catch (error: any) {
       setLogoutError(error?.message || "Logout request failed, clearing session locally.");
     } finally {
+      sessionStorage.clear();
+      window.dispatchEvent(new CustomEvent("session:expired"));
       setLoggingOut(false);
     }
   };
@@ -762,7 +764,7 @@ const SupplierAdminDash: React.FC = () => {
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#ffffff" }}>
       <Header />
 
       <div
@@ -770,7 +772,6 @@ const SupplierAdminDash: React.FC = () => {
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
       >
         <aside className="sad-sidebar">
-          <nav className="sad-nav" style={{ paddingTop: "40px" }}>
             {navItemsBeforeCatalog.map(renderNavItem)}
 
             <Catalog
@@ -782,6 +783,7 @@ const SupplierAdminDash: React.FC = () => {
 
             {navItemsAfterCatalog.map(renderNavItem)}
 
+          <nav className="sad-nav" >
             <div
               className="sad-nav-item sad-nav-item-logout"
               style={{
@@ -952,15 +954,15 @@ const SupplierAdminDash: React.FC = () => {
                     <div className="sad-panel-list" style={{ padding: "20px 0" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #eef0f3" }}>
                         <span style={{ color: "#6b7280", fontWeight: 500 }}>Total Suppliers</span>
-                        <span style={{ fontWeight: 700, fontSize: "18px", color: "#111827" }}>48</span>
+                        <span style={{ fontWeight: 500, fontSize: "18px", color: "#2f6feb" }}>48</span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #eef0f3" }}>
                         <span style={{ color: "#6b7280", fontWeight: 500 }}>Active Users</span>
-                        <span style={{ fontWeight: 700, fontSize: "18px", color: "#111827" }}>234</span>
+                        <span style={{ fontWeight: 500, fontSize: "18px", color: "#2f6feb" }}>234</span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0" }}>
                         <span style={{ color: "#6b7280", fontWeight: 500 }}>Bids Received</span>
-                        <span style={{ fontWeight: 700, fontSize: "18px", color: "#111827" }}>156</span>
+                        <span style={{ fontWeight: 500, fontSize: "18px", color: "#2f6feb" }}>156</span>
                       </div>
                     </div>
                   </section>

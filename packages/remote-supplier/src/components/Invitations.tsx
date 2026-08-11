@@ -1,5 +1,8 @@
 import React, { useState } from "react";
+import "./SupplierDashboard.css";
 import "./Invitations.css";
+
+/* ---------------- Types ---------------- */
 
 /* Types */
 type InvitationStatus = "open" | "accepted" | "declined" | "closed";
@@ -16,7 +19,6 @@ interface Invitation {
 
 type TabKey = "all" | "open" | "accepted" | "declined";
 
-/* ===== ICONS ===== */
 const IconTag = () => (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42Z" />
@@ -81,7 +83,8 @@ const IconBookOpen = () => (
     </svg>
 );
 
-/* ===== STATIC DATA ===== */
+
+
 const officeFurniture: Invitation = {
     code: "RFQ-1024",
     category: "Office Furniture",
@@ -218,9 +221,9 @@ const InvitationCard: React.FC<{ invitation: Invitation }> = ({ invitation }) =>
 
 /* ===== CONTENT ONLY (NO HEADER/SIDEBAR) ===== */
 const Invitations: React.FC = () => {
+
     const [activeTab, setActiveTab] = useState<TabKey>("all");
     const [searchQuery, setSearchQuery] = useState("");
-
     const query = searchQuery.trim().toLowerCase();
     const invitations = tabInvitations[activeTab].filter((inv) => {
         if (!query) return true;
@@ -232,32 +235,56 @@ const Invitations: React.FC = () => {
     });
 
     return (
-        <>
-            <h1 className="pud-title">Sourcing Invitations</h1>
-            <p className="pud-subtitle">
-                Direct invitations from buyers asking you to submit price bids and proposals.
-            </p>
+        <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
 
-            <div className="inv-tabs-bar">
-                <div className="inv-tabs">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab.key}
-                            className={`inv-tab${activeTab === tab.key ? " inv-tab-active" : ""}`}
-                            onClick={() => setActiveTab(tab.key)}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
-                </div>
-                <div className="inv-search">
-                    <IconSearch />
-                    <input
-                        type="text"
-                        placeholder="Search buyer, ID or category..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
+            <div className="inv-shell" style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}>
+
+                <div className="inv-main">
+                    <main className="inv-content">
+                        <h1 className="inv-title">Sourcing Invitations</h1>
+                        <p className="inv-subtitle">Direct invitations from buyers asking you to submit price bids and proposals.</p>
+
+                        <div className="inv-tabs-bar">
+                            <div className="inv-tabs">
+                                {tabs.map((tab) => (
+                                    <button
+                                        key={tab.key}
+                                        className={`inv-tab${activeTab === tab.key ? " inv-tab-active" : ""}`}
+                                        onClick={() => setActiveTab(tab.key)}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="inv-search">
+                                <IconSearch />
+                                <input
+                                    type="text"
+                                    placeholder="Search buyer, ID or category..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        {invitations.length > 0 ? (
+                            <div className="inv-grid">
+                                {invitations.map((inv) => (
+                                    <InvitationCard key={inv.code} invitation={inv} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="inv-empty">
+                                <span className="inv-empty-icon">
+                                    <IconBookOpen />
+                                </span>
+                                <div className="inv-empty-title">No Invitations Found</div>
+                                <div className="inv-empty-subtitle">
+                                    There are no sourcing invitations matching your search criteria or filter at this time.
+                                </div>
+                            </div>
+                        )}
+                    </main>
                 </div>
             </div>
 
@@ -278,7 +305,7 @@ const Invitations: React.FC = () => {
                     </div>
                 </div>
             )}
-        </>
+    </div>
     );
 };
 

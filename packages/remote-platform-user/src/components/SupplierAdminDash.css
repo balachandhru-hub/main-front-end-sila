@@ -6,17 +6,20 @@
     color: #1f2937;
 }
 
-/* ---------- Sidebar ---------- */
 .sad-sidebar {
-    width: 15.5rem;
-    flex-shrink: 0;
+    position: fixed;            
+    top: 64px;                 
+    left: 0;
+    width: 248px;
+    height: calc(100vh - 64px); 
     background: #ffffff;
     border-right: 0.0625rem solid #e6e8ec;
     padding: 1.25rem 0;
     display: flex;
     flex-direction: column;
+    z-index: 100;
+    overflow-y: auto;          
     transition: width 0.3s ease, padding 0.3s ease, border 0.3s ease;
-    overflow: hidden;
 }
 
 .sad-sidebar-closed .sad-sidebar {
@@ -114,16 +117,17 @@
     color: #dc2626;
 }
 
-/* ---------- Main ---------- */
 .sad-main {
     flex: 1;
+    margin-left: 248px;       
+    margin-top: 64px;          
     display: flex;
     flex-direction: column;
     min-width: 0;
+    background: #ffffff;
 }
 
 .sad-content {
-    padding: 2rem 2.5rem 3.5rem 2.5rem;
     max-width: 100%;
     width: 100%;
 }
@@ -143,7 +147,7 @@
     margin: 0 0 1.25rem 0;
 }
 
-/* ---------- Status banner ---------- */
+
 .sad-status-banner {
     background: #eafaf0;
     border: 0.0625rem solid #c9f0d9;
@@ -188,7 +192,6 @@
     font-weight: 500;
 }
 
-/* ---------- Stat cards ---------- */
 .sad-stats-grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
@@ -198,9 +201,17 @@
 
 .sad-stat-card {
     background: #ffffff;
-    border: 0.0625rem solid #e6e8ec;
-    border-radius: 0.625rem;
-    padding: 1.125rem;
+    border: 0.0625rem solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 0.0625rem 0.1875rem 0 rgba(0, 0, 0, 0.05);
+}
+
+.sad-stat-card:hover {
+  transform: translateY(-0.25rem);
+  box-shadow: 0 0.625rem 1.5rem 0 rgba(0, 0, 0, 0.1);
+  border-color: #d1d5db;
 }
 
 .sad-stat-icon {
@@ -263,7 +274,6 @@
     color: #94a3b8;
 }
 
-/* ---------- Panels ---------- */
 .sad-panels {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -274,9 +284,10 @@
 
 .sad-panel {
     background: #ffffff;
-    border: 0.0625rem solid #e6e8ec;
-    border-radius: 0.625rem;
-    padding: 1.25rem;
+    border: 0.0625rem solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 20px;
+    box-shadow: 0 0.0625rem 0.1875rem 0 rgba(0, 0, 0, 0.05);
 }
 
 .sad-panel-header {
@@ -317,7 +328,6 @@
     flex-direction: column;
 }
 
-/* PO rows */
 .sad-po-row {
     display: flex;
     align-items: flex-start;
@@ -396,7 +406,6 @@
     text-decoration: none;
 }
 
-/* ---------- Buttons ---------- */
 .sad-btn {
     border-radius: 0.4375rem;
     font-size: 0.84375rem;
@@ -444,12 +453,12 @@
     background: #255bcc;
 }
 
-/* ---------- Matchmaker ---------- */
 .sad-matchmaker {
     background: #ffffff;
-    border: 0.0625rem solid #e6e8ec;
-    border-radius: 0.625rem;
-    padding: 1.5rem;
+    border: 0.0625rem solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 20px;
+    box-shadow: 0 0.0625rem 0.1875rem 0 rgba(0, 0, 0, 0.05);
 }
 
 .sad-matchmaker-header {
@@ -590,7 +599,6 @@
     gap: 0.625rem;
 }
 
-/* ---------- Pagination ---------- */
 .sad-pagination {
     display: flex;
     justify-content: flex-end;
@@ -622,7 +630,6 @@
     color: #ffffff;
 }
 
-/* ---------- Modal ---------- */
 .sad-modal-overlay {
     position: fixed;
     inset: 0;
@@ -825,7 +832,6 @@
     font-size: 0.875rem;
 }
 
-/* ---------- Responsive ---------- */
 @media (max-width: 1200px) {
     .sad-stats-grid {
         grid-template-columns: repeat(3, 1fr);
@@ -858,10 +864,6 @@
         width: 15.5rem !important;
         border-right: 0.0625rem solid #e6e8ec;
         padding: 1.25rem 0;
-    }
-
-    .sad-content {
-        padding: 3.75rem 1rem 2rem 1rem;
     }
 
     .sad-stats-grid {

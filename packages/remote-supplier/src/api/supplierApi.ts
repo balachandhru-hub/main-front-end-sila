@@ -12,10 +12,26 @@ import type {
   SubmitRfqAnswersPayload,
   CurrencyListResponse,
   SupplierCatalogListItem,
-  ErrorResponseDto,
 } from '../dto/supplierDto';
+import type { ErrorResponseDto } from '@vosox/shared-ui';
+import { isErrorResponse } from '@vosox/shared-ui';
 
-// re-export so existing imports elsewhere (e.g. SupplierApp.tsx) keep working
+export interface PersonDetailDto {
+  personId: string;
+  userId: string;
+  organizationId: string;
+  name: string;
+  email: string;
+  phone: string;
+  userName: string;
+  addressLine: string;
+  country: string;
+  roleId: string;
+  roleName: string;
+  organizationName: string;
+  organizationEmail: string;
+}
+
 export type { SupplierProfileResponse, RFQMasterDataItem, RFQDetailResponse, SubmitQuotationPayload } from '../dto/supplierDto';
 export type { CatalogAssetDto, CatalogDetailDto, CreateSupplierCatalogPayload, SubmitRfqAnswersPayload, RfqDocumentAssetDto, SupplierCatalogListItem } from '../dto/supplierDto';
 export type { ErrorResponseDto } from '../dto/supplierDto';
@@ -26,15 +42,12 @@ export type { ErrorResponseDto } from '../dto/supplierDto';
 const extractErrorResponse = (error: any): ErrorResponseDto => {
   const responseData = error.response?.data;
   return {
-    status_code: error.response?.status || 500,
+    statusCode: error.response?.status || 500,
     message: responseData?.message || 'An error occurred',
     description: responseData?.description || responseData?.message || 'An error occurred',
   };
 };
 
-// ============================================================================
-// API: Create Supplier Profile (Register)
-// ============================================================================
 export const createSupplierProfile = async (
   payload: CreateSupplierProfilePayload
 ): Promise<any> => {
@@ -46,9 +59,6 @@ export const createSupplierProfile = async (
   }
 };
 
-// ============================================================================
-// API: Create Supplier Catalog
-// ============================================================================
 export const createSupplierCatalog = async (
   payload: CreateSupplierCatalogPayload
 ): Promise<any> => {
@@ -60,9 +70,6 @@ export const createSupplierCatalog = async (
   }
 };
 
-// ============================================================================
-// API: Update Rejected Supplier (resubmission after REJECTED status)
-// ============================================================================
 export const updateRejectedSupplier = async (
   payload: UpdateRejectedSupplierPayload
 ): Promise<any> => {
@@ -77,9 +84,6 @@ export const updateRejectedSupplier = async (
   }
 };
 
-// ============================================================================
-// API: Get Onboarding Details (Auto-fill company info)
-// ============================================================================
 export const fetchOnboardingDetails = async (): Promise<any> => {
   try {
     const response = await supplierInstance.get('/api/v1/identity/onboarding');
@@ -89,9 +93,6 @@ export const fetchOnboardingDetails = async (): Promise<any> => {
   }
 };
 
-// ============================================================================
-// API: Get Metadata Reference List (Industry / Business Type / Document Type / Entity Type)
-// ============================================================================
 export const fetchMetadataReferenceList = async (
   types: MetadataReferenceType[]
 ): Promise<MetadataReferenceItem[]> => {
@@ -106,10 +107,6 @@ export const fetchMetadataReferenceList = async (
   }
 };
 
-// ============================================================================
-// API: Get Supplier Profile (Check if profile exists)
-// Returns null if 204 No Content (profile not found)
-// ============================================================================
 export const getSupplierProfile = async (): Promise<SupplierProfileResponse | null> => {
   try {
     const response = await supplierInstance.get<SupplierProfileResponse>(
@@ -129,20 +126,19 @@ export const getSupplierProfile = async (): Promise<SupplierProfileResponse | nu
   }
 };
 
-// ============================================================================
-// API: Logout Supplier
-// ============================================================================
 export const logoutSupplier = async (): Promise<void> => {
   try {
     await supplierInstance.put('/api/v1/identity/auth/logout');
   } catch (error: any) {
-    throw extractErrorResponse(error);
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+    const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
+    throw new Error(`${errMsg} (${status})`);
+  } finally {
+    invalidatePersonDetailCache();
   }
 };
 
-// ============================================================================
-// API: Get RFQ Master Data (Recent Sourcing Opportunities)
-// ============================================================================
 export const fetchRFQMasterData = async (payload: {
   supplierId: string;
   index: number;
@@ -156,9 +152,6 @@ export const fetchRFQMasterData = async (payload: {
   }
 };
 
-// ============================================================================
-// API: Get RFQ By ID
-// ============================================================================
 export const fetchRFQById = async (rfqId: string): Promise<RFQDetailResponse> => {
   try {
     const response = await supplierInstance.get('/api/v1/supplier/rfq-by-id', {
@@ -170,9 +163,6 @@ export const fetchRFQById = async (rfqId: string): Promise<RFQDetailResponse> =>
   }
 };
 
-// ============================================================================
-// API: Submit Supplier Quotation (Create/Update Quotation)
-// ============================================================================
 export const submitSupplierQuotation = async (
   payload: SubmitQuotationPayload
 ): Promise<any> => {
@@ -184,9 +174,6 @@ export const submitSupplierQuotation = async (
   }
 };
 
-// ============================================================================
-// API: UNSPSC segments and classes for product/sub-product categorization
-// ============================================================================
 export const fetchSegments = async (): Promise<any[]> => {
   try {
     const res = await supplierInstance.get(`/api/v1/masterdata/unspsc/segment?pageIndex=1&pageSize=10`);
@@ -338,4 +325,96 @@ export const fetchSupplierCatalog = async (): Promise<SupplierCatalogListItem[]>
   } catch (error: any) {
     throw extractErrorResponse(error);
   }
+};
+
+export const getPersonDetail = async (): Promise<PersonDetailDto | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.get<PersonDetailDto>(
+      '/api/v1/identity/person-detail'
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch person details',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching person details.',
+    };
+  }
+};
+
+export const updatePersonDetail = async (
+  data: Partial<PersonDetailDto>
+): Promise<PersonDetailDto | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.put<PersonDetailDto>(
+      '/api/v1/identity/person-detail',
+      data
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to update person details',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while updating person details.',
+    };
+  }
+};
+
+
+let personDetailCache: PersonDetailDto | null = null;
+let personDetailInFlight: Promise<PersonDetailDto | ErrorResponseDto> | null = null;
+
+export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorResponseDto> => {
+  if (personDetailCache) return personDetailCache;
+  if (personDetailInFlight) return personDetailInFlight;
+
+  personDetailInFlight = getPersonDetail().then((result) => {
+    if (!isErrorResponse(result)) {
+      personDetailCache = result;
+    }
+    personDetailInFlight = null;
+    return result;
+  });
+
+  return personDetailInFlight;
+};
+
+export const invalidatePersonDetailCache = () => {
+  personDetailCache = null;
 };
