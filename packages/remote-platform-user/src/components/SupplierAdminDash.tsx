@@ -452,15 +452,15 @@ const SupplierAdminDash: React.FC = () => {
                     <div className="sad-panel-list" style={{ padding: "20px 0" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #eef0f3" }}>
                         <span style={{ color: "#6b7280", fontWeight: 500 }}>Total Suppliers</span>
-                        <span style={{ fontWeight: 700, fontSize: "18px", color: "#111827" }}>48</span>
+                        <span style={{ fontWeight: 500, fontSize: "18px", color: "#2f6feb" }}>48</span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #eef0f3" }}>
                         <span style={{ color: "#6b7280", fontWeight: 500 }}>Active Users</span>
-                        <span style={{ fontWeight: 700, fontSize: "18px", color: "#111827" }}>234</span>
+                        <span style={{ fontWeight: 500, fontSize: "18px", color: "#2f6feb" }}>234</span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0" }}>
                         <span style={{ color: "#6b7280", fontWeight: 500 }}>Bids Received</span>
-                        <span style={{ fontWeight: 700, fontSize: "18px", color: "#111827" }}>156</span>
+                        <span style={{ fontWeight: 500, fontSize: "18px", color: "#2f6feb" }}>156</span>
                       </div>
                     </div>
                   </section>
