@@ -24,14 +24,6 @@ type TabKey = "all" | "open" | "accepted" | "declined";
 
 /* ---------------- Icons (shared header / sidebar) ---------------- */
 
-const IconMenu = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="3" y1="12" x2="21" y2="12"></line>
-        <line x1="3" y1="6" x2="21" y2="6"></line>
-        <line x1="3" y1="18" x2="21" y2="18"></line>
-    </svg>
-);
-
 const IconBell = () => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
@@ -42,13 +34,6 @@ const IconBell = () => (
 const IconCheck = () => (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 6 9 17l-5-5" />
-    </svg>
-);
-
-const IconClose = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="18" y1="6" x2="6" y2="18" />
-        <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
 );
 
@@ -376,7 +361,6 @@ const Invitations: React.FC = () => {
         sessionStorage.getItem("vosox_organization_name") || "Apex Office & Technology Supp...";
     const firstLetter = organizationName.trim().charAt(0).toUpperCase();
 
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [activeTab, setActiveTab] = useState<TabKey>("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [loggingOut, setLoggingOut] = useState(false);
@@ -434,33 +418,9 @@ const Invitations: React.FC = () => {
             </header>
 
             <div
-                className={`pud-shell ${isSidebarOpen ? "" : "pud-sidebar-closed"}`}
+                className="pud-shell"
                 style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
             >
-                <button
-                    className="pud-sidebar-toggle"
-                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                    style={{
-                        position: "absolute",
-                        top: "5px",
-                        left: "5px",
-                        zIndex: 1001,
-                        background: "#ffffff",
-                        border: "1px solid #e6e8ec",
-                        borderRadius: "6px",
-                        width: "30px",
-                        height: "30px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
-                        padding: 0,
-                    }}
-                    title="Toggle Sidebar"
-                >
-                    {isSidebarOpen ? <IconClose /> : <IconMenu />}
-                </button>
-
                 <aside className="pud-sidebar">
                     <nav className="pud-nav" style={{ paddingTop: "40px" }}>
                         {navItems.map((item) => (
