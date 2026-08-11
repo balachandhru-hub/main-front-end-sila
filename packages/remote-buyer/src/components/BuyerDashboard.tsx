@@ -713,14 +713,30 @@ const BuyersDashboard: React.FC = () => {
                         {answers.length > 0 ? (
                           <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {answers.map((ans, ai) => (
-                              <div key={ai} style={{ background: '#ffffff', border: '1px solid #dbeafe', borderRadius: '6px', padding: '8px 10px' }}>
-                                {ans.supplierName && (
-                                  <div style={{ fontSize: '10.5px', fontWeight: 600, color: '#2563eb', marginBottom: '3px' }}>
-                                    {ans.supplierName}
-                                  </div>
-                                )}
-                                <div style={{ fontSize: '12.5px', color: '#334155' }}>
-                                  {ans.display}
+                              <div key={ai} style={{ background: '#ffffff', border: '1px solid #dbeafe', borderRadius: '6px', padding: '8px 12px' }}>
+                                <div style={{ fontSize: '12.5px', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', width: '100%' }}>
+                                  <span style={{ flex: 1, wordBreak: 'break-word' }}>{ans.display}</span>
+                                  {ans.attachment && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleViewAttachment(ans.attachment)}
+                                      style={{
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        color: '#2563eb',
+                                        background: '#eff6ff',
+                                        border: '1px solid #bfdbfe',
+                                        borderRadius: '5px',
+                                        padding: '4px 10px',
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap',
+                                        flexShrink: 0,
+                                        marginLeft: 'auto'
+                                      }}
+                                    >
+                                      View
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             ))}
@@ -826,25 +842,32 @@ const BuyersDashboard: React.FC = () => {
   };
 
 
+  const handleViewAttachment = (attachment: { fileName?: string; fileBytes?: string; contentType?: string } | null | undefined) => {
+    if (!attachment?.fileBytes) return;
+    try {
+      const byteCharacters = atob(attachment.fileBytes);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: attachment.contentType || "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (err) {
+    }
+  };
+
   const resolveAnswersForQuestion = (
     rfq: any,
     question: any,
     index: number
-  ): { supplierName: string | null; display: string }[] => {
-    const answerList = rfq?.supplierAnswers?.answers;
-    if (!Array.isArray(answerList)) return [];
+  ): { supplierName: string | null; display: string; attachment: any | null }[] => {
+    const supplierAnswerSets = rfq?.supplierAnswers?.supplierAnswers;
+    if (!Array.isArray(supplierAnswerSets) || supplierAnswerSets.length === 0) return [];
 
     const questionId = question?.id || question?.rfqQuestionId;
-    let match = questionId
-      ? answerList.find((a: any) => a?.rfqQuestionId === questionId)
-      : undefined;
-
-    if (!match) {
-      const sortedAnswers = [...answerList];
-      match = sortedAnswers[index];
-    }
-
-    if (!match) return [];
 
     const dedupeIds = (ids: string[]): string[] =>
       Array.from(new Set(ids));
@@ -864,21 +887,46 @@ const BuyersDashboard: React.FC = () => {
       return uniqueIds;
     };
 
-    let display: string | null = null;
+    const results: { supplierName: string | null; display: string; attachment: any | null }[] = [];
 
-    if (match.attachment) {
-      display = match.attachment.fileName || match.answer || "Attached file";
-    } else if (match.answer && match.answer.trim() !== "") {
-      display = match.answer;
-    } else if (Array.isArray(match.questionOptionIds) && match.questionOptionIds.length > 0) {
-      const labels = resolveOptionLabels(match.questionOptionIds);
-      display = labels.join(", ");
-    } else if (match.questionOptionId) {
-      const labels = resolveOptionLabels([match.questionOptionId]);
-      display = labels[0] || match.questionOptionId;
-    }
+    supplierAnswerSets.forEach((supplierSet: any, supplierIdx: number) => {
+      const answerList = supplierSet?.answers;
+      if (!Array.isArray(answerList)) return;
 
-    return display ? [{ supplierName: null, display }] : [];
+      const match = questionId
+        ? answerList.find((a: any) => a?.rfqQuestionId === questionId)
+        : answerList[index];
+
+      if (!match) return;
+
+      let display: string | null = null;
+      let attachment: any | null = null;
+
+      if (match.attachment) {
+        attachment = match.attachment;
+        display = match.attachment.fileName || match.answer || "Attached file";
+      } else if (match.answer && match.answer.trim() !== "") {
+        display = match.answer;
+      } else if (Array.isArray(match.questionOptionIds) && match.questionOptionIds.length > 0) {
+        const labels = resolveOptionLabels(match.questionOptionIds);
+        display = labels.join(", ");
+      } else if (match.questionOptionId) {
+        const labels = resolveOptionLabels([match.questionOptionId]);
+        display = labels[0] || match.questionOptionId;
+      }
+
+      if (!display) return;
+
+      const supplierName =
+        supplierSet?.supplierName ||
+        (supplierSet?.supplierId
+          ? `Supplier ${String(supplierSet.supplierId).substring(0, 8)}...`
+          : `Supplier ${supplierIdx + 1}`);
+
+      results.push({ supplierName, display, attachment });
+    });
+
+    return results;
   };
 
 
