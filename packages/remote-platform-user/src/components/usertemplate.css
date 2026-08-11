@@ -17,7 +17,6 @@ body {
 .template-container {
   width: 100%;
   min-height: 100vh;
-  background-color: #f8f9fa;
   padding: 32px 24px;
 }
 
@@ -91,25 +90,19 @@ body {
 }
 
 .btn-cancel {
-  background-color: #f3f4f6;
-  color: #374151;
   border: 1px solid #d0d5dd;
   padding: 9px 20px;
   border-radius: 6px;
+  background-color: #ffffff;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   letter-spacing: 0.3px;
 }
 
 .btn-cancel:hover {
-  background-color: #e5e7eb;
   border-color: #9ca3af;
-}
-
-.btn-cancel:active {
-  background-color: #d1d5db;
 }
 
 .btn-publish {
@@ -169,12 +162,12 @@ body {
 
 .btn-add-field {
   width: 100%;
-  background-color: #f3f4f6;
-  color: #1366f1;
-  border: 2px dashed #bcc7db;
-  padding: 16px;
+  color: #478bff;
+  border: 2px dashed #81afff;
+  background-color: transparent;
+  padding: 12px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -191,18 +184,14 @@ body {
 }
 
 .btn-add-field:hover {
-  background-color: #e5e7eb;
   border-color: #1366f1;
   box-shadow: 0 1px 3px rgba(19, 102, 241, 0.15);
-}
-
-.btn-add-field:active {
-  background-color: #d1d5db;
 }
 
 .btn-edit {
   background-color: transparent;
   color: #1366f1;
+  font-weight: 600;
   border: none;
   padding: 6px 12px;
   cursor: pointer;
@@ -219,7 +208,7 @@ body {
 }
 
 .btn-edit:hover {
-  background-color: #f0f1f3;
+  color: #0f5ad6;
 }
 
 .btn-delete {
@@ -420,9 +409,13 @@ body {
 .form-group input[type='text']::placeholder,
 .form-group input[type='email']::placeholder,
 .form-group input[type='password']::placeholder,
-.form-group textarea::placeholder,
-.form-group select {
+.form-group textarea::placeholder
+{
   color: #9ca3af;
+}
+
+.form-group select {
+  color:#000000
 }
 
 .form-group input[type='text']:hover,
@@ -544,11 +537,9 @@ body {
   border-radius: 6px;
   margin-bottom: 12px;
   transition: all 0.2s ease;
-  background-color: #fafbfc;
 }
 
 .field-item:hover {
-  background-color: #f3f4f6;
   border-color: #1366f1;
   box-shadow: 0 1px 3px rgba(19, 102, 241, 0.1);
 }
@@ -593,7 +584,6 @@ body {
 
 /* Inline Form Styles */
 .inline-field-form {
-  background-color: #f8f9fa;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 20px;
@@ -634,6 +624,7 @@ body {
 .inline-form-container .form-group select {
   width: 100%;
   padding: 9px 12px;
+  color: #000000;
   border: 1px solid #ddd;
   border-radius: 6px;
   font-size: 13px;
