@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./SupplierDashboard.css";
 import Catalog from "./Catalog.tsx";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
-import { CompanyProfile } from '@vosox/shared-ui';
+import CompanyProfile from '../../../../packages/shared-ui/src/components/CompanyProfile/CompanyProfile.tsx';
 import Invitations from "./Invitations.tsx";
 import {
   logoutSupplier,
@@ -52,8 +52,6 @@ interface MatchCard {
   categoryNote: string;
   destinationNote: string;
 }
-import { CompanyProfile } from '@vosox/shared-ui';
-
 
 
 const IconMail = () => (
@@ -476,33 +474,7 @@ const SupplierDashboard: React.FC = () => {
     }
   }, [location.state]);
 
-  const handleViewMoreRfqs = async () => {
-    if (loadingMoreRfqs) return;
 
-    if (visibleRfqCount < rfqs.length) {
-      setVisibleRfqCount((v) => Math.min(v + RFQ_PAGE_SIZE, rfqs.length));
-      return;
-    }
-
-    if (!supplierId || !hasMoreRfqs) return;
-
-    setLoadingMoreRfqs(true);
-    try {
-      const nextPage = await fetchRFQMasterData({
-        supplierId,
-        index: rfqs.length,
-        limit: RFQ_PAGE_SIZE,
-      });
-      setRfqs((prev) => [...prev, ...nextPage]);
-      setVisibleRfqCount((v) => v + nextPage.length);
-      setHasMoreRfqs(nextPage.length === RFQ_PAGE_SIZE);
-    } catch (err: any) {
-      console.error("Failed to load more RFQs", err);
-      setRfqsError(err.message || "Failed to load more sourcing opportunities.");
-    } finally {
-      setLoadingMoreRfqs(false);
-    }
-  };
 
   const handleViewRfqDetails = async (rfqId: string) => {
     setSelectedRfqId(rfqId);
@@ -1340,7 +1312,7 @@ const SupplierDashboard: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9' }}>
-      <Header/>
+      <Header />
 
       <div className="pud-shell">
         <aside className="pud-sidebar">
