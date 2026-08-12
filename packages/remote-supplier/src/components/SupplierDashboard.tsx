@@ -411,13 +411,13 @@ const SupplierDashboard: React.FC = () => {
       if (!supplierId) {
         try {
           const profile = await getSupplierProfile();
-          if (profile?.id) {
-            sessionStorage.setItem("vosox_supplier_id", profile.id);
-            setSupplierId(profile.id);
-          } else {
-            setRfqsError("Supplier profile not found. Please complete onboarding.");
-            setLoadingRfqs(false);
-          }
+if (profile && 'id' in profile && profile.id) {
+    sessionStorage.setItem("vosox_supplier_id", profile.id);
+    setSupplierId(profile.id);
+} else {
+    setRfqsError("Supplier profile not found. Please complete onboarding.");
+    setLoadingRfqs(false);
+}
         } catch (err: any) {
           
           setRfqsError("Failed to load supplier profile details.");
@@ -438,12 +438,14 @@ const SupplierDashboard: React.FC = () => {
       try {
         const initialLimit = RFQ_INITIAL_VISIBLE;
         const data = await fetchRFQMasterData({
-          supplierId,
-          index: 0,
-          limit: initialLimit,
-        });
-        setRfqs(data);
-        setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
+    supplierId,
+    index: 0,
+    limit: initialLimit,
+});
+if (Array.isArray(data)) {
+    setRfqs(data);
+    setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
+}
       } catch (err: any) {
        
         setRfqsError(err.message || "Failed to load sourcing opportunities.");
@@ -472,7 +474,11 @@ const SupplierDashboard: React.FC = () => {
     setSelectedRfq(null);
     try {
       const data = await fetchRFQById(rfqId);
-      setSelectedRfq(data);
+if (data && 'title' in data) {
+    setSelectedRfq(data);
+} else {
+    setRfqDetailError("Failed to load RFQ details.");
+}
     } catch (err: any) {
      
       setRfqDetailError(err.message || "Failed to load RFQ details.");
@@ -500,7 +506,11 @@ const SupplierDashboard: React.FC = () => {
         setAllRfqsList(rfqs);
       } else {
         const data = await fetchRFQMasterData({ supplierId, index: 0, limit: 100 });
-        setAllRfqsList(data);
+if (Array.isArray(data)) {
+    setAllRfqsList(data);
+} else {
+    setAllRfqsList(rfqs);
+}
       }
     } catch (err: any) {
       console.error("Failed to load full RFQ list", err);
@@ -722,11 +732,11 @@ const SupplierDashboard: React.FC = () => {
     setSubmitAnswersError(null);
     setSubmitAnswersSuccess(false);
     try {
-      const entityTypes = await fetchMetadataReferenceList(['ENTITY_TYPE']);
-      const supplierEntityId =
-        entityTypes.find((e) => e.key === 'SUPPLIER')?.id || '59476530-3c10-438b-b3b3-9db9e96e8d93';
-      const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
-
+     const entityTypesRaw = await fetchMetadataReferenceList(['ENTITY_TYPE']);
+const entityTypes = Array.isArray(entityTypesRaw) ? entityTypesRaw : [];
+const supplierEntityId =
+    entityTypes.find((e) => e.key === 'SUPPLIER')?.id || '59476530-3c10-438b-b3b3-9db9e96e8d93';
+const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
       const payload = {
         supplierRFQId: supplierRFQId as string,
         answers: Object.values(rfqAnswers).map((a) => {
@@ -803,16 +813,21 @@ const SupplierDashboard: React.FC = () => {
       await submitSupplierQuotation(payload);
       setSubmitQuoteSuccess(true);
 
-      const updatedDetails = await fetchRFQById(selectedRfqId!);
-      setSelectedRfq(updatedDetails);
+     const updatedDetails = await fetchRFQById(selectedRfqId!);
+if (updatedDetails && 'title' in updatedDetails) {
+    setSelectedRfq(updatedDetails);
+}
 
       if (supplierId) {
-        const listData = await fetchRFQMasterData({
-          supplierId,
-          index: 0,
-          limit: 10,
-        });
+    const listData = await fetchRFQMasterData({
+        supplierId,
+        index: 0,
+        limit: 10,
+    });
+    if (Array.isArray(listData)) {
         setRfqs(listData);
+    }
+
       }
     } catch (err: any) {
     
@@ -1445,10 +1460,16 @@ const SupplierDashboard: React.FC = () => {
               </>
             ) : activeNav === "companyProfile" ? (
               <CompanyProfile
-                mode="network-admin"
-                entityLabel="Supplier"
-                fetchProfile={getSupplierProfile}
-              />
+    mode="network-admin"
+    entityLabel="Supplier"
+    fetchProfile={async () => {
+        const profile = await getSupplierProfile();
+        if (profile && 'id' in profile) {
+            return profile as any;
+        }
+        return null;
+    }}
+/>
             ) : activeNav === "invitations" ? (
               <Invitations />
             ) : (

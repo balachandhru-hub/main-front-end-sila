@@ -94,9 +94,10 @@ const NetworkAdminOnboardingRoute: React.FC<NetworkAdminOnboardingRouteProps> = 
             })) || [];
 
       const entityTypeKey = role === 'BUYER_NETWORK_ADMIN' ? 'BUYER' : 'SUPPLIER';
-      const entityTypes = await fetchReferenceList(['ENTITY_TYPE']);
-      const entityId = entityTypes.find((e: any) => e.key === entityTypeKey)?.id || '';
-
+const entityTypes = await fetchReferenceList(['ENTITY_TYPE']);
+const entityId = Array.isArray(entityTypes)
+    ? entityTypes.find((e: any) => e.key === entityTypeKey)?.id || ''
+    : '';
       const mappedRegistrations = await Promise.all(
         data.registrations.map(async (r: any) => {
           const fileBytes = r.certificateFile ? await fileToBase64(r.certificateFile) : '';

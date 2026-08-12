@@ -381,7 +381,9 @@ export default function BuyerProfile({ onComplete, onboardingData, rejectedProfi
             setLoadingIndustries(true);
             try {
                 const data = await fetchReferenceList(["INDUSTRY"]);
-                setIndustries(data);
+if (Array.isArray(data)) {
+    setIndustries(data);
+}
             } catch (err) {
                 console.error("Failed to load industries:", err);
             } finally {
@@ -398,7 +400,9 @@ export default function BuyerProfile({ onComplete, onboardingData, rejectedProfi
             setLoadingBusinessTypes(true);
             try {
                 const data = await fetchReferenceList(["BUSINESS_TYPE"]);
-                setBusinessTypes(data);
+if (Array.isArray(data)) {
+    setBusinessTypes(data);
+}
             } catch (err) {
                 console.error("Failed to load business types:", err);
             } finally {
@@ -415,7 +419,9 @@ export default function BuyerProfile({ onComplete, onboardingData, rejectedProfi
             setLoadingDocumentTypes(true);
             try {
                 const data = await fetchReferenceList(["DOCUMENT_TYPE"]);
-                setDocumentTypes(data);
+if (Array.isArray(data)) {
+    setDocumentTypes(data);
+}
             } catch (err) {
                 console.error("Failed to load document types:", err);
             } finally {
@@ -430,7 +436,9 @@ export default function BuyerProfile({ onComplete, onboardingData, rejectedProfi
             setLoadingSegments(true);
             try {
                 const data = await fetchSegments();
-                setSegments(data);
+if (Array.isArray(data)) {
+    setSegments(data);
+}
             } catch (err) {
                 console.error("Failed to load segments:", err);
             } finally {
@@ -450,7 +458,9 @@ export default function BuyerProfile({ onComplete, onboardingData, rejectedProfi
             setLoadingClasses(true);
             try {
                 const data = await fetchClasses(activeProduct.segment, activeProduct.family);
-                setClasses(data);
+if (Array.isArray(data)) {
+    setClasses(data);
+}
             } catch (err) {
                 console.error("Failed to load classes:", err);
             } finally {
