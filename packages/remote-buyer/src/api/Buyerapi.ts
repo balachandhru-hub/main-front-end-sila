@@ -646,7 +646,7 @@ export interface BuyerAssetDownloadResponse {
   fileBytes: string;
 }
 
-export const downloadBuyerAsset = async (assetId: string): Promise<BuyerAssetDownloadResponse> => {
+export const downloadBuyerAsset = async (assetId: string): Promise<BuyerAssetDownloadResponse | ErrorResponseDto> => {
   try {
     const response = await axiosInstance.get<BuyerAssetDownloadResponse>(`/api/v1/supplier/asset/${assetId}`);
     return response.data;
