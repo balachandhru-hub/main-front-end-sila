@@ -502,7 +502,7 @@ export const fetchBuyerCatalog = async (payload: {
   search?: string;
   index?: number;
   limit?: number;
-}): Promise<BuyerCatalogResponse[]> => {
+}): Promise<BuyerCatalogResponse[] | ErrorResponseDto> => {
   try {
     const response = await axiosInstance.get<BuyerCatalogResponse[]>(
       '/api/v1/supplier/buyer-catalog',
@@ -518,14 +518,34 @@ export const fetchBuyerCatalog = async (payload: {
         },
       }
     );
-    return response.data ?? [];
-  }  catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    const responseData = error.response?.data;
-    const errMsg = responseData?.message || responseData?.description || 'Failed to fetch buyer catalog.';
-    throw new Error(`${errMsg} (${status})`);
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch buyer catalog',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching buyer catalog.',
+    };
   }
 };
+
 export const getPersonDetail = async (): Promise<PersonDetailDto | ErrorResponseDto> => {
   try {
     const response = await axiosInstance.get<PersonDetailDto>(
