@@ -635,6 +635,26 @@ export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorRe
   return personDetailInFlight;
 };
 
-export const invalidatePersonDetailCache =()=>{
+export const invalidatePersonDetailCache = () => {
   personDetailCache = null;
+};
+
+export interface BuyerAssetDownloadResponse {
+  assetId: string;
+  fileName: string;
+  contentType: string;
+  fileBytes: string;
+}
+
+export const downloadBuyerAsset = async (assetId: string): Promise<BuyerAssetDownloadResponse> => {
+  try {
+    const response = await axiosInstance.get<BuyerAssetDownloadResponse>(`/api/v1/supplier/asset/${assetId}`);
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to download document (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
 };
