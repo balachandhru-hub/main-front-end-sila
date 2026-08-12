@@ -114,9 +114,7 @@
 }
 
 .sad-main {
-    flex: 1;
-    margin-left: 248px;       
-    margin-top: 64px;          
+    flex: 1;        
     display: flex;
     flex-direction: column;
     min-width: 0;
