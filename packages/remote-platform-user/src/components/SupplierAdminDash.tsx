@@ -1231,7 +1231,7 @@ const SupplierAdminDash: React.FC = () => {
                       value={quoteDeliveryCharge || ""}
                       onChange={(e) => handleOtherFieldChange("deliveryCharge", e.target.value)}
                       placeholder="0.00"
-                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px' }}
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem' }}
                     />
                   </div>
 
@@ -1244,7 +1244,7 @@ const SupplierAdminDash: React.FC = () => {
                       className="pud-rfq-form-input"
                       value={quoteDeliveryType}
                       onChange={(e) => handleOtherFieldChange("deliveryType", e.target.value)}
-                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px', background: '#ffffff' }}
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', background: '#ffffff' }}
                     >
                       <option value="PERCENTAGE">PERCENATGE</option>
                       <option value="AMOUNT">AMOUNT</option>
@@ -1264,7 +1264,7 @@ const SupplierAdminDash: React.FC = () => {
                       value={quoteDiscount || ""}
                       onChange={(e) => handleOtherFieldChange("discount", e.target.value)}
                       placeholder="0.00"
-                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px' }}
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem' }}
                     />
                   </div>
 
@@ -1277,7 +1277,7 @@ const SupplierAdminDash: React.FC = () => {
                       className="pud-rfq-form-input"
                       value={quoteDiscountType}
                       onChange={(e) => handleOtherFieldChange("discountType", e.target.value)}
-                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px', background: '#ffffff' }}
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', background: '#ffffff' }}
                     >
                       <option value="PERCENTAGE">PERCENTAGE</option>
                       <option value="AMOUNT">AMOUNT</option>
@@ -1297,7 +1297,7 @@ const SupplierAdminDash: React.FC = () => {
                       value={quoteTax || ""}
                       onChange={(e) => handleOtherFieldChange("tax", e.target.value)}
                       placeholder="0.00"
-                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px' }}
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem' }}
                     />
                   </div>
 
@@ -1310,7 +1310,7 @@ const SupplierAdminDash: React.FC = () => {
                       className="pud-rfq-form-input"
                       value={quoteTaxType}
                       onChange={(e) => handleOtherFieldChange("taxType", e.target.value)}
-                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px', background: '#ffffff' }}
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', background: '#ffffff' }}
                     >
                       <option value="PERCENTAGE">PERCENTAGE</option>
                       <option value="AMOUNT">AMOUNT</option>
@@ -2227,7 +2227,7 @@ const SupplierAdminDash: React.FC = () => {
                               value={quoteDeliveryCharge || ""}
                               onChange={(e) => handleOtherFieldChange("deliveryCharge", e.target.value)}
                               placeholder="0.00"
-                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px' }}
+                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem' }}
                             />
                           </div>
 
@@ -2240,7 +2240,7 @@ const SupplierAdminDash: React.FC = () => {
                               className="pud-rfq-form-input"
                               value={quoteDeliveryType}
                               onChange={(e) => handleOtherFieldChange("deliveryType", e.target.value)}
-                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px', background: '#ffffff' }}
+                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', background: '#ffffff' }}
                             >
                               <option value="PERCENTAGE">PERCENATGE</option>
                               <option value="AMOUNT">AMOUNT</option>
@@ -2260,7 +2260,7 @@ const SupplierAdminDash: React.FC = () => {
                               value={quoteDiscount || ""}
                               onChange={(e) => handleOtherFieldChange("discount", e.target.value)}
                               placeholder="0.00"
-                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px' }}
+                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem' }}
                             />
                           </div>
 
@@ -2273,7 +2273,7 @@ const SupplierAdminDash: React.FC = () => {
                               className="pud-rfq-form-input"
                               value={quoteDiscountType}
                               onChange={(e) => handleOtherFieldChange("discountType", e.target.value)}
-                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px', background: '#ffffff' }}
+                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', background: '#ffffff' }}
                             >
                               <option value="PERCENTAGE">PERCENTAGE</option>
                               <option value="AMOUNT">AMOUNT</option>
@@ -2293,7 +2293,7 @@ const SupplierAdminDash: React.FC = () => {
                               value={quoteTax || ""}
                               onChange={(e) => handleOtherFieldChange("tax", e.target.value)}
                               placeholder="0.00"
-                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px' }}
+                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem' }}
                             />
                           </div>
 
@@ -2306,7 +2306,7 @@ const SupplierAdminDash: React.FC = () => {
                               className="pud-rfq-form-input"
                               value={quoteTaxType}
                               onChange={(e) => handleOtherFieldChange("taxType", e.target.value)}
-                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px', background: '#ffffff' }}
+                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', background: '#ffffff' }}
                             >
                               <option value="PERCENTAGE">PERCENTAGE</option>
                               <option value="AMOUNT">AMOUNT</option>
