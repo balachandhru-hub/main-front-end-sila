@@ -353,7 +353,9 @@ export default function NetworkAdminOnboarding({ onComplete, onboardingData, rej
             setLoadingIndustries(true);
             try {
                 const data = await fetchReferenceList(["INDUSTRY"]);
-                setIndustries(data);
+if (Array.isArray(data)) {
+    setIndustries(data);
+}
             } catch (err) {
             } finally {
                 setLoadingIndustries(false);
@@ -369,7 +371,9 @@ export default function NetworkAdminOnboarding({ onComplete, onboardingData, rej
             setLoadingBusinessTypes(true);
             try {
                 const data = await fetchReferenceList(["BUSINESS_TYPE"]);
-                setBusinessTypes(data);
+if (Array.isArray(data)) {
+    setBusinessTypes(data);
+}
             } catch (err) {
             } finally {
                 setLoadingBusinessTypes(false);
@@ -385,7 +389,9 @@ export default function NetworkAdminOnboarding({ onComplete, onboardingData, rej
             setLoadingDocumentTypes(true);
             try {
                 const data = await fetchReferenceList(["DOCUMENT_TYPE"]);
-                setDocumentTypes(data);
+if (Array.isArray(data)) {
+    setDocumentTypes(data);
+}
             } catch (err) {
             } finally {
                 setLoadingDocumentTypes(false);
@@ -397,8 +403,10 @@ export default function NetworkAdminOnboarding({ onComplete, onboardingData, rej
         const loadSegments = async () => {
             setLoadingSegments(true);
             try {
-                const data = await fetchSegments();
-                setSegments(data);
+               const data = await fetchSegments();
+if (Array.isArray(data)) {
+    setSegments(data);
+}
             } catch (err) {
             } finally {
                 setLoadingSegments(false);
@@ -416,7 +424,9 @@ export default function NetworkAdminOnboarding({ onComplete, onboardingData, rej
             setLoadingClasses(true);
             try {
                 const data = await fetchClasses(activeProduct.segment, activeProduct.family);
-                setClasses(data);
+if (Array.isArray(data)) {
+    setClasses(data);
+}
             } catch (err) {
             } finally {
                 setLoadingClasses(false);

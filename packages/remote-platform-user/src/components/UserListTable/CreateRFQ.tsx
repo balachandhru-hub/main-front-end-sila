@@ -509,7 +509,52 @@ const CreateRFQ: React.FC = () => {
     const filteredSegmentOptions = segmentOptions.filter((s) =>
         s.title.toLowerCase().includes(segmentSearchTerm.trim().toLowerCase())
     );
+const getCurrenciesSafe = async (
+    index: number,
+    limit: number
+): Promise<{ items: CurrencyDto[]; totalCount: number }> => {
+    try {
+        const res = await getCurrencies(index, limit);
+        if (res && Array.isArray((res as any).items)) {
+            return res as { items: CurrencyDto[]; totalCount: number };
+        }
+    } catch (err) {
+        console.error("Failed to fetch currencies", err);
+    }
+    return { items: [], totalCount: 0 };
+};
 
+const getCountriesSafe = async (
+    index: number,
+    limit: number,
+    searchTerm?: string
+): Promise<{ items: CountryDto[]; totalCount: number }> => {
+    try {
+        const res = await getCountries(index, limit, searchTerm);
+        if (res && Array.isArray((res as any).items)) {
+            return res as { items: CountryDto[]; totalCount: number };
+        }
+    } catch (err) {
+        console.error("Failed to fetch countries", err);
+    }
+    return { items: [], totalCount: 0 };
+};
+
+const getUnitsSafe = async (
+    index: number,
+    limit: number,
+    searchTerm?: string
+): Promise<{ items: UnitDto[]; totalCount: number }> => {
+    try {
+        const res = await getUnits(index, limit, searchTerm);
+        if (res && Array.isArray((res as any).items)) {
+            return res as { items: UnitDto[]; totalCount: number };
+        }
+    } catch (err) {
+        console.error("Failed to fetch units", err);
+    }
+    return { items: [], totalCount: 0 };
+};
     const [isFamilyDropdownOpen, setIsFamilyDropdownOpen] = useState(false);
     const [familySearchTerm, setFamilySearchTerm] = useState("");
     const filteredFamilyOptions = familyOptions.filter((f) =>
@@ -519,17 +564,14 @@ const CreateRFQ: React.FC = () => {
     const [currency, setCurrency] = useState("");
     const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
     const [currencySearchTerm, setCurrencySearchTerm] = useState("");
-    const currencySelect = usePaginatedSearchSelect<CurrencyDto>(getCurrencies, isCurrencyDropdownOpen, currencySearchTerm);
-
     const [region, setRegion] = useState("");
     const [isRegionDropdownOpen, setIsRegionDropdownOpen] = useState(false);
     const [regionSearchTerm, setRegionSearchTerm] = useState("");
-    const regionSelect = usePaginatedSearchSelect<CountryDto>(getCountries, isRegionDropdownOpen, regionSearchTerm);
-
     const [isUomDropdownOpen, setIsUomDropdownOpen] = useState(false);
     const [uomSearchTerm, setUomSearchTerm] = useState("");
-    const uomSelect = usePaginatedSearchSelect<UnitDto>(getUnits, isUomDropdownOpen, uomSearchTerm);
-
+const currencySelect = usePaginatedSearchSelect<CurrencyDto>(getCurrenciesSafe, isCurrencyDropdownOpen, currencySearchTerm);
+const regionSelect = usePaginatedSearchSelect<CountryDto>(getCountriesSafe, isRegionDropdownOpen, regionSearchTerm);
+const uomSelect = usePaginatedSearchSelect<UnitDto>(getUnitsSafe, isUomDropdownOpen, uomSearchTerm);
     const [description, setDescription] = useState("");
     const [deliveryLocation, setDeliveryLocation] = useState("");
     const [startDateTime, setStartDateTime] = useState("");
@@ -560,10 +602,12 @@ const CreateRFQ: React.FC = () => {
         const loadFieldTypes = async () => {
             try {
                 const data = await fetchReferenceList(["QUESTION_TYPE"]);
-                const filtered = data.filter((item: any) =>
-                    ["INPUT", "RADIO_BUTTON", "CHECK_BOX", "FILE"].includes(item.key)
-                );
-                setFieldTypeOptions(filtered);
+if (Array.isArray(data)) {
+    const filtered = data.filter((item: any) =>
+        ["INPUT", "RADIO_BUTTON", "CHECK_BOX", "FILE"].includes(item.key)
+    );
+    setFieldTypeOptions(filtered);
+}
             } catch (err) {
                 console.error("Failed to fetch question types", err);
             }

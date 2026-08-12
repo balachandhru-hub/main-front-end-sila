@@ -1557,7 +1557,9 @@ const Step2Categories: React.FC<Step2CategoriesProps> = ({
       setLoadingSegments(true);
       try {
         const data = await fetchSegments();
-        setSegments(data);
+if (Array.isArray(data)) {
+    setSegments(data);
+}
       } catch (err) {
         console.error('Failed to load segments:', err);
       } finally {
@@ -1575,8 +1577,10 @@ const Step2Categories: React.FC<Step2CategoriesProps> = ({
     const loadClasses = async () => {
       setLoadingClasses(true);
       try {
-        const data = await fetchClasses(activeProduct.segment, activeProduct.family);
-        setClasses(data);
+       const data = await fetchClasses(activeProduct.segment, activeProduct.family);
+if (Array.isArray(data)) {
+    setClasses(data);
+}
       } catch (err) {
         console.error('Failed to load classes:', err);
       } finally {
@@ -1776,10 +1780,12 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
   useEffect(() => {
     const loadMetadata = async () => {
       try {
-        const items = await fetchMetadataReferenceList(['INDUSTRY', 'BUSINESS_TYPE', 'DOCUMENT_TYPE']);
-        setIndustryOptions(items.filter((i) => i.type === 'INDUSTRY'));
-        setBusinessTypeOptions(items.filter((i) => i.type === 'BUSINESS_TYPE'));
-        setDocumentTypeOptions(items.filter((i) => i.type === 'DOCUMENT_TYPE'));
+       const items = await fetchMetadataReferenceList(['INDUSTRY', 'BUSINESS_TYPE', 'DOCUMENT_TYPE']);
+if (Array.isArray(items)) {
+    setIndustryOptions(items.filter((i) => i.type === 'INDUSTRY'));
+    setBusinessTypeOptions(items.filter((i) => i.type === 'BUSINESS_TYPE'));
+    setDocumentTypeOptions(items.filter((i) => i.type === 'DOCUMENT_TYPE'));
+}
       } catch (err) {
         console.warn('Failed to fetch metadata reference list', err);
       }
