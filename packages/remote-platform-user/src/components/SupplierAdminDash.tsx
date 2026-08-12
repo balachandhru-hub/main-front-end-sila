@@ -346,10 +346,7 @@ const SupplierAdminDash: React.FC = () => {
   const [loadingRfqs, setLoadingRfqs] = useState(true);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
-  // const [hasMoreRfqs, setHasMoreRfqs] = useState(true);
-  // const [loadingMoreRfqs, setLoadingMoreRfqs] = useState(false);
   const RFQ_INITIAL_VISIBLE = 3;
-  // const RFQ_PAGE_SIZE = 5;
  
   const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
   const [selectedRfq, setSelectedRfq] = useState<RFQDetailResponse | null>(null);
@@ -437,7 +434,6 @@ const SupplierAdminDash: React.FC = () => {
         
         setRfqs(data);
         setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
-        // setHasMoreRfqs(data.length === initialLimit);
       } catch (err: any) {
         console.error("Failed to load RFQs", err);
         setRfqsError(err.message || "Failed to load sourcing opportunities.");
@@ -447,42 +443,6 @@ const SupplierAdminDash: React.FC = () => {
     };
     loadRfqs();
   }, [supplierId]);
- 
-  // const handleViewMoreRfqs = async () => {
-  //   if (loadingMoreRfqs) return;
- 
-  //   if (visibleRfqCount < rfqs.length) {
-  //     setVisibleRfqCount((v) => Math.min(v + RFQ_PAGE_SIZE, rfqs.length));
-  //     return;
-  //   }
- 
-  //   if (!supplierId || !hasMoreRfqs) return;
- 
-  //   setLoadingMoreRfqs(true);
-  //   try {
-  //     const nextPage = await fetchRFQMasterData({
-  //       supplierId,
-  //       index: rfqs.length,
-  //       limit: RFQ_PAGE_SIZE,
-  //     });
-      
-  //     // ✅ ADD ERROR CHECK HERE
-  //     if (isErrorResponse(nextPage)) {
-  //       setRfqsError(nextPage.description || nextPage.message || "Failed to load more sourcing opportunities.");
-  //       setLoadingMoreRfqs(false);
-  //       return;
-  //     }
-      
-  //     setRfqs((prev) => [...prev, ...nextPage]);
-  //     setVisibleRfqCount((v) => v + nextPage.length);
-  //     setHasMoreRfqs(nextPage.length === RFQ_PAGE_SIZE);
-  //   } catch (err: any) {
-  //     console.error("Failed to load more RFQs", err);
-  //     setRfqsError(err.message || "Failed to load more sourcing opportunities.");
-  //   } finally {
-  //     setLoadingMoreRfqs(false);
-  //   }
-  // };
  
   const handleViewRfqDetails = async (rfqId: string) => {
     setSelectedRfqId(rfqId);
@@ -1616,76 +1576,6 @@ const SupplierAdminDash: React.FC = () => {
                       </div>
                     )}
                   </section>
-                  {/* <section className="sad-panel">
-                    <div className="sad-panel-header">
-                      <div>
-                        <div className="sad-panel-title">Recent Sourcing Opportunities</div>
-                        <div className="sad-panel-subtitle">Newly listed RFQs matched to your industry categories</div>
-                      </div>
-                      {!loadingRfqs && !rfqsError && rfqs.length > 0 && (visibleRfqCount < rfqs.length || hasMoreRfqs) && (
-                        <a
-                          className="sad-panel-link"
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleViewMoreRfqs();
-                          }}
-                          style={loadingMoreRfqs ? { opacity: 0.6, pointerEvents: "none" } : undefined}
-                        >
-                          {loadingMoreRfqs ? "Loading..." : "View All RFQs →"}
-                        </a>
-                      )}
-                    </div>
-                    {loadingRfqs ? (
-                      <div className="sad-panel-list" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "180px" }}>
-                        <div style={{ color: "#64748b", fontSize: "14px", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
-                          <div className="sad-spinner" />
-                          <span>Loading sourcing opportunities...</span>
-                        </div>
-                      </div>
-                    ) : rfqsError ? (
-                      <div className="sad-panel-list" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "180px", padding: "16px" }}>
-                        <div style={{ color: "#ef4444", fontSize: "14px", textAlign: "center" }}>
-                          {rfqsError}
-                        </div>
-                      </div>
-                    ) : rfqs.length === 0 ? (
-                      <div className="sad-panel-list" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "180px", padding: "16px" }}>
-                        <div style={{ color: "#64748b", fontSize: "14px", textAlign: "center" }}>
-                          No recent sourcing opportunities found.
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="sad-panel-list">
-                        {rfqs.slice(0, visibleRfqCount).map((rfq) => (
-                          <div className="sad-rfq-row" key={rfq.rfqId}>
-                            <div className="sad-rfq-info">
-                              <div className="sad-rfq-meta">
-                                <span className="sad-code-badge">{rfq.rfqNumber}</span>
-                                <span className="sad-dot-sep">•</span>
-                                <span className="sad-company">{rfq.organizationName}</span>
-                              </div>
-                              <div className="sad-rfq-title">{rfq.title}</div>
-                              <div className="sad-rfq-details">
-                                <span>
-                                  <IconCalendar /> Closes: {new Date(rfq.endDate).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
-                                </span>
-                                <span>
-                                  <IconPin /> Deliv: {rfq.deliveryLocation}
-                                </span>
-                              </div>
-                            </div>
-                            <button
-                              className="sad-btn sad-btn-outline"
-                              onClick={() => handleViewRfqDetails(rfq.rfqId)}
-                            >
-                              View RFQ Details
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </section> */}
 
                   <section className="sad-panel">
                     <div className="sad-panel-header">
@@ -1716,29 +1606,6 @@ const SupplierAdminDash: React.FC = () => {
                       ))}
                     </div>
                   </section>
-
-                  {/* <section className="sad-panel">
-                    <div className="sad-panel-header">
-                      <div>
-                        <div className="sad-panel-title">Quick Stats</div>
-                        <div className="sad-panel-subtitle">Supplier administration metrics</div>
-                      </div>
-                    </div>
-                    <div className="sad-panel-list" style={{ padding: "20px 0" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #eef0f3" }}>
-                        <span style={{ color: "#6b7280", fontWeight: 500 }}>Total Suppliers</span>
-                        <span style={{ fontWeight: 500, fontSize: "18px", color: "#2f6feb" }}>48</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #eef0f3" }}>
-                        <span style={{ color: "#6b7280", fontWeight: 500 }}>Active Users</span>
-                        <span style={{ fontWeight: 500, fontSize: "18px", color: "#2f6feb" }}>234</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0" }}>
-                        <span style={{ color: "#6b7280", fontWeight: 500 }}>Bids Received</span>
-                        <span style={{ fontWeight: 500, fontSize: "18px", color: "#2f6feb" }}>156</span>
-                      </div>
-                    </div>
-                  </section> */}
                 </div>
 
                 <section className="sad-matchmaker">
