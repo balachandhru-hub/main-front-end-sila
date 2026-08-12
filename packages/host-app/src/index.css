@@ -120,6 +120,7 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
   padding: 1.3rem;
   overflow-y: auto;
+  background: var(--bg-color);
 }
 
 .main-content.bg-white {

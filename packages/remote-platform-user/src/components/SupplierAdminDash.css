@@ -7,11 +7,7 @@
 }
 
 .sad-sidebar {
-    position: fixed;            
-    top: 64px;                 
-    left: 0;
     width: 248px;
-    height: calc(100vh - 64px); 
     background: #ffffff;
     border-right: 0.0625rem solid #e6e8ec;
     padding: 1.25rem 0;
@@ -125,6 +121,7 @@
     flex-direction: column;
     min-width: 0;
     background: #ffffff;
+    padding: 2rem 2rem;
 }
 
 .sad-content {
@@ -951,8 +948,6 @@
   background: #ffffff;
   border-radius: 0.875rem;
   width: 100%;
-  max-width: 38.75rem;
-  max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
 }

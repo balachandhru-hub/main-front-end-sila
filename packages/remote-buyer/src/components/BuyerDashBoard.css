@@ -847,8 +847,6 @@
     background: #ffffff;
     border-radius: 0.875rem;
     width: 100%;
-    max-width: 38.75rem;
-    max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 1.25rem 3.125rem rgba(15, 23, 42, 0.35);
 }
