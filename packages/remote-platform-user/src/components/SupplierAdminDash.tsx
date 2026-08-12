@@ -346,10 +346,10 @@ const SupplierAdminDash: React.FC = () => {
   const [loadingRfqs, setLoadingRfqs] = useState(true);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
-  const [hasMoreRfqs, setHasMoreRfqs] = useState(true);
-  const [loadingMoreRfqs, setLoadingMoreRfqs] = useState(false);
+  // const [hasMoreRfqs, setHasMoreRfqs] = useState(true);
+  // const [loadingMoreRfqs, setLoadingMoreRfqs] = useState(false);
   const RFQ_INITIAL_VISIBLE = 3;
-  const RFQ_PAGE_SIZE = 5;
+  // const RFQ_PAGE_SIZE = 5;
  
   const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
   const [selectedRfq, setSelectedRfq] = useState<RFQDetailResponse | null>(null);
@@ -437,7 +437,7 @@ const SupplierAdminDash: React.FC = () => {
         
         setRfqs(data);
         setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
-        setHasMoreRfqs(data.length === initialLimit);
+        // setHasMoreRfqs(data.length === initialLimit);
       } catch (err: any) {
         console.error("Failed to load RFQs", err);
         setRfqsError(err.message || "Failed to load sourcing opportunities.");
@@ -448,41 +448,41 @@ const SupplierAdminDash: React.FC = () => {
     loadRfqs();
   }, [supplierId]);
  
-  const handleViewMoreRfqs = async () => {
-    if (loadingMoreRfqs) return;
+  // const handleViewMoreRfqs = async () => {
+  //   if (loadingMoreRfqs) return;
  
-    if (visibleRfqCount < rfqs.length) {
-      setVisibleRfqCount((v) => Math.min(v + RFQ_PAGE_SIZE, rfqs.length));
-      return;
-    }
+  //   if (visibleRfqCount < rfqs.length) {
+  //     setVisibleRfqCount((v) => Math.min(v + RFQ_PAGE_SIZE, rfqs.length));
+  //     return;
+  //   }
  
-    if (!supplierId || !hasMoreRfqs) return;
+  //   if (!supplierId || !hasMoreRfqs) return;
  
-    setLoadingMoreRfqs(true);
-    try {
-      const nextPage = await fetchRFQMasterData({
-        supplierId,
-        index: rfqs.length,
-        limit: RFQ_PAGE_SIZE,
-      });
+  //   setLoadingMoreRfqs(true);
+  //   try {
+  //     const nextPage = await fetchRFQMasterData({
+  //       supplierId,
+  //       index: rfqs.length,
+  //       limit: RFQ_PAGE_SIZE,
+  //     });
       
-      // ✅ ADD ERROR CHECK HERE
-      if (isErrorResponse(nextPage)) {
-        setRfqsError(nextPage.description || nextPage.message || "Failed to load more sourcing opportunities.");
-        setLoadingMoreRfqs(false);
-        return;
-      }
+  //     // ✅ ADD ERROR CHECK HERE
+  //     if (isErrorResponse(nextPage)) {
+  //       setRfqsError(nextPage.description || nextPage.message || "Failed to load more sourcing opportunities.");
+  //       setLoadingMoreRfqs(false);
+  //       return;
+  //     }
       
-      setRfqs((prev) => [...prev, ...nextPage]);
-      setVisibleRfqCount((v) => v + nextPage.length);
-      setHasMoreRfqs(nextPage.length === RFQ_PAGE_SIZE);
-    } catch (err: any) {
-      console.error("Failed to load more RFQs", err);
-      setRfqsError(err.message || "Failed to load more sourcing opportunities.");
-    } finally {
-      setLoadingMoreRfqs(false);
-    }
-  };
+  //     setRfqs((prev) => [...prev, ...nextPage]);
+  //     setVisibleRfqCount((v) => v + nextPage.length);
+  //     setHasMoreRfqs(nextPage.length === RFQ_PAGE_SIZE);
+  //   } catch (err: any) {
+  //     console.error("Failed to load more RFQs", err);
+  //     setRfqsError(err.message || "Failed to load more sourcing opportunities.");
+  //   } finally {
+  //     setLoadingMoreRfqs(false);
+  //   }
+  // };
  
   const handleViewRfqDetails = async (rfqId: string) => {
     setSelectedRfqId(rfqId);
