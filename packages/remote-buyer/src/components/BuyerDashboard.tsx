@@ -4,7 +4,9 @@ import CreateRFQ from "./Create_RFQ.tsx";
 import Product from "./Product.tsx";
 import Header from "./Header";
 import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById } from "../api/Buyerapi";
-import { CompanyProfile } from '@vosox/shared-ui';
+import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx"; 
+import Invitaions from "../../../remote-supplier/src/components/Invitations";
+import {CompanyProfile} from '@vosox/shared-ui';
 
 /* ---------------------------------- Icons ---------------------------------- */
 
@@ -259,6 +261,7 @@ const NavIconBarChart = () => (
 
 const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
+  { key: "invitations", icon: <IconMail />, label: "Invitations", badge: 2 },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
   { key: "activeRFQs", icon: <NavIconFile />, label: "Active RFQs" },
   { key: "evaluateQuotations", icon: <NavIconFileCheck />, label: "Evaluate Quotations" },
@@ -929,8 +932,6 @@ const BuyersDashboard: React.FC = () => {
     return results;
   };
 
-
-
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
       <Header />
@@ -939,7 +940,6 @@ const BuyersDashboard: React.FC = () => {
         className="pud-shell"
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
       >
-
         <aside className="pud-sidebar">
           <nav className="pud-nav">
             {navItems.map((item) => (
@@ -980,6 +980,10 @@ const BuyersDashboard: React.FC = () => {
               <CreateRFQ />
             ) : activeNav === "product" ? (
               <Product />
+            ) : activeNav === "invitations" ? (
+              <Invitaions/>
+            ): activeNav === "template" ? (
+              <UserTemplate />
             ) : rfqPageView === "allRfqs" ? (
               <>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>

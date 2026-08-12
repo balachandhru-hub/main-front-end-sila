@@ -5,7 +5,11 @@ export interface AssetDto {
   fileType?: string | null;
   fileName?: string;
 }
-
+export interface ErrorResponseDto {
+  status_code: number;
+  message: string;
+  description: string;
+}
 export interface RegistrationDto {
   registrationType?: string;
   registrationNumber?: string;

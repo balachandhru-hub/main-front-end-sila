@@ -4,6 +4,7 @@ import "./Invitations.css";
 
 /* ---------------- Types ---------------- */
 
+/* Types */
 type InvitationStatus = "open" | "accepted" | "declined" | "closed";
 
 interface Invitation {
@@ -92,8 +93,7 @@ const officeFurniture: Invitation = {
     status: "open",
     title: "Office Furniture",
     company: "ABC Manufacturing",
-    description:
-        "Supply and installation of ergonomic office desks, chairs, and conference room layouts for the newly renovated corporate headquarters.",
+    description: "Supply and installation of ergonomic office desks, chairs, and conference room layouts for the newly renovated corporate headquarters.",
     closing: "2026-07-25",
 };
 
@@ -103,8 +103,7 @@ const enterpriseLaptops: Invitation = {
     status: "open",
     title: "Enterprise Laptops & Keyboards",
     company: "Global Tech Solutions Inc.",
-    description:
-        "Annual replenishment of standard developer workstations, ergonomic mice, mechanical keyboards, and 27-inch monitors.",
+    description: "Annual replenishment of standard developer workstations, ergonomic mice, mechanical keyboards, and 27-inch monitors.",
     closing: "2026-08-05",
 };
 
@@ -114,8 +113,7 @@ const recycledStationeryAccepted: Invitation = {
     status: "accepted",
     title: "Recycled Stationery Bulk",
     company: "Eco-Friendly Logistics Ltd",
-    description:
-        "Corporate-wide distribution of recycled writing pads, notebooks, biodegradable pens, and storage folders.",
+    description: "Corporate-wide distribution of recycled writing pads, notebooks, biodegradable pens, and storage folders.",
     closing: "2026-07-12",
 };
 
@@ -125,8 +123,7 @@ const breakroomSupplies: Invitation = {
     status: "closed",
     title: "Premium Coffee & Breakroom Amenities",
     company: "Nexus Capital",
-    description:
-        "Sourcing high-quality organic coffee beans, tea selection, and eco-friendly disposable mugs for five regional offices.",
+    description: "Sourcing high-quality organic coffee beans, tea selection, and eco-friendly disposable mugs for five regional offices.",
     closing: "2026-06-30",
 };
 
@@ -136,33 +133,25 @@ const recycledStationeryDeclined: Invitation = {
     status: "declined",
     title: "Recycled Stationery Bulk",
     company: "Eco-Friendly Logistics Ltd",
-    description:
-        "Corporate-wide distribution of recycled writing pads, notebooks, biodegradable pens, and storage folders.",
+    description: "Corporate-wide distribution of recycled writing pads, notebooks, biodegradable pens, and storage folders.",
     closing: "2026-06-07",
 };
 
 const tabInvitations: Record<TabKey, Invitation[]> = {
-    all: [
-        officeFurniture,
-        enterpriseLaptops,
-        recycledStationeryAccepted,
-        breakroomSupplies,
-        recycledStationeryDeclined,
-    ],
+    all: [officeFurniture, enterpriseLaptops, recycledStationeryAccepted, breakroomSupplies, recycledStationeryDeclined],
     open: [officeFurniture, enterpriseLaptops],
     accepted: [recycledStationeryAccepted],
-    declined: [],
+    declined: [recycledStationeryDeclined],
 };
 
 const tabs: { key: TabKey; label: string }[] = [
     { key: "all", label: "All Invitations (4)" },
     { key: "open", label: "Open Invitations (2)" },
     { key: "accepted", label: "Accepted Invitations (1)" },
-    { key: "declined", label: "Declined Invitations (0)" },
+    { key: "declined", label: "Declined Invitations (1)" },
 ];
 
-/* ---------------- Invitation card ---------------- */
-
+/* ===== INVITATION CARD ===== */
 const InvitationCard: React.FC<{ invitation: Invitation }> = ({ invitation }) => {
     const { code, category, status, title, company, description, closing } = invitation;
 
@@ -241,6 +230,7 @@ const InvitationCard: React.FC<{ invitation: Invitation }> = ({ invitation }) =>
  * page shell. Doing so would nest a second sidebar inside the dashboard.
  */
 
+/* ===== CONTENT ONLY (NO HEADER/SIDEBAR) ===== */
 const Invitations: React.FC = () => {
     const [activeTab, setActiveTab] = useState<TabKey>("all");
     const [searchQuery, setSearchQuery] = useState("");

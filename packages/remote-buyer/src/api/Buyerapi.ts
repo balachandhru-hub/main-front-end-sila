@@ -7,6 +7,29 @@ import type {
   BuyerRFQDetailResponse,
 } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
+
+export interface BuyerCatalogResponse {
+  supplierId: string;
+  catalogId: string;
+  supplierName: string;
+  catalogName: string;
+  description: string;
+  price: number;
+  currency: string;
+  unitOfMeasure: string;
+  segment: number;
+  segmentTitle: string;
+  family: number;
+  familyTitle: string;
+  commodity: number;
+  commodityTitle: string;
+  class: number;
+  classTitle: string;
+  catalogType: string;
+  isPunchOut: boolean;
+  punchOutUrl: string;
+  hasCatalog: boolean;
+}
 import type { ErrorResponseDto } from "@vosox/shared-ui";
 import { isErrorResponse } from "@vosox/shared-ui";
 
@@ -471,6 +494,58 @@ export const fetchBuyerRFQById = async (rfqId: string): Promise<BuyerRFQDetailRe
   }
 };
 
+export const fetchBuyerCatalog = async (payload: {
+  segment?: number;
+  family?: number;
+  class?: number;
+  commodity?: number;
+  search?: string;
+  index?: number;
+  limit?: number;
+}): Promise<BuyerCatalogResponse[] | ErrorResponseDto> => {
+  try {
+    const response = await axiosInstance.get<BuyerCatalogResponse[]>(
+      '/api/v1/supplier/buyer-catalog',
+      {
+        params: {
+          segment: payload.segment || undefined,
+          family: payload.family || undefined,
+          class: payload.class || undefined,
+          commodity: payload.commodity || undefined,
+          search: payload.search || undefined,
+          index: payload.index ?? 0,
+          limit: payload.limit ?? 20,
+        },
+      }
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch buyer catalog',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching buyer catalog.',
+    };
+  }
+};
+
 export const getPersonDetail = async (): Promise<PersonDetailDto | ErrorResponseDto> => {
   try {
     const response = await axiosInstance.get<PersonDetailDto>(
@@ -560,6 +635,6 @@ export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorRe
   return personDetailInFlight;
 };
 
-export const invalidatePersonDetailCache = () => {
+export const invalidatePersonDetailCache =()=>{
   personDetailCache = null;
 };

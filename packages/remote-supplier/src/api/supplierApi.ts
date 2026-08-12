@@ -10,6 +10,8 @@ import type {
   SubmitQuotationPayload,
   CreateSupplierCatalogPayload,
   SubmitRfqAnswersPayload,
+  CurrencyListResponse,
+  SupplierCatalogListItem,
 } from '../dto/supplierDto';
 import type { ErrorResponseDto } from '@vosox/shared-ui';
 import { isErrorResponse } from '@vosox/shared-ui';
@@ -31,45 +33,78 @@ export interface PersonDetailDto {
 }
 
 export type { SupplierProfileResponse, RFQMasterDataItem, RFQDetailResponse, SubmitQuotationPayload } from '../dto/supplierDto';
-export type { CatalogAssetDto, CatalogDetailDto, CreateSupplierCatalogPayload, SubmitRfqAnswersPayload, RfqDocumentAssetDto } from '../dto/supplierDto';
+export type { CatalogAssetDto, CatalogDetailDto, CreateSupplierCatalogPayload, SubmitRfqAnswersPayload, RfqDocumentAssetDto, SupplierCatalogListItem } from '../dto/supplierDto';
+export type { ErrorResponseDto } from '../dto/supplierDto';
 
 export const createSupplierProfile = async (
   payload: CreateSupplierProfilePayload
-): Promise<any> => {
+): Promise<any | ErrorResponseDto> => {
   try {
     const response = await supplierInstance.post('/api/v1/supplier/register', payload);
-    return response;
+    return response.data;
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    const responseData = error.response?.data;
-    let errMsg = 'Failed to submit supplier profile.';
-    if (responseData) {
-      errMsg = responseData.message || responseData.description || errMsg;
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
     }
-    throw new Error(`${errMsg} (${status})`);
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to create supplier profile',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while creating supplier profile.',
+    };
   }
 };
 
 export const createSupplierCatalog = async (
   payload: CreateSupplierCatalogPayload
-): Promise<any> => {
+): Promise<any | ErrorResponseDto> => {
   try {
     const response = await supplierInstance.post('/api/v1/supplier/catalog', payload);
     return response.data;
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    const responseData = error.response?.data;
-    const errMsg =
-      responseData?.message ||
-      responseData?.description ||
-      'Failed to create supplier catalog.';
-    throw new Error(`${errMsg} (${status})`);
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to create supplier catalog',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while creating supplier catalog.',
+    };
   }
 };
 
 export const updateRejectedSupplier = async (
   payload: UpdateRejectedSupplierPayload
-): Promise<any> => {
+): Promise<any | ErrorResponseDto> => {
   try {
     const response = await supplierInstance.put(
       '/api/v1/supplier/update-rejected-supplier',
@@ -77,29 +112,66 @@ export const updateRejectedSupplier = async (
     );
     return response.data;
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    const responseData = error.response?.data;
-    const errMsg =
-      responseData?.message ||
-      responseData?.description ||
-      'Failed to update rejected supplier profile.';
-    throw new Error(`${errMsg} (${status})`);
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to update rejected supplier',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while updating rejected supplier.',
+    };
   }
 };
 
-export const fetchOnboardingDetails = async (): Promise<any> => {
+export const fetchOnboardingDetails = async (): Promise<any | ErrorResponseDto> => {
   try {
     const response = await supplierInstance.get('/api/v1/identity/onboarding');
     return response.data;
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    throw new Error(`Failed to fetch onboarding details (${status})`);
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch onboarding details',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching onboarding details.',
+    };
   }
 };
 
 export const fetchMetadataReferenceList = async (
   types: MetadataReferenceType[]
-): Promise<MetadataReferenceItem[]> => {
+): Promise<MetadataReferenceItem[] | ErrorResponseDto> => {
   try {
     const response = await supplierInstance.post<MetadataReferenceItem[]>(
       '/api/v1/masterdata/metadata/reference-list',
@@ -107,12 +179,33 @@ export const fetchMetadataReferenceList = async (
     );
     return response.data ?? [];
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    throw new Error(`Failed to fetch metadata reference list (${status})`);
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch metadata reference list',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching metadata reference list.',
+    };
   }
 };
 
-export const getSupplierProfile = async (): Promise<SupplierProfileResponse | null> => {
+export const getSupplierProfile = async (): Promise<SupplierProfileResponse | null | ErrorResponseDto> => {
   try {
     const response = await supplierInstance.get<SupplierProfileResponse>(
       'api/v1/supplier/profile'
@@ -127,18 +220,55 @@ export const getSupplierProfile = async (): Promise<SupplierProfileResponse | nu
     if (error?.response?.status === 204) {
       return null;
     }
-    throw error;
+
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch supplier profile',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching supplier profile.',
+    };
   }
 };
 
-export const logoutSupplier = async (): Promise<void> => {
+export const logoutSupplier = async (): Promise<void | ErrorResponseDto> => {
   try {
     await supplierInstance.put('/api/v1/identity/auth/logout');
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    const responseData = error.response?.data;
-    const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
-    throw new Error(`${errMsg} (${status})`);
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+    }
+    
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to logout',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while logging out.',
+    };
   } finally {
     invalidatePersonDetailCache();
   }
@@ -148,53 +278,135 @@ export const fetchRFQMasterData = async (payload: {
   supplierId: string;
   index: number;
   limit: number;
-}): Promise<RFQMasterDataItem[]> => {
+}): Promise<RFQMasterDataItem[] | ErrorResponseDto> => {
   try {
     const response = await supplierInstance.post('/api/v1/supplier/rfq-master-data', payload);
     return response.data ?? [];
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    throw new Error(`Failed to fetch RFQ master data (${status})`);
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch RFQ master data',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching RFQ master data.',
+    };
   }
 };
 
-export const fetchRFQById = async (rfqId: string): Promise<RFQDetailResponse> => {
+export const fetchRFQById = async (rfqId: string): Promise<RFQDetailResponse | ErrorResponseDto> => {
   try {
     const response = await supplierInstance.get('/api/v1/supplier/rfq-by-id', {
       params: { rfqId },
     });
     return response.data;
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    throw new Error(`Failed to fetch RFQ details (${status})`);
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch RFQ details',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching RFQ details.',
+    };
   }
 };
 
 export const submitSupplierQuotation = async (
   payload: SubmitQuotationPayload
-): Promise<any> => {
+): Promise<any | ErrorResponseDto> => {
   try {
     const response = await supplierInstance.put('/api/v1/supplier/quotation', payload);
     return response.data;
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    const responseData = error.response?.data;
-    const errMsg = responseData?.message || responseData?.description || 'Failed to submit quotation.';
-    throw new Error(`${errMsg} (${status})`);
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to submit supplier quotation',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while submitting supplier quotation.',
+    };
   }
 };
 
-export const fetchSegments = async (): Promise<any[]> => {
+export const fetchSegments = async (): Promise<any[] | ErrorResponseDto> => {
   try {
-    const res = await supplierInstance.get(`/api/v1/masterdata/unspsc?pageIndex=1&pageSize=10`);
+    const res = await supplierInstance.get(`/api/v1/masterdata/unspsc/segment?pageIndex=1&pageSize=10`);
     return Array.isArray(res.data) ? res.data : [];
   } catch (error: any) {
-    console.error('Failed to fetch segments:', error);
-    return [];
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch segments',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching segments.',
+    };
   }
 };
 
-export const fetchClasses = async (segment: number, family: number): Promise<any[]> => {
+export const fetchClasses = async (segment: number, family: number): Promise<any[] | ErrorResponseDto> => {
   try {
     const res = await supplierInstance.get(
       `/api/v1/masterdata/unspsc/class-commodity?segment=${segment}&family=${family}&pageIndex=1&pageSize=10`
@@ -204,22 +416,291 @@ export const fetchClasses = async (segment: number, family: number): Promise<any
     }
     return [];
   } catch (error: any) {
-    console.error('Failed to fetch classes:', error);
-    return [];
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch classes',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching classes.',
+    };
   }
 };
 
+// ============================================================================
+// API: Submit RFQ Answers
+// ============================================================================
 export const submitRfqAnswers = async (
   payload: SubmitRfqAnswersPayload
-): Promise<any> => {
+): Promise<any | ErrorResponseDto> => {
   try {
     const response = await supplierInstance.put('/api/v1/supplier/rfq-answer', payload);
     return response.data;
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    const responseData = error.response?.data;
-    const errMsg = responseData?.message || responseData?.description || 'Failed to submit RFQ answers.';
-    throw new Error(`${errMsg} (${status})`);
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to submit RFQ answers',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while submitting RFQ answers.',
+    };
+  }
+};
+
+// ============================================================================
+// API: Fetch Currencies
+// ============================================================================
+export const fetchCurrencies = async (payload?: {
+  index?: number;
+  limit?: number;
+}): Promise<CurrencyListResponse | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.get<CurrencyListResponse>(
+      '/api/v1/masterdata/currencies',
+      {
+        params: {
+          index: payload?.index ?? 0,
+          limit: payload?.limit ?? 10,
+        },
+      }
+    );
+    return response.data ?? { items: [], totalCount: 0, index: 0, limit: 0 };
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch currencies',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching currencies.',
+    };
+  }
+};
+
+// ============================================================================
+// API: Fetch Families for a selected Segment
+// ============================================================================
+export const fetchFamilies = async (
+  segment: number,
+  payload?: { pageIndex?: number; pageSize?: number }
+): Promise<any[] | ErrorResponseDto> => {
+  try {
+    const res = await supplierInstance.get(
+      `/api/v1/masterdata/unspsc/family`,
+      {
+        params: {
+          segment,
+          pageIndex: payload?.pageIndex ?? 1,
+          pageSize: payload?.pageSize ?? 100,
+        },
+      }
+    );
+    if (Array.isArray(res.data)) {
+      return res.data.filter((item) => item && item.family !== null && item.title !== '');
+    }
+    return [];
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch families',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching families.',
+    };
+  }
+};
+
+// ============================================================================
+// API: Fetch Classes for a selected Family
+// ============================================================================
+export const fetchClassifications = async (
+  family: number,
+  payload?: { pageIndex?: number; pageSize?: number }
+): Promise<any[] | ErrorResponseDto> => {
+  try {
+    const res = await supplierInstance.get(
+      `/api/v1/masterdata/unspsc/class`,
+      {
+        params: {
+          family,
+          pageIndex: payload?.pageIndex ?? 1,
+          pageSize: payload?.pageSize ?? 100,
+        },
+      }
+    );
+    if (Array.isArray(res.data)) {
+      return res.data.filter((item) => item && item.class !== null && item.title !== '');
+    }
+    return [];
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch classifications',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching classifications.',
+    };
+  }
+};
+
+// ============================================================================
+// API: Fetch Commodities for a selected Class
+// ============================================================================
+export const fetchCommodities = async (
+  classId: number,
+  payload?: { pageIndex?: number; pageSize?: number }
+): Promise<any[] | ErrorResponseDto> => {
+  try {
+    const res = await supplierInstance.get(
+      `/api/v1/masterdata/unspsc/commodity`,
+      {
+        params: {
+          class: classId,
+          pageIndex: payload?.pageIndex ?? 1,
+          pageSize: payload?.pageSize ?? 100,
+        },
+      }
+    );
+    if (Array.isArray(res.data)) {
+      return res.data.filter((item) => item && item.commodity !== null && item.title !== '');
+    }
+    return [];
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch commodities',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching commodities.',
+    };
+  }
+};
+
+// ============================================================================
+// API: Fetch Supplier Catalog
+// ============================================================================
+export const fetchSupplierCatalog = async (): Promise<SupplierCatalogListItem[] | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.get<SupplierCatalogListItem[]>('/api/v1/supplier/catalog');
+    return response.data ?? [];
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch supplier catalog',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching supplier catalog.',
+    };
   }
 };
 

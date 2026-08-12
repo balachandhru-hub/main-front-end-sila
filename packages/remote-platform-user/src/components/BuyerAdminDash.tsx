@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import "./BuyerAdminDash.css";
-import Header from "./Header";
+import Header from "../../../remote-buyer/src/components/Header";
 import UserAdmin from "../UserAdmin";
+import Invitations from "../../../remote-supplier/src/components/Invitations";
+import Product from "../../../remote-buyer/src/components/Product";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import { useNetworkAdminAuthStore } from "../store/useAuthStore";
-import { fetchBuyerRFQs, fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
+import { getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
 import CreateRFQ from "./UserListTable/CreateRFQ";
 import { logoutPlatformUser } from "../api/platformApi";
 
@@ -132,6 +134,14 @@ const NavIconTemplate = () => (
   </svg>
 );
 
+const NavIconFileCheck = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <path d="M14 2v6h6" />
+    <path d="m9 15 2 2 4-4" />
+  </svg>
+);
+
 const LogoutIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -224,8 +234,10 @@ const NavIconFilePlus = () => (
 
 const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
-  { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
+  { key: "invitations", icon: <IconMail />, label: "Invitations", badge: 2 },
   { key: "activeRFQs", icon: <IconFile />, label: "Active RFQs" },
+  { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
+  { key: "product", icon: <NavIconFileCheck />, label: "Product" },
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
   { key: "template", icon: <NavIconTemplate />, label: "Template" },
   { key: "purchaseOrders", icon: <IconBag />, label: "Purchase Orders" },
@@ -347,11 +359,32 @@ const BuyerAdminDash: React.FC = () => {
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
   const RFQ_INITIAL_VISIBLE = 3;
 
-  const buyerId = sessionStorage.getItem("vosox_buyer_id");
+  const [buyerId, setBuyerId] = useState<string | null>(
+    sessionStorage.getItem("vosox_buyer_id")
+  );
 
   useEffect(() => {
     useNetworkAdminAuthStore.getState().initializeFromSession();
   }, []);
+
+  useEffect(() => {
+    const loadBuyerProfile = async () => {
+      if (!buyerId) {
+        try {
+          const profile = await getBuyerProfile();
+          if (profile?.id) {
+            sessionStorage.setItem("vosox_buyer_id", profile.id);
+            setBuyerId(profile.id);
+          } else {
+            setRfqsError("Buyer profile not found. Please complete onboarding.");
+          }
+        } catch (err: any) {
+          setRfqsError("Failed to load buyer profile details.");
+        }
+      }
+    };
+    loadBuyerProfile();
+  }, [buyerId]);
 
   useEffect(() => {
     const loadRfqs = async () => {
@@ -437,7 +470,6 @@ const BuyerAdminDash: React.FC = () => {
   };
 
   const handleViewRfqDetailsFullPage = async (rfqId: string) => {
-    // setFullPageRfqId(rfqId);
     setRfqPageView("rfqDetail");
     setLoadingFullPageRfq(true);
     setFullPageRfqError(null);
@@ -463,8 +495,6 @@ const BuyerAdminDash: React.FC = () => {
     setFullPageRfq(null);
     setFullPageRfqError(null);
   };
-
-
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -563,10 +593,13 @@ const BuyerAdminDash: React.FC = () => {
           <main className="bad-content">
             {activeNav === "userList" ? (
               <UserAdmin />
+            ) : activeNav === "invitations" ? (
+              <Invitations />
             ) : activeNav === "companyProfile" ? (
               <CompanyProfile mode="network-admin" showHeader={false} />
             ) : activeNav === "createRFQ" ? (
-              <CreateRFQ />
+              <CreateRFQ />) : activeNav === "product" ? (
+  <Product />
             ) : rfqPageView === "allRfqs" ? (
               <>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>

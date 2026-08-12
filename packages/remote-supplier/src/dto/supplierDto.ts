@@ -17,7 +17,46 @@ export interface MetadataReferenceItem {
   type: MetadataReferenceType;
   description: string | null;
 }
+export interface CurrencyItem {
+  id: string;
+  currencyName: string;
+  sortNumber: number;
+}
 
+export interface CurrencyListResponse {
+  items: CurrencyItem[];
+  totalCount: number;
+  index: number;
+  limit: number;
+}
+export interface SupplierCatalogAssetItem {
+  id: string;
+  assetType: string | null;
+  assetName: string;
+  fileType: string | null;
+  fileName: string;
+}
+
+export interface SupplierCatalogListItem {
+  id: string;
+  catalogName: string;
+  description: string;
+  price: number;
+  currency: string;
+  unitOfMeasure: string;
+  segment: number;
+  segmentTitle: string;
+  family: number;
+  familyTitle: string;
+  commodity: number;
+  commodityTitle: string;
+  class: number;
+  classTitle: string;
+  catalogType: string;
+  isPunchOut: boolean;
+  punchOutUrl: string;
+  assets: SupplierCatalogAssetItem[];
+}
 export type MetadataReferenceListRequest = MetadataReferenceType[];
 export type MetadataReferenceListResponse = MetadataReferenceItem[];
 
@@ -339,4 +378,9 @@ export interface SubmitRfqAnswerItemDto {
 export interface SubmitRfqAnswersPayload {
   supplierRFQId: string;
   answers: SubmitRfqAnswerItemDto[];
+}
+export interface ErrorResponseDto {
+  status_code: number;
+  message: string;
+  description: string;
 }
