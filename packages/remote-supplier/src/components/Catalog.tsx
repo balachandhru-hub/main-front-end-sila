@@ -237,7 +237,11 @@ const Catalog: React.FC<CatalogProps> = ({
         setCatalogListError(null);
         try {
             const data = await fetchSupplierCatalog();
-            setCatalogList(data);
+if (Array.isArray(data)) {
+    setCatalogList(data);
+} else {
+    setCatalogListError((data as any)?.message || "Failed to load catalogs. Please try again.");
+}
         } catch (error: any) {
         
             setCatalogListError(error?.message || "Failed to load catalogs. Please try again.");
@@ -275,17 +279,21 @@ const Catalog: React.FC<CatalogProps> = ({
 
     // ---- Load Catalog Types ----
     const loadCatalogTypes = async () => {
-        const types = await fetchMetadataReferenceList(['CATALOG_TYPE']);
+    const types = await fetchMetadataReferenceList(['CATALOG_TYPE']);
+    if (Array.isArray(types)) {
         setCatalogTypeOptions(types);
-    };
+    }
+};
 
     // ---- Load Currencies (lazy-load) ----
     const loadCurrencies = async () => {
         if (currencyOptions.length > 0 || loadingCurrencies) return;
         setLoadingCurrencies(true);
         try {
-            const result = await fetchCurrencies({ index: 0, limit: 100 });
-            setCurrencyOptions(result.items || []);
+          const result = await fetchCurrencies({ index: 0, limit: 100 });
+if (result && 'items' in result && Array.isArray(result.items)) {
+    setCurrencyOptions(result.items);
+}
         } catch (error) {
             
         } finally {
@@ -298,8 +306,10 @@ const Catalog: React.FC<CatalogProps> = ({
         if (segmentOptions.length > 0) return;
         setLoadingSegments(true);
         try {
-            const segments = await fetchSegments();
-            setSegmentOptions(segments);
+           const segments = await fetchSegments();
+if (Array.isArray(segments)) {
+    setSegmentOptions(segments);
+}
         } catch (error) {
           
         } finally {
@@ -331,7 +341,9 @@ const Catalog: React.FC<CatalogProps> = ({
             setLoadingFamilies(true);
             try {
                 const families = await fetchFamilies(segmentNum);
-                setFamilyOptions(families);
+if (Array.isArray(families)) {
+    setFamilyOptions(families);
+}
             } catch (error) {
               
             } finally {
@@ -360,8 +372,10 @@ const Catalog: React.FC<CatalogProps> = ({
         if (familyNum) {
             setLoadingClasses(true);
             try {
-                const classes = await fetchClassifications(familyNum);
-                setClassOptions(classes);
+               const classes = await fetchClassifications(familyNum);
+if (Array.isArray(classes)) {
+    setClassOptions(classes);
+}
             } catch (error) {
               
             } finally {
@@ -387,8 +401,10 @@ const Catalog: React.FC<CatalogProps> = ({
         if (classNum) {
             setLoadingCommodities(true);
             try {
-                const commodities = await fetchCommodities(classNum);
-                setCommodityOptions(commodities);
+               const commodities = await fetchCommodities(classNum);
+if (Array.isArray(commodities)) {
+    setCommodityOptions(commodities);
+}
             } catch (error) {
              
             } finally {
@@ -458,10 +474,10 @@ const Catalog: React.FC<CatalogProps> = ({
             if (!organizationId) {
                 throw new Error("Organization ID not found. Please log in again.");
             }
-
-            const entityTypes = await fetchMetadataReferenceList(['ENTITY_TYPE']);
-            const supplierEntityId = entityTypes.find((e) => e.key === 'SUPPLIER')?.id || '59476530-3c10-438b-b3b3-9db9e96e8d93';
-            const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
+const entityTypesRaw = await fetchMetadataReferenceList(['ENTITY_TYPE']);
+const entityTypes = Array.isArray(entityTypesRaw) ? entityTypesRaw : [];
+const supplierEntityId = entityTypes.find((e) => e.key === 'SUPPLIER')?.id || '59476530-3c10-438b-b3b3-9db9e96e8d93';
+const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
             let assets: CatalogAssetDto[] = [];
             if (catalogFile) {
                 const fileBytes = await fileToBase64(catalogFile);

@@ -113,7 +113,9 @@ const Product: React.FC = () => {
     setLoadingSegments(true);
     try {
       const segments = await fetchSegments();
-      setSegmentOptions(segments);
+if (Array.isArray(segments)) {
+    setSegmentOptions(segments);
+}
     } catch (err) {
       console.error("Failed to load segments", err);
     } finally {
@@ -141,7 +143,9 @@ const Product: React.FC = () => {
       setLoadingFamilies(true);
       try {
         const families = await fetchFamilies(segmentNum);
-        setFamilyOptions(families);
+if (Array.isArray(families)) {
+    setFamilyOptions(families);
+}
       } catch (err) {
         console.error("Failed to load families", err);
       } finally {
@@ -168,7 +172,9 @@ const Product: React.FC = () => {
       setLoadingClasses(true);
       try {
         const classes = await fetchClassifications(familyNum);
-        setClassOptions(classes);
+if (Array.isArray(classes)) {
+    setClassOptions(classes);
+}
       } catch (err) {
         console.error("Failed to load classes", err);
       } finally {
@@ -193,7 +199,9 @@ const Product: React.FC = () => {
       setLoadingCommodities(true);
       try {
         const commodities = await fetchCommodities(classNum);
-        setCommodityOptions(commodities);
+if (Array.isArray(commodities)) {
+    setCommodityOptions(commodities);
+}
       } catch (err) {
         console.error("Failed to load commodities", err);
       } finally {
@@ -226,18 +234,22 @@ const Product: React.FC = () => {
     setCatalogResults([]);
 
     try {
-      const results = await fetchBuyerCatalog({
-        segment: filters.segment || undefined,
-        family: filters.family || undefined,
-        class: filters.class || undefined,
-        commodity: filters.commodity || undefined,
-        search: filters.search || undefined,
-        index: filters.index,
-        limit: filters.limit,
-      });
+     const results = await fetchBuyerCatalog({
+    segment: filters.segment || undefined,
+    family: filters.family || undefined,
+    class: filters.class || undefined,
+    commodity: filters.commodity || undefined,
+    search: filters.search || undefined,
+    index: filters.index,
+    limit: filters.limit,
+});
 
-      setCatalogResults(results);
-      setHasSearched(true);
+if (Array.isArray(results)) {
+    setCatalogResults(results);
+} else {
+    setError((results as any)?.message || "Failed to fetch catalogs. Please try again.");
+}
+setHasSearched(true);
     } catch (err: any) {
       setError(err?.message || "Failed to fetch catalogs. Please try again.");
       setHasSearched(true);
