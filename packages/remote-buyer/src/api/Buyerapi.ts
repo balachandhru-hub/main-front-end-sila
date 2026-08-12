@@ -646,15 +646,44 @@ export interface BuyerAssetDownloadResponse {
   fileBytes: string;
 }
 
-export const downloadBuyerAsset = async (assetId: string): Promise<BuyerAssetDownloadResponse | ErrorResponseDto> => {
+export const downloadBuyerAsset = async (
+  assetId: string
+): Promise<BuyerAssetDownloadResponse | ErrorResponseDto> => {
   try {
-    const response = await axiosInstance.get<BuyerAssetDownloadResponse>(`/api/v1/supplier/asset/${assetId}`);
+    const response = await axiosInstance.get<BuyerAssetDownloadResponse>(
+      `/api/v1/supplier/asset/${assetId}`
+    );
+
     return response.data;
   } catch (error: any) {
-    if (error?.response?.data) {
-      const data = error.response.data;
-      throw new Error(data?.message || data?.description || `Failed to download document (${error.response.status}).`);
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
     }
-    throw new Error('Could not reach the server. Please check your connection and try again.');
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+
+      return {
+        statusCode:
+          errData.statusCode ||
+          errData.status_code ||
+          error.response.status ||
+          500,
+        message: errData.message || 'Failed to download document',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while downloading the document.',
+    };
   }
 };
