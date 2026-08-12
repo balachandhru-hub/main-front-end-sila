@@ -10,7 +10,6 @@
     width: 248px;
     background: #ffffff;
     border-right: 0.0625rem solid #e6e8ec;
-    padding: 1.25rem 0;
     display: flex;
     flex-direction: column;
     z-index: 100;
