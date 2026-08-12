@@ -1616,7 +1616,7 @@ const SupplierAdminDash: React.FC = () => {
                       </div>
                     )}
                   </section>
-                  <section className="sad-panel">
+                  {/* <section className="sad-panel">
                     <div className="sad-panel-header">
                       <div>
                         <div className="sad-panel-title">Recent Sourcing Opportunities</div>
@@ -1685,7 +1685,7 @@ const SupplierAdminDash: React.FC = () => {
                         ))}
                       </div>
                     )}
-                  </section>
+                  </section> */}
 
                   <section className="sad-panel">
                     <div className="sad-panel-header">
@@ -1717,7 +1717,7 @@ const SupplierAdminDash: React.FC = () => {
                     </div>
                   </section>
 
-                  <section className="sad-panel">
+                  {/* <section className="sad-panel">
                     <div className="sad-panel-header">
                       <div>
                         <div className="sad-panel-title">Quick Stats</div>
@@ -1738,7 +1738,7 @@ const SupplierAdminDash: React.FC = () => {
                         <span style={{ fontWeight: 500, fontSize: "18px", color: "#2f6feb" }}>156</span>
                       </div>
                     </div>
-                  </section>
+                  </section> */}
                 </div>
 
                 <section className="sad-matchmaker">
