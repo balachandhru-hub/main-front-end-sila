@@ -231,7 +231,7 @@ function usePaginatedSearchSelect<T>(
                     setPageIndex(0);
                     setHasMore(items.length === limit);
                 } catch (err) {
-                    console.error("Failed to fetch options", err);
+                
                     setOptions([]);
                     setHasMore(false);
                 } finally {
@@ -254,7 +254,7 @@ function usePaginatedSearchSelect<T>(
             setPageIndex(nextIndex);
             setHasMore(items.length === limit);
         } catch (err) {
-            console.error("Failed to fetch more options", err);
+            
         } finally {
             setLoading(false);
         }
@@ -403,7 +403,7 @@ const CreateRFQ: React.FC = () => {
                     setMaterialCodeOptions(Array.isArray(itemData) ? itemData : []);
                 }
             } catch (err) {
-                console.error("Failed to fetch initial data", err);
+            
             }
         };
         fetchInitialData();
@@ -422,7 +422,7 @@ const CreateRFQ: React.FC = () => {
                 const data = res?.data?.data || res?.data || res || [];
                 setCostCenterOptions(Array.isArray(data) ? data : []);
             } catch (err) {
-                console.error("Failed to fetch cost centers", err);
+            
             }
         };
         fetchCostCenters();
@@ -468,7 +468,7 @@ const CreateRFQ: React.FC = () => {
                 const data = await getUnspscSegments(1, 200);
                 setSegmentOptions(data);
             } catch (err) {
-                console.error("Failed to fetch UNSPSC segments", err);
+              
             }
         };
         fetchSegments();
@@ -484,7 +484,6 @@ const CreateRFQ: React.FC = () => {
                 const data = await getUnspscFamilies(Number(segmentCode), 1, 200);
                 setFamilyOptions(data);
             } catch (err) {
-                console.error("Failed to fetch UNSPSC families", err);
             }
         };
         fetchFamilies();
@@ -565,7 +564,6 @@ const CreateRFQ: React.FC = () => {
                 );
                 setFieldTypeOptions(filtered);
             } catch (err) {
-                console.error("Failed to fetch question types", err);
             }
         };
         loadFieldTypes();
@@ -1209,7 +1207,7 @@ const CreateRFQ: React.FC = () => {
                     </div>
 
                     <div className="bd-field">
-                        <label className="bd-label">Total Budget (AED)</label>
+                        <label className="bd-label">Total Budget</label>
                         <input
                             className="bd-input"
                             type="text"
@@ -1581,6 +1579,7 @@ const CreateRFQ: React.FC = () => {
                                 <tr>
                                     <th className="bd-checkbox-cell">Select</th>
                                     <th>Supplier Name</th>
+                                    <th>SN ID</th>
                                     <th>Email</th>
                                     <th>Verification Status</th>
                                     <th>Pipeline Actions On Submit</th>
@@ -1598,6 +1597,9 @@ const CreateRFQ: React.FC = () => {
                                         </td>
                                         <td>
                                             <div className="bd-supplier-name">{s.supplierName}</div>
+                                        </td>
+                                        <td>
+                                            <div className="bd-supplier-sn-id">{s.snid}</div>
                                         </td>
                                         <td>
                                             <span className="bd-supplier-email">{s.email}</span>

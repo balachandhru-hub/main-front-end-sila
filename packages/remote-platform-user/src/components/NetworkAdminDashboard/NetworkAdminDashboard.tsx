@@ -6,6 +6,7 @@ import UserListTable from '../UserListTable/UserListTable';
 import CreateUserModal from '../CreateUserModal/CreateUserModal';
 import { ToastContainer, toastService } from '@vosox/shared-ui';
 import CompanyProfile from '../CompanyProfile/CompanyProfile';
+import Header from '../Header'; 
 import {
   getOrganizationUsers,
   createPerson,
@@ -22,8 +23,6 @@ import {
   FaPlus,
 } from 'react-icons/fa';
 import './NetworkAdminDashboard.css';
-
-const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;
 
 const NavIconUsers = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -275,9 +274,7 @@ const NetworkAdminDashboard: React.FC = () => {
     <div className="nad-page">
       <ToastContainer />
 
-      <header className="nad-top-header">
-        <img src={sila_logo} alt="SILA" className="nad-top-logo" />
-      </header>
+      <Header />
 
       <div className="nad-shell">
         <aside className="nad-sidebar">

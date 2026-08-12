@@ -2,17 +2,9 @@ import React, { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import "./Catalog.css";
 import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
-import { 
-    createSupplierCatalog, 
-    fetchMetadataReferenceList, 
-    fetchCurrencies,
-    fetchSegments,
-    fetchFamilies,
-    fetchClassifications,
-    fetchCommodities,
-    fetchSupplierCatalog
-} from "../api/supplierApi";
-import type { CatalogAssetDto, CatalogDetailDto, SupplierCatalogListItem } from "../dto/supplierDto";
+import { createSupplierCatalog } from "../../../remote-supplier/src/api/supplierApi";
+import type { CatalogAssetDto, CatalogDetailDto } from "../../../remote-supplier/src/dto/supplierDto";
+import { fetchMetadataReferenceList } from "../../../remote-supplier/src/api/supplierApi"
 
 /* ============================== Types ============================== */
 
@@ -21,7 +13,6 @@ export interface CatalogItem {
     catalogName: string;
     description: string;
     price: number;
-    currency: string;
     unitOfMeasure: string;
     catalogType: string;
     segment: number;
@@ -44,7 +35,6 @@ const emptyCatalogForm = {
     catalogName: "",
     description: "",
     price: "",
-    currency: "",
     unitOfMeasure: "PCS",
     catalogType: "",
     segment: "",
@@ -71,6 +61,15 @@ const formatFileSize = (bytes: number) => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+const formatCatalogDate = (iso: string) => {
+    try {
+        return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    } catch {
+        return "";
+    }
+};
+
+// Converts a File to a raw base64 string (strips the "data:...;base64," prefix)
 const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -85,34 +84,29 @@ const fileToBase64 = (file: File): Promise<string> => {
 
 /* ============================== Icons ============================== */
 
-interface IconProps {
-    style?: React.CSSProperties;
-    className?: string;
-}
-
-const NavIconCatalog = (props: IconProps) => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+const NavIconCatalog = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" />
         <circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none" />
     </svg>
 );
 
-const IconChevronRight = (props: IconProps) => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+const IconChevronRight = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="9 18 15 12 9 6" />
     </svg>
 );
 
-const IconPlusCircle = (props: IconProps) => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+const IconPlusCircle = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
         <line x1="12" y1="8" x2="12" y2="16" />
         <line x1="8" y1="12" x2="16" y2="12" />
     </svg>
 );
 
-const IconUploadCloud = (props: IconProps) => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+const IconUploadCloud = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M16 16.5v.01" />
         <path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.78A6 6 0 1 0 6 18h11.5z" />
         <path d="M12 12v7" />
@@ -120,16 +114,16 @@ const IconUploadCloud = (props: IconProps) => (
     </svg>
 );
 
-const IconUploadCloudLarge = (props: IconProps) => (
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+const IconUploadCloudLarge = () => (
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.78A6 6 0 1 0 6 18h11.5z" />
         <path d="M12 12v7" />
         <path d="m9.5 14.5 2.5-2.5 2.5 2.5" />
     </svg>
 );
 
-const IconGrid = (props: IconProps) => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+const IconGrid = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7" rx="1.5" />
         <rect x="14" y="3" width="7" height="7" rx="1.5" />
         <rect x="3" y="14" width="7" height="7" rx="1.5" />
@@ -137,8 +131,8 @@ const IconGrid = (props: IconProps) => (
     </svg>
 );
 
-const IconGridLarge = (props: IconProps) => (
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+const IconGridLarge = () => (
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7" rx="1.5" />
         <rect x="14" y="3" width="7" height="7" rx="1.5" />
         <rect x="3" y="14" width="7" height="7" rx="1.5" />
@@ -146,105 +140,55 @@ const IconGridLarge = (props: IconProps) => (
     </svg>
 );
 
-const IconClose = (props: IconProps) => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+const IconClose = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="6" x2="6" y2="18" />
         <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
 );
 
-const IconCheckCircle = (props: IconProps) => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+const IconCheckCircle = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 6 9 17l-5-5" />
     </svg>
 );
 
-const IconTrash = (props: IconProps) => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+const IconTrash = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="3 6 5 6 21 6" />
         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
     </svg>
 );
 
-const IconFileGeneric = (props: IconProps) => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+const IconFileGeneric = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
         <path d="M14 2v6h6" />
-    </svg>
-);
-
-const IconFilePdf = (props: IconProps) => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <path d="M14 2v6h6" />
-    </svg>
-);
-
-const IconEye = (props: IconProps) => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-        <circle cx="12" cy="12" r="3" />
-    </svg>
-);
-
-const IconExternalLink = (props: IconProps) => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-        <polyline points="15 3 21 3 21 9" />
-        <line x1="10" y1="14" x2="21" y2="3" />
     </svg>
 );
 
 /* ============================== Component ============================== */
 
 interface CatalogProps {
+    /** Called when "Show Catalogs" is clicked, so the parent dashboard can
+     *  switch its main content area to the full catalog list view — the
+     *  same pattern BuyerDashboard uses for its other sidebar nav items. */
     onShowCatalogList?: () => void;
+    /** Called when the user leaves the full catalog list view. */
     onCloseCatalogList?: () => void;
+    /** DOM node (rendered by the parent, inside the main content area) that
+     *  the full catalog list view is portaled into. Null/undefined while
+     *  the view isn't active. */
     fullViewContainer?: HTMLDivElement | null;
-    isAdmin?: boolean;
 }
 
-const Catalog: React.FC<CatalogProps> = ({ 
-    onShowCatalogList, 
-    onCloseCatalogList, 
-    fullViewContainer,
-    isAdmin = false
-}) => {
+const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList, fullViewContainer }) => {
     // ---- Sidebar expansion + modal visibility ----
     const [isCatalogExpanded, setIsCatalogExpanded] = useState(false);
     const [showCreateCatalogModal, setShowCreateCatalogModal] = useState(false);
     const [showUploadCatalogModal, setShowUploadCatalogModal] = useState(false);
     const [showCatalogListModal, setShowCatalogListModal] = useState(false);
-    const [_catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
-
-    // ---- PDF Preview Modal ----
-    const [showPdfPreviewModal, setShowPdfPreviewModal] = useState(false);
-    const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
-    const [pdfPreviewFileName, setPdfPreviewFileName] = useState<string>("");
-
-    // ---- PunchOut Preview Modal ----
-    const [showPunchOutModal, setShowPunchOutModal] = useState(false);
-    const [punchOutPreviewUrl, setPunchOutPreviewUrl] = useState<string>("");
-    const [punchOutIframeBlocked, setPunchOutIframeBlocked] = useState(false);
-
-    // ---- Show Catalogs: API-backed list state ----
-    const [catalogList, setCatalogList] = useState<SupplierCatalogListItem[]>([]);
-    const [loadingCatalogList, setLoadingCatalogList] = useState(false);
-    const [catalogListError, setCatalogListError] = useState<string | null>(null);
-
-    const loadCatalogList = async () => {
-        setLoadingCatalogList(true);
-        setCatalogListError(null);
-        try {
-            const data = await fetchSupplierCatalog();
-            setCatalogList(data);
-        } catch (error: any) {
-        
-            setCatalogListError(error?.message || "Failed to load catalogs. Please try again.");
-        } finally {
-            setLoadingCatalogList(false);
-        }
-    };
+    const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
 
     // ---- Create Catalog form state ----
     const [catalogForm, setCatalogForm] = useState<CatalogFormState>(emptyCatalogForm);
@@ -255,163 +199,17 @@ const Catalog: React.FC<CatalogProps> = ({
     const [createCatalogError, setCreateCatalogError] = useState<string | null>(null);
     const [createCatalogSuccess, setCreateCatalogSuccess] = useState(false);
     const catalogFileInputRef = useRef<HTMLInputElement>(null);
-
-    // ---- Catalog Type & Currency ----
     const [catalogTypeOptions, setCatalogTypeOptions] = useState<Array<{ id: string; key: string }>>([]);
-    const [currencyOptions, setCurrencyOptions] = useState<Array<{ id: string; currencyName: string; sortNumber: number }>>([]);
-    const [loadingCurrencies, setLoadingCurrencies] = useState(false);
-
-    // ---- UNSPSC Classification Dropdowns State ----
-    const [segmentOptions, setSegmentOptions] = useState<Array<{ segment: number; title: string }>>([]);
-    const [familyOptions, setFamilyOptions] = useState<Array<{ family: number; title: string }>>([]);
-    const [classOptions, setClassOptions] = useState<Array<{ class: number; title: string }>>([]);
-    const [commodityOptions, setCommodityOptions] = useState<Array<{ commodity: number; title: string }>>([]);
-
-    // ---- Loading states for classification ----
-    const [loadingSegments, setLoadingSegments] = useState(false);
-    const [loadingFamilies, setLoadingFamilies] = useState(false);
-    const [loadingClasses, setLoadingClasses] = useState(false);
-    const [loadingCommodities, setLoadingCommodities] = useState(false);
-
-    // ---- Load Catalog Types ----
     const loadCatalogTypes = async () => {
         const types = await fetchMetadataReferenceList(['CATALOG_TYPE']);
         setCatalogTypeOptions(types);
-    };
-
-    // ---- Load Currencies (lazy-load) ----
-    const loadCurrencies = async () => {
-        if (currencyOptions.length > 0 || loadingCurrencies) return;
-        setLoadingCurrencies(true);
-        try {
-            const result = await fetchCurrencies({ index: 0, limit: 100 });
-            setCurrencyOptions(result.items || []);
-        } catch (error) {
-            
-        } finally {
-            setLoadingCurrencies(false);
-        }
-    };
-
-    // ---- Load Segments on Modal Open ----
-    const loadSegments = async () => {
-        if (segmentOptions.length > 0) return;
-        setLoadingSegments(true);
-        try {
-            const segments = await fetchSegments();
-            setSegmentOptions(segments);
-        } catch (error) {
-          
-        } finally {
-            setLoadingSegments(false);
-        }
-    };
-
-    // ---- Handle Segment Selection ----
-    const handleSegmentChange = async (segmentValue: string) => {
-        const segmentNum = Number(segmentValue);
-        
-        updateCatalogField("segment", segmentValue);
-        
-        const selectedSegment = segmentOptions.find(s => s.segment === segmentNum);
-        updateCatalogField("segmentTitle", selectedSegment?.title || "");
-        
-        updateCatalogField("family", "");
-        updateCatalogField("familyTitle", "");
-        updateCatalogField("class", "");
-        updateCatalogField("classTitle", "");
-        updateCatalogField("commodity", "");
-        updateCatalogField("commodityTitle", "");
-        
-        setFamilyOptions([]);
-        setClassOptions([]);
-        setCommodityOptions([]);
-        
-        if (segmentNum) {
-            setLoadingFamilies(true);
-            try {
-                const families = await fetchFamilies(segmentNum);
-                setFamilyOptions(families);
-            } catch (error) {
-              
-            } finally {
-                setLoadingFamilies(false);
-            }
-        }
-    };
-
-    // ---- Handle Family Selection ----
-    const handleFamilyChange = async (familyValue: string) => {
-        const familyNum = Number(familyValue);
-        
-        updateCatalogField("family", familyValue);
-        
-        const selectedFamily = familyOptions.find(f => f.family === familyNum);
-        updateCatalogField("familyTitle", selectedFamily?.title || "");
-        
-        updateCatalogField("class", "");
-        updateCatalogField("classTitle", "");
-        updateCatalogField("commodity", "");
-        updateCatalogField("commodityTitle", "");
-        
-        setClassOptions([]);
-        setCommodityOptions([]);
-        
-        if (familyNum) {
-            setLoadingClasses(true);
-            try {
-                const classes = await fetchClassifications(familyNum);
-                setClassOptions(classes);
-            } catch (error) {
-              
-            } finally {
-                setLoadingClasses(false);
-            }
-        }
-    };
-
-    // ---- Handle Class Selection ----
-    const handleClassChange = async (classValue: string) => {
-        const classNum = Number(classValue);
-        
-        updateCatalogField("class", classValue);
-        
-        const selectedClass = classOptions.find(c => c.class === classNum);
-        updateCatalogField("classTitle", selectedClass?.title || "");
-        
-        updateCatalogField("commodity", "");
-        updateCatalogField("commodityTitle", "");
-        
-        setCommodityOptions([]);
-        
-        if (classNum) {
-            setLoadingCommodities(true);
-            try {
-                const commodities = await fetchCommodities(classNum);
-                setCommodityOptions(commodities);
-            } catch (error) {
-             
-            } finally {
-                setLoadingCommodities(false);
-            }
-        }
-    };
-
-    // ---- Handle Commodity Selection ----
-    const handleCommodityChange = (commodityValue: string) => {
-        const commodityNum = Number(commodityValue);
-        
-        updateCatalogField("commodity", commodityValue);
-        
-        const selectedCommodity = commodityOptions.find(c => c.commodity === commodityNum);
-        updateCatalogField("commodityTitle", selectedCommodity?.title || "");
     };
 
     const updateCatalogField = <K extends keyof CatalogFormState>(field: K, value: CatalogFormState[K]) => {
         setCatalogForm((prev) => ({ ...prev, [field]: value }));
     };
 
-    // ---- Upload Catalog State ----
+    // ---- Upload Catalog (bulk file/image upload) state ----
     const [uploadCatalogFiles, setUploadCatalogFiles] = useState<File[]>([]);
     const [isDraggingUploadFiles, setIsDraggingUploadFiles] = useState(false);
     const [uploadingCatalog, setUploadingCatalog] = useState(false);
@@ -452,6 +250,7 @@ const Catalog: React.FC<CatalogProps> = ({
         setCreatingCatalog(true);
         setCreateCatalogError(null);
         try {
+            // organizationId comes from the logged-in user's token claim, mirrored into the auth store
             const organizationId =
                 useAuthStore.getState().organizationId || sessionStorage.getItem("vosox_organization_id") || "";
 
@@ -482,7 +281,6 @@ const Catalog: React.FC<CatalogProps> = ({
                 catalogName: catalogForm.catalogName.trim(),
                 description: catalogForm.description.trim(),
                 price: Number(catalogForm.price) || 0,
-                currency: catalogForm.currency.trim(),
                 unitOfMeasure: catalogForm.unitOfMeasure,
                 catalogType: catalogForm.catalogType.trim(),
                 segment: Number(catalogForm.segment) || 0,
@@ -496,7 +294,7 @@ const Catalog: React.FC<CatalogProps> = ({
                 isPunchOut: catalogForm.isPunchOut,
                 punchOutUrl: catalogForm.punchOutUrl.trim(),
                 assets,
-            } as CatalogDetailDto & { currency: string };
+            };
 
             await createSupplierCatalog({
                 organizationId,
@@ -507,7 +305,6 @@ const Catalog: React.FC<CatalogProps> = ({
                 {
                     source: "created",
                     ...catalogPayload,
-                    currency: catalogForm.currency.trim(),
                     fileName: catalogFile?.name,
                     filePreview: catalogFilePreview,
                     fileType: catalogFile?.type,
@@ -516,7 +313,6 @@ const Catalog: React.FC<CatalogProps> = ({
                 ...prev,
             ]);
             setCreateCatalogSuccess(true);
-            loadCatalogList();
             setTimeout(closeCreateCatalogModal, 900);
         } catch (error: any) {
             setCreateCatalogError(error?.message || "Failed to create catalog. Please try again.");
@@ -552,6 +348,9 @@ const Catalog: React.FC<CatalogProps> = ({
         setUploadingCatalog(true);
         setUploadCatalogError(null);
         try {
+            // TODO: replace with real catalog upload API call once the endpoint is available
+            // const formData = new FormData();
+            // uploadCatalogFiles.forEach((f) => formData.append("files", f));
             await new Promise((resolve) => setTimeout(resolve, 600));
 
             const newItems: CatalogItem[] = await Promise.all(
@@ -563,7 +362,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                 catalogName: file.name,
                                 description: "",
                                 price: 0,
-                                currency: "",
                                 unitOfMeasure: "",
                                 catalogType: "",
                                 segment: 0,
@@ -603,23 +401,6 @@ const Catalog: React.FC<CatalogProps> = ({
         }
     };
 
-    // ---- PDF Preview Handler ----
-    const handlePdfPreview = (asset: any) => {
-        setPdfPreviewFileName(asset.fileName || asset.assetName);
-        // You'll need to construct the URL to download/view the PDF from your backend
-        // This assumes your API provides a way to get the asset content
-        setPdfPreviewUrl(`/api/assets/${asset.id}/content`); // Adjust based on your API
-        setShowPdfPreviewModal(true);
-        setPunchOutIframeBlocked(false);
-    };
-
-    // ---- PunchOut Preview Handler ----
-    const handlePunchOutPreview = (url: string) => {
-        setPunchOutPreviewUrl(url);
-        setShowPunchOutModal(true);
-        setPunchOutIframeBlocked(false);
-    };
-
     return (
         <>
             {/* ---------- Sidebar nav entry ---------- */}
@@ -638,32 +419,25 @@ const Catalog: React.FC<CatalogProps> = ({
             </div>
             {isCatalogExpanded && (
                 <div className="pud-nav-subgroup">
-                    {isAdmin && (
-                        <div className="pud-nav-subitem" onClick={() => setShowCreateCatalogModal(true)}>
-                            <span className="pud-nav-icon"><IconPlusCircle /></span>
-                            <span className="pud-nav-label">Create Catalog</span>
-                        </div>
-                    )}
-
-                    {isAdmin && (
-                        <div className="pud-nav-subitem" onClick={() => setShowUploadCatalogModal(true)}>
-                            <span className="pud-nav-icon"><IconUploadCloud /></span>
-                            <span className="pud-nav-label">Upload Catalog</span>
-                        </div>
-                    )}
-
+                    <div className="pud-nav-subitem" onClick={() => setShowCreateCatalogModal(true)}>
+                        <span className="pud-nav-icon"><IconPlusCircle /></span>
+                        <span className="pud-nav-label">Create Catalog</span>
+                    </div>
+                    <div className="pud-nav-subitem" onClick={() => setShowUploadCatalogModal(true)}>
+                        <span className="pud-nav-icon"><IconUploadCloud /></span>
+                        <span className="pud-nav-label">Upload Catalog</span>
+                    </div>
                     <div
                         className="pud-nav-subitem"
                         onClick={() => {
                             setShowCatalogListModal(true);
                             onShowCatalogList?.();
-                            loadCatalogList();
                         }}
                     >
                         <span className="pud-nav-icon"><IconGrid /></span>
                         <span className="pud-nav-label">Show Catalogs</span>
-                        {catalogList.length > 0 && (
-                            <span className="pud-nav-subitem-count">{catalogList.length}</span>
+                        {catalogItems.length > 0 && (
+                            <span className="pud-nav-subitem-count">{catalogItems.length}</span>
                         )}
                     </div>
                 </div>
@@ -727,7 +501,7 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Price</label>
+                                        <label className="pud-catalog-form-label">Price ($)</label>
                                         <input
                                             type="number"
                                             step="0.01"
@@ -737,23 +511,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                             onChange={(e) => updateCatalogField("price", e.target.value)}
                                             placeholder="0.00"
                                         />
-                                    </div>
-
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Currency</label>
-                                        <select
-                                            className="pud-catalog-form-select"
-                                            value={catalogForm.currency}
-                                            onChange={(e) => updateCatalogField("currency", e.target.value)}
-                                            onClick={loadCurrencies}
-                                        >
-                                            <option value="">
-                                                {loadingCurrencies ? "Loading..." : "Select currency"}
-                                            </option>
-                                            {currencyOptions.map((c) => (
-                                                <option key={c.id} value={c.currencyName}>{c.currencyName}</option>
-                                            ))}
-                                        </select>
                                     </div>
 
                                     <div className="pud-catalog-form-field">
@@ -777,7 +534,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                             onChange={(e) => updateCatalogField("catalogType", e.target.value)}
                                             onClick={loadCatalogTypes}
                                         >
-                                            <option value="">Select catalog type</option>
                                             {catalogTypeOptions.map((opt) => (
                                                 <option key={opt.id} value={opt.key}>{opt.key}</option>
                                             ))}
@@ -789,142 +545,87 @@ const Catalog: React.FC<CatalogProps> = ({
                                         <span className="pud-catalog-form-section-title">Classification</span>
                                     </div>
 
-                                    {/* SEGMENT */}
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Segment *</label>
-                                        <select
-                                            className="pud-catalog-form-select"
+                                        <label className="pud-catalog-form-label">Segment</label>
+                                        <input
+                                            type="number"
+                                            className="pud-catalog-form-input"
                                             value={catalogForm.segment}
-                                            onChange={(e) => handleSegmentChange(e.target.value)}
-                                            onClick={loadSegments}
-                                        >
-                                            <option value="">
-                                                {loadingSegments ? "Loading segments..." : "Select segment"}
-                                            </option>
-                                            {segmentOptions.map((seg) => (
-                                                <option key={seg.segment} value={seg.segment}>
-                                                    {seg.segment} - {seg.title}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            onChange={(e) => updateCatalogField("segment", e.target.value)}
+                                            placeholder="e.g. 44000000"
+                                        />
                                     </div>
-
                                     <div className="pud-catalog-form-field">
                                         <label className="pud-catalog-form-label">Segment Title</label>
                                         <input
                                             type="text"
                                             className="pud-catalog-form-input"
                                             value={catalogForm.segmentTitle}
-                                            readOnly
-                                            placeholder="Auto-filled when segment is selected"
+                                            onChange={(e) => updateCatalogField("segmentTitle", e.target.value)}
+                                            placeholder="e.g. Office Equipment"
                                         />
                                     </div>
 
-                                    {/* FAMILY */}
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Family *</label>
-                                        <select
-                                            className="pud-catalog-form-select"
+                                        <label className="pud-catalog-form-label">Family</label>
+                                        <input
+                                            type="number"
+                                            className="pud-catalog-form-input"
                                             value={catalogForm.family}
-                                            onChange={(e) => handleFamilyChange(e.target.value)}
-                                            disabled={!catalogForm.segment}
-                                        >
-                                            <option value="">
-                                                {!catalogForm.segment
-                                                    ? "Select a segment first"
-                                                    : loadingFamilies
-                                                        ? "Loading families..."
-                                                        : "Select family"
-                                                }
-                                            </option>
-                                            {familyOptions.map((fam) => (
-                                                <option key={fam.family} value={fam.family}>
-                                                    {fam.family} - {fam.title}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            onChange={(e) => updateCatalogField("family", e.target.value)}
+                                            placeholder="e.g. 44120000"
+                                        />
                                     </div>
-
                                     <div className="pud-catalog-form-field">
                                         <label className="pud-catalog-form-label">Family Title</label>
                                         <input
                                             type="text"
                                             className="pud-catalog-form-input"
                                             value={catalogForm.familyTitle}
-                                            readOnly
-                                            placeholder="Auto-filled when family is selected"
+                                            onChange={(e) => updateCatalogField("familyTitle", e.target.value)}
+                                            placeholder="e.g. Office Furniture"
                                         />
                                     </div>
 
-                                    {/* CLASS */}
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Class *</label>
-                                        <select
-                                            className="pud-catalog-form-select"
-                                            value={catalogForm.class}
-                                            onChange={(e) => handleClassChange(e.target.value)}
-                                            disabled={!catalogForm.family}
-                                        >
-                                            <option value="">
-                                                {!catalogForm.family
-                                                    ? "Select a family first"
-                                                    : loadingClasses
-                                                        ? "Loading classes..."
-                                                        : "Select class"
-                                                }
-                                            </option>
-                                            {classOptions.map((cls) => (
-                                                <option key={cls.class} value={cls.class}>
-                                                    {cls.class} - {cls.title}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Class Title</label>
+                                        <label className="pud-catalog-form-label">Commodity</label>
                                         <input
-                                            type="text"
+                                            type="number"
                                             className="pud-catalog-form-input"
-                                            value={catalogForm.classTitle}
-                                            readOnly
-                                            placeholder="Auto-filled when class is selected"
+                                            value={catalogForm.commodity}
+                                            onChange={(e) => updateCatalogField("commodity", e.target.value)}
+                                            placeholder="e.g. 44121700"
                                         />
                                     </div>
-
-                                    {/* COMMODITY */}
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Commodity *</label>
-                                        <select
-                                            className="pud-catalog-form-select"
-                                            value={catalogForm.commodity}
-                                            onChange={(e) => handleCommodityChange(e.target.value)}
-                                            disabled={!catalogForm.class}
-                                        >
-                                            <option value="">
-                                                {!catalogForm.class
-                                                    ? "Select a class first"
-                                                    : loadingCommodities
-                                                        ? "Loading commodities..."
-                                                        : "Select commodity"
-                                                }
-                                            </option>
-                                            {commodityOptions.map((com) => (
-                                                <option key={com.commodity} value={com.commodity}>
-                                                    {com.commodity} - {com.title}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
                                     <div className="pud-catalog-form-field">
                                         <label className="pud-catalog-form-label">Commodity Title</label>
                                         <input
                                             type="text"
                                             className="pud-catalog-form-input"
                                             value={catalogForm.commodityTitle}
-                                            readOnly
-                                            placeholder="Auto-filled when commodity is selected"
+                                            onChange={(e) => updateCatalogField("commodityTitle", e.target.value)}
+                                            placeholder="e.g. Seating"
+                                        />
+                                    </div>
+
+                                    <div className="pud-catalog-form-field">
+                                        <label className="pud-catalog-form-label">Class</label>
+                                        <input
+                                            type="number"
+                                            className="pud-catalog-form-input"
+                                            value={catalogForm.class}
+                                            onChange={(e) => updateCatalogField("class", e.target.value)}
+                                            placeholder="e.g. 44121701"
+                                        />
+                                    </div>
+                                    <div className="pud-catalog-form-field">
+                                        <label className="pud-catalog-form-label">Class Title</label>
+                                        <input
+                                            type="text"
+                                            className="pud-catalog-form-input"
+                                            value={catalogForm.classTitle}
+                                            onChange={(e) => updateCatalogField("classTitle", e.target.value)}
+                                            placeholder="e.g. Office Chairs"
                                         />
                                     </div>
 
@@ -1141,92 +842,17 @@ const Catalog: React.FC<CatalogProps> = ({
                 </div>
             )}
 
-            {/* ---------- PDF Preview Modal ---------- */}
-            {showPdfPreviewModal && (
-                <div className="pud-modal-overlay" onClick={() => setShowPdfPreviewModal(false)}>
-                    <div className="pud-modal pud-modal-pdf" onClick={(e) => e.stopPropagation()}>
-                        <div className="pud-modal-header">
-                            <button className="pud-modal-close" onClick={() => setShowPdfPreviewModal(false)} title="Close">
-                                <IconClose />
-                            </button>
-                            <span className="pud-modal-badge">
-                                <IconFilePdf /> PDF Preview
-                            </span>
-                            <h2 className="pud-modal-name">{pdfPreviewFileName}</h2>
-                        </div>
-
-                        <div className="pud-modal-body pud-pdf-viewer-container">
-                            {pdfPreviewUrl ? (
-                                <iframe
-                                    src={`${pdfPreviewUrl}#toolbar=1`}
-                                    style={{ width: "100%", height: "100%", border: "none" }}
-                                    title="PDF Preview"
-                                />
-                            ) : (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px', color: '#94a3b8' }}>
-                                    Unable to load PDF
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ---------- PunchOut Preview Modal ---------- */}
-            {showPunchOutModal && (
-                <div className="pud-modal-overlay" onClick={() => setShowPunchOutModal(false)}>
-                    <div className="pud-modal pud-modal-punchout" onClick={(e) => e.stopPropagation()}>
-                        <div className="pud-modal-header">
-                            <button className="pud-modal-close" onClick={() => setShowPunchOutModal(false)} title="Close">
-                                <IconClose />
-                            </button>
-                            <span className="pud-modal-badge">
-                                <IconExternalLink /> PunchOut Catalog
-                            </span>
-                            <h2 className="pud-modal-name">Catalog Website</h2>
-                        </div>
-
-                        <div className="pud-modal-body pud-punchout-viewer-container">
-                            {punchOutIframeBlocked ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '400px', gap: '16px', color: '#64748b' }}>
-                                    <div style={{ fontSize: '14px', textAlign: 'center', maxWidth: '400px' }}>
-                                        <p style={{ marginBottom: '12px', fontWeight: '600' }}>Website Cannot Be Embedded</p>
-                                        <p style={{ fontSize: '12px', marginBottom: '16px' }}>
-                                            This website has restricted embedding for security reasons.
-                                        </p>
-                                    </div>
-                                    <a
-                                        href={punchOutPreviewUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="pud-btn pud-btn-message"
-                                        style={{ background: "#2563eb", color: "#ffffff", textDecoration: "none" }}
-                                    >
-                                        <IconExternalLink style={{ marginRight: "6px" }} /> Open in New Tab
-                                    </a>
-                                </div>
-                            ) : (
-                                <iframe
-                                    src={punchOutPreviewUrl}
-                                    style={{ width: "100%", height: "100%", border: "none" }}
-                                    title="PunchOut Catalog"
-                                    onError={() => setPunchOutIframeBlocked(true)}
-                                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-pointer-lock"
-                                />
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ---------- Show Catalogs: full-page view ---------- */}
+            {/* ---------- Show Catalogs: full-page view ----------
+                Portaled into the main content area (rendered by the parent
+                dashboard) instead of a modal, so it opens exactly like the
+                other sidebar options do — a full-width page swap. */}
             {showCatalogListModal && fullViewContainer && createPortal(
                 <>
                     <div className="pud-catalog-fullview-header">
                         <div>
                             <h1 className="pud-title">Your Catalogs</h1>
                             <p className="pud-subtitle">
-                                <IconGrid /> {catalogList.length} {catalogList.length === 1 ? "Item" : "Items"} in your supplier catalog
+                                <IconGrid /> {catalogItems.length} {catalogItems.length === 1 ? "Item" : "Items"} created or uploaded to your catalog
                             </p>
                         </div>
                         <div className="pud-catalog-fullview-actions">
@@ -1240,149 +866,60 @@ const Catalog: React.FC<CatalogProps> = ({
                             >
                                 <IconChevronRight /> Back to Dashboard
                             </button>
-                            {isAdmin && (
-                                <button
-                                    type="button"
-                                    className="pud-btn pud-btn-message"
-                                    onClick={() => setShowCreateCatalogModal(true)}
-                                    style={{ background: "#2563eb", color: "#ffffff" }}
-                                >
-                                    + Add Catalog
-                                </button>
-                            )}
+                            <button
+                                type="button"
+                                className="pud-btn pud-btn-message"
+                                onClick={() => setShowCreateCatalogModal(true)}
+                                style={{ background: "#2563eb", color: "#ffffff" }}
+                            >
+                                + Add Catalog
+                            </button>
                         </div>
                     </div>
 
-                    {loadingCatalogList ? (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
-                            <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                                <div className="pud-spinner" />
-                                <span>Loading your catalogs...</span>
-                            </div>
-                        </div>
-                    ) : catalogListError ? (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px', padding: '16px' }}>
-                            <div style={{ color: '#ef4444', fontSize: '14px', textAlign: 'center' }}>
-                                {catalogListError}
-                                <div style={{ marginTop: '12px' }}>
-                                    <button
-                                        type="button"
-                                        className="pud-btn pud-btn-outline"
-                                        onClick={loadCatalogList}
-                                    >
-                                        Retry
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ) : catalogList.length === 0 ? (
+                    {catalogItems.length === 0 ? (
                         <div className="pud-catalog-empty-state">
                             <div className="pud-catalog-dropzone-icon"><IconGridLarge /></div>
                             <div className="pud-catalog-dropzone-text">No catalogs yet</div>
                             <div className="pud-catalog-dropzone-subtext">
-                                {isAdmin 
-                                    ? 'Use "Create Catalog" or "Upload Catalog" to add your first item.'
-                                    : 'No catalogs are currently available.'
-                                }
+                                Use "Create Catalog" or "Upload Catalog" to add your first item.
                             </div>
                         </div>
                     ) : (
                         <div className="pud-catalog-grid">
-                            {catalogList.map((item) => (
-                                <div className="pud-catalog-card" key={item.id}>
+                            {catalogItems.map((item) => (
+                                <div className="pud-catalog-card">
                                     <div className="pud-catalog-card-media">
-                                        <div className="pud-catalog-card-media-placeholder"><IconFileGeneric /></div>
-                                        {item.assets && item.assets.length > 0 && (
-                                            <span className="pud-catalog-card-source">
-                                                {item.assets.length} {item.assets.length === 1 ? "File" : "Files"}
-                                            </span>
+                                        {item.filePreview ? (
+                                            <img src={item.filePreview} alt={item.catalogName} />
+                                        ) : (
+                                            <div className="pud-catalog-card-media-placeholder"><IconFileGeneric /></div>
                                         )}
+                                        <span className={`pud-catalog-card-source pud-catalog-card-source-${item.source}`}>
+                                            {item.source === "created" ? "Created" : "Uploaded"}
+                                        </span>
                                     </div>
                                     <div className="pud-catalog-card-body">
                                         <div className="pud-catalog-card-name" title={item.catalogName}>{item.catalogName}</div>
                                         {item.description && (
                                             <div className="pud-catalog-card-desc">{item.description}</div>
                                         )}
-                                        
-                                        {/* Price & UOM */}
                                         <div className="pud-catalog-card-meta">
                                             {!!item.price && (
-                                                <span className="pud-catalog-card-price">
-                                                    {item.currency ? `${item.currency} ` : ""}{Number(item.price).toFixed(2)}
-                                                </span>
+                                                <span className="pud-catalog-card-price">${Number(item.price).toFixed(2)}</span>
                                             )}
                                             {item.unitOfMeasure && (
                                                 <span className="pud-catalog-card-uom">{item.unitOfMeasure}</span>
                                             )}
                                         </div>
-
-                                        {/* UNSPSC Classification */}
-                                        <div className="pud-catalog-card-classification">
-                                            {item.segmentTitle && (
-                                                <div className="pud-catalog-classification-row">
-                                                    <span className="pud-catalog-classification-label">Segment:</span>
-                                                    <span className="pud-catalog-classification-value">{item.segment} - {item.segmentTitle}</span>
-                                                </div>
-                                            )}
-                                            {item.familyTitle && (
-                                                <div className="pud-catalog-classification-row">
-                                                    <span className="pud-catalog-classification-label">Family:</span>
-                                                    <span className="pud-catalog-classification-value">{item.family} - {item.familyTitle}</span>
-                                                </div>
-                                            )}
-                                            {item.classTitle && (
-                                                <div className="pud-catalog-classification-row">
-                                                    <span className="pud-catalog-classification-label">Class:</span>
-                                                    <span className="pud-catalog-classification-value">{item.class} - {item.classTitle}</span>
-                                                </div>
-                                            )}
-                                            {item.commodityTitle && (
-                                                <div className="pud-catalog-classification-row">
-                                                    <span className="pud-catalog-classification-label">Commodity:</span>
-                                                    <span className="pud-catalog-classification-value">{item.commodity} - {item.commodityTitle}</span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Assets / Files */}
-                                        {item.assets && item.assets.length > 0 && (
-                                            <div className="pud-catalog-card-assets">
-                                                {item.assets.map((asset) => {
-                                                    const isPdf = asset.fileName?.toLowerCase().endsWith('.pdf');
-                                                    return (
-                                                        <div className="pud-catalog-card-asset" key={asset.id}>
-                                                            {isPdf ? (
-                                                                <button
-                                                                    className="pud-catalog-asset-preview-btn"
-                                                                    onClick={() => handlePdfPreview(asset)}
-                                                                    title="Preview PDF"
-                                                                >
-                                                                    <IconEye /> Preview
-                                                                </button>
-                                                            ) : (
-                                                                <span className="pud-catalog-asset-filename">
-                                                                    {asset.fileName}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
+                                        {(item.classTitle || item.catalogType || item.isPunchOut) && (
+                                            <div className="pud-catalog-card-badges">
+                                                {item.catalogType && <span className="pud-catalog-card-tag">{item.catalogType}</span>}
+                                                {item.classTitle && <span className="pud-catalog-card-tag">{item.classTitle}</span>}
+                                                {item.isPunchOut && <span className="pud-catalog-card-tag pud-catalog-card-tag-punchout">PunchOut</span>}
                                             </div>
                                         )}
-
-                                        {/* Tags / PunchOut */}
-                                        <div className="pud-catalog-card-badges">
-                                            {item.catalogType && <span className="pud-catalog-card-tag">{item.catalogType}</span>}
-                                            {item.isPunchOut && item.punchOutUrl && (
-                                                <button
-                                                    className="pud-catalog-card-tag pud-catalog-card-tag-punchout pud-catalog-punchout-btn"
-                                                    onClick={() => handlePunchOutPreview(item.punchOutUrl)}
-                                                    title="Open PunchOut catalog"
-                                                >
-                                                    🔗 PunchOut
-                                                </button>
-                                            )}
-                                        </div>
+                                        <div className="pud-catalog-card-date">Added {formatCatalogDate(item.addedAt)}</div>
                                     </div>
                                 </div>
                             ))}

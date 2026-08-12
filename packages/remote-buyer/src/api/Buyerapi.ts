@@ -8,6 +8,30 @@ import type {
 } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
 
+export interface BuyerCatalogResponse {
+  supplierId: string;
+  catalogId: string;
+  supplierName: string;
+  catalogName: string;
+  description: string;
+  price: number;
+  currency: string;
+  unitOfMeasure: string;
+  segment: number;
+  segmentTitle: string;
+  family: number;
+  familyTitle: string;
+  commodity: number;
+  commodityTitle: string;
+  class: number;
+  classTitle: string;
+  catalogType: string;
+  isPunchOut: boolean;
+  punchOutUrl: string;
+  hasCatalog: boolean;
+}
+import type { ErrorResponseDto } from "@vosox/shared-ui";
+import { isErrorResponse } from "@vosox/shared-ui";
 
 export interface BuyerProfileResponse {
   id: string;
@@ -175,6 +199,22 @@ export interface BuyerRegistrationPayload {
   }[];
 }
 
+export interface PersonDetailDto {
+  personId: string;
+  userId: string;
+  organizationId: string;
+  name: string;
+  email: string;
+  phone: string;
+  userName: string;
+  addressLine: string;
+  country: string;
+  roleId: string;
+  roleName: string;
+  organizationName: string;
+  organizationEmail: string;
+}
+
 export interface UpdateRejectedBuyerPayload {
   buyer: {
     buyerId: string;
@@ -293,6 +333,8 @@ export const logoutBuyer = async (): Promise<void> => {
     const responseData = error.response?.data;
     const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
     throw new Error(`${errMsg} (${status})`);
+  } finally {
+    invalidatePersonDetailCache();
   }
 };
 
@@ -450,4 +492,149 @@ export const fetchBuyerRFQById = async (rfqId: string): Promise<BuyerRFQDetailRe
     }
     throw new Error('Could not reach the server. Please check your connection and try again.');
   }
+};
+
+export const fetchBuyerCatalog = async (payload: {
+  segment?: number;
+  family?: number;
+  class?: number;
+  commodity?: number;
+  search?: string;
+  index?: number;
+  limit?: number;
+}): Promise<BuyerCatalogResponse[] | ErrorResponseDto> => {
+  try {
+    const response = await axiosInstance.get<BuyerCatalogResponse[]>(
+      '/api/v1/supplier/buyer-catalog',
+      {
+        params: {
+          segment: payload.segment || undefined,
+          family: payload.family || undefined,
+          class: payload.class || undefined,
+          commodity: payload.commodity || undefined,
+          search: payload.search || undefined,
+          index: payload.index ?? 0,
+          limit: payload.limit ?? 20,
+        },
+      }
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch buyer catalog',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching buyer catalog.',
+    };
+  }
+};
+
+export const getPersonDetail = async (): Promise<PersonDetailDto | ErrorResponseDto> => {
+  try {
+    const response = await axiosInstance.get<PersonDetailDto>(
+      '/api/v1/identity/person-detail'
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch person details',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching person details.',
+    };
+  }
+};
+
+
+export const updatePersonDetail = async (
+  data: Partial<PersonDetailDto>
+): Promise<PersonDetailDto | ErrorResponseDto> => {
+  try {
+    const response = await axiosInstance.put<PersonDetailDto>(
+      '/api/v1/identity/person-detail',
+      data
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to update person details',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while updating person details.',
+    };
+  }
+};
+
+
+let personDetailCache: PersonDetailDto | null = null;
+let personDetailInFlight: Promise<PersonDetailDto | ErrorResponseDto> | null = null;
+
+export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorResponseDto> => {
+  if (personDetailCache) return personDetailCache;
+  if (personDetailInFlight) return personDetailInFlight;
+
+  personDetailInFlight = getPersonDetail().then((result) => {
+    if (!isErrorResponse(result)) {
+      personDetailCache = result;
+    }
+    personDetailInFlight = null;
+    return result;
+  });
+
+  return personDetailInFlight;
+};
+
+export const invalidatePersonDetailCache =()=>{
+  personDetailCache = null;
 };

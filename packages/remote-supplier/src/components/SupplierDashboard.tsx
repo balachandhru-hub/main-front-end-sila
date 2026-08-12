@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
-import SilaLogo from "../assets/SILA_Logo.png";
 import "./SupplierDashboard.css";
 import Catalog from "./Catalog.tsx";
-import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
 import { CompanyProfile } from '@vosox/shared-ui';
+import Invitations from "./Invitations.tsx";
 import {
   logoutSupplier,
   fetchRFQMasterData,
@@ -17,7 +16,8 @@ import {
   type SubmitQuotationPayload,
   type RfqDocumentAssetDto
 } from "../api/supplierApi";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import Header from "./Header.tsx";
 interface StatCard {
   icon: React.ReactNode;
   label: string;
@@ -51,7 +51,6 @@ interface MatchCard {
   categoryNote: string;
   destinationNote: string;
 }
-
 
 
 const IconMail = () => (
@@ -186,20 +185,6 @@ const LogoutIcon = () => (
   </svg>
 );
 
-// <-- ADDED: Template icon for sidebar
-const NavIconTemplate = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <path d="M3 9h18" />
-    <path d="M9 3v18" />
-  </svg>
-);
-
-const IconCheck = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 6 9 17l-5-5" />
-  </svg>
-);
 
 const IconCalendar = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -282,22 +267,19 @@ const IconCheckCircle = () => (
   </svg>
 );
 
-const navItemsBeforeCatalog = [
-  { icon: <NavIconHome />, label: "Dashboard", active: true },
-  { icon: <NavIconMail />, label: "Invitations", badge: 2 },
-  { icon: <NavIconFile />, label: "RFQs", badge: 2 },
-  { icon: <NavIconUser />, label: "Quotations" },
-];
-
-const navItemsAfterCatalog = [
-  { icon: <NavIconBag />, label: "Purchase Orders" },
-  { icon: <NavIconContract />, label: "Contracts" },
-  { icon: <NavIconInvoice />, label: "Invoices" },
-  { icon: <NavIconPayment />, label: "Payments" },
-  { icon: <NavIconMessage />, label: "Messages" },
-  { icon: <NavIconBuilding />, label: "Company Profile" },
-  { icon: <NavIconTemplate />, label: "Template" }, // <-- ADDED Template nav item
-  { icon: <NavIconSettings />, label: "Settings" },
+const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
+  { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
+  { key: "invitations", icon: <NavIconMail />, label: "Invitations" },
+  { key: "rfqs", icon: <NavIconFile />, label: "RFQs" },
+  { key: "quotations", icon: <NavIconUser />, label: "Quotations" },
+  { key: "purchaseOrders", icon: <NavIconBag />, label: "Purchase Orders" },
+  { key: "contracts", icon: <NavIconContract />, label: "Contracts" },
+  { key: "invoices", icon: <NavIconInvoice />, label: "Invoices" },
+  { key: "payments", icon: <NavIconPayment />, label: "Payments" },
+  { key: "messages", icon: <NavIconMessage />, label: "Messages" },
+  { key: "companyProfile", icon: <NavIconBuilding />, label: "Company Profile" },
+  // { key: "template", icon: <NavIconTemplate />, label: "Template" },
+  { key: "settings", icon: <NavIconSettings />, label: "Settings" },
 ];
 
 const statCards: StatCard[] = [
@@ -387,17 +369,13 @@ const matchCards: MatchCard[] = [
 ];
 
 const SupplierDashboard: React.FC = () => {
-  const navigate = useNavigate();
-  const organizationName =
-    sessionStorage.getItem("vosox_organization_name") || "Apex Office & Technology Supp...";
-  const firstLetter = organizationName.trim().charAt(0).toUpperCase();
 
-  const [activeView, setActiveView] = useState<"dashboard" | "catalogList" | "template" | "companyProfile">("dashboard");
-  const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
-  // Sidebar toggle removed; sidebar always open.
+
+  const [activeNav, setActiveNav] = useState<string>("dashboard");
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
 
   const [supplierId, setSupplierId] = useState<string | null>(
     sessionStorage.getItem("vosox_supplier_id")
@@ -406,10 +384,7 @@ const SupplierDashboard: React.FC = () => {
   const [loadingRfqs, setLoadingRfqs] = useState(true);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
-  const [hasMoreRfqs, setHasMoreRfqs] = useState(true);
-  const [loadingMoreRfqs, setLoadingMoreRfqs] = useState(false);
   const RFQ_INITIAL_VISIBLE = 3;
-  const RFQ_PAGE_SIZE = 5;
 
   const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
   const [selectedRfq, setSelectedRfq] = useState<RFQDetailResponse | null>(null);
@@ -431,7 +406,6 @@ const SupplierDashboard: React.FC = () => {
   const [submitAnswersError, setSubmitAnswersError] = useState<string | null>(null);
   const [submitAnswersSuccess, setSubmitAnswersSuccess] = useState(false);
 
-  // Fetch supplier profile if supplierId is not in sessionStorage
   useEffect(() => {
     const loadSupplierProfile = async () => {
       if (!supplierId) {
@@ -445,7 +419,7 @@ const SupplierDashboard: React.FC = () => {
             setLoadingRfqs(false);
           }
         } catch (err: any) {
-          console.error("Failed to load supplier profile", err);
+          
           setRfqsError("Failed to load supplier profile details.");
           setLoadingRfqs(false);
         }
@@ -454,7 +428,6 @@ const SupplierDashboard: React.FC = () => {
     loadSupplierProfile();
   }, [supplierId]);
 
-  // Fetch Recent Sourcing Opportunities
   useEffect(() => {
     const loadRfqs = async () => {
       if (!supplierId) return;
@@ -463,7 +436,6 @@ const SupplierDashboard: React.FC = () => {
       setRfqsError(null);
 
       try {
-        //const ix = supplierId || sessionStorage.getItem("vosox_supplier_id") || "";
         const initialLimit = RFQ_INITIAL_VISIBLE;
         const data = await fetchRFQMasterData({
           supplierId,
@@ -472,9 +444,8 @@ const SupplierDashboard: React.FC = () => {
         });
         setRfqs(data);
         setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
-        setHasMoreRfqs(data.length === initialLimit);
       } catch (err: any) {
-        console.error("Failed to load RFQs", err);
+       
         setRfqsError(err.message || "Failed to load sourcing opportunities.");
       } finally {
         setLoadingRfqs(false);
@@ -488,39 +459,11 @@ const SupplierDashboard: React.FC = () => {
   useEffect(() => {
     const intendedView = (location.state as { view?: string })?.view;
     if (intendedView === "companyProfile") {
-      setActiveView("companyProfile");
+      setActiveNav("companyProfile");
     }
   }, [location.state]);
 
-  const handleViewMoreRfqs = async () => {
-    if (loadingMoreRfqs) return;
 
-    // If we already have more fetched than we're showing, just reveal more locally.
-    if (visibleRfqCount < rfqs.length) {
-      setVisibleRfqCount((v) => Math.min(v + RFQ_PAGE_SIZE, rfqs.length));
-      return;
-    }
-
-    // Otherwise, fetch the next page from the server.
-    if (!supplierId || !hasMoreRfqs) return;
-
-    setLoadingMoreRfqs(true);
-    try {
-      const nextPage = await fetchRFQMasterData({
-        supplierId,
-        index: rfqs.length,
-        limit: RFQ_PAGE_SIZE,
-      });
-      setRfqs((prev) => [...prev, ...nextPage]);
-      setVisibleRfqCount((v) => v + nextPage.length);
-      setHasMoreRfqs(nextPage.length === RFQ_PAGE_SIZE);
-    } catch (err: any) {
-      console.error("Failed to load more RFQs", err);
-      setRfqsError(err.message || "Failed to load more sourcing opportunities.");
-    } finally {
-      setLoadingMoreRfqs(false);
-    }
-  };
 
   const handleViewRfqDetails = async (rfqId: string) => {
     setSelectedRfqId(rfqId);
@@ -531,14 +474,75 @@ const SupplierDashboard: React.FC = () => {
       const data = await fetchRFQById(rfqId);
       setSelectedRfq(data);
     } catch (err: any) {
-      console.error("Failed to fetch RFQ details", err);
+     
       setRfqDetailError(err.message || "Failed to load RFQ details.");
     } finally {
       setLoadingRfqDetail(false);
     }
   };
 
-  // Quotation form fields states
+  const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
+
+  const [allRfqsList, setAllRfqsList] = useState<RFQMasterDataItem[]>([]);
+  const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
+  const [allRfqsError, setAllRfqsError] = useState<string | null>(null);
+  const [allRfqsLoaded, setAllRfqsLoaded] = useState(false);
+
+  const handleOpenAllRfqs = async () => {
+    setActiveNav("rfqs");
+    setRfqPageView("allRfqs");
+    if (allRfqsLoaded || loadingAllRfqs) return;
+
+    setLoadingAllRfqs(true);
+    setAllRfqsError(null);
+    try {
+      if (!supplierId) {
+        setAllRfqsList(rfqs);
+      } else {
+        const data = await fetchRFQMasterData({ supplierId, index: 0, limit: 100 });
+        setAllRfqsList(data);
+      }
+    } catch (err: any) {
+      console.error("Failed to load full RFQ list", err);
+      setAllRfqsError(err.message || "Failed to load the full RFQ list.");
+      setAllRfqsList(rfqs);
+    } finally {
+      setLoadingAllRfqs(false);
+      setAllRfqsLoaded(true);
+    }
+  };
+
+  const handleBackToDashboard = () => {
+    setRfqPageView("dashboard");
+    setActiveNav("dashboard");
+  };
+
+  // Sidebar nav click: "RFQs" opens the full-page RFQ list; every other item
+  // behaves as before, but also resets rfqPageView so a stale "All RFQs" /
+  // "RFQ Details" view doesn't linger in the background.
+  const handleNavClick = (key: string) => {
+    if (key === "rfqs") {
+      handleOpenAllRfqs();
+      return;
+    }
+    setActiveNav(key);
+    setRfqPageView("dashboard");
+  };
+
+  const handleViewRfqDetailsFullPage = (rfqId: string) => {
+    setRfqPageView("rfqDetail");
+    handleViewRfqDetails(rfqId);
+  };
+
+  const closeRfqDetail = () => {
+    if (rfqPageView === "rfqDetail") {
+      setRfqPageView("allRfqs");
+    }
+    setSelectedRfqId(null);
+    setSelectedRfq(null);
+    setRfqDetailError(null);
+  };
+
   const [quoteQuotationId, setQuoteQuotationId] = useState<string | null>(null);
   const [quoteTotalPrice, setQuoteTotalPrice] = useState<number>(0);
   const [quoteDeliveryCharge, setQuoteDeliveryCharge] = useState<number>(0);
@@ -553,7 +557,6 @@ const SupplierDashboard: React.FC = () => {
   const [submitQuoteError, setSubmitQuoteError] = useState<string | null>(null);
   const [submitQuoteSuccess, setSubmitQuoteSuccess] = useState(false);
 
-  // Initialize/Populate quotation form state when selectedRfq changes
   useEffect(() => {
     if (selectedRfq) {
       const activeQuote = selectedRfq.supplierQuotation?.[0];
@@ -601,7 +604,6 @@ const SupplierDashboard: React.FC = () => {
     }
   }, [selectedRfq]);
 
-  // Price Calculation helpers
   const handleItemPriceChange = (key: string, value: number) => {
     const updatedPrices = { ...quoteItemPrices, [key]: value };
     setQuoteItemPrices(updatedPrices);
@@ -702,7 +704,6 @@ const SupplierDashboard: React.FC = () => {
     if (!selectedRfq) return;
     const supplierRFQId = selectedRfq.items?.[0]?.supplierRFQId || null;
 
-    // Basic validation: make sure every required question has been answered
     const unanswered = (selectedRfq.questions || []).find((q) => {
       if (!q.isRequired) return false;
       const a = rfqAnswers[q.questionId];
@@ -721,7 +722,6 @@ const SupplierDashboard: React.FC = () => {
     setSubmitAnswersError(null);
     setSubmitAnswersSuccess(false);
     try {
-      // Resolve the SUPPLIER entity type/id once for all file answers in this submission
       const entityTypes = await fetchMetadataReferenceList(['ENTITY_TYPE']);
       const supplierEntityId =
         entityTypes.find((e) => e.key === 'SUPPLIER')?.id || '59476530-3c10-438b-b3b3-9db9e96e8d93';
@@ -733,7 +733,6 @@ const SupplierDashboard: React.FC = () => {
           const question = selectedRfq.questions?.find(q => q.questionId === a.rfqQuestionId);
           const allOptionIds = question?.options?.map(opt => opt.optionId) || [];
 
-          // Build the attachment from the file the supplier actually uploaded for this answer
           const answerAttachment: RfqDocumentAssetDto | null =
             a.file && a.fileBase64
               ? {
@@ -760,7 +759,7 @@ const SupplierDashboard: React.FC = () => {
       await submitRfqAnswers(payload);
       setSubmitAnswersSuccess(true);
     } catch (err: any) {
-      console.error("Failed to submit RFQ answers", err);
+     
       setSubmitAnswersError(err.message || "Failed to submit answers.");
     } finally {
       setSubmittingAnswers(false);
@@ -804,11 +803,9 @@ const SupplierDashboard: React.FC = () => {
       await submitSupplierQuotation(payload);
       setSubmitQuoteSuccess(true);
 
-      // Refresh the RFQ details
       const updatedDetails = await fetchRFQById(selectedRfqId!);
       setSelectedRfq(updatedDetails);
 
-      // Refresh RFQ list
       if (supplierId) {
         const listData = await fetchRFQMasterData({
           supplierId,
@@ -818,7 +815,7 @@ const SupplierDashboard: React.FC = () => {
         setRfqs(listData);
       }
     } catch (err: any) {
-      console.error("Failed to submit quotation", err);
+    
       setSubmitQuoteError(err.message || "Failed to submit quotation.");
     } finally {
       setSubmittingQuote(false);
@@ -840,78 +837,507 @@ const SupplierDashboard: React.FC = () => {
     }
   };
 
+  const renderRfqDetailInner = () => (
+    <>
+
+      {/* Modal Header */}
+      <div className="pud-modal-header">
+        <span className="pud-modal-badge">
+          <IconFile /> RFQ Specification
+        </span>
+        <button className="pud-modal-close" onClick={closeRfqDetail}>
+          <IconClose />
+        </button>
+        <h2 className="pud-modal-name">
+          {loadingRfqDetail ? "Loading RFQ Details..." : selectedRfq?.title || "RFQ Details"}
+        </h2>
+        {selectedRfq && (
+          <div className="pud-modal-meta">
+            <span><IconCalendar /> Closes: {new Date(selectedRfq.endDate).toLocaleDateString()}</span>
+            <span><IconPin /> Delivery: {selectedRfq.deliveryLocation}</span>
+          </div>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmitQuotation}>
+        <div className="pud-modal-body">
+          {loadingRfqDetail && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', gap: '12px' }}>
+              <div className="pud-spinner" />
+              <span style={{ color: '#64748b', fontSize: '14px' }}>Fetching RFQ data from secure server...</span>
+            </div>
+          )}
+
+          {rfqDetailError && (
+            <div style={{ padding: '24px 0', textAlign: 'center' }}>
+              <div style={{ color: '#ef4444', fontSize: '15px', marginBottom: '16px' }}>{rfqDetailError}</div>
+              <button
+                type="button"
+                className="pud-btn pud-btn-outline"
+                onClick={() => { if (selectedRfqId) handleViewRfqDetails(selectedRfqId); }}
+              >
+                Retry Loading
+              </button>
+            </div>
+          )}
+
+          {selectedRfq && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+              <div>
+                <div className="pud-modal-section-title">Description</div>
+                <p className="pud-modal-desc" style={{ whiteSpace: 'pre-wrap' }}>
+                  {selectedRfq.description || "No description provided."}
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
+                    <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                      {new Date(selectedRfq.startDate).toLocaleString()}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>End Date</div>
+                    <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                      {new Date(selectedRfq.endDate).toLocaleString()}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Add Lot Option</div>
+                    <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                      {selectedRfq.addLotOption ? "Allowed" : "Not Allowed"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {((selectedRfq.technicalSpecificationDocuments?.length ?? 0) > 0 ||
+                (selectedRfq.termsConditionDocuments?.length ?? 0) > 0) && (
+                  <div>
+                    <div className="pud-modal-section-title">Reference Documents</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginTop: '8px' }}>
+
+                      {selectedRfq.technicalSpecificationDocuments?.map((doc) => (
+                        <div key={doc.id} className="pud-rfq-doc-card">
+                          <span className="pud-rfq-doc-icon"><IconFile /></span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                            <div className="pud-rfq-doc-type">Tech Spec • {doc.fileType.toUpperCase()}</div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {selectedRfq.termsConditionDocuments?.map((doc) => (
+                        <div key={doc.id} className="pud-rfq-doc-card">
+                          <span className="pud-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                            <div className="pud-rfq-doc-type">Terms & Conditions • {doc.fileType.toUpperCase()}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Sourcing Items Table */}
+              <div>
+                <div className="pud-modal-section-title" style={{ marginBottom: '12px' }}>Required Materials & Services</div>
+                <div className="pud-rfq-table-container">
+                  <table className="pud-rfq-items-table">
+                    <thead>
+                      <tr>
+                        <th>Material Info</th>
+                        <th>Group / Code</th>
+                        <th style={{ textAlign: 'left' }}>Qty Required</th>
+                        {!selectedRfq.addLotOption && <th style={{ textAlign: 'left', width: '130px' }}>Your Unit Quote</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedRfq.items?.map((item, idx) => {
+                        const key = item.id || item.buyerRFQItemId || `item-${idx}`;
+                        const price = quoteItemPrices[key] ?? 0;
+                        return (
+                          <tr key={idx}>
+                            <td>
+                              <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
+                              {item.costCenter && (
+                                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                  Cost Center: {item.costCenter}
+                                </div>
+                              )}
+                              {item.attachments?.map((att) => (
+                                <div key={att.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f1f5f9', color: '#475569', fontSize: '11px', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', marginRight: '4px' }}>
+                                  <IconFile /> {att.fileName}
+                                </div>
+                              ))}
+                            </td>
+                            <td>
+                              <div style={{ textAlign: 'left', fontSize: '13px', color: '#334155' }}>
+                                {item.materialGroup || "N/A"}
+                              </div>
+                              <div style={{ textAlign: 'left', fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                Code: {item.materialCode || "N/A"}
+                              </div>
+                            </td>
+                            <td style={{ textAlign: 'left', fontWeight: 600, color: '#0f172a' }}>
+                              {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
+                            </td>
+                            {!selectedRfq.addLotOption && (
+                              <td style={{ textAlign: 'left' }}>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  className="pud-rfq-item-input"
+                                  value={price || ""}
+                                  onChange={(e) => handleItemPriceChange(key, parseFloat(e.target.value) || 0)}
+                                  placeholder="0.00"
+                                  style={{
+                                    width: '110px',
+                                    padding: '6px 10px',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '6px',
+                                    textAlign: 'left',
+                                    fontSize: '13px',
+                                    fontWeight: 600,
+                                    color: '#0f172a'
+                                  }}
+                                  required
+                                />
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {(selectedRfq.questions?.length ?? 0) > 0 && (
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+                  <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <IconMessageSquare /> Additional Questions from Buyer
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    {submitAnswersSuccess && (
+                      <div style={{ color: '#15803d', fontSize: '13px', fontWeight: 500, background: '#dcfce7', padding: '8px 12px', borderRadius: '6px' }}>
+                        <IconCheckCircle /> All answers successfully saved!
+                      </div>
+                    )}
+                    {submitAnswersError && (
+                      <div style={{ color: '#ef4444', fontSize: '13px', fontWeight: 500, background: '#fee2e2', padding: '8px 12px', borderRadius: '6px' }}>
+                        {submitAnswersError}
+                      </div>
+                    )}
+                    {[...selectedRfq.questions]
+                      .sort((a, b) => a.displayOrder - b.displayOrder)
+                      .map((q, index) => {
+                        const current = rfqAnswers[q.questionId];
+                        return (
+                          <div key={q.questionId} style={{ background: '#ffffff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
+                            <div style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b', marginBottom: '12px' }}>
+                              <span style={{ color: '#2563eb', marginRight: '4px' }}>Q{index + 1}.</span> {q.question}
+                              {q.isRequired && <span style={{ color: '#ef4444' }}> *</span>}
+                            </div>
+
+                            {q.questionType === 'Text' && (
+                              <input
+                                type="text"
+                                className="pud-rfq-item-input"
+                                value={current?.answer || ''}
+                                onChange={(e) => handleTextAnswerChange(q.questionId, e.target.value)}
+                                placeholder="Type your answer..."
+                                required={q.isRequired}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 12px',
+                                  border: '1px solid #cbd5e1',
+                                  borderRadius: '6px',
+                                  fontSize: '13px',
+                                  color: '#0f172a',
+                                  background: '#ffffff',
+                                }}
+                              />
+                            )}
+
+                            {q.questionType === 'Radio' && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {[...(q.options || [])]
+                                  .sort((a, b) => a.displayOrder - b.displayOrder)
+                                  .map((opt) => (
+                                    <label
+                                      key={opt.optionId}
+                                      style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155', cursor: 'pointer' }}
+                                    >
+                                      <input
+                                        type="radio"
+                                        name={`rfq-question-${q.questionId}`}
+                                        checked={current?.questionOptionId === opt.optionId}
+                                        onChange={() => handleRadioAnswerChange(q.questionId, opt.optionId)}
+                                        required={q.isRequired}
+                                      />
+                                      {opt.optionText}
+                                    </label>
+                                  ))}
+                              </div>
+                            )}
+
+                            {q.questionType === 'FILE' && (
+                              <input
+                                type="file"
+                                className="pud-rfq-item-input"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0] || null;
+                                  handleFileAnswerChange(q.questionId, file);
+                                }}
+                                required={q.isRequired}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 12px',
+                                  border: '1px solid #cbd5e1',
+                                  borderRadius: '6px',
+                                  fontSize: '13px',
+                                  color: '#0f172a',
+                                  background: '#ffffff',
+                                }}
+                              />
+                            )}
+
+                            {q.questionType !== 'Text' && q.questionType !== 'Radio' && q.questionType !== 'File' && (q.options?.length ?? 0) > 0 && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {[...(q.options || [])]
+                                  .sort((a, b) => a.displayOrder - b.displayOrder)
+                                  .map((opt) => (
+                                    <label
+                                      key={opt.optionId}
+                                      style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155', cursor: 'pointer' }}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={current?.questionOptionIds?.includes(opt.optionId) || false}
+                                        onChange={(e) => handleCheckboxAnswerChange(q.questionId, opt.optionId, e.target.checked)}
+                                      />
+                                      {opt.optionText}
+                                    </label>
+                                  ))}
+                              </div>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
+                              <button
+                                type="button"
+                                className="pud-btn pud-btn-outline"
+                                onClick={handleSubmitRfqAnswers}
+                                disabled={submittingAnswers}
+                                style={{ padding: '6px 14px', fontSize: '12px' }}
+                              >
+                                {submittingAnswers ? 'Saving...' : 'Save Answer'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+
+              {/* Quotation Pricing & Details Form */}
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+                <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                  <IconSparkles /> Commercial Proposal / Quotation Details
+                </div>
+
+                {submitQuoteSuccess && (
+                  <div style={{ background: '#dcfce7', border: '1px solid #bbf7d0', color: '#15803d', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 500, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <IconCheckCircle /> Quotation submitted successfully!
+                  </div>
+                )}
+
+                {submitQuoteError && (
+                  <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 500, marginBottom: '16px' }}>
+                    {submitQuoteError}
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', background: '#f8fafc', padding: '20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+
+                  {/* Delivery Charge */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
+                      Delivery Charge
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="pud-rfq-form-input"
+                      value={quoteDeliveryCharge || ""}
+                      onChange={(e) => handleOtherFieldChange("deliveryCharge", e.target.value)}
+                      placeholder="0.00"
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px' }}
+                    />
+                  </div>
+
+                  {/* Delivery Type */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
+                      Delivery Type
+                    </label>
+                    <select
+                      className="pud-rfq-form-input"
+                      value={quoteDeliveryType}
+                      onChange={(e) => handleOtherFieldChange("deliveryType", e.target.value)}
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px', background: '#ffffff' }}
+                    >
+                      <option value="PERCENTAGE">PERCENATGE</option>
+                      <option value="AMOUNT">AMOUNT</option>
+                    </select>
+                  </div>
+
+                  {/* Discount */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
+                      Discount
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="pud-rfq-form-input"
+                      value={quoteDiscount || ""}
+                      onChange={(e) => handleOtherFieldChange("discount", e.target.value)}
+                      placeholder="0.00"
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px' }}
+                    />
+                  </div>
+
+                  {/* Discount Type */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
+                      Discount Type
+                    </label>
+                    <select
+                      className="pud-rfq-form-input"
+                      value={quoteDiscountType}
+                      onChange={(e) => handleOtherFieldChange("discountType", e.target.value)}
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px', background: '#ffffff' }}
+                    >
+                      <option value="PERCENTAGE">PERCENTAGE</option>
+                      <option value="AMOUNT">AMOUNT</option>
+                    </select>
+                  </div>
+
+                  {/* Tax */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
+                      Tax
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="pud-rfq-form-input"
+                      value={quoteTax || ""}
+                      onChange={(e) => handleOtherFieldChange("tax", e.target.value)}
+                      placeholder="0.00"
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px' }}
+                    />
+                  </div>
+
+                  {/* Tax Type */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
+                      Tax Type
+                    </label>
+                    <select
+                      className="pud-rfq-form-input"
+                      value={quoteTaxType}
+                      onChange={(e) => handleOtherFieldChange("taxType", e.target.value)}
+                      style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px', background: '#ffffff' }}
+                    >
+                      <option value="PERCENTAGE">PERCENTAGE</option>
+                      <option value="AMOUNT">AMOUNT</option>
+                    </select>
+                  </div>
+
+                  {/* Total Price (Auto calculated but editable) */}
+                  <div style={{ gridColumn: 'span 2', borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '13px', color: '#1e293b', fontWeight: 700 }}>Total Price Quote</span>
+                    </div>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="pud-rfq-form-input"
+                      value={quoteTotalPrice}
+                      onChange={(e) => handleOtherFieldChange("totalPrice", e.target.value)}
+                      placeholder="0.00"
+                      style={{ width: '180px', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '16px', fontWeight: 700, color: '#16a34a', textAlign: 'right' }}
+                      required
+                    />
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="pud-modal-footer">
+          <button
+            type="button"
+            className="pud-btn pud-btn-outline"
+            onClick={closeRfqDetail}
+            style={{ marginRight: '10px' }}
+          >
+            Close
+          </button>
+          {selectedRfq && (
+            <button
+              type="submit"
+              className="pud-btn pud-btn-message"
+              disabled={submittingQuote}
+              style={{ background: '#2563eb', color: '#ffffff' }}
+            >
+              {submittingQuote ? "Submitting..." : "Submit Quotation"}
+            </button>
+          )}
+        </div>
+      </form>
+
+    </>
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9' }}>
-      <header className="pud-header" style={{ width: '100%', zIndex: 10, position: 'relative' }}>
-        <div className="pud-header-left">
-          <div className="pud-logo">
-            <img src={SilaLogo} alt="SILA Logo" className="pud-logo-img" />
-          </div>
-        </div>
-        <div className="pud-header-spacer" />
-        <div className="pud-header-right">
-          <span className="pud-header-bell">
-            <IconBell />
-          </span>
-          <div className="pud-header-account">
-            <span className="pud-header-account-name" title={organizationName}>
-              {organizationName}
-            </span>
-            <span className="pud-header-account-verified">
-              <IconCheck /> Verified Vendor
-            </span>
-          </div>
-          <div className="pud-header-avatar">{firstLetter}</div>
-        </div>
-      </header>
+      <Header />
 
-      <div className="pud-shell" style={{ flex: 1, position: 'relative', minHeight: 'calc(100vh - 64px)' }}>
-
-
+      <div className="pud-shell">
         <aside className="pud-sidebar">
-          <nav className="pud-nav" style={{ paddingTop: '40px' }}>
-            {navItemsBeforeCatalog.map((item) => {
-              const isActive = item.label === "Dashboard" && activeView === "dashboard";
-              return (
-                <div
-                  key={item.label}
-                  className={`pud-nav-item${isActive ? " pud-nav-item-active" : ""}`}
-                  onClick={() => {
-                    if (item.label === "Dashboard") navigate("/supplier/dashboard");
-                    if (item.label === "Invitations") navigate("/supplier/invitations");
-                  }}
-                >
-                  <span className="pud-nav-icon">{item.icon}</span>
-                  <span className="pud-nav-label">{item.label}</span>
-                  {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
-                </div>
-              );
-            })}
+          <nav className="pud-nav">
+            {navItems.map((item) => (
+              <div
+                key={item.key}
+                className={`pud-nav-item${activeNav === item.key ? " pud-nav-item-active" : ""}`}
+                onClick={() => handleNavClick(item.key)}
+              >
+                <span className="pud-nav-icon">{item.icon}</span>
+                <span className="pud-nav-label">{item.label}</span>
+                {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
+              </div>
+            ))}
 
             <Catalog
-              onShowCatalogList={() => setActiveView("catalogList")}
-              onCloseCatalogList={() => setActiveView("dashboard")}
-              fullViewContainer={activeView === "catalogList" ? catalogViewContainer : null}
+              onShowCatalogList={() => setActiveNav("catalogList")}
+              onCloseCatalogList={() => setActiveNav("dashboard")}
+              fullViewContainer={activeNav === "catalogList" ? catalogViewContainer : null}
             />
 
-            {navItemsAfterCatalog.map((item) => {
-              const isActive =
-                (item.label === "Template" && activeView === "template") ||
-                (item.label === "Company Profile" && activeView === "companyProfile");
-              return (
-                <div
-                  key={item.label}
-                  className={`pud-nav-item${isActive ? " pud-nav-item-active" : ""}`}
-                  onClick={() => {
-                    if (item.label === "Template") setActiveView("template");
-                    if (item.label === "Company Profile") setActiveView("companyProfile");
-                  }}
-                >
-                  <span className="pud-nav-icon">{item.icon}</span>
-                  <span className="pud-nav-label">{item.label}</span>
-                </div>
-              );
-            })}
             <div
               className="pud-nav-item pud-nav-item-logout"
               style={{
@@ -935,16 +1361,96 @@ const SupplierDashboard: React.FC = () => {
 
         <div className="pud-main">
           <main className="pud-content">
-            {activeView === "template" ? (
-              <UserTemplate />
-            ) : activeView === "catalogList" ? (
+            {activeNav === "catalogList" ? (
               <div ref={setCatalogViewContainer} />
-            ) : activeView === "companyProfile" ? (
+            ) : rfqPageView === "allRfqs" ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
+                  <div>
+                    <h1 className="pud-title">All RFQs</h1>
+                    <p className="pud-subtitle" style={{ marginBottom: 0 }}>
+                      Sourcing opportunities matched to your industry categories.
+                    </p>
+                  </div>
+                  <button className="pud-btn pud-btn-outline" onClick={handleBackToDashboard}>
+                    ← Back to Dashboard
+                  </button>
+                </div>
+
+                {loadingAllRfqs ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
+                    <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                      <div className="pud-spinner" />
+                      <span>Loading all sourcing opportunities...</span>
+                    </div>
+                  </div>
+                ) : allRfqsError && allRfqsList.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>{allRfqsError}</div>
+                ) : allRfqsList.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                    No RFQs found.
+                  </div>
+                ) : (
+                  <div className="pud-rfq-table-container">
+                    <table className="pud-rfq-items-table pud-allrfqs-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '48px' }}>#</th>
+                          <th>RFQ Number</th>
+                          <th>Title</th>
+                          <th>Organization</th>
+                          <th>Delivery Location</th>
+                          <th>Closing Date</th>
+                          <th style={{ textAlign: 'right' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allRfqsList.map((rfq: any, idx: number) => (
+                          <tr key={rfq.rfqId || idx}>
+                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
+                            <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
+                            <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                            <td>{rfq.organizationName}</td>
+                            <td>{rfq.deliveryLocation}</td>
+                            <td>
+                              {rfq.endDate
+                                ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                : "—"}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              <button
+                                className="pud-btn pud-btn-outline"
+                                onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                              >
+                                View RFQ Details
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            ) : rfqPageView === "rfqDetail" ? (
+              <>
+                <div style={{ marginBottom: '16px' }}>
+                  <button className="pud-btn pud-btn-outline" onClick={() => setRfqPageView("allRfqs")}>
+                    ← Back to All RFQs
+                  </button>
+                </div>
+                <div className="pud-rfq-fullpage">
+                  {renderRfqDetailInner()}
+                </div>
+              </>
+            ) : activeNav === "companyProfile" ? (
               <CompanyProfile
                 mode="network-admin"
                 entityLabel="Supplier"
                 fetchProfile={getSupplierProfile}
               />
+            ) : activeNav === "invitations" ? (
+              <Invitations />
             ) : (
               <>
                 <h1 className="pud-title">Supplier Operations Command</h1>
@@ -978,17 +1484,16 @@ const SupplierDashboard: React.FC = () => {
                         <div className="pud-panel-title">Recent Sourcing Opportunities</div>
                         <div className="pud-panel-subtitle">Newly listed RFQs matched to your industry categories</div>
                       </div>
-                      {!loadingRfqs && !rfqsError && rfqs.length > 0 && (visibleRfqCount < rfqs.length || hasMoreRfqs) && (
+                      {!loadingRfqs && !rfqsError && rfqs.length > 0 && (
                         <a
                           className="pud-panel-link"
                           href="#"
                           onClick={(e) => {
                             e.preventDefault();
-                            handleViewMoreRfqs();
+                            handleOpenAllRfqs();
                           }}
-                          style={loadingMoreRfqs ? { opacity: 0.6, pointerEvents: "none" } : undefined}
                         >
-                          {loadingMoreRfqs ? "Loading..." : "View All RFQs →"}
+                          View All RFQs →
                         </a>
                       )}
                     </div>
@@ -1214,485 +1719,10 @@ const SupplierDashboard: React.FC = () => {
           </div>
         )}
 
-        {selectedRfqId && (
-          <div className="pud-modal-overlay" onClick={() => setSelectedRfqId(null)}>
+        {selectedRfqId && rfqPageView === "dashboard" && (
+          <div className="pud-modal-overlay" onClick={closeRfqDetail}>
             <div className="pud-modal pud-modal-rfq" onClick={(e) => e.stopPropagation()}>
-
-              {/* Modal Header */}
-              <div className="pud-modal-header">
-                <span className="pud-modal-badge">
-                  <IconFile /> RFQ Specification
-                </span>
-                <button className="pud-modal-close" onClick={() => setSelectedRfqId(null)}>
-                  <IconClose />
-                </button>
-                <h2 className="pud-modal-name">
-                  {loadingRfqDetail ? "Loading RFQ Details..." : selectedRfq?.title || "RFQ Details"}
-                </h2>
-                {selectedRfq && (
-                  <div className="pud-modal-meta">
-                    <span><IconCalendar /> Closes: {new Date(selectedRfq.endDate).toLocaleDateString()}</span>
-                    <span><IconPin /> Delivery: {selectedRfq.deliveryLocation}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Modal Body & Form */}
-              <form onSubmit={handleSubmitQuotation}>
-                <div className="pud-modal-body">
-                  {loadingRfqDetail && (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', gap: '12px' }}>
-                      <div className="pud-spinner" />
-                      <span style={{ color: '#64748b', fontSize: '14px' }}>Fetching RFQ data from secure server...</span>
-                    </div>
-                  )}
-
-                  {rfqDetailError && (
-                    <div style={{ padding: '24px 0', textAlign: 'center' }}>
-                      <div style={{ color: '#ef4444', fontSize: '15px', marginBottom: '16px' }}>{rfqDetailError}</div>
-                      <button
-                        type="button"
-                        className="pud-btn pud-btn-outline"
-                        onClick={() => handleViewRfqDetails(selectedRfqId)}
-                      >
-                        Retry Loading
-                      </button>
-                    </div>
-                  )}
-
-                  {selectedRfq && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-
-                      {/* General Specs */}
-                      <div>
-                        <div className="pud-modal-section-title">Description</div>
-                        <p className="pud-modal-desc" style={{ whiteSpace: 'pre-wrap' }}>
-                          {selectedRfq.description || "No description provided."}
-                        </p>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
-                          <div>
-                            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
-                            <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                              {new Date(selectedRfq.startDate).toLocaleString()}
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>End Date</div>
-                            <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                              {new Date(selectedRfq.endDate).toLocaleString()}
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Add Lot Option</div>
-                            <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                              {selectedRfq.addLotOption ? "Allowed" : "Not Allowed"}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Reference / Bid Documents */}
-                      {((selectedRfq.technicalSpecificationDocuments?.length ?? 0) > 0 ||
-                        (selectedRfq.termsConditionDocuments?.length ?? 0) > 0) && (
-                          <div>
-                            <div className="pud-modal-section-title">Reference Documents</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginTop: '8px' }}>
-
-                              {/* Tech Documents */}
-                              {selectedRfq.technicalSpecificationDocuments?.map((doc) => (
-                                <div key={doc.id} className="pud-rfq-doc-card">
-                                  <span className="pud-rfq-doc-icon"><IconFile /></span>
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                    <div className="pud-rfq-doc-type">Tech Spec • {doc.fileType.toUpperCase()}</div>
-                                  </div>
-                                </div>
-                              ))}
-
-                              {/* Terms Documents */}
-                              {selectedRfq.termsConditionDocuments?.map((doc) => (
-                                <div key={doc.id} className="pud-rfq-doc-card">
-                                  <span className="pud-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></span>
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                    <div className="pud-rfq-doc-type">Terms & Conditions • {doc.fileType.toUpperCase()}</div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                      {/* Sourcing Items Table */}
-                      <div>
-                        <div className="pud-modal-section-title" style={{ marginBottom: '12px' }}>Required Materials & Services</div>
-                        <div className="pud-rfq-table-container">
-                          <table className="pud-rfq-items-table">
-                            <thead>
-                              <tr>
-                                <th>Material Info</th>
-                                <th>Group / Code</th>
-                                <th style={{ textAlign: 'right' }}>Qty Required</th>
-                                {!selectedRfq.addLotOption && <th style={{ textAlign: 'right', width: '130px' }}>Your Unit Quote</th>}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {selectedRfq.items?.map((item, idx) => {
-                                const key = item.id || item.buyerRFQItemId || `item-${idx}`;
-                                const price = quoteItemPrices[key] ?? 0;
-                                return (
-                                  <tr key={idx}>
-                                    <td>
-                                      <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
-                                      {item.costCenter && (
-                                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                          Cost Center: {item.costCenter}
-                                        </div>
-                                      )}
-                                      {item.attachments?.map((att) => (
-                                        <div key={att.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f1f5f9', color: '#475569', fontSize: '11px', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', marginRight: '4px' }}>
-                                          <IconFile /> {att.fileName}
-                                        </div>
-                                      ))}
-                                    </td>
-                                    <td>
-                                      <div style={{ fontSize: '13px', color: '#334155' }}>
-                                        {item.materialGroup || "N/A"}
-                                      </div>
-                                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                        Code: {item.materialCode || "N/A"}
-                                      </div>
-                                    </td>
-                                    <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>
-                                      {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
-                                    </td>
-                                    {!selectedRfq.addLotOption && (
-                                      <td style={{ textAlign: 'right' }}>
-                                        <input
-                                          type="number"
-                                          step="0.01"
-                                          min="0"
-                                          className="pud-rfq-item-input"
-                                          value={price || ""}
-                                          onChange={(e) => handleItemPriceChange(key, parseFloat(e.target.value) || 0)}
-                                          placeholder="0.00"
-                                          style={{
-                                            width: '110px',
-                                            padding: '6px 10px',
-                                            border: '1px solid #cbd5e1',
-                                            borderRadius: '6px',
-                                            textAlign: 'right',
-                                            fontSize: '13px',
-                                            fontWeight: 600,
-                                            color: '#0f172a'
-                                          }}
-                                          required
-                                        />
-                                      </td>
-                                    )}
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-
-                      {(selectedRfq.questions?.length ?? 0) > 0 && (
-                        <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-                          <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                            <IconMessageSquare /> Additional Questions from Buyer
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                            {submitAnswersSuccess && (
-                              <div style={{ color: '#15803d', fontSize: '13px', fontWeight: 500, background: '#dcfce7', padding: '8px 12px', borderRadius: '6px' }}>
-                                <IconCheckCircle /> All answers successfully saved!
-                              </div>
-                            )}
-                            {submitAnswersError && (
-                              <div style={{ color: '#ef4444', fontSize: '13px', fontWeight: 500, background: '#fee2e2', padding: '8px 12px', borderRadius: '6px' }}>
-                                {submitAnswersError}
-                              </div>
-                            )}
-                            {[...selectedRfq.questions]
-                              .sort((a, b) => a.displayOrder - b.displayOrder)
-                              .map((q, index) => {
-                                const current = rfqAnswers[q.questionId];
-                                return (
-                                  <div key={q.questionId} style={{ background: '#ffffff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
-                                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b', marginBottom: '12px' }}>
-                                      <span style={{ color: '#2563eb', marginRight: '4px' }}>Q{index + 1}.</span> {q.question}
-                                      {q.isRequired && <span style={{ color: '#ef4444' }}> *</span>}
-                                    </div>
-
-                                    {q.questionType === 'Text' && (
-                                      <input
-                                        type="text"
-                                        className="pud-rfq-item-input"
-                                        value={current?.answer || ''}
-                                        onChange={(e) => handleTextAnswerChange(q.questionId, e.target.value)}
-                                        placeholder="Type your answer..."
-                                        required={q.isRequired}
-                                        style={{
-                                          width: '100%',
-                                          padding: '8px 12px',
-                                          border: '1px solid #cbd5e1',
-                                          borderRadius: '6px',
-                                          fontSize: '13px',
-                                          color: '#0f172a',
-                                          background: '#ffffff',
-                                        }}
-                                      />
-                                    )}
-
-                                    {q.questionType === 'Radio' && (
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                        {[...(q.options || [])]
-                                          .sort((a, b) => a.displayOrder - b.displayOrder)
-                                          .map((opt) => (
-                                            <label
-                                              key={opt.optionId}
-                                              style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155', cursor: 'pointer' }}
-                                            >
-                                              <input
-                                                type="radio"
-                                                name={`rfq-question-${q.questionId}`}
-                                                checked={current?.questionOptionId === opt.optionId}
-                                                onChange={() => handleRadioAnswerChange(q.questionId, opt.optionId)}
-                                                required={q.isRequired}
-                                              />
-                                              {opt.optionText}
-                                            </label>
-                                          ))}
-                                      </div>
-                                    )}
-
-                                    {q.questionType === 'FILE' && (
-                                      <input
-                                        type="file"
-                                        className="pud-rfq-item-input"
-                                        onChange={(e) => {
-                                          const file = e.target.files?.[0] || null;
-                                          handleFileAnswerChange(q.questionId, file);
-                                        }}
-                                        required={q.isRequired}
-                                        style={{
-                                          width: '100%',
-                                          padding: '8px 12px',
-                                          border: '1px solid #cbd5e1',
-                                          borderRadius: '6px',
-                                          fontSize: '13px',
-                                          color: '#0f172a',
-                                          background: '#ffffff',
-                                        }}
-                                      />
-                                    )}
-
-                                    {q.questionType !== 'Text' && q.questionType !== 'Radio' && q.questionType !== 'File' && (q.options?.length ?? 0) > 0 && (
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                        {[...(q.options || [])]
-                                          .sort((a, b) => a.displayOrder - b.displayOrder)
-                                          .map((opt) => (
-                                            <label
-                                              key={opt.optionId}
-                                              style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155', cursor: 'pointer' }}
-                                            >
-                                              <input
-                                                type="checkbox"
-                                                checked={current?.questionOptionIds?.includes(opt.optionId) || false}
-                                                onChange={(e) => handleCheckboxAnswerChange(q.questionId, opt.optionId, e.target.checked)}
-                                              />
-                                              {opt.optionText}
-                                            </label>
-                                          ))}
-                                      </div>
-                                    )}
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
-                                      <button
-                                        type="button"
-                                        className="pud-btn pud-btn-outline"
-                                        onClick={handleSubmitRfqAnswers}
-                                        disabled={submittingAnswers}
-                                        style={{ padding: '6px 14px', fontSize: '12px' }}
-                                      >
-                                        {submittingAnswers ? 'Saving...' : 'Save Answer'}
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                          </div>
-                        </div>
-                      )}
-
-
-                      {/* Quotation Pricing & Details Form */}
-                      <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-                        <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                          <IconSparkles /> Commercial Proposal / Quotation Details
-                        </div>
-
-                        {submitQuoteSuccess && (
-                          <div style={{ background: '#dcfce7', border: '1px solid #bbf7d0', color: '#15803d', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 500, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <IconCheckCircle /> Quotation submitted successfully!
-                          </div>
-                        )}
-
-                        {submitQuoteError && (
-                          <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 500, marginBottom: '16px' }}>
-                            {submitQuoteError}
-                          </div>
-                        )}
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', background: '#f8fafc', padding: '20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-
-                          {/* Delivery Charge */}
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
-                              Delivery Charge
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              className="pud-rfq-form-input"
-                              value={quoteDeliveryCharge || ""}
-                              onChange={(e) => handleOtherFieldChange("deliveryCharge", e.target.value)}
-                              placeholder="0.00"
-                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px' }}
-                            />
-                          </div>
-
-                          {/* Delivery Type */}
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
-                              Delivery Type
-                            </label>
-                            <select
-                              className="pud-rfq-form-input"
-                              value={quoteDeliveryType}
-                              onChange={(e) => handleOtherFieldChange("deliveryType", e.target.value)}
-                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px', background: '#ffffff' }}
-                            >
-                              <option value="PERCENTAGE">PERCENATGE</option>
-                              <option value="AMOUNT">AMOUNT</option>
-                            </select>
-                          </div>
-
-                          {/* Discount */}
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
-                              Discount
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              className="pud-rfq-form-input"
-                              value={quoteDiscount || ""}
-                              onChange={(e) => handleOtherFieldChange("discount", e.target.value)}
-                              placeholder="0.00"
-                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px' }}
-                            />
-                          </div>
-
-                          {/* Discount Type */}
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
-                              Discount Type
-                            </label>
-                            <select
-                              className="pud-rfq-form-input"
-                              value={quoteDiscountType}
-                              onChange={(e) => handleOtherFieldChange("discountType", e.target.value)}
-                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px', background: '#ffffff' }}
-                            >
-                              <option value="PERCENTAGE">PERCENTAGE</option>
-                              <option value="AMOUNT">AMOUNT</option>
-                            </select>
-                          </div>
-
-                          {/* Tax */}
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
-                              Tax
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              className="pud-rfq-form-input"
-                              value={quoteTax || ""}
-                              onChange={(e) => handleOtherFieldChange("tax", e.target.value)}
-                              placeholder="0.00"
-                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px' }}
-                            />
-                          </div>
-
-                          {/* Tax Type */}
-                          <div>
-                            <label style={{ display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>
-                              Tax Type
-                            </label>
-                            <select
-                              className="pud-rfq-form-input"
-                              value={quoteTaxType}
-                              onChange={(e) => handleOtherFieldChange("taxType", e.target.value)}
-                              style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13.5px', background: '#ffffff' }}
-                            >
-                              <option value="PERCENTAGE">PERCENTAGE</option>
-                              <option value="AMOUNT">AMOUNT</option>
-                            </select>
-                          </div>
-
-                          {/* Total Price (Auto calculated but editable) */}
-                          <div style={{ gridColumn: 'span 2', borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                              <span style={{ fontSize: '13px', color: '#1e293b', fontWeight: 700 }}>Total Price Quote</span>
-                            </div>
-                            <input
-                              type="number"
-                              step="0.01"
-                              className="pud-rfq-form-input"
-                              value={quoteTotalPrice}
-                              onChange={(e) => handleOtherFieldChange("totalPrice", e.target.value)}
-                              placeholder="0.00"
-                              style={{ width: '180px', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '16px', fontWeight: 700, color: '#16a34a', textAlign: 'right' }}
-                              required
-                            />
-                          </div>
-
-                        </div>
-                      </div>
-
-                    </div>
-                  )}
-                </div>
-
-                {/* Modal Footer */}
-                <div className="pud-modal-footer">
-                  <button
-                    type="button"
-                    className="pud-btn pud-btn-outline"
-                    onClick={() => setSelectedRfqId(null)}
-                    style={{ marginRight: '10px' }}
-                  >
-                    Close
-                  </button>
-                  {selectedRfq && (
-                    <button
-                      type="submit"
-                      className="pud-btn pud-btn-message"
-                      disabled={submittingQuote}
-                      style={{ background: '#2563eb', color: '#ffffff' }}
-                    >
-                      {submittingQuote ? "Submitting..." : "Submit Quotation"}
-                    </button>
-                  )}
-                </div>
-              </form>
-
+              {renderRfqDetailInner()}
             </div>
           </div>
         )}

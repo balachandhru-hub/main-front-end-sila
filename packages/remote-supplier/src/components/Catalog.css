@@ -2,15 +2,15 @@
 .pud-nav-subitem-count {
     background: #2f6feb;
     color: #ffffff;
-    font-size: 10.5px;
+    font-size: 0.6562rem;
     font-weight: 700;
-    min-width: 18px;
-    height: 18px;
-    border-radius: 999px;
+    min-width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 62.4375rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 5px;
+    padding: 0 0.3125rem;
     margin-left: auto;
 }
 
@@ -18,31 +18,31 @@
 .pud-alert {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-size: 14px;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
     font-weight: 500;
-    margin-bottom: 16px;
+    margin-bottom: 1rem;
 }
 
 .pud-alert-success {
     background: #dcfce7;
-    border: 1px solid #bbf7d0;
+    border: 0.0625rem solid #bbf7d0;
     color: #15803d;
 }
 
 .pud-alert-error {
     background: #fee2e2;
-    border: 1px solid #fca5a5;
+    border: 0.0625rem solid #fca5a5;
     color: #b91c1c;
 }
 
 /* ---------- Catalog: form fields ---------- */
 .pud-catalog-form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(12.5rem, 1fr));
+    gap: 1rem;
 }
 
 .pud-catalog-form-field {
@@ -52,20 +52,20 @@
 
 .pud-catalog-form-label {
     display: block;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: #475569;
     font-weight: 600;
-    margin-bottom: 6px;
+    margin-bottom: 0.375rem;
 }
 
 .pud-catalog-form-section {
     grid-column: 1 / -1;
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin: 6px 0 -4px;
-    padding-top: 14px;
-    border-top: 1px solid #e2e8f0;
+    gap: 0.5rem;
+    margin: 0.375rem 0 -0.25rem;
+    padding-top: 0.875rem;
+    border-top: 0.0625rem solid #e2e8f0;
 }
 
 .pud-catalog-form-section:first-child {
@@ -75,7 +75,7 @@
 }
 
 .pud-catalog-form-section-title {
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 700;
     color: #1e293b;
     letter-spacing: 0.01em;
@@ -89,10 +89,10 @@
 .pud-catalog-form-select,
 .pud-catalog-form-textarea {
     width: 100%;
-    padding: 9px 12px;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 13.5px;
+    padding: 0.5625rem 0.75rem;
+    border: 0.0625rem solid #cbd5e1;
+    border-radius: 0.375rem;
+    font-size: 0.8438rem;
     font-family: inherit;
     color: #1e293b;
     background: #ffffff;
@@ -104,7 +104,7 @@
 .pud-catalog-form-textarea:focus {
     outline: none;
     border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    box-shadow: 0 0 0 0.1875rem rgba(37, 99, 235, 0.12);
 }
 
 .pud-catalog-form-textarea {
@@ -112,20 +112,20 @@
 }
 
 .pud-catalog-form-hint {
-    margin-top: 4px;
-    font-size: 11px;
+    margin-top: 0.25rem;
+    font-size: 0.6875rem;
     color: #94a3b8;
 }
 
 .pud-catalog-checkbox-field {
     flex-direction: row !important;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
 }
 
 .pud-catalog-checkbox-field input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
+    width: 1rem;
+    height: 1rem;
     accent-color: #2563eb;
 }
 
@@ -140,11 +140,11 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 0.625rem;
     text-align: center;
-    padding: 28px 20px;
-    border: 2px dashed #cbd5e1;
-    border-radius: 10px;
+    padding: 1.75rem 1.25rem;
+    border: 0.125rem dashed #cbd5e1;
+    border-radius: 0.625rem;
     background: #f8fafc;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -161,7 +161,7 @@
 }
 
 .pud-catalog-dropzone-large {
-    padding: 40px 20px;
+    padding: 2.5rem 1.25rem;
 }
 
 .pud-catalog-dropzone-icon {
@@ -172,33 +172,33 @@
 }
 
 .pud-catalog-dropzone-preview {
-    max-height: 110px;
+    max-height: 6.875rem;
     max-width: 100%;
-    border-radius: 8px;
+    border-radius: 0.5rem;
     object-fit: contain;
 }
 
 .pud-catalog-dropzone-text {
-    font-size: 13.5px;
+    font-size: 0.8438rem;
     font-weight: 500;
     color: #334155;
 }
 
 .pud-catalog-dropzone-subtext {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: #94a3b8;
 }
 
 .pud-catalog-dropzone-remove {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 0.375rem;
     background: #fee2e2;
     color: #b91c1c;
     border: none;
-    border-radius: 6px;
-    padding: 6px 12px;
-    font-size: 12px;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
 }
@@ -211,32 +211,32 @@
 .pud-catalog-file-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-top: 16px;
+    gap: 0.625rem;
+    margin-top: 1rem;
 }
 
 .pud-catalog-file-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
+    gap: 0.75rem;
+    padding: 0.625rem 0.875rem;
     background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
+    border: 0.0625rem solid #e2e8f0;
+    border-radius: 0.5rem;
 }
 
 .pud-catalog-file-thumb {
-    width: 36px;
-    height: 36px;
-    border-radius: 6px;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.375rem;
     object-fit: cover;
     flex-shrink: 0;
 }
 
 .pud-catalog-file-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 6px;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.375rem;
     background: #dbeafe;
     color: #2563eb;
     display: flex;
@@ -251,7 +251,7 @@
 }
 
 .pud-catalog-file-name {
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 600;
     color: #1e293b;
     overflow: hidden;
@@ -260,14 +260,14 @@
 }
 
 .pud-catalog-file-size {
-    font-size: 11.5px;
+    font-size: 0.7188rem;
     color: #64748b;
-    margin-top: 1px;
+    margin-top: 0.0625rem;
 }
 
 .pud-catalog-file-remove {
-    width: 26px;
-    height: 26px;
+    width: 1.625rem;
+    height: 1.625rem;
     border-radius: 50%;
     border: none;
     background: #f1f5f9;
@@ -277,6 +277,7 @@
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
+    transition: all 0.15s ease;
 }
 
 .pud-catalog-file-remove:hover {
@@ -290,9 +291,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 0.625rem;
     text-align: center;
-    padding: 50px 20px;
+    padding: 3.125rem 1.25rem;
     color: #94a3b8;
 }
 
@@ -302,29 +303,32 @@
 
 .pud-catalog-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-    gap: 16px;
-    padding-bottom: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr));
+    gap: 1rem;
+    padding-bottom: 0.5rem;
 }
 
 .pud-catalog-card {
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
+    border: 0.0625rem solid #e2e8f0;
+    border-radius: 0.625rem;
     overflow: hidden;
     background: #ffffff;
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    display: flex;
+    flex-direction: column;
 }
 
 .pud-catalog-card:hover {
     border-color: #cbd5e1;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 0.25rem 0.875rem rgba(15, 23, 42, 0.08);
+    transform: translateY(-0.125rem);
 }
 
 .pud-catalog-card-media {
     position: relative;
     width: 100%;
-    height: 110px;
-    background: #f1f5f9;
+    height: 6.25rem;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -338,22 +342,23 @@
 }
 
 .pud-catalog-card-media-placeholder {
-    color: #94a3b8;
+    color: #cbd5e1;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 1.75rem;
 }
 
 .pud-catalog-card-source {
     position: absolute;
-    top: 8px;
-    left: 8px;
-    font-size: 10px;
+    top: 0.5rem;
+    left: 0.5rem;
+    font-size: 0.625rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    padding: 3px 8px;
-    border-radius: 999px;
+    padding: 0.1875rem 0.5rem;
+    border-radius: 62.4375rem;
     background: rgba(255, 255, 255, 0.9);
     color: #334155;
 }
@@ -367,74 +372,431 @@
 }
 
 .pud-catalog-card-body {
-    padding: 12px 14px 14px 14px;
+    padding: 0.875rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    overflow: hidden;
 }
 
 .pud-catalog-card-name {
-    font-size: 13.5px;
-    font-weight: 600;
+    font-size: 0.875rem;
+    font-weight: 700;
     color: #1e293b;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    margin-bottom: 4px;
+    margin: 0;
 }
 
 .pud-catalog-card-desc {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: #64748b;
     line-height: 1.4;
-    margin-bottom: 8px;
     display: -webkit-box;
-    /* -webkit-line-clamp: 2; */
     -webkit-box-orient: vertical;
     overflow: hidden;
+    margin: 0;
 }
 
 .pud-catalog-card-meta {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
+    gap: 0.5rem;
+    margin: 0;
+    flex-wrap: wrap;
 }
 
 .pud-catalog-card-price {
-    font-size: 13.5px;
+    font-size: 0.8125rem;
     font-weight: 700;
     color: #16a34a;
 }
 
 .pud-catalog-card-uom {
-    font-size: 11px;
+    font-size: 0.6875rem;
     font-weight: 600;
     color: #475569;
     background: #f1f5f9;
-    padding: 2px 8px;
-    border-radius: 999px;
+    padding: 0.125rem 0.5rem;
+    border-radius: 62.4375rem;
+    display: inline-block;
 }
 
-.pud-catalog-card-date {
-    font-size: 11px;
-    color: #94a3b8;
+/* ---------- NEW: UNSPSC Classification Display ---------- */
+.pud-catalog-card-classification {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 0.625rem 0;
+    border-top: 0.0625rem solid #e2e8f0;
+    border-bottom: 0.0625rem solid #e2e8f0;
+    font-size: 0.6875rem;
 }
 
+.pud-catalog-classification-row {
+    display: grid;
+    grid-template-columns: 4.375rem 1fr;
+    gap: 0.5rem;
+    align-items: flex-start;
+}
+
+.pud-catalog-classification-label {
+    font-weight: 600;
+    color: #475569;
+}
+
+.pud-catalog-classification-value {
+    color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+}
+
+/* ---------- NEW: Asset/File Buttons ---------- */
+.pud-catalog-card-assets {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    margin: 0;
+}
+
+.pud-catalog-card-asset {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pud-catalog-asset-preview-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 0.0625rem solid #bfdbfe;
+    border-radius: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pud-catalog-asset-preview-btn:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+}
+
+.pud-catalog-asset-filename {
+    font-size: 0.6875rem;
+    color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+}
+
+/* ---------- Tags / Badges ---------- */
 .pud-catalog-card-badges {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin: 4px 0;
+    gap: 0.375rem;
+    margin: 0;
+    margin-top: auto;
 }
 
 .pud-catalog-card-tag {
-    font-size: 10.5px;
+    font-size: 0.6875rem;
     font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 999px;
+    padding: 0.25rem 0.625rem;
+    border-radius: 62.4375rem;
     background: #f1f5f9;
     color: #475569;
+    display: inline-block;
+    border: none;
+    cursor: default;
 }
 
 .pud-catalog-card-tag-punchout {
     background: #eff6ff;
     color: #1d4ed8;
+    border: 0.0625rem solid #bfdbfe;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pud-catalog-card-tag-punchout:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+}
+
+.pud-catalog-punchout-btn {
+    font-size: 0.6875rem !important;
+    padding: 0.25rem 0.625rem !important;
+}
+
+/* ---------- Modal Styles ---------- */
+.pud-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.pud-modal {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    box-shadow: 0 1.25rem 1.5625rem rgba(0, 0, 0, 0.15);
+    max-width: 37.5rem;
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.pud-modal-rfq {
+    max-width: 50rem;
+}
+
+.pud-modal-pdf {
+    max-width: 56.25rem;
+    max-height: 95vh;
+}
+
+.pud-modal-punchout {
+    max-width: 62.5rem;
+    max-height: 95vh;
+}
+
+.pud-modal-header {
+    padding: 1.25rem;
+    border-bottom: 0.0625rem solid #e2e8f0;
+    position: relative;
+}
+
+.pud-modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: transparent;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    border-radius: 0.375rem;
+    transition: all 0.15s ease;
+}
+
+.pud-modal-close:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.pud-modal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 0.25rem 0.625rem;
+    border-radius: 0.375rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.pud-modal-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    padding: 0;
+}
+
+.pud-modal-meta {
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+    color: #64748b;
+}
+
+.pud-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem;
+}
+
+.pud-modal-footer {
+    padding: 1rem 1.25rem;
+    border-top: 0.0625rem solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.pud-btn {
+    padding: 0.625rem 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+}
+
+.pud-btn-outline {
+    background: transparent;
+    border: 0.0625rem solid #cbd5e1;
+    color: #334155;
+}
+
+.pud-btn-outline:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.pud-btn-message {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+}
+
+.pud-btn-message:hover {
+    background: #1d4ed8;
+}
+
+.pud-btn-message:disabled {
+    background: #cbd5e1;
+    cursor: not-allowed;
+}
+
+/* ---------- PDF Viewer Container ---------- */
+.pud-pdf-viewer-container {
+    height: 31.25rem;
+    border: 0.0625rem solid #e2e8f0;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: #f8fafc;
+}
+
+/* ---------- PunchOut Viewer Container ---------- */
+.pud-punchout-viewer-container {
+    height: 31.25rem;
+    border: 0.0625rem solid #e2e8f0;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+/* ---------- Fullview Header ---------- */
+.pud-catalog-fullview-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding: 2rem;
+    border-bottom: 0.0625rem solid #e2e8f0;
+    background: #ffffff;
+}
+
+.pud-catalog-fullview-header > div:first-child {
+    flex: 1;
+}
+
+.pud-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    padding: 0;
+}
+
+.pud-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 0.75rem 0 0 0;
+    padding: 0;
+}
+
+.pud-catalog-fullview-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+/* ---------- Spinner ---------- */
+.pud-spinner {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 0.1875rem solid #e2e8f0;
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ---------- Responsive adjustments ---------- */
+@media (max-width: 48rem) {
+    .pud-catalog-grid {
+        grid-template-columns: repeat(auto-fill, minmax(13.75rem, 1fr));
+        gap: 0.75rem;
+    }
+
+    .pud-modal {
+        max-width: calc(100% - 2rem);
+        max-height: calc(100vh - 2rem);
+    }
+
+    .pud-modal-pdf,
+    .pud-modal-punchout {
+        max-width: calc(100% - 2rem);
+    }
+
+    .pud-catalog-fullview-header {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1.25rem;
+    }
+
+    .pud-catalog-fullview-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .pud-catalog-fullview-actions button {
+        width: 100%;
+    }
+
+    .pud-title {
+        font-size: 1.5rem;
+    }
+
+    .pud-pdf-viewer-container,
+    .pud-punchout-viewer-container {
+        height: 18.75rem;
+    }
 }
