@@ -1140,29 +1140,6 @@ const BuyerAdminDash: React.FC = () => {
                       ))}
                     </div>
                   </section>
-
-                  <section className="bad-panel">
-                    <div className="bad-panel-header">
-                      <div>
-                        <div className="bad-panel-title">Quick Stats</div>
-                        <div className="bad-panel-subtitle">Buyer administration metrics</div>
-                      </div>
-                    </div>
-                    <div className="bad-panel-list" style={{ padding: "20px 0" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #eef0f3" }}>
-                        <span style={{ color: "#6b7280", fontWeight: 500 }}>Total Buyers</span>
-                        <span style={{ fontWeight: 700, fontSize: "18px", color: "#111827" }}>24</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #eef0f3" }}>
-                        <span style={{ color: "#6b7280", fontWeight: 500 }}>Active Users</span>
-                        <span style={{ fontWeight: 700, fontSize: "18px", color: "#111827" }}>156</span>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0" }}>
-                        <span style={{ color: "#6b7280", fontWeight: 500 }}>Total RFQs</span>
-                        <span style={{ fontWeight: 700, fontSize: "18px", color: "#111827" }}>89</span>
-                      </div>
-                    </div>
-                  </section>
                 </div>
 
                 <section className="bad-matchmaker">

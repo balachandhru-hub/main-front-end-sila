@@ -82,24 +82,22 @@
 
 .bad-main {
     flex: 1;
-    margin-left: 248px; 
-    margin-top: 64px; 
     display: flex;
     flex-direction: column;
     min-width: 0;
+    gap: 0.5rem;
+    padding : 0.7rem 0.7rem;
 }
 
 .bad-content {
-    max-width: 100%;
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
 .bad-sidebar {
-    position: fixed;           
-    top: 64px;                 
-    left: 0;
     width: 248px;
-    height: calc(100vh - 64px);
     background: #ffffff;
     border-right: 1px solid #e6e8ec;
     padding: 20px 0;
@@ -121,7 +119,6 @@
 .bad-subtitle {
     font-size: 15px;
     color: #64748b;
-    margin: 0 0 20px 0;
 }
 
 .bad-status-banner {
@@ -245,8 +242,7 @@
 .bad-panels {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 28px;
+    gap: 1.25rem;
     align-items: start;
 }
 
