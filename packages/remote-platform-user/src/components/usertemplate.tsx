@@ -1,13 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FaEye as Eye, FaEdit as Edit2, FaTrash as Trash2, FaPlus as Plus } from 'react-icons/fa';
+import { toastService } from '@vosox/shared-ui';
 import './usertemplate.css';
+import {
+  createBuyerVerificationTemplate,
+  createVerificationTemplateQuestion,
+  fetchBuyerVerificationTemplateById,
+  type CreateVerificationTemplatePayload,
+  type VerificationTemplateQuestionDto,
+} from '../../../remote-buyer/src/api/Buyerapi';
 
-interface Template {
-  id: number;
-  name: string;
-  category: string;
-  lastModified: string;
-  description: string;
+interface TemplateQuestion {
+  questionId: string;
+  question: string;
+  questionKey: string;
+  questionType: string;
+  displayOrder: number;
+  answer: string;
+  options: string[];
+  isRequired: boolean;
+}
+
+interface VerificationTemplate {
+  templateId: string;
+  templateCode: string;
+  templateName: string;
+  templateType: string;
+  questions: TemplateQuestion[];
+}
+
+interface UserTemplateProps {
+  templates?: VerificationTemplate[];
 }
 
 interface FormField {
@@ -21,48 +44,16 @@ interface FormField {
 
 interface TemplateFormData {
   name: string;
-  category: string;
   description: string;
   fields: FormField[];
 }
 
-export default function TemplateManager() {
-  const [templates, setTemplates] = useState<Template[]>([
-    {
-      id: 1,
-      name: 'Standard Supplier Registration',
-      category: 'General',
-      lastModified: '20 Jul 2026',
-      description: 'Standard compliance checklist for onboarding suppliers.',
-    },
-    {
-      id: 2,
-      name: 'IT Vendor Registration',
-      category: 'IT',
-      lastModified: '19 Jul 2026',
-      description: 'Compliance check for software vendors and IT service providers.',
-    },
-    {
-      id: 3,
-      name: 'Manufacturing Supplier Registration',
-      category: 'Manufacturing',
-      lastModified: '17 Jul 2026',
-      description: 'Compliance check including physical safety licenses and raw material certifications.',
-    },
-    {
-      id: 4,
-      name: 'Logistics Provider',
-      category: 'Logistics',
-      lastModified: '15 Jul 2026',
-      description: 'Verification of transport assets, customs certifications, and state freight permits.',
-    },
-  ]);
-
+export default function UserTemplate({ templates = [] }: UserTemplateProps) {
+  const [apiTemplates, setApiTemplates] = useState<VerificationTemplate[]>(templates);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<TemplateFormData>({
     name: '',
-    category: 'General',
     description: '',
     fields: [],
   });
@@ -72,19 +63,23 @@ export default function TemplateManager() {
   const [fieldForm, setFieldForm] = useState({
     label: '',
     type: 'Text' as 'Text' | 'Dropdown' | 'Radio button' | 'Checkbox' | 'Date' | 'Email',
-    placeholder: '',
     options: '',
     mandatory: false,
   });
 
-  const categoryOptions = [
-    'General',
-    'IT',
-    'Manufacturing',
-    'Logistics',
-    'HR',
-    'Finance',
-  ];
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+
+  const [viewingTemplate, setViewingTemplate] = useState<VerificationTemplate | null>(null);
+  const [loadingViewId, setLoadingViewId] = useState<string | null>(null);
+  const [viewError, setViewError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (templates && templates.length > 0) {
+      setApiTemplates(templates);
+    }
+  }, [templates]);
+
 
   const fieldTypes = [
     'Text',
@@ -98,19 +93,24 @@ export default function TemplateManager() {
   const handleCreateTemplate = () => {
     setShowCreateForm(true);
     setCurrentStep(1);
-    setFormData({ name: '', category: 'General', description: '', fields: [] });
+    setPublishError(null);
+    setFormData({ name: '', description: '', fields: [] });
   };
 
   const handleCancelCreate = () => {
     setShowCreateForm(false);
     setCurrentStep(1);
-    setFormData({ name: '', category: 'General', description: '', fields: [] });
+    setPublishError(null);
+    setFormData({ name: '', description: '', fields: [] });
   };
 
+
   const handleStep1Next = () => {
-    if (formData.name.trim()) {
-      setCurrentStep(2);
+    if (!formData.name.trim()) {
+      toastService.error('Please enter a template name');
+      return;
     }
+    setCurrentStep(2);
   };
 
   const handleAddField = () => {
@@ -118,7 +118,6 @@ export default function TemplateManager() {
     setFieldForm({
       label: '',
       type: 'Text',
-      placeholder: '',
       options: '',
       mandatory: false,
     });
@@ -132,7 +131,6 @@ export default function TemplateManager() {
       setFieldForm({
         label: field.label,
         type: field.type,
-        placeholder: field.placeholder || '',
         options: field.options?.join(', ') || '',
         mandatory: field.mandatory,
       });
@@ -149,7 +147,7 @@ export default function TemplateManager() {
 
   const handleSaveField = () => {
     if (!fieldForm.label.trim()) {
-      alert('Please enter a question label');
+      toastService.error('Please enter a question label');
       return;
     }
 
@@ -157,7 +155,6 @@ export default function TemplateManager() {
       id: editingFieldId || Date.now(),
       label: fieldForm.label,
       type: fieldForm.type,
-      placeholder: fieldForm.placeholder,
       options: fieldForm.options
         ? fieldForm.options.split(',').map((opt) => opt.trim())
         : undefined,
@@ -171,37 +168,105 @@ export default function TemplateManager() {
           f.id === editingFieldId ? newField : f
         ),
       });
+      toastService.success('Field updated successfully');
     } else {
       setFormData({
         ...formData,
         fields: [...formData.fields, newField],
       });
+      toastService.success('Field added successfully');
     }
 
     setShowFieldForm(false);
   };
 
-  const handlePublishTemplate = () => {
-    if (formData.name.trim() && formData.fields.length > 0) {
-      const newTemplate: Template = {
-        id: Date.now(),
-        name: formData.name,
-        category: formData.category,
+  const handlePublishTemplate = async () => {
+    if (!formData.name.trim()) {
+      toastService.error('Please enter a template name');
+      return;
+    }
+
+    if (formData.fields.length === 0) {
+      toastService.error('Please add at least one field');
+      return;
+    }
+
+    setPublishing(true);
+    setPublishError(null);
+
+    try {
+      const templatePayload: CreateVerificationTemplatePayload = {
+        templateName: formData.name,
         description: formData.description,
-        lastModified: new Date().toLocaleDateString('en-GB'),
       };
 
-      setTemplates([newTemplate, ...templates]);
+      const templateResult = await createBuyerVerificationTemplate(templatePayload);
+
+      if (typeof templateResult !== 'string') {
+        setPublishError(templateResult.message || 'Failed to create template');
+        return;
+      }
+
+      const templateId = templateResult;
+
+      for (let i = 0; i < formData.fields.length; i++) {
+        const field = formData.fields[i];
+
+        const questionDto: VerificationTemplateQuestionDto = {
+          verificationTemplateId: templateId,
+          question: field.label,
+          questionType: field.type,
+          isRequired: field.mandatory,
+          displayOrder: i,
+          options: field.options || [],
+        };
+
+        const questionResult = await createVerificationTemplateQuestion({
+          verificationTemplateQuestionDto: questionDto,
+        });
+
+        if (typeof questionResult !== 'string') {
+          setPublishError(
+            `Template created, but failed to save question "${field.label}": ${questionResult.message}`
+          );
+          return;
+        }
+      }
+
+      const fullTemplate = await fetchBuyerVerificationTemplateById(templateId);
+
+      if ('statusCode' in fullTemplate) {
+        setPublishError(fullTemplate.message || 'Template saved, but failed to reload it');
+        return;
+      }
+
+      setApiTemplates([fullTemplate, ...apiTemplates]);
       handleCancelCreate();
-      alert('Template published successfully!');
-    } else {
-      alert('Please complete the template with at least one field');
+      toastService.success('Template created successfully');
+    } catch (err: any) {
+      setPublishError(err?.message || 'Something went wrong while publishing the template.');
+    } finally {
+      setPublishing(false);
     }
   };
 
-  const handleDeleteTemplate = (id: number) => {
-    if (confirm('Are you sure you want to delete this template?')) {
-      setTemplates(templates.filter((t) => t.id !== id));
+  const handleViewTemplate = async (templateId: string) => {
+    setLoadingViewId(templateId);
+    setViewError(null);
+
+    try {
+      const result = await fetchBuyerVerificationTemplateById(templateId);
+
+      if ('statusCode' in result) {
+        setViewError(result.message || 'Failed to load template details');
+        return;
+      }
+
+      setViewingTemplate(result);
+    } catch (err: any) {
+      setViewError(err?.message || 'Failed to load template details');
+    } finally {
+      setLoadingViewId(null);
     }
   };
 
@@ -232,24 +297,6 @@ export default function TemplateManager() {
                   setFormData({ ...formData, name: e.target.value })
                 }
               />
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>Category</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category: e.target.value })
-                  }
-                >
-                  {categoryOptions.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             <div className="form-group">
@@ -297,8 +344,8 @@ export default function TemplateManager() {
                     <select
                       value={fieldForm.type}
                       onChange={(e) =>
-                        setFieldForm({ 
-                          ...fieldForm, 
+                        setFieldForm({
+                          ...fieldForm,
                           type: e.target.value as 'Text' | 'Dropdown' | 'Radio button' | 'Checkbox' | 'Date' | 'Email'
                         })
                       }
@@ -319,21 +366,6 @@ export default function TemplateManager() {
                       value={fieldForm.label}
                       onChange={(e) =>
                         setFieldForm({ ...fieldForm, label: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Placeholder Text</label>
-                    <input
-                      type="text"
-                      placeholder="eg. Enter business type"
-                      value={fieldForm.placeholder}
-                      onChange={(e) =>
-                        setFieldForm({
-                          ...fieldForm,
-                          placeholder: e.target.value,
-                        })
                       }
                     />
                   </div>
@@ -421,18 +453,22 @@ export default function TemplateManager() {
               )}
             </div>
 
+            {publishError && (
+              <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '16px' }}>
+                {publishError}
+              </div>
+            )}
+
             <div className="form-actions">
-              <button className="btn-cancel" onClick={() => setCurrentStep(1)}>
+              <button className="btn-cancel" onClick={() => setCurrentStep(1)} disabled={publishing}>
                 Cancel
               </button>
-              <button className="btn-publish" onClick={handlePublishTemplate}>
-                Publish Template
+              <button className="btn-publish" onClick={handlePublishTemplate} disabled={publishing}>
+                {publishing ? 'Publishing...' : 'Publish Template'}
               </button>
             </div>
           </div>
         )}
-
-
       </div>
     );
   }
@@ -449,53 +485,140 @@ export default function TemplateManager() {
         </button>
       </div>
 
-      <div className="templates-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Template Name</th>
-              <th>Category</th>
-              <th>Last Modified</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {templates.map((template) => (
-              <tr key={template.id}>
-                <td>
-                  <div className="template-name-cell">
-                    <strong>{template.name}</strong>
-                    <p>{template.description}</p>
-                  </div>
-                </td>
-                <td>
-                  <span className={`badge badge-${template.category.toLowerCase()}`}>
-                    {template.category}
-                  </span>
-                </td>
-                <td>{template.lastModified}</td>
-                <td>
-                  <div className="action-buttons">
-                    <button className="btn-action btn-view" title="View">
-                      <Eye size={16} /> View
-                    </button>
-                    <button className="btn-action btn-edit" title="Edit">
-                      <Edit2 size={16} /> Edit
-                    </button>
-                    <button
-                      className="btn-action btn-delete"
-                      title="Delete"
-                      onClick={() => handleDeleteTemplate(template.id)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </td>
+      {viewError && (
+        <div style={{ color: '#ef4444', fontSize: '13px', marginBottom: '16px' }}>
+          {viewError}
+        </div>
+      )}
+
+      {/* Templates Table */}
+      {apiTemplates.length > 0 && (
+        <div className="templates-table-wrapper">
+          <table className="templates-table">
+            <thead>
+              <tr>
+                <th className="col-name">TEMPLATE NAME</th>
+                <th className="col-modified">LAST MODIFIED</th>
+                <th className="col-action">ACTION</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {apiTemplates.map((template) => (
+                <tr key={template.templateId} className="template-row">
+                  <td className="col-name">
+                    <div className="template-name-wrapper">
+                      <div className="template-name">{template.templateName}</div>
+                      <div className="template-description">
+                        {template.questions.length} questions • {template.templateType}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="col-modified">
+                    {new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </td>
+                  <td className="col-action">
+                    <div className="action-buttons">
+                      <button
+                        className="btn-action btn-view"
+                        title="View"
+                        onClick={() => handleViewTemplate(template.templateId)}
+                        disabled={loadingViewId === template.templateId}
+                      >
+                        <Eye size={18} />
+                        {loadingViewId === template.templateId ? 'Loading...' : 'View'}
+                      </button>
+                      <button className="btn-action btn-edit" title="Edit" disabled>
+                        <Edit2 size={18} />
+                        Edit
+                      </button>
+                      <button className="btn-action btn-delete" title="Delete" disabled>
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {apiTemplates.length === 0 && (
+        <div className="empty-state-container">
+          <p>No templates available. Create a new template to get started.</p>
+        </div>
+      )}
+
+      {/* View Template Modal */}
+      {viewingTemplate && (
+        <div
+          className="bad-modal-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setViewingTemplate(null)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '10px',
+              padding: '24px',
+              maxWidth: '560px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '18px', color: '#1e293b' }}>{viewingTemplate.templateName}</h2>
+                <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+                  {viewingTemplate.templateType} • Code: {viewingTemplate.templateCode}
+                </div>
+              </div>
+              <button
+                className="btn-cancel"
+                onClick={() => setViewingTemplate(null)}
+                style={{ padding: '6px 12px' }}
+              >
+                Close
+              </button>
+            </div>
+
+            {viewingTemplate.questions.length === 0 ? (
+              <p className="empty-state">No questions configured for this template.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {viewingTemplate.questions
+                  .slice()
+                  .sort((a, b) => a.displayOrder - b.displayOrder)
+                  .map((q) => (
+                    <div key={q.questionId} className="field-item" style={{ marginBottom: 0 }}>
+                      <div className="field-info">
+                        <div className="field-name">{q.question}</div>
+                        <div className="field-type">Type: {q.questionType}</div>
+                        {q.options && q.options.length > 0 && (
+                          <div className="field-type">Options: {q.options.join(', ')}</div>
+                        )}
+                        {q.isRequired && (
+                          <div className="field-mandatory">Mandatory</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

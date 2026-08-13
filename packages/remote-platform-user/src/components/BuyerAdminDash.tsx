@@ -6,9 +6,17 @@ import Invitations from "../../../remote-supplier/src/components/Invitations";
 import Product from "../../../remote-buyer/src/components/Product";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import { useNetworkAdminAuthStore } from "../store/useAuthStore";
-import { getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
+import { 
+  getBuyerProfile, 
+  fetchBuyerRFQs, 
+  fetchBuyerRFQById,
+  fetchBuyerVerificationTemplates,
+  type VerificationTemplate
+} from "../../../remote-buyer/src/api/Buyerapi";
 import CreateRFQ from "./UserListTable/CreateRFQ";
 import { logoutPlatformUser } from "../api/platformApi";
+import UserTemplate from "./usertemplate"
+import { ToastContainer } from "@vosox/shared-ui";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -359,6 +367,10 @@ const BuyerAdminDash: React.FC = () => {
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
   const RFQ_INITIAL_VISIBLE = 3;
 
+  const [templates, setTemplates] = useState<VerificationTemplate[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
+
   const [buyerId, setBuyerId] = useState<string | null>(
     sessionStorage.getItem("vosox_buyer_id")
   );
@@ -389,7 +401,6 @@ const BuyerAdminDash: React.FC = () => {
   useEffect(() => {
     const loadRfqs = async () => {
       if (!buyerId) {
-        console.warn("Buyer ID not found in sessionStorage.");
         setRfqs(mockRfqs);
         setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, mockRfqs.length));
         return;
@@ -412,7 +423,6 @@ const BuyerAdminDash: React.FC = () => {
           Math.min(RFQ_INITIAL_VISIBLE, finalData.length)
         );
       } catch (err: any) {
-        console.error("Failed to load RFQs:", err);
 
         setRfqsError(
           err?.message || "Failed to load sourcing opportunities."
@@ -429,6 +439,32 @@ const BuyerAdminDash: React.FC = () => {
 
     loadRfqs();
   }, [buyerId]);
+
+  useEffect(() => {
+    const loadTemplates = async () => {
+      setLoadingTemplates(true);
+      setTemplatesError(null);
+      try {
+        const data = await fetchBuyerVerificationTemplates();
+
+        if ('statusCode' in data) {
+          setTemplatesError(data.message || 'Failed to load templates');
+          setTemplates([]);
+        } else {
+          setTemplates(Array.isArray(data) ? data : []);
+        }
+      } catch (err: any) {
+        setTemplatesError(err.message || "Failed to load verification templates.");
+        setTemplates([]);
+      } finally {
+        setLoadingTemplates(false);
+      }
+    };
+
+    if (activeNav === "template") {
+      loadTemplates();
+    }
+  }, [activeNav]);
 
 
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
@@ -456,7 +492,6 @@ const BuyerAdminDash: React.FC = () => {
         setAllRfqsList(data.length > 0 ? data : mockRfqs);
       }
     } catch (err: any) {
-      console.error("Failed to load full RFQ list", err);
       setAllRfqsError(err.message || "Failed to load the full RFQ list.");
       setAllRfqsList(rfqs.length > 0 ? rfqs : mockRfqs);
     } finally {
@@ -478,7 +513,6 @@ const BuyerAdminDash: React.FC = () => {
       const details = await fetchBuyerRFQById(rfqId);
       setFullPageRfq(details);
     } catch (err: any) {
-      console.error("Failed to load RFQ details from API", err);
       setFullPageRfqError(err.message || "Failed to fetch details.");
       const found =
         allRfqsList.find((r) => r.rfqId === rfqId) ||
@@ -549,6 +583,7 @@ const BuyerAdminDash: React.FC = () => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
+      <ToastContainer/>
       <Header />
 
       <div
@@ -597,78 +632,97 @@ const BuyerAdminDash: React.FC = () => {
               <Invitations />
             ) : activeNav === "companyProfile" ? (
               <CompanyProfile mode="network-admin" showHeader={false} />
-            ) : activeNav === "createRFQ" ? (
-              <CreateRFQ />) : activeNav === "product" ? (
-  <Product />
-            ) : rfqPageView === "allRfqs" ? (
-              <>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
-                  <div>
-                    <h1 className="bad-title">All RFQs</h1>
-                    <p className="bad-subtitle" style={{ marginBottom: 0 }}>
-                      RFQs posted across your organization, awaiting supplier quotations.
-                    </p>
-                  </div>
-                  <button className="bad-btn bad-btn-outline" onClick={handleBackToDashboard}>
-                    ← Back to Dashboard
-                  </button>
-                </div>
-
-                {loadingAllRfqs ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
-                    <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                      <div className="bad-spinner" />
-                      <span>Loading all sourcing opportunities...</span>
+            ) : activeNav === "template" ? (
+              <div>
+                {loadingTemplates ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+                    <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                      <div className="bad-spinner" style={{ width: '32px', height: '32px' }} />
+                      <span>Loading verification templates...</span>
                     </div>
                   </div>
-                ) : allRfqsError && allRfqsList.length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>{allRfqsError}</div>
-                ) : allRfqsList.length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
-                    No RFQs found.
+                ) : templatesError ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
+                    <h3>Error Loading Templates</h3>
+                    <p>{templatesError}</p>
                   </div>
                 ) : (
-                  <div className="bad-rfq-table-container">
-                    <table className="bad-rfq-items-table bad-allrfqs-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '48px' }}>#</th>
-                          <th>RFQ Number</th>
-                          <th>Title</th>
-                          <th>Organization</th>
-                          <th>Delivery Location</th>
-                          <th>Closing Date</th>
-                          <th style={{ textAlign: 'right' }}>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allRfqsList.map((rfq: any, idx: number) => (
-                          <tr key={rfq.rfqId || idx}>
-                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
-                            <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
-                            <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
-                            <td>{rfq.organizationName}</td>
-                            <td>{rfq.deliveryLocation}</td>
-                            <td>
-                              {rfq.endDate
-                                ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                                : "—"}
-                            </td>
-                            <td style={{ textAlign: 'right' }}>
-                              <button
-                                className="bad-btn bad-btn-outline"
-                                onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                              >
-                                View RFQ Details
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <UserTemplate templates={templates} />
                 )}
-              </>
+              </div>
+            ) : activeNav === "createRFQ" ? (
+              <CreateRFQ />
+            ) : activeNav === "product" ? (
+              <Product />
+            ) : rfqPageView === "allRfqs" ? (
+    <>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
+        <div>
+          <h1 className="bad-title">All RFQs</h1>
+          <p className="bad-subtitle" style={{ marginBottom: 0 }}>
+            RFQs posted across your organization, awaiting supplier quotations.
+          </p>
+        </div>
+        <button className="bad-btn bad-btn-outline" onClick={handleBackToDashboard}>
+          ← Back to Dashboard
+        </button>
+      </div>
+
+      {loadingAllRfqs ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
+          <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+            <div className="bad-spinner" />
+            <span>Loading all sourcing opportunities...</span>
+          </div>
+        </div>
+      ) : allRfqsError && allRfqsList.length === 0 ? (
+        <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>{allRfqsError}</div>
+      ) : allRfqsList.length === 0 ? (
+        <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+          No RFQs found.
+        </div>
+      ) : (
+        <div className="bad-rfq-table-container">
+          <table className="bad-rfq-items-table bad-allrfqs-table">
+            <thead>
+              <tr>
+                <th style={{ width: '48px' }}>#</th>
+                <th>RFQ Number</th>
+                <th>Title</th>
+                <th>Organization</th>
+                <th>Delivery Location</th>
+                <th>Closing Date</th>
+                <th style={{ textAlign: 'right' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allRfqsList.map((rfq: any, idx: number) => (
+                <tr key={rfq.rfqId || idx}>
+                  <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
+                  <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
+                  <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                  <td>{rfq.organizationName}</td>
+                  <td>{rfq.deliveryLocation}</td>
+                  <td>
+                    {rfq.endDate
+                      ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                      : "—"}
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button
+                      className="bad-btn bad-btn-outline"
+                      onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                    >
+                      View RFQ Details
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
             ) : rfqPageView === "rfqDetail" ? (
               <>
                 <button
