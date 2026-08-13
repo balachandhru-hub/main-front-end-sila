@@ -316,12 +316,38 @@
     grid-template-columns: 1fr 1fr 1fr auto;
     gap: 14px;
     align-items: start;
-    /* Changed from 'end' to 'start' */
 }
 
 /* Push the Add button down so it lines up with the inputs, not the labels */
 .bd-dsr-builder-row>.bd-btn-add {
-    margin-top: 22px;
+    margin-top: 19px;
+    align-self: start;
+}
+
+/* Item add row: align Add button height with inputs */
+.bd-item-add-grid-bottom {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.bd-btn-add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    height: 35px;
+    border-radius: 8px;
+    background: #eef2ff;
+    border: 1px solid #dbe6fd;
+    color: #1f2937;
+    cursor: pointer;
+}
+
+.bd-btn-add svg {
+    display: inline-block;
+    vertical-align: middle;
 }
 
 .bd-dsr-fields-list {
@@ -469,7 +495,7 @@
     align-items: center;
     gap: 6px;
     white-space: nowrap;
-    height: 38px;
+    height: 35px;
 }
 
 /* ---------- Line items table ---------- */

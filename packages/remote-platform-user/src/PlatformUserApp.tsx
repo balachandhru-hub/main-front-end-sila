@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ToastContainer } from '@vosox/shared-ui';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useNetworkAdminAuthStore } from './store/useAuthStore';
 import PlatformUserDashboard from './components/PlatformUserDashboard';
@@ -370,7 +371,9 @@ const PlatformUserApp: React.FC = () => {
   const defaultRoute = isNetworkAdmin ? 'network-admin' : 'dashboard';
 
   return (
-    <Routes>
+    <>
+      <ToastContainer />
+      <Routes>
       <Route path="dashboard" element={<PlatformUserDashboard />} />
       <Route path="settings" element={<Department />} />
       <Route path="departmentcostlist" element={<DepartmentCostList />} />
@@ -432,7 +435,8 @@ const PlatformUserApp: React.FC = () => {
 
       <Route path="itemmaster" element={<ItemMaster />} />
       <Route path="*" element={<Navigate to={defaultRoute} replace />} />
-    </Routes>
+      </Routes>
+    </>
   );
 };
 

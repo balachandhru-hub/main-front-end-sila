@@ -427,6 +427,8 @@ if (Array.isArray(commodities)) {
         setCatalogForm((prev) => ({ ...prev, [field]: value }));
     };
 
+    const isNonCatalogType = (catalogForm.catalogType || "").toString().toLowerCase().includes("non");
+
     // ---- Upload Catalog State ----
     const [uploadCatalogFiles, setUploadCatalogFiles] = useState<File[]>([]);
     const [isDraggingUploadFiles, setIsDraggingUploadFiles] = useState(false);
@@ -944,33 +946,37 @@ const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLI
                                         />
                                     </div>
 
-                                    {/* ---- PunchOut ---- */}
-                                    <div className="pud-catalog-form-section">
-                                        <span className="pud-catalog-form-section-title">PunchOut</span>
-                                    </div>
+                                    {/* ---- PunchOut (only for Non-catalog types) ---- */}
+                                    {isNonCatalogType && (
+                                        <>
+                                            <div className="pud-catalog-form-section">
+                                                <span className="pud-catalog-form-section-title">PunchOut</span>
+                                            </div>
 
-                                    <div className="pud-catalog-form-field pud-catalog-checkbox-field pud-catalog-form-full">
-                                        <input
-                                            type="checkbox"
-                                            id="isPunchOut"
-                                            checked={catalogForm.isPunchOut}
-                                            onChange={(e) => updateCatalogField("isPunchOut", e.target.checked)}
-                                        />
-                                        <label htmlFor="isPunchOut">This is a PunchOut catalog item</label>
-                                    </div>
+                                            <div className="pud-catalog-form-field pud-catalog-checkbox-field pud-catalog-form-full">
+                                                <input
+                                                    type="checkbox"
+                                                    id="isPunchOut"
+                                                    checked={catalogForm.isPunchOut}
+                                                    onChange={(e) => updateCatalogField("isPunchOut", e.target.checked)}
+                                                />
+                                                <label htmlFor="isPunchOut">This is a PunchOut catalog item</label>
+                                            </div>
 
-                                    {catalogForm.isPunchOut && (
-                                        <div className="pud-catalog-form-field pud-catalog-form-full">
-                                            <label className="pud-catalog-form-label">PunchOut URL *</label>
-                                            <input
-                                                type="url"
-                                                className="pud-catalog-form-input"
-                                                value={catalogForm.punchOutUrl}
-                                                onChange={(e) => updateCatalogField("punchOutUrl", e.target.value)}
-                                                placeholder="https://supplier.example.com/punchout"
-                                                required={catalogForm.isPunchOut}
-                                            />
-                                        </div>
+                                            {catalogForm.isPunchOut && (
+                                                <div className="pud-catalog-form-field pud-catalog-form-full">
+                                                    <label className="pud-catalog-form-label">PunchOut URL *</label>
+                                                    <input
+                                                        type="url"
+                                                        className="pud-catalog-form-input"
+                                                        value={catalogForm.punchOutUrl}
+                                                        onChange={(e) => updateCatalogField("punchOutUrl", e.target.value)}
+                                                        placeholder="https://supplier.example.com/punchout"
+                                                        required={catalogForm.isPunchOut}
+                                                    />
+                                                </div>
+                                            )}
+                                        </>
                                     )}
 
                                     {/* ---- Attachment ---- */}
