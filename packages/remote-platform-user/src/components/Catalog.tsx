@@ -416,7 +416,6 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                 setUnitOptions(result.items);
             }
         } catch (error) {
-            console.error("Failed to fetch units", error);
         } finally {
             setLoadingUnits(false);
         }
