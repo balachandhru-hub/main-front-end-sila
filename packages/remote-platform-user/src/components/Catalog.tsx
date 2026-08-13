@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import "./Catalog.css";
 import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
-import { createSupplierCatalog } from "../../../remote-supplier/src/api/supplierApi";
+import { createSupplierCatalog, fetchUnits, type UnitItem, } from "../../../remote-supplier/src/api/supplierApi";
 import type { CatalogAssetDto, CatalogDetailDto } from "../../../remote-supplier/src/dto/supplierDto";
 import { fetchMetadataReferenceList } from "../../../remote-supplier/src/api/supplierApi"
 
@@ -35,7 +35,7 @@ const emptyCatalogForm = {
     catalogName: "",
     description: "",
     price: "",
-    unitOfMeasure: "PCS",
+    unitOfMeasure: "",
     catalogType: "",
     segment: "",
     segmentTitle: "",
@@ -51,7 +51,6 @@ const emptyCatalogForm = {
 
 type CatalogFormState = typeof emptyCatalogForm;
 
-const unitOfMeasureOptions = ["PCS", "SET", "BOX", "UNIT", "KG", "METER", "LITER", "HOUR"];
 
 /* ============================== Helpers ============================== */
 
@@ -403,6 +402,25 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
             setUploadingCatalog(false);
         }
     };
+    // ---- Unit of Measure options state ----
+    const [unitOptions, setUnitOptions] = useState<UnitItem[]>([]);
+    const [loadingUnits, setLoadingUnits] = useState(false);
+
+    // ---- Load Units (lazy-load on click/focus) ----
+    const loadUnits = async () => {
+        if (unitOptions.length > 0 || loadingUnits) return;
+        setLoadingUnits(true);
+        try {
+            const result = await fetchUnits({ index: 0, limit: 100 });
+            if (result && 'items' in result && Array.isArray(result.items)) {
+                setUnitOptions(result.items);
+            }
+        } catch (error) {
+            console.error("Failed to fetch units", error);
+        } finally {
+            setLoadingUnits(false);
+        }
+    };
 
     return (
         <>
@@ -522,9 +540,15 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                             className="pud-catalog-form-select"
                                             value={catalogForm.unitOfMeasure}
                                             onChange={(e) => updateCatalogField("unitOfMeasure", e.target.value)}
+                                            onClick={loadUnits}
                                         >
-                                            {unitOfMeasureOptions.map((uom) => (
-                                                <option key={uom} value={uom}>{uom}</option>
+                                            <option value="">
+                                                {loadingUnits ? "Loading units..." : "Select unit of measure"}
+                                            </option>
+                                            {unitOptions.map((unit) => (
+                                                <option key={unit.id} value={unit.key}>
+                                                    {unit.key}
+                                                </option>
                                             ))}
                                         </select>
                                     </div>
