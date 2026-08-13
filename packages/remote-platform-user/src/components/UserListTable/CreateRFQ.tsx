@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import "./CreateRFQ.css";
+import { toastService } from "@vosox/shared-ui";
 import { getBuyerProfile, getAllDepartments, getAllCostCenters, getAllItemMasters, createRFQ, getVerifiedSuppliers, getUnspscSegments, getUnspscFamilies } from "../../../../remote-buyer/src/api/Buyerapi";
 import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../../../../remote-buyer/src/api/masterdataApi";
 import type { CreateRFQPayload, RfqDocumentAssetDto, RfqItemDto, RfqQuestionDto, VerifiedSupplierDto, SupplierVerificationType } from "../../../../remote-buyer/src/dto/rfqDto";
@@ -282,6 +283,7 @@ interface SearchableSelectProps<T> {
     small?: boolean;
     hideSearch?: boolean;
     disabled?: boolean;
+    error?: boolean;
 }
 
 function SearchableSelect<T,>({
@@ -302,6 +304,7 @@ function SearchableSelect<T,>({
     small,
     hideSearch,
     disabled,
+    error,
 }: SearchableSelectProps<T>) {
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -325,9 +328,9 @@ function SearchableSelect<T,>({
     return (
         <div className="bd-custom-select-container" ref={containerRef}>
             <div
-                className={`${small ? "bd-input-sm" : "bd-input"} bd-custom-select-trigger${disabled ? " disabled" : ""}`}
+                className={`${small ? "bd-input-sm" : "bd-input"} bd-custom-select-trigger${disabled ? " disabled" : ""}${error ? " bd-input-error" : ""}`}
                 onClick={() => !disabled && onToggle()}
-                style={{ cursor: disabled ? "not-allowed" : "pointer" }}
+                style={{ cursor: disabled ? "not-allowed" : "pointer", borderColor: error ? '#ef4444' : undefined }}
             >
                 <span className="bd-custom-select-value">{value || placeholder}</span>
                 <IconChevronDown />
@@ -732,7 +735,11 @@ if (Array.isArray(data)) {
             price: newItemPrice.trim(),
             materialCode: newItemMaterialCode,
         };
-        setLineItems((prev) => [...prev, item]);
+        setLineItems((prev) => {
+            const next = [...prev, item];
+            return next;
+        });
+        setErrors((p) => { const np = { ...p }; delete np.lineItems; return np; });
         setNewItemName("");
         setNewItemDesc("");
         setNewItemQty(1);
@@ -798,9 +805,37 @@ if (Array.isArray(data)) {
         e.target.value = "";
     };
 
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
     const handleNext = () => {
-        if (activeStep === "details") setActiveStep("suppliers");
-        else if (activeStep === "suppliers") setActiveStep("summary");
+        if (activeStep === "details") {
+            const newErrors: Record<string, string> = {};
+            if (!rfqTitle.trim()) newErrors.rfqTitle = "Please enter RFQ Title";
+            if (!department) newErrors.department = "Please select Department";
+            if (!description.trim()) newErrors.description = "Please enter description";
+            if (!currency) newErrors.currency = "Please select Currency";
+            if (!region) newErrors.region = "Please select Region";
+            if (!deliveryLocation.trim()) newErrors.deliveryLocation = "Please enter delivery location";
+            if (!startDateTime) newErrors.startDateTime = "Please select Start Date & Time";
+            if (!endDateTime) newErrors.endDateTime = "Please select End Date & Time";
+            if (!deliveryTargetDate) newErrors.deliveryTargetDate = "Please select Delivery Target Date";
+            if (!lineItems || lineItems.length === 0) newErrors.lineItems = "Please add at least one line item";
+
+            if (Object.keys(newErrors).length > 0) {
+                setErrors(newErrors);
+                try {
+                    if (typeof toastService !== 'undefined' && toastService && typeof toastService.error === 'function') {
+                        toastService.error('Please fill the required fields');
+                    }
+                } catch (e) {
+                    // ignore
+                }
+                return;
+            }
+
+            setErrors({});
+            setActiveStep("suppliers");
+        } else if (activeStep === "suppliers") setActiveStep("summary");
     };
 
     const toggleSupplier = (id: string) => {
@@ -914,18 +949,20 @@ if (Array.isArray(data)) {
             {activeStep === "details" && (
                 <>
                     <div className="bd-field">
-                        <label className="bd-label">RFQ Title</label>
+                        <label className="bd-label">RFQ Title*</label>
                         <input
-                            className="bd-input"
+                            className={`bd-input ${errors.rfqTitle ? "bd-input-error" : ""}`}
+                            style={errors.rfqTitle ? { borderColor: "#ef4444" } : undefined}
                             type="text"
                             value={rfqTitle}
-                            onChange={(e) => setRfqTitle(e.target.value)}
+                            onChange={(e) => { setRfqTitle(e.target.value); setErrors((p) => { const np = { ...p }; delete np.rfqTitle; return np; }); }}
                         />
+                        {errors.rfqTitle && <div className="bd-error-text">{errors.rfqTitle}</div>}
                     </div>
 
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Department</label>
+                            <label className="bd-label">Department*</label>
                             <SearchableSelect<any>
                                 value={departmentLabel}
                                 placeholder="Select Department"
@@ -949,6 +986,7 @@ if (Array.isArray(data)) {
                                 loading={false}
                                 onScrollBottom={() => { }}
                                 searchPlaceholder="Search department..."
+                                error={!!errors.department}
                             />
                         </div>
                         <div className="bd-field">
@@ -1030,18 +1068,20 @@ if (Array.isArray(data)) {
                     </div>
 
                     <div className="bd-field">
-                        <label className="bd-label">Description</label>
+                        <label className="bd-label">Description*</label>
                         <textarea
-                            className="bd-textarea"
+                            className={`bd-textarea ${errors.description ? "bd-input-error" : ""}`}
+                            style={errors.description ? { borderColor: "#ef4444" } : undefined}
                             rows={3}
                             value={description}
-                            onChange={(e) => setDescription(e.target.value)}
+                            onChange={(e) => { setDescription(e.target.value); setErrors((p) => { const np = { ...p }; delete np.description; return np; }); }}
                         />
+                        {errors.description && <div className="bd-error-text">{errors.description}</div>}
                     </div>
 
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Currency</label>
+                            <label className="bd-label">Currency*</label>
                             <SearchableSelect<CurrencyDto>
                                 value={currency}
                                 placeholder="Select Currency"
@@ -1061,13 +1101,14 @@ if (Array.isArray(data)) {
                                 loading={currencySelect.loading}
                                 onScrollBottom={currencySelect.loadMore}
                                 hideSearch
+                                error={!!errors.currency}
                             />
                         </div>
                     </div>
 
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Region</label>
+                            <label className="bd-label">Region*</label>
                             <SearchableSelect<CountryDto>
                                 value={region}
                                 placeholder="Select Region"
@@ -1087,25 +1128,29 @@ if (Array.isArray(data)) {
                                 loading={regionSelect.loading}
                                 onScrollBottom={regionSelect.loadMore}
                                 searchPlaceholder="Search country..."
+                                error={!!errors.region}
                             />
                         </div>
                         <div className="bd-field">
-                            <label className="bd-label">Delivery Location</label>
+                            <label className="bd-label">Delivery Location*</label>
                             <input
-                                className="bd-input"
+                                className={`bd-input ${errors.deliveryLocation ? "bd-input-error" : ""}`}
+                                style={errors.deliveryLocation ? { borderColor: "#ef4444" } : undefined}
                                 type="text"
                                 value={deliveryLocation}
-                                onChange={(e) => setDeliveryLocation(e.target.value)}
+                                onChange={(e) => { setDeliveryLocation(e.target.value); setErrors((p) => { const np = { ...p }; delete np.deliveryLocation; return np; }); }}
                             />
+                            {errors.deliveryLocation && <div className="bd-error-text">{errors.deliveryLocation}</div>}
                         </div>
                     </div>
 
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Start Date &amp; Time (UTC)</label>
+                            <label className="bd-label">Start Date &amp; Time (UTC)*</label>
                             <div className="bd-input-icon-wrap">
                                 <input
-                                    className="bd-input bd-input-with-icon"
+                                    className={`bd-input bd-input-with-icon ${errors.startDateTime ? "bd-input-error" : ""}`}
+                                    style={errors.startDateTime ? { borderColor: "#ef4444" } : undefined}
                                     type="text"
                                     readOnly
                                     value={formatDateTimeLabel(startDateTime)}
@@ -1118,64 +1163,69 @@ if (Array.isArray(data)) {
                                     type="datetime-local"
                                     className="bd-hidden-date-input"
                                     value={startDateTime}
-                                    onChange={(e) => setStartDateTime(e.target.value)}
+                                    onChange={(e) => { setStartDateTime(e.target.value); setErrors((p) => { const np = { ...p }; delete np.startDateTime; return np; }); }}
                                 />
                                 <span className="bd-input-icon">
                                     <IconCalendar />
                                 </span>
                             </div>
+                            {errors.startDateTime && <div className="bd-error-text">{errors.startDateTime}</div>}
                         </div>
                         <div className="bd-field">
-                            <label className="bd-label">End Date &amp; Time (UTC)</label>
+                            <label className="bd-label">End Date &amp; Time (UTC)*</label>
                             <div className="bd-input-icon-wrap">
                                 <input
-                                    className="bd-input bd-input-with-icon"
-                                    type="text"
-                                    readOnly
-                                    value={formatDateTimeLabel(endDateTime)}
-                                    onClick={() =>
-                                        (document.getElementById("bd-end-datetime") as HTMLInputElement)?.showPicker?.()
-                                    }
-                                />
-                                <input
-                                    id="bd-end-datetime"
-                                    type="datetime-local"
-                                    className="bd-hidden-date-input"
-                                    value={endDateTime}
-                                    onChange={(e) => setEndDateTime(e.target.value)}
-                                />
+                                        className={`bd-input bd-input-with-icon ${errors.endDateTime ? "bd-input-error" : ""}`}
+                                        style={errors.endDateTime ? { borderColor: "#ef4444" } : undefined}
+                                        type="text"
+                                        readOnly
+                                        value={formatDateTimeLabel(endDateTime)}
+                                        onClick={() =>
+                                            (document.getElementById("bd-end-datetime") as HTMLInputElement)?.showPicker?.()
+                                        }
+                                    />
+                                    <input
+                                        id="bd-end-datetime"
+                                        type="datetime-local"
+                                        className="bd-hidden-date-input"
+                                        value={endDateTime}
+                                        onChange={(e) => { setEndDateTime(e.target.value); setErrors((p) => { const np = { ...p }; delete np.endDateTime; return np; }); }}
+                                    />
                                 <span className="bd-input-icon">
                                     <IconCalendar />
                                 </span>
                             </div>
-                        </div>
+                                {errors.endDateTime && <div className="bd-error-text">{errors.endDateTime}</div>}
+                            </div>
                     </div>
 
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Delivery Target Date (UTC)</label>
+                            <label className="bd-label">Delivery Target Date (UTC)*</label>
                             <div className="bd-input-icon-wrap">
                                 <input
-                                    className="bd-input bd-input-with-icon"
-                                    type="text"
-                                    readOnly
-                                    value={formatDateLabel(deliveryTargetDate)}
-                                    onClick={() =>
-                                        (document.getElementById("bd-target-date") as HTMLInputElement)?.showPicker?.()
-                                    }
-                                />
-                                <input
-                                    id="bd-target-date"
-                                    type="date"
-                                    className="bd-hidden-date-input"
-                                    value={deliveryTargetDate}
-                                    onChange={(e) => setDeliveryTargetDate(e.target.value)}
-                                />
+                                        className={`bd-input bd-input-with-icon ${errors.deliveryTargetDate ? "bd-input-error" : ""}`}
+                                        style={errors.deliveryTargetDate ? { borderColor: "#ef4444" } : undefined}
+                                        type="text"
+                                        readOnly
+                                        value={formatDateLabel(deliveryTargetDate)}
+                                        onClick={() =>
+                                            (document.getElementById("bd-target-date") as HTMLInputElement)?.showPicker?.()
+                                        }
+                                    />
+                                    <input
+                                        id="bd-target-date"
+                                        type="date"
+                                        className="bd-hidden-date-input"
+                                        value={deliveryTargetDate}
+                                        onChange={(e) => { setDeliveryTargetDate(e.target.value); setErrors((p) => { const np = { ...p }; delete np.deliveryTargetDate; return np; }); }}
+                                    />
                                 <span className="bd-input-icon">
                                     <IconCalendar />
                                 </span>
                             </div>
-                        </div>
+                                {errors.deliveryTargetDate && <div className="bd-error-text">{errors.deliveryTargetDate}</div>}
+                            </div>
                     </div>
 
                     <div className="bd-row-2">
@@ -1455,7 +1505,7 @@ if (Array.isArray(data)) {
                                 />
                             </div>
                             <div className="bd-item-add-field">
-                                <label className="bd-label-sm">DESCRIPTION</label>
+                                <label className="bd-label-sm">DESCRIPTION*</label>
                                 <input
                                     className="bd-input-sm"
                                     type="text"
@@ -1528,7 +1578,7 @@ if (Array.isArray(data)) {
                     <div className="bd-line-items-label">
                         <IconList /> LINE ITEMS
                     </div>
-                    <div className="bd-table-responsive">
+                    <div className="bd-table-responsive" style={errors.lineItems ? { border: "1px solid #ef4444", padding: 8, borderRadius: 6 } : undefined}>
                         <table className="bd-table">
                             <thead>
                                 <tr>
@@ -1570,6 +1620,7 @@ if (Array.isArray(data)) {
                             </tbody>
                         </table>
                     </div>
+                    {errors.lineItems && <div className="bd-error-text" style={{ marginTop: 8, color: '#ef4444' }}>{errors.lineItems}</div>}
 
                     <div className="bd-form-footer">
                         <button className="bd-btn-next" onClick={handleNext} type="button">
