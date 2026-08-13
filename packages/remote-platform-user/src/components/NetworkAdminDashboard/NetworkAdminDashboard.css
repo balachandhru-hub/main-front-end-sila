@@ -43,20 +43,13 @@
 .nad-shell {
   display: flex;
   flex: 1;
-  margin-top: 4rem; /* Restores clearance under fixed header */
-  height: calc(100vh - 4rem);
   overflow: hidden;
 }
 
 .nad-sidebar {
-  position: fixed; /* Pins sidebar back to the screen */
-  top: 4rem;
-  left: 0;
   width: 15rem;
-  height: calc(100vh - 4rem);
   background: #ffffff;
   border-right: 0.0625rem solid #e5e7eb;
-  padding: 1.25rem 0;
   display: flex;
   flex-direction: column;
   z-index: 20;
@@ -65,7 +58,6 @@
 
 .nad-main {
   flex: 1;
-  margin-left: 15rem; /* Offsets content so it sits cleanly next to fixed sidebar */
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -78,11 +70,9 @@
   flex: 1;
   overflow-y: auto;
   padding: 1rem;
-  max-width: 100%;
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
 }
 
 .nad-sidebar::-webkit-scrollbar {
