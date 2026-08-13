@@ -1337,7 +1337,7 @@ const SupplierAdminDash: React.FC = () => {
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
       >
         <aside className="sad-sidebar">
-          <nav className="sad-nav" style={{ paddingTop: "40px" }}>
+          <nav className="sad-nav">
             {navItemsBeforeCatalog.map((item) => (
               <div
                 key={item.key}
