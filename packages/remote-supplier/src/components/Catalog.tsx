@@ -1298,8 +1298,8 @@ const Catalog: React.FC<CatalogProps> = ({
                             {punchOutIframeBlocked ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '400px', gap: '16px', color: '#64748b' }}>
                                     <div style={{ fontSize: '14px', textAlign: 'center', maxWidth: '400px' }}>
-                                        <p style={{ marginBottom: '12px', fontWeight: '600' }}>Website Cannot Be Embedded</p>
-                                        <p style={{ fontSize: '12px', marginBottom: '16px' }}>
+                                        <p style={{ fontWeight: '600' }}>Website Cannot Be Embedded</p>
+                                        <p style={{ fontSize: '12px' }}>
                                             This website has restricted embedding for security reasons.
                                         </p>
                                     </div>
@@ -1338,7 +1338,7 @@ const Catalog: React.FC<CatalogProps> = ({
                                         className="pud-btn pud-btn-outline"
                                         onClick={closeCatalogDetail}
                                     >
-                                        <IconChevronLeft /> Back to Catalogs
+                                        <IconChevronLeft /> Back to Catalog
                                     </button>
                                 </div>
                             </div>
@@ -1349,7 +1349,7 @@ const Catalog: React.FC<CatalogProps> = ({
                                     flexWrap: "wrap",
                                     gap: "32px",
                                     alignItems: "flex-start",
-                                    padding: "8px 4px 32px",
+                                    padding: "2rem 0.5rem 1rem",
                                 }}
                             >
                                 <div style={{ flex: "1 1 360px", maxWidth: "480px", minWidth: "280px" }}>
@@ -1452,22 +1452,22 @@ const Catalog: React.FC<CatalogProps> = ({
                                     )}
                                 </div>
 
-                                <div style={{ flex: "1 1 340px", minWidth: "280px" }}>
-                                    <h1 className="pud-title" style={{ marginBottom: "6px" }}>{selectedCatalogItem.catalogName}</h1>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem"}}>
+                                    <h1 className="pud-title" >{selectedCatalogItem.catalogName}</h1>
 
                                     {selectedCatalogItem.catalogType && (
-                                        <span className="pud-catalog-card-tag" style={{ display: "inline-block", marginBottom: "12px" }}>
+                                        <span className="pud-catalog-card-tag" style={{ display: "inline-block"}}>
                                             {selectedCatalogItem.catalogType}
                                         </span>
                                     )}
 
                                     {selectedCatalogItem.description && (
-                                        <p className="pud-catalog-card-desc" style={{ fontSize: "14px", lineHeight: 1.6, marginBottom: "18px" }}>
+                                        <p className="pud-catalog-card-desc" style={{ fontSize: "14px", lineHeight: 1.6}}>
                                             {selectedCatalogItem.description}
                                         </p>
                                     )}
 
-                                    <div style={{ display: "flex", alignItems: "baseline", gap: "10px", marginBottom: "18px" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px"}}>
                                         {!!selectedCatalogItem.price && (
                                             <span className="pud-catalog-card-price" style={{ fontSize: "22px" }}>
                                                 {selectedCatalogItem.currency ? `${selectedCatalogItem.currency} ` : ""}
@@ -1483,15 +1483,15 @@ const Catalog: React.FC<CatalogProps> = ({
                                         <button
                                             className="pud-btn pud-btn-message"
                                             onClick={() => handlePunchOutPreview(selectedCatalogItem.punchOutUrl)}
-                                            style={{ background: "#2563eb", color: "#ffffff", marginBottom: "20px" }}
+                                            style={{ background: "#2563eb", color: "#ffffff"}}
                                         >
                                             <IconExternalLink style={{ marginRight: "6px" }} /> View Catalog
                                         </button>
                                     )}
 
                                     {(selectedCatalogItem.segmentTitle || selectedCatalogItem.familyTitle || selectedCatalogItem.classTitle || selectedCatalogItem.commodityTitle) && (
-                                        <div className="pud-catalog-card-classification" style={{ marginBottom: "18px" }}>
-                                            <div className="pud-catalog-form-section-title" style={{ marginBottom: "8px" }}>Classification</div>
+                                        <div className="pud-catalog-card-classification">
+                                            <div className="pud-catalog-form-section-title">Classification</div>
                                             {selectedCatalogItem.segmentTitle && (
                                                 <div className="pud-catalog-classification-row">
                                                     <span className="pud-catalog-classification-label">Segment:</span>
@@ -1521,7 +1521,7 @@ const Catalog: React.FC<CatalogProps> = ({
 
                                     {selectedCatalogItem.assets && selectedCatalogItem.assets.length > 0 && (
                                         <div className="pud-catalog-card-assets">
-                                            <div className="pud-catalog-form-section-title" style={{ marginBottom: "8px" }}>
+                                            <div className="pud-catalog-form-section-title">
                                                 Attached Files ({selectedCatalogItem.assets.length})
                                             </div>
                                             {selectedCatalogItem.assets.map((asset) => (
