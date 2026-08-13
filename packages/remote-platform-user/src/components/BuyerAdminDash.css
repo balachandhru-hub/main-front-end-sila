@@ -87,6 +87,7 @@
     min-width: 0;
     gap: 0.5rem;
     padding : 0.7rem 0.7rem;
+    background: white;
 }
 
 .bad-content {
