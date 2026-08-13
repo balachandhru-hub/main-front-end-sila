@@ -448,6 +448,7 @@
     border-radius: 999px;
     background: #f1f5f9;
     color: #475569;
+    width: fit-content;
 }
 
 .pud-catalog-card-tag-punchout {
