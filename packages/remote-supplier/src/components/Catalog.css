@@ -706,7 +706,7 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 1.25rem;
-    padding: 2rem;
+    padding: 0.5rem 0.7rem;
     border-bottom: 0.0625rem solid #e2e8f0;
     background: #ffffff;
 }
