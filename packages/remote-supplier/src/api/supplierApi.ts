@@ -23,9 +23,7 @@ export interface SupplierAssetDto {
   assetType?: string | null;
   fileType?: string | null;
   contentType?: string;
-  // Base64-encoded file content, if the API returns the raw bytes inline.
   fileBytes?: string;
-  // Direct/CDN URL to the asset, if the API returns a link instead of bytes.
   url?: string;
   fileUrl?: string;
 }
@@ -456,9 +454,6 @@ export const fetchClasses = async (segment: number, family: number): Promise<any
   }
 };
 
-// ============================================================================
-// API: Submit RFQ Answers
-// ============================================================================
 export const submitRfqAnswers = async (
   payload: SubmitRfqAnswersPayload
 ): Promise<any | ErrorResponseDto> => {
@@ -492,9 +487,6 @@ export const submitRfqAnswers = async (
   }
 };
 
-// ============================================================================
-// API: Fetch Currencies
-// ============================================================================
 export const fetchCurrencies = async (payload?: {
   index?: number;
   limit?: number;
@@ -537,9 +529,6 @@ export const fetchCurrencies = async (payload?: {
   }
 };
 
-// ============================================================================
-// API: Fetch Families for a selected Segment
-// ============================================================================
 export const fetchFamilies = async (
   segment: number,
   payload?: { pageIndex?: number; pageSize?: number }
@@ -586,9 +575,6 @@ export const fetchFamilies = async (
   }
 };
 
-// ============================================================================
-// API: Fetch Classes for a selected Family
-// ============================================================================
 export const fetchClassifications = async (
   family: number,
   payload?: { pageIndex?: number; pageSize?: number }
@@ -635,9 +621,6 @@ export const fetchClassifications = async (
   }
 };
 
-// ============================================================================
-// API: Fetch Commodities for a selected Class
-// ============================================================================
 export const fetchCommodities = async (
   classId: number,
   payload?: { pageIndex?: number; pageSize?: number }

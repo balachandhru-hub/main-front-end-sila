@@ -64,9 +64,6 @@ const emptyCatalogForm = {
 
 type CatalogFormState = typeof emptyCatalogForm;
 
-
-/* ============================== Helpers ============================== */
-
 const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -84,8 +81,6 @@ const fileToBase64 = (file: File): Promise<string> => {
         reader.onerror = (error) => reject(error);
     });
 };
-
-/* ============================== Icons ============================== */
 
 interface IconProps {
     style?: React.CSSProperties;
@@ -185,7 +180,6 @@ const IconExternalLink = (props: IconProps) => (
     </svg>
 );
 
-/* ============================== Component ============================== */
 
 interface CatalogProps {
     onShowCatalogList?: () => void;
@@ -200,37 +194,25 @@ const Catalog: React.FC<CatalogProps> = ({
     fullViewContainer,
     isAdmin = false
 }) => {
-    // ---- Sidebar expansion + modal visibility ----
     const [isCatalogExpanded, setIsCatalogExpanded] = useState(false);
     const [showCreateCatalogModal, setShowCreateCatalogModal] = useState(false);
     const [showUploadCatalogModal, setShowUploadCatalogModal] = useState(false);
     const [showCatalogListModal, setShowCatalogListModal] = useState(false);
     const [_catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
 
-    // ---- PDF Preview Modal ----
-    // const [showPdfPreviewModal, setShowPdfPreviewModal] = useState(false);
-    // const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
-    // const [pdfPreviewFileName, setPdfPreviewFileName] = useState<string>("");
-
-    // ---- PunchOut Preview Modal ----
     const [showPunchOutModal, setShowPunchOutModal] = useState(false);
     const [punchOutPreviewUrl, setPunchOutPreviewUrl] = useState<string>("");
     const [punchOutIframeBlocked, setPunchOutIframeBlocked] = useState(false);
 
-    // ---- Show Catalogs: API-backed list state ----
     const [catalogList, setCatalogList] = useState<SupplierCatalogListItem[]>([]);
     const [loadingCatalogList, setLoadingCatalogList] = useState(false);
     const [catalogListError, setCatalogListError] = useState<string | null>(null);
-    // Caches resolved image data (or URL) per asset id, so each card can show
-    // its uploaded image after fetching GET /api/v1/supplier/asset/{assetId}.
+
     const [catalogAssetImages, setCatalogAssetImages] = useState<Record<string, string>>({});
 
-    // ---- Catalog Detail (full-screen) view state ----
     const [selectedCatalogItem, setSelectedCatalogItem] = useState<SupplierCatalogListItem | null>(null);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [loadingSelectedImages, setLoadingSelectedImages] = useState(false);
-
-    // Fetches a single asset's image content and caches it by asset id.
     const loadCatalogAssetImage = async (assetId: string) => {
         if (!assetId || catalogAssetImages[assetId]) return;
         try {
@@ -251,7 +233,6 @@ const Catalog: React.FC<CatalogProps> = ({
                 setCatalogAssetImages((prev) => ({ ...prev, [assetId]: src as string }));
             }
         } catch (error) {
-            // Non-fatal: the card just falls back to the placeholder icon.
         }
     };
 
@@ -279,8 +260,6 @@ const Catalog: React.FC<CatalogProps> = ({
         }
     };
 
-    // Opens the full-screen detail view for a catalog item and resolves
-    // every attached asset's image (not just the first) for the gallery.
     const openCatalogDetail = async (item: SupplierCatalogListItem) => {
         setSelectedCatalogItem(item);
         setSelectedImageIndex(0);
@@ -317,7 +296,6 @@ const Catalog: React.FC<CatalogProps> = ({
         );
     };
 
-    // ---- Create Catalog form state ----
     const [catalogForm, setCatalogForm] = useState<CatalogFormState>(emptyCatalogForm);
     const [catalogFiles, setCatalogFiles] = useState<File[]>([]);
     const [catalogFilePreviews, setCatalogFilePreviews] = useState<string[]>([]);
@@ -327,24 +305,20 @@ const Catalog: React.FC<CatalogProps> = ({
     const [createCatalogSuccess, setCreateCatalogSuccess] = useState(false);
     const catalogFileInputRef = useRef<HTMLInputElement>(null);
 
-    // ---- Catalog Type & Currency ----
     const [catalogTypeOptions, setCatalogTypeOptions] = useState<Array<{ id: string; key: string }>>([]);
     const [currencyOptions, setCurrencyOptions] = useState<Array<{ id: string; currencyName: string; sortNumber: number }>>([]);
     const [loadingCurrencies, setLoadingCurrencies] = useState(false);
 
-    // ---- UNSPSC Classification Dropdowns State ----
     const [segmentOptions, setSegmentOptions] = useState<Array<{ segment: number; title: string }>>([]);
     const [familyOptions, setFamilyOptions] = useState<Array<{ family: number; title: string }>>([]);
     const [classOptions, setClassOptions] = useState<Array<{ class: number; title: string }>>([]);
     const [commodityOptions, setCommodityOptions] = useState<Array<{ commodity: number; title: string }>>([]);
 
-    // ---- Loading states for classification ----
     const [loadingSegments, setLoadingSegments] = useState(false);
     const [loadingFamilies, setLoadingFamilies] = useState(false);
     const [loadingClasses, setLoadingClasses] = useState(false);
     const [loadingCommodities, setLoadingCommodities] = useState(false);
 
-    // ---- Load Catalog Types ----
     const loadCatalogTypes = async () => {
         const types = await fetchMetadataReferenceList(['CATALOG_TYPE']);
         if (Array.isArray(types)) {
@@ -352,7 +326,6 @@ const Catalog: React.FC<CatalogProps> = ({
         }
     };
 
-    // ---- Load Currencies (lazy-load) ----
     const loadCurrencies = async () => {
         if (currencyOptions.length > 0 || loadingCurrencies) return;
         setLoadingCurrencies(true);
@@ -368,7 +341,6 @@ const Catalog: React.FC<CatalogProps> = ({
         }
     };
 
-    // ---- Load Segments on Modal Open ----
     const loadSegments = async () => {
         if (segmentOptions.length > 0) return;
         setLoadingSegments(true);
@@ -384,7 +356,6 @@ const Catalog: React.FC<CatalogProps> = ({
         }
     };
 
-    // ---- Handle Segment Selection ----
     const handleSegmentChange = async (segmentValue: string) => {
         const segmentNum = Number(segmentValue);
 
@@ -419,7 +390,6 @@ const Catalog: React.FC<CatalogProps> = ({
         }
     };
 
-    // ---- Handle Family Selection ----
     const handleFamilyChange = async (familyValue: string) => {
         const familyNum = Number(familyValue);
 
@@ -451,7 +421,6 @@ const Catalog: React.FC<CatalogProps> = ({
         }
     };
 
-    // ---- Handle Class Selection ----
     const handleClassChange = async (classValue: string) => {
         const classNum = Number(classValue);
 
@@ -480,7 +449,6 @@ const Catalog: React.FC<CatalogProps> = ({
         }
     };
 
-    // ---- Handle Commodity Selection ----
     const handleCommodityChange = (commodityValue: string) => {
         const commodityNum = Number(commodityValue);
 
@@ -494,7 +462,6 @@ const Catalog: React.FC<CatalogProps> = ({
         setCatalogForm((prev) => ({ ...prev, [field]: value }));
     };
 
-    // ---- Upload Catalog State ----
     const [uploadCatalogFiles, setUploadCatalogFiles] = useState<File[]>([]);
     const [isDraggingUploadFiles, setIsDraggingUploadFiles] = useState(false);
     const [uploadingCatalog, setUploadingCatalog] = useState(false);
@@ -511,7 +478,6 @@ const Catalog: React.FC<CatalogProps> = ({
         setCreateCatalogSuccess(false);
     };
 
-    // Adds one or more images to the pending catalog-image list (multi-image upload).
     const handleCatalogFilesAdd = (files: FileList | File[] | null) => {
         if (!files) return;
         const incoming = Array.from(files);
@@ -572,8 +538,7 @@ const Catalog: React.FC<CatalogProps> = ({
             const supplierEntityId = entityTypes.find((e) => e.key === 'SUPPLIER')?.id || '59476530-3c10-438b-b3b3-9db9e96e8d93';
             const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
 
-            // Build one asset entry per uploaded image; the first image is marked
-            // as the singleton/cover asset used for card & thumbnail previews.
+
             const assets: CatalogAssetDto[] = await Promise.all(
                 catalogFiles.map(async (file, index) => {
                     const fileBytes = await fileToBase64(file);
@@ -715,17 +680,14 @@ const Catalog: React.FC<CatalogProps> = ({
     };
 
 
-    // ---- PunchOut Preview Handler ----
     const handlePunchOutPreview = (url: string) => {
         setPunchOutPreviewUrl(url);
         setShowPunchOutModal(true);
         setPunchOutIframeBlocked(false);
     };
-    // ---- Unit of Measure options state ----
     const [unitOptions, setUnitOptions] = useState<UnitItem[]>([]);
     const [loadingUnits, setLoadingUnits] = useState(false);
 
-    // ---- Load Units (lazy-load on click/focus) ----
     const loadUnits = async () => {
         if (unitOptions.length > 0 || loadingUnits) return;
         setLoadingUnits(true);
@@ -743,7 +705,6 @@ const Catalog: React.FC<CatalogProps> = ({
 
     return (
         <>
-            {/* ---------- Sidebar nav entry ---------- */}
             <div
                 className="pud-nav-item"
                 onClick={() => setIsCatalogExpanded((prev) => !prev)}
@@ -788,7 +749,6 @@ const Catalog: React.FC<CatalogProps> = ({
                 </div>
             )}
 
-            {/* ---------- Create Catalog Modal ---------- */}
             {showCreateCatalogModal && (
                 <div className="pud-modal-overlay" onClick={closeCreateCatalogModal}>
                     <div className="pud-modal pud-modal-rfq" onClick={(e) => e.stopPropagation()}>
@@ -817,7 +777,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                 )}
 
                                 <div className="pud-catalog-form-grid">
-                                    {/* ---- Basic Details ---- */}
                                     <div className="pud-catalog-form-section">
                                         <span className="pud-catalog-form-section-title">Basic Details</span>
                                     </div>
@@ -909,12 +868,10 @@ const Catalog: React.FC<CatalogProps> = ({
                                         </select>
                                     </div>
 
-                                    {/* ---- Classification (UNSPSC-style) ---- */}
                                     <div className="pud-catalog-form-section">
                                         <span className="pud-catalog-form-section-title">Classification</span>
                                     </div>
 
-                                    {/* SEGMENT */}
                                     <div className="pud-catalog-form-field">
                                         <label className="pud-catalog-form-label">Segment *</label>
                                         <select
@@ -945,7 +902,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                         />
                                     </div>
 
-                                    {/* FAMILY */}
                                     <div className="pud-catalog-form-field">
                                         <label className="pud-catalog-form-label">Family *</label>
                                         <select
@@ -981,7 +937,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                         />
                                     </div>
 
-                                    {/* CLASS */}
                                     <div className="pud-catalog-form-field">
                                         <label className="pud-catalog-form-label">Class *</label>
                                         <select
@@ -1017,7 +972,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                         />
                                     </div>
 
-                                    {/* COMMODITY */}
                                     <div className="pud-catalog-form-field">
                                         <label className="pud-catalog-form-label">Commodity *</label>
                                         <select
@@ -1053,7 +1007,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                         />
                                     </div>
 
-                                    {/* ---- PunchOut ---- */}
                                     <div className="pud-catalog-form-section">
                                         <span className="pud-catalog-form-section-title">PunchOut</span>
                                     </div>
@@ -1082,7 +1035,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                         </div>
                                     )}
 
-                                    {/* ---- Attachment ---- */}
                                     <div className="pud-catalog-form-section">
                                         <span className="pud-catalog-form-section-title">Attachment</span>
                                     </div>
@@ -1217,7 +1169,6 @@ const Catalog: React.FC<CatalogProps> = ({
                 </div>
             )}
 
-            {/* ---------- Upload Catalog Modal ---------- */}
             {showUploadCatalogModal && (
                 <div className="pud-modal-overlay" onClick={closeUploadCatalogModal}>
                     <div className="pud-modal" onClick={(e) => e.stopPropagation()}>
@@ -1329,10 +1280,8 @@ const Catalog: React.FC<CatalogProps> = ({
                 </div>
             )}
 
-            {/* ---------- PDF Preview Modal ---------- */}
 
 
-            {/* ---------- PunchOut Preview Modal ---------- */}
             {showPunchOutModal && (
                 <div className="pud-modal-overlay" onClick={() => setShowPunchOutModal(false)}>
                     <div className="pud-modal pud-modal-punchout" onClick={(e) => e.stopPropagation()}>
@@ -1379,11 +1328,9 @@ const Catalog: React.FC<CatalogProps> = ({
                 </div>
             )}
 
-            {/* ---------- Show Catalogs: full-page view ---------- */}
             {showCatalogListModal && fullViewContainer && createPortal(
                 <>
                     {selectedCatalogItem ? (
-                        /* ===================== Catalog Detail Page ===================== */
                         <>
                             <div className="pud-catalog-fullview-header">
                                 <div>
@@ -1406,7 +1353,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                     padding: "8px 4px 32px",
                                 }}
                             >
-                                {/* ---- Left: Image gallery ---- */}
                                 <div style={{ flex: "1 1 360px", maxWidth: "480px", minWidth: "280px" }}>
                                     <div
                                         style={{
@@ -1507,7 +1453,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                     )}
                                 </div>
 
-                                {/* ---- Right: Details ---- */}
                                 <div style={{ flex: "1 1 340px", minWidth: "280px" }}>
                                     <h1 className="pud-title" style={{ marginBottom: "6px" }}>{selectedCatalogItem.catalogName}</h1>
 
