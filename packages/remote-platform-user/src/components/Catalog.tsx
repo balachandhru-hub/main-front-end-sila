@@ -200,12 +200,12 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
     const [createCatalogSuccess, setCreateCatalogSuccess] = useState(false);
     const catalogFileInputRef = useRef<HTMLInputElement>(null);
     const [catalogTypeOptions, setCatalogTypeOptions] = useState<Array<{ id: string; key: string }>>([]);
-   const loadCatalogTypes = async () => {
-    const types = await fetchMetadataReferenceList(['CATALOG_TYPE']);
-    if (Array.isArray(types)) {
-        setCatalogTypeOptions(types);
-    }
-};
+    const loadCatalogTypes = async () => {
+        const types = await fetchMetadataReferenceList(['CATALOG_TYPE']);
+        if (Array.isArray(types)) {
+            setCatalogTypeOptions(types);
+        }
+    };
 
     const updateCatalogField = <K extends keyof CatalogFormState>(field: K, value: CatalogFormState[K]) => {
         setCatalogForm((prev) => ({ ...prev, [field]: value }));
@@ -260,10 +260,10 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                 throw new Error("Organization ID not found. Please log in again.");
             }
 
-           const entityTypesRaw = await fetchMetadataReferenceList(['ENTITY_TYPE']);
-const entityTypes = Array.isArray(entityTypesRaw) ? entityTypesRaw : [];
-const supplierEntityId = entityTypes.find((e) => e.key === 'SUPPLIER')?.id || '59476530-3c10-438b-b3b3-9db9e96e8d93';
-const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
+            const entityTypesRaw = await fetchMetadataReferenceList(['ENTITY_TYPE']);
+            const entityTypes = Array.isArray(entityTypesRaw) ? entityTypesRaw : [];
+            const supplierEntityId = entityTypes.find((e) => e.key === 'SUPPLIER')?.id || '59476530-3c10-438b-b3b3-9db9e96e8d93';
+            const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
             let assets: CatalogAssetDto[] = [];
             if (catalogFile) {
                 const fileBytes = await fileToBase64(catalogFile);
