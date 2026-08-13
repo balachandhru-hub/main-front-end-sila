@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./BuyerAdminDash.css";
-import Header from "../../../remote-buyer/src/components/Header";
+import Header from "./Header";
 import UserAdmin from "../UserAdmin";
 import Invitations from "../../../remote-supplier/src/components/Invitations";
 import Product from "../../../remote-buyer/src/components/Product";
