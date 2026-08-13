@@ -558,8 +558,7 @@
     border-radius: 0.75rem;
     box-shadow: 0 1.25rem 1.5625rem rgba(0, 0, 0, 0.15);
     width: 100%;
-    max-height: 90vh;
-    display: flex;
+    max-height: 100vh;
     flex-direction: column;
 }
 
@@ -573,8 +572,7 @@
 }
 
 .pud-modal-punchout {
-    max-width: 62.5rem;
-    max-height: 95vh;
+    max-width: 75.5rem;
 }
 
 .pud-modal-header {
@@ -713,7 +711,7 @@
     background: #ffffff;
 }
 
-.pud-catalog-fullview-header > div:first-child {
+.pud-catalog-fullview-header>div:first-child {
     flex: 1;
 }
 
@@ -753,7 +751,9 @@
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* ---------- Responsive adjustments ---------- */

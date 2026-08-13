@@ -16,6 +16,18 @@ import type {
 import type { ErrorResponseDto } from '@vosox/shared-ui';
 import { isErrorResponse } from '@vosox/shared-ui';
 
+export interface SupplierAssetDto {
+  id: string;
+  assetName?: string;
+  fileName?: string;
+  assetType?: string | null;
+  fileType?: string | null;
+  contentType?: string;
+  fileBytes?: string;
+  url?: string;
+  fileUrl?: string;
+}
+
 export interface PersonDetailDto {
   personId: string;
   userId: string;
@@ -254,7 +266,7 @@ export const logoutSupplier = async (): Promise<void | ErrorResponseDto> => {
     if (error.response?.status === 401) {
       (window as any).handleUnauthorized?.();
     }
-    
+
     if (error.response && error.response.data) {
       const errData = error.response.data;
       return {
@@ -442,9 +454,6 @@ export const fetchClasses = async (segment: number, family: number): Promise<any
   }
 };
 
-// ============================================================================
-// API: Submit RFQ Answers
-// ============================================================================
 export const submitRfqAnswers = async (
   payload: SubmitRfqAnswersPayload
 ): Promise<any | ErrorResponseDto> => {
@@ -478,9 +487,6 @@ export const submitRfqAnswers = async (
   }
 };
 
-// ============================================================================
-// API: Fetch Currencies
-// ============================================================================
 export const fetchCurrencies = async (payload?: {
   index?: number;
   limit?: number;
@@ -523,9 +529,6 @@ export const fetchCurrencies = async (payload?: {
   }
 };
 
-// ============================================================================
-// API: Fetch Families for a selected Segment
-// ============================================================================
 export const fetchFamilies = async (
   segment: number,
   payload?: { pageIndex?: number; pageSize?: number }
@@ -572,9 +575,6 @@ export const fetchFamilies = async (
   }
 };
 
-// ============================================================================
-// API: Fetch Classes for a selected Family
-// ============================================================================
 export const fetchClassifications = async (
   family: number,
   payload?: { pageIndex?: number; pageSize?: number }
@@ -621,9 +621,6 @@ export const fetchClassifications = async (
   }
 };
 
-// ============================================================================
-// API: Fetch Commodities for a selected Class
-// ============================================================================
 export const fetchCommodities = async (
   classId: number,
   payload?: { pageIndex?: number; pageSize?: number }
@@ -670,9 +667,6 @@ export const fetchCommodities = async (
   }
 };
 
-// ============================================================================
-// API: Fetch Supplier Catalog
-// ============================================================================
 export const fetchSupplierCatalog = async (): Promise<SupplierCatalogListItem[] | ErrorResponseDto> => {
   try {
     const response = await supplierInstance.get<SupplierCatalogListItem[]>('/api/v1/supplier/catalog');
@@ -700,6 +694,41 @@ export const fetchSupplierCatalog = async (): Promise<SupplierCatalogListItem[] 
       statusCode: 500,
       message: 'Unexpected Error',
       description: 'Something went wrong while fetching supplier catalog.',
+    };
+  }
+};
+
+export const fetchSupplierAsset = async (
+  assetId: string
+): Promise<SupplierAssetDto | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.get<SupplierAssetDto>(
+      `/api/v1/supplier/asset/${assetId}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch asset',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching the asset.',
     };
   }
 };
@@ -794,4 +823,62 @@ export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorRe
 
 export const invalidatePersonDetailCache = () => {
   personDetailCache = null;
+};
+
+export interface UnitItem {
+  id: string;
+  key: string;
+  type: string;
+  description: string;
+}
+
+export interface UnitListResponse {
+  items: UnitItem[];
+  totalCount: number;
+  index: number;
+  limit: number;
+}
+
+export const fetchUnits = async (payload?: {
+  index?: number;
+  limit?: number;
+  searchTerm?: string;
+}): Promise<UnitListResponse | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.get<UnitListResponse>(
+      '/api/v1/masterdata/units',
+      {
+        params: {
+          index: payload?.index ?? 0,
+          limit: payload?.limit ?? 100,
+          searchTerm: payload?.searchTerm ?? '',
+        },
+      }
+    );
+    return response.data ?? { items: [], totalCount: 0, index: 0, limit: 0 };
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch units',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching units.',
+    };
+  }
 };
