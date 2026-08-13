@@ -527,9 +527,6 @@ const SupplierDashboard: React.FC = () => {
     setActiveNav("dashboard");
   };
 
-  // Sidebar nav click: "RFQs" opens the full-page RFQ list; every other item
-  // behaves as before, but also resets rfqPageView so a stale "All RFQs" /
-  // "RFQ Details" view doesn't linger in the background.
   const handleNavClick = (key: string) => {
     if (key === "rfqs") {
       handleOpenAllRfqs();
@@ -760,8 +757,7 @@ const SupplierDashboard: React.FC = () => {
           const isText = question?.questionType === "Text";
 
           if (isRadio) {
-            // Radio: single choice — questionOptionId holds the selection,
-            // questionOptionIds stays empty, and answer mirrors the option's label.
+
             const selectedOption = question?.options?.find(opt => opt.optionId === a.questionOptionId);
             return {
               rfqQuestionId: a.rfqQuestionId,
@@ -773,9 +769,7 @@ const SupplierDashboard: React.FC = () => {
           }
 
           if (!isText && !isFile) {
-            // Checkbox (and any other multi-select type): questionOptionId stays
-            // null, questionOptionIds holds only the selected ids, and answer is
-            // built from the selected options' labels.
+
             const selectedIds = a.questionOptionIds || [];
             const selectedLabels = selectedIds
               .map((id) => question?.options?.find(opt => opt.optionId === id)?.optionText)
@@ -789,7 +783,6 @@ const SupplierDashboard: React.FC = () => {
             };
           }
 
-          // Text / File
           return {
             rfqQuestionId: a.rfqQuestionId,
             answer: a.answer || "",
@@ -1193,7 +1186,6 @@ const SupplierDashboard: React.FC = () => {
               )}
 
 
-              {/* Quotation Pricing & Details Form */}
               <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
                 <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                   <IconSparkles /> Commercial Proposal / Quotation Details
@@ -1312,7 +1304,6 @@ const SupplierDashboard: React.FC = () => {
                     </select>
                   </div>
 
-                  {/* Total Price (Auto calculated but editable) */}
                   <div style={{ gridColumn: 'span 2', borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <span style={{ fontSize: '13px', color: '#1e293b', fontWeight: 700 }}>Total Price Quote</span>

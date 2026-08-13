@@ -566,6 +566,9 @@ const BuyersDashboard: React.FC = () => {
     setDownloadAssetError(null);
     try {
       const asset = await downloadBuyerAsset(attachment.id);
+      if ('statusCode' in asset) {
+        throw new Error(asset.message || 'Failed to download document');
+      }
       const byteCharacters = atob(asset.fileBytes);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
@@ -586,6 +589,61 @@ const BuyersDashboard: React.FC = () => {
     } finally {
       setDownloadingAssetId(null);
     }
+  };
+  const [viewingAttachment, setViewingAttachment] = useState<{ fileName: string; url: string; contentType: string } | null>(null);
+  const [viewingAssetId, setViewingAssetId] = useState<string | null>(null);
+  const [viewAssetError, setViewAssetError] = useState<string | null>(null);
+
+  const handleViewAnswerAttachment = async (attachment: any) => {
+    if (!attachment?.id || viewingAssetId) return;
+    setViewingAssetId(attachment.id);
+    setViewAssetError(null);
+    try {
+      const asset = await downloadBuyerAsset(attachment.id);
+      if ('statusCode' in asset) {
+        throw new Error(asset.message || 'Failed to download document');
+      }
+      const byteCharacters = atob(asset.fileBytes);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const resolvedFileName = asset.fileName || attachment.fileName || "Document";
+      const extension = resolvedFileName.split(".").pop()?.toLowerCase() || "";
+      const extensionMimeMap: Record<string, string> = {
+        pdf: "application/pdf",
+        png: "image/png",
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        gif: "image/gif",
+        webp: "image/webp",
+        svg: "image/svg+xml",
+        txt: "text/plain",
+      };
+      const viewContentType =
+        extensionMimeMap[extension] ||
+        (asset.contentType && asset.contentType !== "application/octet-stream" ? asset.contentType : "application/pdf");
+
+      const blob = new Blob([byteArray], { type: viewContentType });
+      const url = window.URL.createObjectURL(blob);
+      setViewingAttachment({
+        fileName: resolvedFileName,
+        url,
+        contentType: viewContentType,
+      });
+    } catch (err: any) {
+      setViewAssetError(err.message || "Failed to load the document.");
+    } finally {
+      setViewingAssetId(null);
+    }
+  };
+
+  const closeAttachmentViewer = () => {
+    if (viewingAttachment?.url) {
+      window.URL.revokeObjectURL(viewingAttachment.url);
+    }
+    setViewingAttachment(null);
   };
 
 
@@ -725,7 +783,7 @@ const BuyersDashboard: React.FC = () => {
                     <span className="pud-modal-badge">
                       <IconFile /> RFQ Specification
                     </span>
-                    <button className="pud-modal-close" onClick={handleBackToAllRfqs}>
+                    <button className="pud-modal-close" onClick={() => (viewingAttachment ? closeAttachmentViewer() : handleBackToAllRfqs())}>
                       <IconClose />
                     </button>
                     <h2 className="pud-modal-name">
@@ -740,7 +798,29 @@ const BuyersDashboard: React.FC = () => {
                   </div>
 
                   <div className="pud-modal-body">
-                    {loadingFullPageRfq ? (
+                    {viewingAttachment ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '520px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                          <button
+                            type="button"
+                            className="pud-btn pud-btn-outline"
+                            style={{ padding: '5px 12px', fontSize: '12px' }}
+                            onClick={closeAttachmentViewer}
+                          >
+                            ← Back
+                          </button>
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
+                            {viewingAttachment.fileName}
+                          </span>
+                          <span style={{ width: '70px' }} />
+                        </div>
+                        <iframe
+                          src={viewingAttachment.url}
+                          title={viewingAttachment.fileName}
+                          style={{ flex: 1, width: '100%', minHeight: '480px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}
+                        />
+                      </div>
+                    ) : loadingFullPageRfq ? (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
                         <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <div className="pud-spinner" style={{ width: '32px', height: '32px' }} />
@@ -958,20 +1038,34 @@ const BuyersDashboard: React.FC = () => {
                                               {ans.display}
                                             </div>
                                             {ans.attachment && (
-                                              <button
-                                                type="button"
-                                                className="pud-btn pud-btn-outline"
-                                                style={{ padding: '4px 10px', fontSize: '11.5px', flexShrink: 0 }}
-                                                disabled={downloadingAssetId === ans.attachment.id}
-                                                onClick={() => handleDownloadAnswerAttachment(ans.attachment)}
-                                              >
-                                                {downloadingAssetId === ans.attachment.id ? "Downloading..." : "View"}
-                                              </button>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                                <button
+                                                  type="button"
+                                                  className="pud-btn pud-btn-outline"
+                                                  style={{ padding: '4px 10px', fontSize: '11.5px' }}
+                                                  disabled={viewingAssetId === ans.attachment.id}
+                                                  onClick={() => handleViewAnswerAttachment(ans.attachment)}
+                                                >
+                                                  {viewingAssetId === ans.attachment.id ? "Loading..." : "View"}
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  className="pud-btn pud-btn-outline"
+                                                  style={{ padding: '4px 10px', fontSize: '11.5px' }}
+                                                  disabled={downloadingAssetId === ans.attachment.id}
+                                                  onClick={() => handleDownloadAnswerAttachment(ans.attachment)}
+                                                >
+                                                  {downloadingAssetId === ans.attachment.id ? "Downloading..." : "Download"}
+                                                </button>
+                                              </div>
                                             )}
                                           </div>
                                         ))}
                                         {downloadAssetError && (
                                           <div style={{ fontSize: '11px', color: '#ef4444' }}>{downloadAssetError}</div>
+                                        )}
+                                        {viewAssetError && (
+                                          <div style={{ fontSize: '11px', color: '#ef4444' }}>{viewAssetError}</div>
                                         )}
                                       </div>
                                     ) : (
@@ -995,14 +1089,16 @@ const BuyersDashboard: React.FC = () => {
                     <div className="pud-modal-footer">
                       <button
                         className="pud-btn pud-btn-outline"
-                        onClick={handleBackToAllRfqs}
+                        onClick={() => (viewingAttachment ? closeAttachmentViewer() : handleBackToAllRfqs())}
                         style={{ marginRight: '10px' }}
                       >
-                        Close
+                        {viewingAttachment ? "Back" : "Close"}
                       </button>
-                      <button className="pud-btn pud-btn-message" style={{ background: '#2563eb', color: '#ffffff' }}>
-                        Evaluate Quotations
-                      </button>
+                      {!viewingAttachment && (
+                        <button className="pud-btn pud-btn-message" style={{ background: '#2563eb', color: '#ffffff' }}>
+                          Evaluate Quotations
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
