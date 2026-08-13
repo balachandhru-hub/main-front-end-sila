@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./Product.css";
+import "../../../remote-supplier/src/components/Catalog.css";
 import {
   fetchSegments,
   fetchFamilies,
@@ -34,6 +35,21 @@ const IconLoader = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pud-loader">
     <circle cx="12" cy="12" r="10" />
     <path d="M12 6v6l4 2" />
+  </svg>
+);
+
+const IconClose = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const IconExternalLink = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    <polyline points="15 3 21 3 21 9" />
+    <line x1="10" y1="14" x2="21" y2="3" />
   </svg>
 );
 
@@ -104,18 +120,33 @@ const Product: React.FC = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ---- Load Segments on Component Mount ----
+  // ---- PunchOut Preview Modal State ----
+  const [showPunchOutModal, setShowPunchOutModal] = useState(false);
+  const [punchOutPreviewUrl, setPunchOutPreviewUrl] = useState<string>("");
+  const [punchOutIframeBlocked, setPunchOutIframeBlocked] = useState(false);
+
+  // ---- Load Segments + All Products on Component Mount ----
   useEffect(() => {
     loadSegments();
+    fetchProducts({
+      segment: "",
+      family: "",
+      class: "",
+      commodity: "",
+      search: "",
+      index: 0,
+      limit: 20,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSegments = async () => {
     setLoadingSegments(true);
     try {
       const segments = await fetchSegments();
-if (Array.isArray(segments)) {
-    setSegmentOptions(segments);
-}
+      if (Array.isArray(segments)) {
+        setSegmentOptions(segments);
+      }
     } catch (err) {
       console.error("Failed to load segments", err);
     } finally {
@@ -143,9 +174,9 @@ if (Array.isArray(segments)) {
       setLoadingFamilies(true);
       try {
         const families = await fetchFamilies(segmentNum);
-if (Array.isArray(families)) {
-    setFamilyOptions(families);
-}
+        if (Array.isArray(families)) {
+          setFamilyOptions(families);
+        }
       } catch (err) {
         console.error("Failed to load families", err);
       } finally {
@@ -172,9 +203,9 @@ if (Array.isArray(families)) {
       setLoadingClasses(true);
       try {
         const classes = await fetchClassifications(familyNum);
-if (Array.isArray(classes)) {
-    setClassOptions(classes);
-}
+        if (Array.isArray(classes)) {
+          setClassOptions(classes);
+        }
       } catch (err) {
         console.error("Failed to load classes", err);
       } finally {
@@ -199,9 +230,9 @@ if (Array.isArray(classes)) {
       setLoadingCommodities(true);
       try {
         const commodities = await fetchCommodities(classNum);
-if (Array.isArray(commodities)) {
-    setCommodityOptions(commodities);
-}
+        if (Array.isArray(commodities)) {
+          setCommodityOptions(commodities);
+        }
       } catch (err) {
         console.error("Failed to load commodities", err);
       } finally {
@@ -227,35 +258,50 @@ if (Array.isArray(commodities)) {
     }));
   };
 
-  // ---- Handle Search/Filter Submit ----
-  const handleSearchSubmit = async () => {
+  // ---- Fetch products for a given filter state ----
+  // Used both for the initial unfiltered load (all products) and for
+  // subsequent filtered/search requests, so the two stay in sync.
+  const fetchProducts = async (filterState: FilterState) => {
     setLoadingResults(true);
     setError(null);
-    setCatalogResults([]);
 
     try {
-     const results = await fetchBuyerCatalog({
-    segment: filters.segment || undefined,
-    family: filters.family || undefined,
-    class: filters.class || undefined,
-    commodity: filters.commodity || undefined,
-    search: filters.search || undefined,
-    index: filters.index,
-    limit: filters.limit,
-});
+      const results = await fetchBuyerCatalog({
+        segment: filterState.segment || undefined,
+        family: filterState.family || undefined,
+        class: filterState.class || undefined,
+        commodity: filterState.commodity || undefined,
+        search: filterState.search || undefined,
+        index: filterState.index,
+        limit: filterState.limit,
+      });
 
-if (Array.isArray(results)) {
-    setCatalogResults(results);
-} else {
-    setError((results as any)?.message || "Failed to fetch catalogs. Please try again.");
-}
-setHasSearched(true);
+      if (Array.isArray(results)) {
+        setCatalogResults(results);
+      } else {
+        setError((results as any)?.message || "Failed to fetch catalogs. Please try again.");
+        setCatalogResults([]);
+      }
+      setHasSearched(true);
     } catch (err: any) {
       setError(err?.message || "Failed to fetch catalogs. Please try again.");
+      setCatalogResults([]);
       setHasSearched(true);
     } finally {
       setLoadingResults(false);
     }
+  };
+
+  // ---- Handle Search/Filter Submit ----
+  const handleSearchSubmit = () => {
+    fetchProducts(filters);
+  };
+
+  // ---- PunchOut Preview Handler (mirrors Catalog.tsx) ----
+  const handlePunchOutPreview = (url: string) => {
+    setPunchOutPreviewUrl(url);
+    setShowPunchOutModal(true);
+    setPunchOutIframeBlocked(false);
   };
 
   return (
@@ -467,14 +513,13 @@ setHasSearched(true);
 
                   {item.isPunchOut && item.punchOutUrl && (
                     <div className="pud-product-item-action">
-                      <a
-                        href={item.punchOutUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
                         className="pud-product-item-link"
+                        onClick={() => handlePunchOutPreview(item.punchOutUrl)}
                       >
                         Visit Supplier
-                      </a>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -491,6 +536,53 @@ setHasSearched(true);
           )
         )}
       </div>
+
+      {/* ---- PunchOut Preview Modal (mirrors Catalog.tsx) ---- */}
+      {showPunchOutModal && (
+        <div className="pud-modal-overlay" onClick={() => setShowPunchOutModal(false)}>
+          <div className="pud-modal pud-modal-punchout" onClick={(e) => e.stopPropagation()}>
+            <div className="pud-modal-header">
+              <button className="pud-modal-close" onClick={() => setShowPunchOutModal(false)} title="Close">
+                <IconClose />
+              </button>
+              <span className="pud-modal-badge">
+                <IconExternalLink /> PunchOut Catalog
+              </span>
+              <h2 className="pud-modal-name">Catalog Website</h2>
+            </div>
+
+            <div className="pud-modal-body pud-punchout-viewer-container">
+              {punchOutIframeBlocked ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '400px', gap: '16px', color: '#64748b' }}>
+                  <div style={{ fontSize: '14px', textAlign: 'center', maxWidth: '400px' }}>
+                    <p style={{ marginBottom: '12px', fontWeight: '600' }}>Website Cannot Be Embedded</p>
+                    <p style={{ fontSize: '12px', marginBottom: '16px' }}>
+                      This website has restricted embedding for security reasons.
+                    </p>
+                  </div>
+                  <a
+                    href={punchOutPreviewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pud-btn pud-btn-message"
+                    style={{ background: "#2563eb", color: "#ffffff", textDecoration: "none" }}
+                  >
+                    <IconExternalLink /> Open in New Tab
+                  </a>
+                </div>
+              ) : (
+                <iframe
+                  src={punchOutPreviewUrl}
+                  style={{ width: "100%", height: "100%", border: "none" }}
+                  title="PunchOut Catalog"
+                  onError={() => setPunchOutIframeBlocked(true)}
+                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-pointer-lock"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
