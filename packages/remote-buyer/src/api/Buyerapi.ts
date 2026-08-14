@@ -285,6 +285,28 @@ export interface CreateVerificationTemplateQuestionPayload {
 }
 
 
+export interface UpdateVerificationTemplateQuestionOptionDto {
+  id?: string;
+  optionText: string;
+  displayOrder: number;
+}
+
+export interface UpdateVerificationTemplateQuestionDto {
+  id: string;
+  verificationTemplateId: string;
+  question: string;
+  questionType: string;
+  isRequired: boolean;
+  displayOrder: number;
+  isDeleted?: boolean;
+  options: UpdateVerificationTemplateQuestionOptionDto[];
+}
+
+export interface UpdateVerificationTemplateQuestionPayload {
+  verificationTemplateQuestionDto: UpdateVerificationTemplateQuestionDto;
+}
+
+
 export const getBuyerProfile = async (): Promise<BuyerProfileResponse | null> => {
   try {
     const response = await axiosInstance.get<BuyerProfileResponse>('/api/v1/buyer/profile');
@@ -727,10 +749,14 @@ export const downloadBuyerAsset = async (
 };
 
 
-export const fetchBuyerVerificationTemplates = async (): Promise<VerificationTemplate[] | ErrorResponseDto> => {
+export const fetchBuyerVerificationTemplates = async (
+  index: number = 0,
+  limit: number = 10
+): Promise<VerificationTemplate[] | ErrorResponseDto> => {
   try {
     const response = await axiosInstance.get<VerificationTemplate[]>(
-      '/api/v1/buyer/get-verification-template'
+      '/api/v1/buyer/get-verification-template',
+      { params: { index, limit } }
     );
     return Array.isArray(response.data) ? response.data : [];
   } catch (error: any) {
@@ -863,6 +889,78 @@ export const fetchBuyerVerificationTemplateById = async (
       statusCode: 500,
       message: 'Unexpected Error',
       description: 'Something went wrong while fetching the verification template.',
+    };
+  }
+};
+
+
+export const updateVerificationTemplateQuestion = async (
+  payload: UpdateVerificationTemplateQuestionPayload
+): Promise<string | ErrorResponseDto> => {
+  try {
+    const response = await axiosInstance.put<string>(
+      '/api/v1/buyer/update-verification-template-question',
+      payload
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: "Failed to update template question",
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while updating the verification template question.',
+    };
+  }
+};
+
+export const deleteVerificationTemplate = async (
+  templateId: string
+): Promise<boolean | ErrorResponseDto> => {
+  try {
+    const response = await axiosInstance.delete<boolean>(
+      `/api/v1/buyer/verification-template/${templateId}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message:'Failed to delete template',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while deleting the verification template.',
     };
   }
 };
