@@ -8,6 +8,14 @@ import type {
 } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
 
+export interface BuyerCatalogAssetItem {
+  id: string;
+  assetType: string | null;
+  assetName: string;
+  fileType: string | null;
+  fileName: string;
+}
+
 export interface BuyerCatalogResponse {
   supplierId: string;
   catalogId: string;
@@ -29,6 +37,7 @@ export interface BuyerCatalogResponse {
   isPunchOut: boolean;
   punchOutUrl: string;
   hasCatalog: boolean;
+  asset: BuyerCatalogAssetItem[];
 }
 import type { ErrorResponseDto } from "@vosox/shared-ui";
 import { isErrorResponse } from "@vosox/shared-ui";
@@ -744,6 +753,53 @@ export const downloadBuyerAsset = async (
       statusCode: 500,
       message: 'Unexpected Error',
       description: 'Something went wrong while downloading the document.',
+    };
+  }
+};
+
+export interface BuyerAssetDto {
+  id: string;
+  assetName?: string;
+  fileName?: string;
+  assetType?: string | null;
+  fileType?: string | null;
+  contentType?: string;
+  fileBytes?: string;
+  url?: string;
+  fileUrl?: string;
+}
+
+export const fetchBuyerAsset = async (
+  assetId: string
+): Promise<BuyerAssetDto | ErrorResponseDto> => {
+  try {
+    const response = await axiosInstance.get<BuyerAssetDto>(
+      `/api/v1/supplier/asset/${assetId}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch asset',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching the asset.',
     };
   }
 };

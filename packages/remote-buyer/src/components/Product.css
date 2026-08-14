@@ -222,6 +222,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -287,7 +288,6 @@
 }
 
 
-/* ============================== Product List ============================== */
 
 
 .pud-product-list {
@@ -414,13 +414,6 @@
   font-size: 0.75rem;
   border-radius: 0.25rem;
   border: 0.0625rem solid #e5e7eb;
-}
-
-
-.pud-product-item-action {
-  margin-top: 0.5rem;
-  padding-top: 0.75rem;
-  border-top: 0.0625rem solid #e5e7eb;
 }
 
 

@@ -3,7 +3,6 @@ import "./SupplierAdminDash.css";
 import "../../../remote-supplier/src/components/SupplierDashboard.css"
 import Header from "./Header";
 import UserAdmin from "../UserAdmin";
-import Invitations from "../../../remote-supplier/src/components/Invitations";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import Catalog from "../../../remote-supplier/src/components/Catalog";
 import { useNetworkAdminAuthStore } from "../store/useAuthStore";
@@ -21,7 +20,7 @@ import {
 } from "../../../remote-supplier/src/api/supplierApi";
 import { logoutPlatformUser } from "../api/platformApi";
 import { isErrorResponse } from "@vosox/shared-ui";
- 
+
 interface StatCard {
   icon: React.ReactNode;
   label: string;
@@ -29,7 +28,7 @@ interface StatCard {
   linkText: string;
   colorClass: string;
 }
- 
+
 interface POItem {
   code: string;
   status: "ACCEPTED" | "DELIVERED";
@@ -37,7 +36,7 @@ interface POItem {
   orderDate: string;
   amount: string;
 }
- 
+
 interface MatchCard {
   location: string;
   initials: string;
@@ -55,21 +54,21 @@ interface MatchCard {
   categoryNote: string;
   destinationNote: string;
 }
- 
+
 const IconClose = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <line x1="18" y1="6" x2="6" y2="18" />
     <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
- 
+
 const IconMail = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="4" width="20" height="16" rx="2" />
     <path d="m22 6-10 7L2 6" />
   </svg>
 );
- 
+
 const IconFile = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -77,14 +76,14 @@ const IconFile = () => (
     <path d="M8 13h8M8 17h8M8 9h2" />
   </svg>
 );
- 
+
 const IconTrend = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
     <polyline points="16 7 22 7 22 13" />
   </svg>
 );
- 
+
 const IconBag = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
@@ -92,7 +91,7 @@ const IconBag = () => (
     <path d="M16 10a4 4 0 0 1-8 0" />
   </svg>
 );
- 
+
 const IconInvoice = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 2h11l5 5v15H4z" />
@@ -100,21 +99,21 @@ const IconInvoice = () => (
     <path d="M9 13h1M9 17h6" />
   </svg>
 );
- 
+
 const IconBell = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
     <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
   </svg>
 );
- 
+
 const NavIconHome = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
     <path d="M9 22V12h6v10" />
   </svg>
 );
- 
+
 const NavIconUsers = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -123,28 +122,28 @@ const NavIconUsers = () => (
     <path d="M16 3.13a4 4 0 0 1 0 7.75" />
   </svg>
 );
- 
+
 const NavIconBuilding = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="4" y="2" width="16" height="20" rx="1" />
     <path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01" />
   </svg>
 );
- 
+
 const NavIconSettings = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3" />
     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
   </svg>
 );
- 
+
 const NavIconFile = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
     <path d="M14 2v6h6" />
   </svg>
 );
- 
+
 const LogoutIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -152,60 +151,60 @@ const LogoutIcon = () => (
     <line x1="21" y1="12" x2="9" y2="12" />
   </svg>
 );
- 
+
 const IconCalendar = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="4" width="18" height="18" rx="2" />
     <path d="M16 2v4M8 2v4M3 10h18" />
   </svg>
 );
- 
+
 const IconPin = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
     <circle cx="12" cy="10" r="3" />
   </svg>
 );
- 
+
 const IconEye = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
     <circle cx="12" cy="12" r="3" />
   </svg>
 );
- 
+
 const IconMessageSquare = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   </svg>
 );
- 
+
 const IconSend = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m22 2-7 20-4-9-9-4Z" />
     <path d="M22 2 11 13" />
   </svg>
 );
- 
+
 const IconSparkles = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
     <path d="M5 3v4M3 5h4M19 3v4M17 5h4M5 19v4M3 21h4M19 19v4M17 21h4" />
   </svg>
 );
- 
+
 const IconChevronLeft = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="15 18 9 12 15 6" />
   </svg>
 );
- 
+
 const IconChevronRight = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="9 18 15 12 9 6" />
   </svg>
 );
- 
+
 const IconGlobe = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
@@ -213,33 +212,33 @@ const IconGlobe = () => (
     <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z" />
   </svg>
 );
- 
+
 const IconShieldCheck = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 2 4 5v6c0 5 3.5 8.5 8 11 4.5-2.5 8-6 8-11V5Z" />
     <path d="m9 12 2 2 4-4" />
   </svg>
 );
- 
+
 const IconCheckCircle = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 6 9 17l-5-5" />
   </svg>
 );
- 
+
 const navItemsBeforeCatalog: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
   { key: "rfqs", icon: <NavIconFile />, label: "RFQs" },
 ];
- 
+
 const navItemsAfterCatalog: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "purchaseOrders", icon: <IconBag />, label: "Purchase Orders" },
   { key: "messages", icon: <IconMessageSquare />, label: "Messages" },
   { key: "companyProfile", icon: <NavIconBuilding />, label: "Company Profile" },
   { key: "settings", icon: <NavIconSettings />, label: "Settings" },
 ];
- 
+
 const statCards: StatCard[] = [
   { icon: <IconMail />, label: "INVITATIONS", value: 2, linkText: "Pending review >", colorClass: "sad-stat-icon-blue" },
   { icon: <IconFile />, label: "ACTIVE RFQS", value: 2, linkText: "Bids open >", colorClass: "sad-stat-icon-indigo" },
@@ -248,13 +247,13 @@ const statCards: StatCard[] = [
   { icon: <IconInvoice />, label: "DUE INVOICES", value: 2, linkText: "Invoice list >", colorClass: "sad-stat-icon-orange" },
   { icon: <IconBell />, label: "NOTIFICATIONS", value: 3, linkText: "Inquiries & Alerts >", colorClass: "sad-stat-icon-teal" },
 ];
- 
+
 const poItems: POItem[] = [
   { code: "PO-2026-90412", status: "ACCEPTED", company: "Global Tech Solutions Inc.", orderDate: "2026-07-04", amount: "$18,500.00" },
   { code: "PO-2026-88401", status: "ACCEPTED", company: "Apex Partners", orderDate: "2026-05-22", amount: "$4,200.00" },
   { code: "PO-2026-80214", status: "DELIVERED", company: "ABC Manufacturing Inc.", orderDate: "2026-04-10", amount: "$9,800.00" },
 ];
- 
+
 const matchCards: MatchCard[] = [
   {
     location: "Singapore",
@@ -325,20 +324,20 @@ const matchCards: MatchCard[] = [
     destinationNote: "Matches your active service regions",
   },
 ];
- 
+
 const SupplierAdminDash: React.FC = () => {
   const [activeNav, setActiveNav] = useState<string>("dashboard");
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
- 
+
   useEffect(() => {
     useNetworkAdminAuthStore.getState().initializeFromSession();
   }, []);
- 
+
   /* ---------------------------------- RFQ management (ported from SupplierDashboard) ---------------------------------- */
- 
+
   const [supplierId, setSupplierId] = useState<string | null>(
     sessionStorage.getItem("vosox_supplier_id")
   );
@@ -347,12 +346,12 @@ const SupplierAdminDash: React.FC = () => {
   const [rfqsError, setRfqsError] = useState<string | null>(null);
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
   const RFQ_INITIAL_VISIBLE = 3;
- 
+
   const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
   const [selectedRfq, setSelectedRfq] = useState<RFQDetailResponse | null>(null);
   const [loadingRfqDetail, setLoadingRfqDetail] = useState(false);
   const [rfqDetailError, setRfqDetailError] = useState<string | null>(null);
- 
+
   const [rfqAnswers, setRfqAnswers] = useState<{
     [questionId: string]: {
       rfqQuestionId: string;
@@ -367,7 +366,7 @@ const SupplierAdminDash: React.FC = () => {
   const [submittingAnswers, setSubmittingAnswers] = useState(false);
   const [submitAnswersError, setSubmitAnswersError] = useState<string | null>(null);
   const [submitAnswersSuccess, setSubmitAnswersSuccess] = useState(false);
- 
+
   // supplierId comes straight from sessionStorage (set during login) — no
   // profile-fetch call here, since getSupplierProfile() is a supplier-role
   // scoped endpoint and 401/403s when called from the network-admin session.
@@ -377,21 +376,20 @@ const SupplierAdminDash: React.FC = () => {
       setLoadingRfqs(false);
     }
   }, [supplierId]);
- 
+
   // Fetch Recent Sourcing Opportunities
   useEffect(() => {
     const loadSupplierProfile = async () => {
       if (!supplierId) {
         try {
           const profile = await getSupplierProfile();
-          
-          // ✅ ADD ERROR CHECK HERE
+
           if (isErrorResponse(profile)) {
             setRfqsError("Supplier profile not found. Please complete onboarding.");
             setLoadingRfqs(false);
             return;
           }
-          
+
           if (profile && profile.id) {
             sessionStorage.setItem("vosox_supplier_id", profile.id);
             setSupplierId(profile.id);
@@ -400,7 +398,6 @@ const SupplierAdminDash: React.FC = () => {
             setLoadingRfqs(false);
           }
         } catch (err: any) {
-          console.error("Failed to load supplier profile", err);
           setRfqsError("Failed to load supplier profile details.");
           setLoadingRfqs(false);
         }
@@ -408,14 +405,14 @@ const SupplierAdminDash: React.FC = () => {
     };
     loadSupplierProfile();
   }, [supplierId]);
- 
+
   useEffect(() => {
     const loadRfqs = async () => {
       if (!supplierId) return;
- 
+
       setLoadingRfqs(true);
       setRfqsError(null);
- 
+
       try {
         const initialLimit = RFQ_INITIAL_VISIBLE;
         const data = await fetchRFQMasterData({
@@ -423,7 +420,7 @@ const SupplierAdminDash: React.FC = () => {
           index: 0,
           limit: initialLimit,
         });
-        
+
         // ✅ ADD ERROR CHECK HERE
         if (isErrorResponse(data)) {
           setRfqsError(data.description || data.message || "Failed to load sourcing opportunities.");
@@ -431,11 +428,10 @@ const SupplierAdminDash: React.FC = () => {
           setLoadingRfqs(false);
           return;
         }
-        
+
         setRfqs(data);
         setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
       } catch (err: any) {
-        console.error("Failed to load RFQs", err);
         setRfqsError(err.message || "Failed to load sourcing opportunities.");
       } finally {
         setLoadingRfqs(false);
@@ -443,7 +439,7 @@ const SupplierAdminDash: React.FC = () => {
     };
     loadRfqs();
   }, [supplierId]);
- 
+
   const handleViewRfqDetails = async (rfqId: string) => {
     setSelectedRfqId(rfqId);
     setLoadingRfqDetail(true);
@@ -451,7 +447,7 @@ const SupplierAdminDash: React.FC = () => {
     setSelectedRfq(null);
     try {
       const data = await fetchRFQById(rfqId);
-      
+
       // ✅ ADD ERROR CHECK HERE
       if (isErrorResponse(data)) {
         setRfqDetailError(data.description || data.message || "Failed to load RFQ details.");
@@ -459,62 +455,101 @@ const SupplierAdminDash: React.FC = () => {
         setLoadingRfqDetail(false);
         return;
       }
-      
+
       setSelectedRfq(data);
     } catch (err: any) {
-      console.error("Failed to fetch RFQ details", err);
       setRfqDetailError(err.message || "Failed to load RFQ details.");
     } finally {
       setLoadingRfqDetail(false);
     }
   };
- 
+
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
- 
+
   const [allRfqsList, setAllRfqsList] = useState<RFQMasterDataItem[]>([]);
   const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
   const [allRfqsError, setAllRfqsError] = useState<string | null>(null);
   const [allRfqsLoaded, setAllRfqsLoaded] = useState(false);
- 
-  const handleOpenAllRfqs = async () => {
-    setActiveNav("rfqs");
-    setRfqPageView("allRfqs");
-    if (allRfqsLoaded || loadingAllRfqs) return;
- 
+  const [allRfqsPage, setAllRfqsPage] = useState(1);
+  const [allRfqsHasMore, setAllRfqsHasMore] = useState(true);
+  const RFQ_PAGE_SIZE = 10;
+  const getRfqPageRange = (page: number) => {
+    const index = (page - 1) * RFQ_PAGE_SIZE;
+    const limit = index + 10;
+    return { index, limit };
+  };
+
+  const loadAllRfqsPage = async (page: number) => {
+    if (!supplierId) {
+      setAllRfqsList(rfqs);
+      setAllRfqsHasMore(false);
+      setAllRfqsLoaded(true);
+      return;
+    }
+
     setLoadingAllRfqs(true);
     setAllRfqsError(null);
+
     try {
-      if (!supplierId) {
-        setAllRfqsList(rfqs);
-      } else {
-        const data = await fetchRFQMasterData({ supplierId, index: 0, limit: 100 });
-        
-        // ✅ ADD ERROR CHECK HERE
-        if (isErrorResponse(data)) {
-          setAllRfqsError(data.description || data.message || "Failed to load the full RFQ list.");
-          setAllRfqsList(rfqs);
-          setLoadingAllRfqs(false);
-          setAllRfqsLoaded(true);
-          return;
-        }
-        
-        setAllRfqsList(data);
+      const { index, limit } = getRfqPageRange(page);
+
+      const data = await fetchRFQMasterData({
+        supplierId,
+        index,
+        limit,
+      });
+
+      if (isErrorResponse(data)) {
+        setAllRfqsError(
+          data.description ||
+          data.message ||
+          "Failed to load the full RFQ list."
+        );
+        setAllRfqsList([]);
+        setAllRfqsHasMore(false);
+        return;
       }
+
+      setAllRfqsList(data);
+      setAllRfqsPage(page);
+
+      setAllRfqsHasMore(data.length === RFQ_PAGE_SIZE);
     } catch (err: any) {
-      console.error("Failed to load full RFQ list", err);
-      setAllRfqsError(err.message || "Failed to load the full RFQ list.");
-      setAllRfqsList(rfqs);
+      setAllRfqsError(
+        err.message || "Failed to load the full RFQ list."
+      );
+      setAllRfqsList([]);
+      setAllRfqsHasMore(false);
     } finally {
       setLoadingAllRfqs(false);
       setAllRfqsLoaded(true);
     }
   };
- 
+
+  const handleAllRfqsNextPage = () => {
+    if (loadingAllRfqs || !allRfqsHasMore) return;
+
+    loadAllRfqsPage(allRfqsPage + 1);
+  };
+
+  const handleAllRfqsPrevPage = () => {
+    if (loadingAllRfqs || allRfqsPage <= 1) return;
+
+    loadAllRfqsPage(allRfqsPage - 1);
+  };
+
+  const handleOpenAllRfqs = async () => {
+    setActiveNav("rfqs");
+    setRfqPageView("allRfqs");
+    if (allRfqsLoaded || loadingAllRfqs) return;
+    await loadAllRfqsPage(1);
+  };
+
   const handleBackToDashboard = () => {
     setRfqPageView("dashboard");
     setActiveNav("dashboard");
   };
- 
+
   const handleNavClick = (key: string) => {
     if (key === "rfqs") {
       handleOpenAllRfqs();
@@ -523,12 +558,12 @@ const SupplierAdminDash: React.FC = () => {
     setActiveNav(key);
     setRfqPageView("dashboard");
   };
- 
+
   const handleViewRfqDetailsFullPage = (rfqId: string) => {
     setRfqPageView("rfqDetail");
     handleViewRfqDetails(rfqId);
   };
- 
+
   const closeRfqDetail = () => {
     if (rfqPageView === "rfqDetail") {
       setRfqPageView("allRfqs");
@@ -537,7 +572,7 @@ const SupplierAdminDash: React.FC = () => {
     setSelectedRfq(null);
     setRfqDetailError(null);
   };
- 
+
   const [quoteQuotationId, setQuoteQuotationId] = useState<string | null>(null);
   const [quoteTotalPrice, setQuoteTotalPrice] = useState<number>(0);
   const [quoteDeliveryCharge, setQuoteDeliveryCharge] = useState<number>(0);
@@ -547,11 +582,11 @@ const SupplierAdminDash: React.FC = () => {
   const [quoteTax, setQuoteTax] = useState<number>(0);
   const [quoteTaxType, setQuoteTaxType] = useState<string>("PERCENTAGE");
   const [quoteItemPrices, setQuoteItemPrices] = useState<{ [key: string]: number }>({});
- 
+
   const [submittingQuote, setSubmittingQuote] = useState(false);
   const [submitQuoteError, setSubmitQuoteError] = useState<string | null>(null);
   const [submitQuoteSuccess, setSubmitQuoteSuccess] = useState(false);
- 
+
   useEffect(() => {
     if (selectedRfq) {
       const activeQuote = selectedRfq.supplierQuotation?.[0];
@@ -574,7 +609,7 @@ const SupplierAdminDash: React.FC = () => {
         setQuoteTax(0);
         setQuoteTaxType("PERCENTAGE");
       }
- 
+
       const prices: { [key: string]: number } = {};
       selectedRfq.items?.forEach((item, idx) => {
         const itemQuote = selectedRfq.supplierQuotationItems?.[idx];
@@ -598,12 +633,12 @@ const SupplierAdminDash: React.FC = () => {
       setSubmitAnswersError(null);
     }
   }, [selectedRfq]);
- 
+
   const handleItemPriceChange = (key: string, value: number) => {
     const updatedPrices = { ...quoteItemPrices, [key]: value };
     setQuoteItemPrices(updatedPrices);
   };
- 
+
   const handleOtherFieldChange = (field: string, value: any) => {
     if (field === "deliveryCharge") {
       setQuoteDeliveryCharge(Number(value) || 0);
@@ -621,7 +656,7 @@ const SupplierAdminDash: React.FC = () => {
       setQuoteTotalPrice(Number(value) || 0);
     }
   };
- 
+
   const handleTextAnswerChange = (questionId: string, value: string) => {
     setRfqAnswers((prev) => ({
       ...prev,
@@ -632,7 +667,7 @@ const SupplierAdminDash: React.FC = () => {
       },
     }));
   };
- 
+
   const handleRadioAnswerChange = (questionId: string, optionId: string) => {
     setRfqAnswers((prev) => ({
       ...prev,
@@ -644,7 +679,7 @@ const SupplierAdminDash: React.FC = () => {
       },
     }));
   };
- 
+
   const handleCheckboxAnswerChange = (questionId: string, optionId: string, checked: boolean) => {
     setRfqAnswers((prev) => {
       const current = prev[questionId]?.questionOptionIds || [];
@@ -659,7 +694,7 @@ const SupplierAdminDash: React.FC = () => {
       };
     });
   };
- 
+
   const handleFileAnswerChange = (questionId: string, file: File | null) => {
     if (!file) {
       setRfqAnswers((prev) => ({
@@ -675,7 +710,7 @@ const SupplierAdminDash: React.FC = () => {
       }));
       return;
     }
- 
+
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result as string;
@@ -694,11 +729,11 @@ const SupplierAdminDash: React.FC = () => {
     };
     reader.readAsDataURL(file);
   };
- 
+
   const handleSubmitRfqAnswers = async () => {
     if (!selectedRfq) return;
     const supplierRFQId = selectedRfq.items?.[0]?.supplierRFQId || null;
- 
+
     const unanswered = (selectedRfq.questions || []).find((q) => {
       if (!q.isRequired) return false;
       const a = rfqAnswers[q.questionId];
@@ -712,30 +747,30 @@ const SupplierAdminDash: React.FC = () => {
       setSubmitAnswersError(`Please answer the required question: "${unanswered.question}"`);
       return;
     }
- 
+
     setSubmittingAnswers(true);
     setSubmitAnswersError(null);
     setSubmitAnswersSuccess(false);
     try {
       const entityTypes = await fetchMetadataReferenceList(['ENTITY_TYPE']);
-      
+
       // ✅ ADD ERROR CHECK HERE
       if (isErrorResponse(entityTypes)) {
         setSubmitAnswersError(entityTypes.description || entityTypes.message || "Failed to fetch metadata.");
         setSubmittingAnswers(false);
         return;
       }
-      
+
       const supplierEntityId =
         entityTypes.find((e) => e.key === 'SUPPLIER')?.id || '59476530-3c10-438b-b3b3-9db9e96e8d93';
       const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
- 
+
       const payload = {
         supplierRFQId: supplierRFQId as string,
         answers: Object.values(rfqAnswers).map((a) => {
           const question = selectedRfq.questions?.find(q => q.questionId === a.rfqQuestionId);
           const allOptionIds = question?.options?.map(opt => opt.optionId) || [];
- 
+
           const answerAttachment: RfqDocumentAssetDto | null =
             a.file && a.fileBase64
               ? {
@@ -748,7 +783,7 @@ const SupplierAdminDash: React.FC = () => {
                 isSingletonAsset: true,
               }
               : null;
- 
+
           return {
             rfqQuestionId: a.rfqQuestionId,
             answer: a.answer || "",
@@ -758,28 +793,27 @@ const SupplierAdminDash: React.FC = () => {
           };
         }),
       };
- 
+
       await submitRfqAnswers(payload);
       setSubmitAnswersSuccess(true);
     } catch (err: any) {
-      console.error("Failed to submit RFQ answers", err);
       setSubmitAnswersError(err.message || "Failed to submit answers.");
     } finally {
       setSubmittingAnswers(false);
     }
   };
- 
+
   const handleSubmitQuotation = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedRfq) return;
- 
+
     setSubmittingQuote(true);
     setSubmitQuoteError(null);
     setSubmitQuoteSuccess(false);
- 
+
     try {
       const supplierRFQId = selectedRfq.items?.[0]?.supplierRFQId || null;
- 
+
       const payload: SubmitQuotationPayload = {
         supplierQuotationId: quoteQuotationId,
         supplierRFQId: supplierRFQId,
@@ -802,39 +836,37 @@ const SupplierAdminDash: React.FC = () => {
           })
         } : {})
       };
- 
+
       await submitSupplierQuotation(payload);
       setSubmitQuoteSuccess(true);
- 
+
       const updatedDetails = await fetchRFQById(selectedRfqId!);
-      
+
       // ✅ ADD ERROR CHECK HERE
       if (!isErrorResponse(updatedDetails)) {
         setSelectedRfq(updatedDetails);
       } else {
         setSubmitQuoteError(updatedDetails.description || updatedDetails.message || "Failed to refresh RFQ details.");
       }
- 
+
       if (supplierId) {
         const listData = await fetchRFQMasterData({
           supplierId,
           index: 0,
           limit: 10,
         });
-        
-        // ✅ ADD ERROR CHECK HERE
+
         if (!isErrorResponse(listData)) {
           setRfqs(listData);
         }
       }
     } catch (err: any) {
-      console.error("Failed to submit quotation", err);
       setSubmitQuoteError(err.message || "Failed to submit quotation.");
     } finally {
       setSubmittingQuote(false);
     }
   };
- 
+
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
@@ -1351,7 +1383,7 @@ const SupplierAdminDash: React.FC = () => {
             ))}
 
             <Catalog
-            isAdmin={true}
+              isAdmin={true}
               onShowCatalogList={() => setActiveNav("catalogList")}
               onCloseCatalogList={() => setActiveNav("dashboard")}
               fullViewContainer={activeNav === "catalogList" ? catalogViewContainer : null}
@@ -1393,280 +1425,302 @@ const SupplierAdminDash: React.FC = () => {
           <main className="sad-content">
             {activeNav === "catalogList" ? (
               <div ref={setCatalogViewContainer} />
-            ): activeNav === "invitations" ? (
-    <Invitations />  // ← INSERT HERE
-  ) 
-            : activeNav === "userList" ? (
-              <UserAdmin />
-            ) : activeNav === "companyProfile" ? (
-              <CompanyProfile mode="network-admin" showHeader={false} />
-            ) : rfqPageView === "allRfqs" ? (
-              <>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
-                  <div>
-                    <h1 className="pud-title">All RFQs</h1>
-                    <p className="pud-subtitle" style={{ marginBottom: 0 }}>
-                      Sourcing opportunities matched to your industry categories.
-                    </p>
-                  </div>
-                  <button className="pud-btn pud-btn-outline" onClick={handleBackToDashboard}>
-                    ← Back to Dashboard
-                  </button>
-                </div>
-
-                {loadingAllRfqs ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
-                    <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                      <div className="pud-spinner" />
-                      <span>Loading all sourcing opportunities...</span>
+            )
+              : activeNav === "userList" ? (
+                <UserAdmin />
+              ) : activeNav === "companyProfile" ? (
+                <CompanyProfile mode="network-admin" showHeader={false} />
+              ) : rfqPageView === "allRfqs" ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
+                    <div>
+                      <h1 className="pud-title">All RFQs</h1>
+                      <p className="pud-subtitle" style={{ marginBottom: 0 }}>
+                        Sourcing opportunities matched to your industry categories.
+                      </p>
                     </div>
+                    <button className="pud-btn pud-btn-outline" onClick={handleBackToDashboard}>
+                      ← Back to Dashboard
+                    </button>
                   </div>
-                ) : allRfqsError && allRfqsList.length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>{allRfqsError}</div>
-                ) : allRfqsList.length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
-                    No RFQs found.
-                  </div>
-                ) : (
-                  <div className="pud-rfq-table-container">
-                    <table className="pud-rfq-items-table pud-allrfqs-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '48px' }}>#</th>
-                          <th>RFQ Number</th>
-                          <th>Title</th>
-                          <th>Organization</th>
-                          <th>Delivery Location</th>
-                          <th>Closing Date</th>
-                          <th style={{ textAlign: 'right' }}>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allRfqsList.map((rfq: any, idx: number) => (
-                          <tr key={rfq.rfqId || idx}>
-                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
-                            <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
-                            <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
-                            <td>{rfq.organizationName}</td>
-                            <td>{rfq.deliveryLocation}</td>
-                            <td>
-                              {rfq.endDate
-                                ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                                : "—"}
-                            </td>
-                            <td style={{ textAlign: 'right' }}>
-                              <button
-                                className="pud-btn pud-btn-outline"
-                                onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                              >
-                                View RFQ Details
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </>
-            ) : rfqPageView === "rfqDetail" ? (
-              <>
-                <div style={{ marginBottom: '16px' }}>
-                  <button className="pud-btn pud-btn-outline" onClick={() => setRfqPageView("allRfqs")}>
-                    ← Back to All RFQs
-                  </button>
-                </div>
-                <div className="pud-rfq-fullpage">
-                  {renderRfqDetailInner()}
-                </div>
-              </>
-            ) : (
-              <>
-                <h1 className="sad-title">Supplier Admin Command Center</h1>
-                <p className="sad-subtitle">Manage suppliers, track sourcing activities, and oversee operations.</p>
 
-                <div className="sad-status-banner">
-                  <span className="sad-status-dot" />
-                  <div>
-                    <div className="sad-status-title">Active Supplier Administration Portal (100%)</div>
-                    <div className="sad-status-subtext">
-                      You have administrative access to manage supplier operations and user accounts.
-                    </div>
-                  </div>
-                </div>
-
-                <div className="sad-stats-grid">
-                  {statCards.map((stat) => (
-                    <div className="sad-stat-card" key={stat.label}>
-                      <div className={`sad-stat-icon ${stat.colorClass}`}>{stat.icon}</div>
-                      <div className="sad-stat-label">{stat.label}</div>
-                      <div className="sad-stat-value">{stat.value}</div>
-                      <div className="sad-stat-link">{stat.linkText}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="sad-panels">
-                  <section className="pud-panel">
-                    <div className="pud-panel-header">
-                      <div>
-                        <div className="pud-panel-title">Recent Sourcing Opportunities</div>
-                        <div className="pud-panel-subtitle">Newly listed RFQs matched to your industry categories</div>
+                  {loadingAllRfqs ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
+                      <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                        <div className="pud-spinner" />
+                        <span>Loading all sourcing opportunities...</span>
                       </div>
-                      {!loadingRfqs && !rfqsError && rfqs.length > 0 && (
-                        <a
-                          className="pud-panel-link"
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleOpenAllRfqs();
-                          }}
+                    </div>
+                  ) : allRfqsError && allRfqsList.length === 0 ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>{allRfqsError}</div>
+                  ) : allRfqsList.length === 0 ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                      No RFQs found.
+                    </div>
+                  ) : (
+                    <>
+                      <div className="pud-rfq-table-container">
+                        <table className="pud-rfq-items-table pud-allrfqs-table">
+                          <thead>
+                            <tr>
+                              <th style={{ width: '48px' }}>#</th>
+                              <th>RFQ Number</th>
+                              <th>Title</th>
+                              <th>Organization</th>
+                              <th>Delivery Location</th>
+                              <th>Closing Date</th>
+                              <th style={{ textAlign: 'right' }}>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {allRfqsList.map((rfq: any, idx: number) => (
+                              <tr key={rfq.rfqId || idx}>
+                                <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
+                                <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
+                                <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                                <td>{rfq.organizationName}</td>
+                                <td>{rfq.deliveryLocation}</td>
+                                <td>
+                                  {rfq.endDate
+                                    ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                    : "—"}
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <button
+                                    className="pud-btn pud-btn-outline"
+                                    onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                                  >
+                                    View RFQ Details
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="pud-allrfqs-pagination">
+                        <button
+                          type="button"
+                          className="pud-allrfqs-page-btn"
+                          disabled={allRfqsPage <= 1 || loadingAllRfqs}
+                          onClick={handleAllRfqsPrevPage}
+                          title="Previous page"
                         >
-                          View All RFQs →
-                        </a>
-                      )}
-                    </div>
-                    {loadingRfqs ? (
-                      <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px' }}>
-                        <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                          <div className="pud-spinner" />
-                          <span>Loading sourcing opportunities...</span>
-                        </div>
+                          ←
+                        </button>
+                        <span className="pud-allrfqs-page-number">Page {allRfqsPage}</span>
+                        <button
+                          type="button"
+                          className="pud-allrfqs-page-btn"
+                          disabled={!allRfqsHasMore || loadingAllRfqs}
+                          onClick={handleAllRfqsNextPage}
+                          title="Next page"
+                        >
+                          →
+                        </button>
                       </div>
-                    ) : rfqsError ? (
-                      <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
-                        <div style={{ color: '#ef4444', fontSize: '14px', textAlign: 'center' }}>
-                          {rfqsError}
-                        </div>
-                      </div>
-                    ) : rfqs.length === 0 ? (
-                      <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
-                        <div style={{ color: '#64748b', fontSize: '14px', textAlign: 'center' }}>
-                          No recent sourcing opportunities found.
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="pud-panel-list">
-                        {rfqs.slice(0, visibleRfqCount).map((rfq) => (
-                          <div className="pud-rfq-row" key={rfq.rfqId}>
-                            <div className="pud-rfq-info">
-                              <div className="pud-rfq-meta">
-                                <span className="pud-code-badge">{rfq.rfqNumber}</span>
-                                <span className="pud-dot-sep">•</span>
-                                <span className="pud-company">{rfq.organizationName}</span>
-                              </div>
-                              <div className="pud-rfq-title">{rfq.title}</div>
-                              <div className="pud-rfq-details">
-                                <span>
-                                  <IconCalendar /> Closes: {new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                                </span>
-                                <span>
-                                  <IconPin /> Deliv: {rfq.deliveryLocation}
-                                </span>
-                              </div>
-                            </div>
-                            <button
-                              className="pud-btn pud-btn-outline"
-                              onClick={() => handleViewRfqDetails(rfq.rfqId)}
-                            >
-                              View RFQ Details
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </section>
+                    </>
+                  )}
+                </>
+              ) : rfqPageView === "rfqDetail" ? (
+                <>
+                  <div style={{ marginBottom: '16px' }}>
+                    <button className="pud-btn pud-btn-outline" onClick={() => setRfqPageView("allRfqs")}>
+                      ← Back to All RFQs
+                    </button>
+                  </div>
+                  <div className="pud-rfq-fullpage">
+                    {renderRfqDetailInner()}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h1 className="sad-title">Supplier Admin Command Center</h1>
+                  <p className="sad-subtitle">Manage suppliers, track sourcing activities, and oversee operations.</p>
 
-                  <section className="sad-panel">
-                    <div className="sad-panel-header">
-                      <div>
-                        <div className="sad-panel-title">Recent Purchase Orders</div>
-                        <div className="sad-panel-subtitle">Supplier orders requiring attention</div>
+                  <div className="sad-status-banner">
+                    <span className="sad-status-dot" />
+                    <div>
+                      <div className="sad-status-title">Active Supplier Administration Portal (100%)</div>
+                      <div className="sad-status-subtext">
+                        You have administrative access to manage supplier operations and user accounts.
                       </div>
-                      <a className="sad-panel-link" href="#">View All →</a>
-                    </div>
-                    <div className="sad-panel-list">
-                      {poItems.map((po) => (
-                        <div className="sad-po-row" key={po.code}>
-                          <div className="sad-po-info">
-                            <div className="sad-po-meta">
-                              <span className="sad-po-code">{po.code}</span>
-                              <span className={`sad-status-badge sad-status-badge-${po.status.toLowerCase()}`}>
-                                {po.status}
-                              </span>
-                            </div>
-                            <div className="sad-po-company">{po.company}</div>
-                            <div className="sad-po-date"><IconCalendar /> Order Date: {po.orderDate}</div>
-                          </div>
-                          <div className="sad-po-right">
-                            <div className="sad-po-amount">{po.amount}</div>
-                            <a className="sad-po-process" href="#">Process →</a>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                </div>
-
-                <section className="sad-matchmaker">
-                  <div className="sad-matchmaker-header">
-                    <div className="sad-matchmaker-title-row">
-                      <span className="sad-matchmaker-icon"><IconSparkles /></span>
-                      <div className="sad-matchmaker-title">Buyer Network Overview</div>
-                    </div>
-                    <div className="sad-matchmaker-subtitle">
-                      Monitor connected buyers and their engagement with your suppliers.
                     </div>
                   </div>
 
-                  <div className="sad-match-grid">
-                    {matchCards.map((card) => (
-                      <div className="sad-match-card" key={card.name}>
-                        <span className="sad-match-location"><IconPin /> {card.location}</span>
-                        <div className="sad-match-top">
-                          <div className="sad-match-avatar">{card.initials}</div>
-                          <div>
-                            <div className="sad-match-name">{card.name}</div>
-                            <div className="sad-match-seeking"><NavIconBuilding /> Seeking: {card.seeking}</div>
-                          </div>
-                        </div>
-                        <p className="sad-match-desc">{card.description}</p>
-                        <div className="sad-match-rep-row">
-                          <span className="sad-match-rep-label">Representative:</span>
-                          <span className="sad-match-rep-name">{card.representative}</span>
-                        </div>
-                        <div className="sad-match-actions">
-                          <button
-                            className="sad-btn sad-btn-outline sad-btn-flex"
-                            onClick={() => setSelectedProfile(card)}
-                          >
-                            <IconEye /> Profile
-                          </button>
-                          {card.actionVariant === "message" ? (
-                            <button className="sad-btn sad-btn-message sad-btn-flex">
-                              <IconMessageSquare /> Message
-                            </button>
-                          ) : (
-                            <button className="sad-btn sad-btn-interest sad-btn-flex">
-                              <IconSend /> Send Interest
-                            </button>
-                          )}
-                        </div>
+                  <div className="sad-stats-grid">
+                    {statCards.map((stat) => (
+                      <div className="sad-stat-card" key={stat.label}>
+                        <div className={`sad-stat-icon ${stat.colorClass}`}>{stat.icon}</div>
+                        <div className="sad-stat-label">{stat.label}</div>
+                        <div className="sad-stat-value">{stat.value}</div>
+                        <div className="sad-stat-link">{stat.linkText}</div>
                       </div>
                     ))}
                   </div>
 
-                  <div className="sad-pagination">
-                    <button className="sad-page-btn sad-page-btn-disabled" disabled>
-                      <IconChevronLeft />
-                    </button>
-                    <button className="sad-page-btn sad-page-btn-active">
-                      <IconChevronRight />
-                    </button>
+                  <div className="sad-panels">
+                    <section className="pud-panel">
+                      <div className="pud-panel-header">
+                        <div>
+                          <div className="pud-panel-title">Recent Sourcing Opportunities</div>
+                          <div className="pud-panel-subtitle">Newly listed RFQs matched to your industry categories</div>
+                        </div>
+                        {!loadingRfqs && !rfqsError && rfqs.length > 0 && (
+                          <a
+                            className="pud-panel-link"
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleOpenAllRfqs();
+                            }}
+                          >
+                            View All RFQs →
+                          </a>
+                        )}
+                      </div>
+                      {loadingRfqs ? (
+                        <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px' }}>
+                          <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                            <div className="pud-spinner" />
+                            <span>Loading sourcing opportunities...</span>
+                          </div>
+                        </div>
+                      ) : rfqsError ? (
+                        <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
+                          <div style={{ color: '#ef4444', fontSize: '14px', textAlign: 'center' }}>
+                            {rfqsError}
+                          </div>
+                        </div>
+                      ) : rfqs.length === 0 ? (
+                        <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
+                          <div style={{ color: '#64748b', fontSize: '14px', textAlign: 'center' }}>
+                            No recent sourcing opportunities found.
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="pud-panel-list">
+                          {rfqs.slice(0, visibleRfqCount).map((rfq) => (
+                            <div className="pud-rfq-row" key={rfq.rfqId}>
+                              <div className="pud-rfq-info">
+                                <div className="pud-rfq-meta">
+                                  <span className="pud-code-badge">{rfq.rfqNumber}</span>
+                                  <span className="pud-dot-sep">•</span>
+                                  <span className="pud-company">{rfq.organizationName}</span>
+                                </div>
+                                <div className="pud-rfq-title">{rfq.title}</div>
+                                <div className="pud-rfq-details">
+                                  <span>
+                                    <IconCalendar /> Closes: {new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                  </span>
+                                  <span>
+                                    <IconPin /> Deliv: {rfq.deliveryLocation}
+                                  </span>
+                                </div>
+                              </div>
+                              <button
+                                className="pud-btn pud-btn-outline"
+                                onClick={() => handleViewRfqDetails(rfq.rfqId)}
+                              >
+                                View RFQ Details
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </section>
+
+                    <section className="sad-panel">
+                      <div className="sad-panel-header">
+                        <div>
+                          <div className="sad-panel-title">Recent Purchase Orders</div>
+                          <div className="sad-panel-subtitle">Supplier orders requiring attention</div>
+                        </div>
+                        <a className="sad-panel-link" href="#">View All →</a>
+                      </div>
+                      <div className="sad-panel-list">
+                        {poItems.map((po) => (
+                          <div className="sad-po-row" key={po.code}>
+                            <div className="sad-po-info">
+                              <div className="sad-po-meta">
+                                <span className="sad-po-code">{po.code}</span>
+                                <span className={`sad-status-badge sad-status-badge-${po.status.toLowerCase()}`}>
+                                  {po.status}
+                                </span>
+                              </div>
+                              <div className="sad-po-company">{po.company}</div>
+                              <div className="sad-po-date"><IconCalendar /> Order Date: {po.orderDate}</div>
+                            </div>
+                            <div className="sad-po-right">
+                              <div className="sad-po-amount">{po.amount}</div>
+                              <a className="sad-po-process" href="#">Process →</a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
                   </div>
-                </section>
-              </>
-            )}
+
+                  <section className="sad-matchmaker">
+                    <div className="sad-matchmaker-header">
+                      <div className="sad-matchmaker-title-row">
+                        <span className="sad-matchmaker-icon"><IconSparkles /></span>
+                        <div className="sad-matchmaker-title">Buyer Network Overview</div>
+                      </div>
+                      <div className="sad-matchmaker-subtitle">
+                        Monitor connected buyers and their engagement with your suppliers.
+                      </div>
+                    </div>
+
+                    <div className="sad-match-grid">
+                      {matchCards.map((card) => (
+                        <div className="sad-match-card" key={card.name}>
+                          <span className="sad-match-location"><IconPin /> {card.location}</span>
+                          <div className="sad-match-top">
+                            <div className="sad-match-avatar">{card.initials}</div>
+                            <div>
+                              <div className="sad-match-name">{card.name}</div>
+                              <div className="sad-match-seeking"><NavIconBuilding /> Seeking: {card.seeking}</div>
+                            </div>
+                          </div>
+                          <p className="sad-match-desc">{card.description}</p>
+                          <div className="sad-match-rep-row">
+                            <span className="sad-match-rep-label">Representative:</span>
+                            <span className="sad-match-rep-name">{card.representative}</span>
+                          </div>
+                          <div className="sad-match-actions">
+                            <button
+                              className="sad-btn sad-btn-outline sad-btn-flex"
+                              onClick={() => setSelectedProfile(card)}
+                            >
+                              <IconEye /> Profile
+                            </button>
+                            {card.actionVariant === "message" ? (
+                              <button className="sad-btn sad-btn-message sad-btn-flex">
+                                <IconMessageSquare /> Message
+                              </button>
+                            ) : (
+                              <button className="sad-btn sad-btn-interest sad-btn-flex">
+                                <IconSend /> Send Interest
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="sad-pagination">
+                      <button className="sad-page-btn sad-page-btn-disabled" disabled>
+                        <IconChevronLeft />
+                      </button>
+                      <button className="sad-page-btn sad-page-btn-active">
+                        <IconChevronRight />
+                      </button>
+                    </div>
+                  </section>
+                </>
+              )}
           </main>
         </div>
 

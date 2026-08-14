@@ -488,37 +488,105 @@ const SupplierDashboard: React.FC = () => {
   };
 
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
-
+  const RFQ_PAGE_SIZE = 10;
   const [allRfqsList, setAllRfqsList] = useState<RFQMasterDataItem[]>([]);
   const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
   const [allRfqsError, setAllRfqsError] = useState<string | null>(null);
-  const [allRfqsLoaded, setAllRfqsLoaded] = useState(false);
+  const [allRfqsPage, setAllRfqsPage] = useState(1);
+  const [hasNextRfqPage, setHasNextRfqPage] = useState(false);
+
+  const getAllRfqsRange = (page: number) => {
+    if (page <= 1) {
+      return { index: 0, limit: RFQ_PAGE_SIZE };
+    }
+
+    return {
+      index: (page - 1) * RFQ_PAGE_SIZE + 1,
+      limit: page * RFQ_PAGE_SIZE + 1,
+    };
+  };
+
+  const fetchAllRfqsPage = async (page: number): Promise<boolean> => {
+    if (!supplierId) {
+      const start = (page - 1) * RFQ_PAGE_SIZE;
+      const pageData = rfqs.slice(start, start + RFQ_PAGE_SIZE);
+      setAllRfqsList(pageData);
+      setHasNextRfqPage(start + RFQ_PAGE_SIZE < rfqs.length);
+      return pageData.length > 0;
+    }
+
+    setLoadingAllRfqs(true);
+    setAllRfqsError(null);
+
+    try {
+      const { index, limit } = getAllRfqsRange(page);
+
+
+      const data = await fetchRFQMasterData({
+        supplierId,
+        index,
+        limit,
+      });
+
+      if (!Array.isArray(data)) {
+        setAllRfqsError("Failed to load RFQs.");
+        setAllRfqsList([]);
+        setHasNextRfqPage(false);
+        return false;
+      }
+
+      setAllRfqsList(data);
+
+
+      setHasNextRfqPage(data.length >= RFQ_PAGE_SIZE);
+
+      return data.length > 0;
+    } catch (err: any) {
+      setAllRfqsError(err?.message || "Failed to load the RFQ page.");
+      setAllRfqsList([]);
+      setHasNextRfqPage(false);
+      return false;
+    } finally {
+      setLoadingAllRfqs(false);
+    }
+  };
 
   const handleOpenAllRfqs = async () => {
     setActiveNav("rfqs");
     setRfqPageView("allRfqs");
-    if (allRfqsLoaded || loadingAllRfqs) return;
 
-    setLoadingAllRfqs(true);
-    setAllRfqsError(null);
-    try {
-      if (!supplierId) {
-        setAllRfqsList(rfqs);
-      } else {
-        const data = await fetchRFQMasterData({ supplierId, index: 0, limit: 100 });
-        if (Array.isArray(data)) {
-          setAllRfqsList(data);
-        } else {
-          setAllRfqsList(rfqs);
-        }
-      }
-    } catch (err: any) {
-      console.error("Failed to load full RFQ list", err);
-      setAllRfqsError(err.message || "Failed to load the full RFQ list.");
-      setAllRfqsList(rfqs);
-    } finally {
-      setLoadingAllRfqs(false);
-      setAllRfqsLoaded(true);
+    if (loadingAllRfqs) return;
+
+    setAllRfqsPage(1);
+    await fetchAllRfqsPage(1);
+  };
+
+  const handleNextRfqPage = async () => {
+    if (loadingAllRfqs || !hasNextRfqPage) return;
+
+    const currentPage = allRfqsPage;
+    const nextPage = currentPage + 1;
+    const currentPageData = allRfqsList;
+
+    const loaded = await fetchAllRfqsPage(nextPage);
+
+    if (loaded) {
+      setAllRfqsPage(nextPage);
+    } else {
+      setAllRfqsList(currentPageData);
+      setHasNextRfqPage(false);
+    }
+  };
+
+  const handlePreviousRfqPage = async () => {
+    if (loadingAllRfqs || allRfqsPage <= 1) return;
+
+    const previousPage = allRfqsPage - 1;
+    const loaded = await fetchAllRfqsPage(previousPage);
+
+    if (loaded) {
+      setAllRfqsPage(previousPage);
+      setHasNextRfqPage(true);
     }
   };
 
@@ -1431,45 +1499,75 @@ const SupplierDashboard: React.FC = () => {
                     No RFQs found.
                   </div>
                 ) : (
-                  <div className="pud-rfq-table-container">
-                    <table className="pud-rfq-items-table pud-allrfqs-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '48px' }}>#</th>
-                          <th>RFQ Number</th>
-                          <th>Title</th>
-                          <th>Organization</th>
-                          <th>Delivery Location</th>
-                          <th>Closing Date</th>
-                          <th style={{ textAlign: 'right' }}>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allRfqsList.map((rfq: any, idx: number) => (
-                          <tr key={rfq.rfqId || idx}>
-                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
-                            <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
-                            <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
-                            <td>{rfq.organizationName}</td>
-                            <td>{rfq.deliveryLocation}</td>
-                            <td>
-                              {rfq.endDate
-                                ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                                : "—"}
-                            </td>
-                            <td style={{ textAlign: 'right' }}>
-                              <button
-                                className="pud-btn pud-btn-outline"
-                                onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                              >
-                                View RFQ Details
-                              </button>
-                            </td>
+                  <>
+                    <div className="pud-rfq-table-container">
+                      <table className="pud-rfq-items-table pud-allrfqs-table">
+                        <thead>
+                          <tr>
+                            <th style={{ width: '48px' }}>#</th>
+                            <th>RFQ Number</th>
+                            <th>Title</th>
+                            <th>Organization</th>
+                            <th>Delivery Location</th>
+                            <th>Closing Date</th>
+                            <th style={{ textAlign: 'right' }}>Action</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {allRfqsList.map((rfq: any, idx: number) => (
+                            <tr key={rfq.rfqId || idx}>
+                              <td style={{ color: '#94a3b8', fontWeight: 600 }}>
+                                {(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}
+                              </td>
+                              <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
+                              <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                              <td>{rfq.organizationName}</td>
+                              <td>{rfq.deliveryLocation}</td>
+                              <td>
+                                {rfq.endDate
+                                  ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                  : "—"}
+                              </td>
+                              <td style={{ textAlign: 'right' }}>
+                                <button
+                                  className="pud-btn pud-btn-outline"
+                                  onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                                >
+                                  View RFQ Details
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="pud-pagination pud-allrfqs-pagination">
+                      <button
+                        type="button"
+                        className={`pud-page-btn${allRfqsPage === 1 || loadingAllRfqs ? " pud-page-btn-disabled" : ""}`}
+                        onClick={handlePreviousRfqPage}
+                        disabled={allRfqsPage === 1 || loadingAllRfqs}
+                        aria-label="Previous RFQ page"
+                      >
+                        <IconChevronLeft />
+                      </button>
+
+                      <span className="pud-page-number">
+                        Page {allRfqsPage}
+                      </span>
+
+                      <button
+                        type="button"
+                        className={`pud-page-btn${!hasNextRfqPage || loadingAllRfqs ? " pud-page-btn-disabled" : ""}`}
+                        onClick={handleNextRfqPage}
+                        disabled={!hasNextRfqPage || loadingAllRfqs}
+                        aria-label="Next RFQ page"
+                      >
+                        <IconChevronRight />
+                      </button>
+                    </div>
+                  </>
                 )}
               </>
             ) : rfqPageView === "rfqDetail" ? (
