@@ -750,7 +750,7 @@ const Catalog: React.FC<CatalogProps> = ({
 
             {showCreateCatalogModal && (
                 <div className="pud-modal-overlay" onClick={closeCreateCatalogModal}>
-                    <div className="pud-modal pud-modal-rfq" onClick={(e) => e.stopPropagation()}>
+                    <div className="pud-modal pud-modal-catalog" onClick={(e) => e.stopPropagation()}>
                         <div className="pud-modal-header">
                             <button className="pud-modal-close" onClick={closeCreateCatalogModal} title="Close">
                                 <IconClose />
