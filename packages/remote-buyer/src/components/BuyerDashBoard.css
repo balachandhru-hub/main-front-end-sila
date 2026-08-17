@@ -1032,6 +1032,7 @@
 }
 
 @media (max-width: 560px) {
+
     .pud-modal-analytics-grid,
     .pud-modal-info-grid {
         grid-template-columns: 1fr;
@@ -1047,6 +1048,7 @@
 
 .pud-modal-rfq {
     max-width: 53.125rem;
+    height: 51rem;
 }
 
 .pud-rfq-fullpage {

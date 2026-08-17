@@ -8,6 +8,8 @@ import {
   fetchCommodities,
 } from "../api/masterdataApi";
 import { fetchBuyerCatalog } from "../api/Buyerapi";
+import { fetchBuyerAsset } from "../api/Buyerapi";
+import type { BuyerCatalogResponse } from "../api/Buyerapi";
 
 /* ============================== Icons ============================== */
 
@@ -38,18 +40,23 @@ const IconLoader = () => (
   </svg>
 );
 
-const IconClose = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
-
 const IconExternalLink = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
     <polyline points="15 3 21 3 21 9" />
     <line x1="10" y1="14" x2="21" y2="3" />
+  </svg>
+);
+
+const IconChevronLeft = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="15 18 9 12 15 6" />
+  </svg>
+);
+
+const IconChevronRight = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6" />
   </svg>
 );
 
@@ -63,29 +70,6 @@ interface FilterState {
   search: string;
   index: number;
   limit: number;
-}
-
-interface BuyerCatalogItem {
-  supplierId: string;
-  catalogId: string;
-  supplierName: string;
-  catalogName: string;
-  description: string;
-  price: number;
-  currency: string;
-  unitOfMeasure: string;
-  segment: number;
-  segmentTitle: string;
-  family: number;
-  familyTitle: string;
-  commodity: number;
-  commodityTitle: string;
-  class: number;
-  classTitle: string;
-  catalogType: string;
-  isPunchOut: boolean;
-  punchOutUrl: string;
-  hasCatalog: boolean;
 }
 
 /* ============================== Component ============================== */
@@ -105,8 +89,8 @@ const Product: React.FC = () => {
   // ---- Classification Options ----
   const [segmentOptions, setSegmentOptions] = useState<Array<{ segment: number; title: string }>>([]);
   const [familyOptions, setFamilyOptions] = useState<Array<{ family: number; title: string }>>([]);
-  const [classOptions, setClassOptions] = useState<Array<{ class: number; title: string }>>([]);
-  const [commodityOptions, setCommodityOptions] = useState<Array<{ commodity: number; title: string }>>([]);
+  const [classOptions, setClassOptions] = useState<Array<{ class: number; classTitle: string }>>([]);
+  const [commodityOptions, setCommodityOptions] = useState<Array<{ commodity: number; commodityTitle: string }>>([]);
 
   // ---- Loading States ----
   const [loadingSegments, setLoadingSegments] = useState(false);
@@ -116,16 +100,28 @@ const Product: React.FC = () => {
   const [loadingResults, setLoadingResults] = useState(false);
 
   // ---- Results State ----
-  const [catalogResults, setCatalogResults] = useState<BuyerCatalogItem[]>([]);
+  const [catalogResults, setCatalogResults] = useState<BuyerCatalogResponse[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ---- PunchOut Preview Modal State ----
-  const [showPunchOutModal, setShowPunchOutModal] = useState(false);
+  const PRODUCT_PAGE_SIZE = 10;
+  const [productPage, setProductPage] = useState(0);
+  const productTotalPages = Math.max(1, Math.ceil(catalogResults.length / PRODUCT_PAGE_SIZE));
+  const pagedProductResults = catalogResults.slice(
+    productPage * PRODUCT_PAGE_SIZE,
+    productPage * PRODUCT_PAGE_SIZE + PRODUCT_PAGE_SIZE
+  );
+
+  const [productAssetImages, setProductAssetImages] = useState<Record<string, string>>({});
+
+  const [selectedProduct, setSelectedProduct] = useState<BuyerCatalogResponse | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [loadingSelectedImages, setLoadingSelectedImages] = useState(false);
+
+  const [showPunchOutFullPage, setShowPunchOutFullPage] = useState(false);
   const [punchOutPreviewUrl, setPunchOutPreviewUrl] = useState<string>("");
   const [punchOutIframeBlocked, setPunchOutIframeBlocked] = useState(false);
 
-  // ---- Load Segments + All Products on Component Mount ----
   useEffect(() => {
     loadSegments();
     fetchProducts({
@@ -137,7 +133,6 @@ const Product: React.FC = () => {
       index: 0,
       limit: 20,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSegments = async () => {
@@ -148,7 +143,6 @@ const Product: React.FC = () => {
         setSegmentOptions(segments);
       }
     } catch (err) {
-      console.error("Failed to load segments", err);
     } finally {
       setLoadingSegments(false);
     }
@@ -178,7 +172,6 @@ const Product: React.FC = () => {
           setFamilyOptions(families);
         }
       } catch (err) {
-        console.error("Failed to load families", err);
       } finally {
         setLoadingFamilies(false);
       }
@@ -207,7 +200,6 @@ const Product: React.FC = () => {
           setClassOptions(classes);
         }
       } catch (err) {
-        console.error("Failed to load classes", err);
       } finally {
         setLoadingClasses(false);
       }
@@ -234,7 +226,6 @@ const Product: React.FC = () => {
           setCommodityOptions(commodities);
         }
       } catch (err) {
-        console.error("Failed to load commodities", err);
       } finally {
         setLoadingCommodities(false);
       }
@@ -258,9 +249,6 @@ const Product: React.FC = () => {
     }));
   };
 
-  // ---- Fetch products for a given filter state ----
-  // Used both for the initial unfiltered load (all products) and for
-  // subsequent filtered/search requests, so the two stay in sync.
   const fetchProducts = async (filterState: FilterState) => {
     setLoadingResults(true);
     setError(null);
@@ -278,6 +266,13 @@ const Product: React.FC = () => {
 
       if (Array.isArray(results)) {
         setCatalogResults(results);
+        setProductPage(0);
+        results.forEach((item: BuyerCatalogResponse) => {
+          const firstAssetId = item.asset && item.asset[0]?.id;
+          if (firstAssetId) {
+            loadProductAssetImage(firstAssetId);
+          }
+        });
       } else {
         setError((results as any)?.message || "Failed to fetch catalogs. Please try again.");
         setCatalogResults([]);
@@ -292,17 +287,325 @@ const Product: React.FC = () => {
     }
   };
 
-  // ---- Handle Search/Filter Submit ----
   const handleSearchSubmit = () => {
     fetchProducts(filters);
   };
 
-  // ---- PunchOut Preview Handler (mirrors Catalog.tsx) ----
+  const loadProductAssetImage = async (assetId: string) => {
+    if (!assetId || productAssetImages[assetId]) return;
+    try {
+      const asset: any = await fetchBuyerAsset(assetId);
+      if (!asset || asset.statusCode) return;
+
+      let src: string | null = null;
+      if (asset.fileBytes) {
+        const mime = asset.contentType || asset.fileType || "image/png";
+        src = `data:${mime};base64,${asset.fileBytes}`;
+      } else if (asset.url) {
+        src = asset.url;
+      } else if (asset.fileUrl) {
+        src = asset.fileUrl;
+      }
+
+      if (src) {
+        setProductAssetImages((prev) => ({ ...prev, [assetId]: src as string }));
+      }
+    } catch (error) {
+    }
+  };
+
+  const openProductDetail = async (item: BuyerCatalogResponse) => {
+    setSelectedProduct(item);
+    setSelectedImageIndex(0);
+    setShowPunchOutFullPage(false);
+
+    const assetIds = (item.asset || []).map((a) => a.id).filter(Boolean) as string[];
+    if (assetIds.length === 0) return;
+    setLoadingSelectedImages(true);
+    try {
+      await Promise.all(assetIds.map((id) => loadProductAssetImage(id)));
+    } finally {
+      setLoadingSelectedImages(false);
+    }
+  };
+
+  const closeProductDetail = () => {
+    setSelectedProduct(null);
+    setSelectedImageIndex(0);
+    setShowPunchOutFullPage(false);
+  };
+
+  const selectedProductImages: string[] = selectedProduct
+    ? ((selectedProduct.asset || [])
+      .map((a) => (a.id ? productAssetImages[a.id] : undefined))
+      .filter(Boolean) as string[])
+    : [];
+
+  const goToPrevProductImage = () => {
+    setSelectedImageIndex((prev) =>
+      selectedProductImages.length === 0 ? 0 : (prev - 1 + selectedProductImages.length) % selectedProductImages.length
+    );
+  };
+
+  const goToNextProductImage = () => {
+    setSelectedImageIndex((prev) =>
+      selectedProductImages.length === 0 ? 0 : (prev + 1) % selectedProductImages.length
+    );
+  };
+
   const handlePunchOutPreview = (url: string) => {
     setPunchOutPreviewUrl(url);
-    setShowPunchOutModal(true);
+    setShowPunchOutFullPage(true);
     setPunchOutIframeBlocked(false);
   };
+
+  if (showPunchOutFullPage && selectedProduct) {
+    return (
+      <div className="pud-product-page">
+        <div className="pud-catalog-fullview-header">
+          <div>
+            <button
+              type="button"
+              className="pud-btn pud-btn-outline"
+              onClick={() => setShowPunchOutFullPage(false)}
+            >
+              <IconChevronLeft /> Back to {selectedProduct.catalogName}
+            </button>
+          </div>
+          <div className="pud-catalog-fullview-actions">
+            <span className="pud-modal-badge">
+              <IconExternalLink /> PunchOut Catalog
+            </span>
+          </div>
+        </div>
+
+        <div className="pud-punchout-fullpage-body">
+          <h1 className="pud-title">{selectedProduct.catalogName}</h1>
+
+          <div className="pud-punchout-fullpage-viewer">
+            {punchOutIframeBlocked ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', color: '#64748b' }}>
+                <div style={{ fontSize: '14px', textAlign: 'center', maxWidth: '400px' }}>
+                  <p style={{ fontWeight: '600' }}>Website Cannot Be Embedded</p>
+                  <p style={{ fontSize: '12px' }}>
+                    This website has restricted embedding for security reasons.
+                  </p>
+                </div>
+                <a
+                  href={punchOutPreviewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="pud-btn pud-btn-message"
+                  style={{ background: "#2563eb", color: "#ffffff", textDecoration: "none" }}
+                >
+                  <IconExternalLink /> Open in New Tab
+                </a>
+              </div>
+            ) : (
+              <iframe
+                src={punchOutPreviewUrl}
+                style={{ width: "100%", height: "100%", border: "none" }}
+                title="PunchOut Catalog"
+                onError={() => setPunchOutIframeBlocked(true)}
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-pointer-lock"
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedProduct) {
+    return (
+      <div className="pud-product-page">
+        <div className="pud-catalog-fullview-header">
+          <div>
+            <button type="button" className="pud-btn pud-btn-outline" onClick={closeProductDetail}>
+              <IconChevronLeft /> Back to Products
+            </button>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "32px",
+            alignItems: "flex-start",
+            padding: "2rem 0.5rem 1rem",
+          }}
+        >
+          <div style={{ flex: "1 1 360px", maxWidth: "480px", minWidth: "280px" }}>
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                aspectRatio: "1 / 1",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: "12px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
+              }}
+            >
+              {loadingSelectedImages ? (
+                <div className="pud-spinner" />
+              ) : selectedProductImages.length > 0 ? (
+                <img
+                  src={selectedProductImages[selectedImageIndex]}
+                  alt={selectedProduct.catalogName}
+                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                />
+              ) : (
+                <div style={{ color: "#94a3b8" }}><IconFileGeneric /></div>
+              )}
+
+              {selectedProductImages.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={goToPrevProductImage}
+                    title="Previous image"
+                    style={{
+                      position: "absolute",
+                      left: "10px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "50%",
+                      border: "1px solid #e2e8f0",
+                      background: "rgba(255,255,255,0.9)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <IconChevronLeft />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goToNextProductImage}
+                    title="Next image"
+                    style={{
+                      position: "absolute",
+                      right: "10px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "50%",
+                      border: "1px solid #e2e8f0",
+                      background: "rgba(255,255,255,0.9)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <IconChevronRight />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {selectedProductImages.length > 1 && (
+              <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
+                {selectedProductImages.map((src, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => setSelectedImageIndex(idx)}
+                    style={{
+                      width: "56px",
+                      height: "56px",
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                      cursor: "pointer",
+                      border: idx === selectedImageIndex ? "2px solid #2563eb" : "1px solid #e2e8f0",
+                      opacity: idx === selectedImageIndex ? 1 : 0.75,
+                    }}
+                  >
+                    <img src={src} alt={`thumb-${idx}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", flex: "1 1 320px" }}>
+            <h1 className="pud-title">{selectedProduct.catalogName}</h1>
+            <p className="pud-product-item-supplier">by {selectedProduct.supplierName}</p>
+
+            {selectedProduct.catalogType && (
+              <span className="pud-catalog-card-tag" style={{ display: "inline-block", width: "fit-content" }}>
+                {selectedProduct.catalogType}
+              </span>
+            )}
+
+            {selectedProduct.description && (
+              <p style={{ color: "#475569", fontSize: "0.9rem", lineHeight: 1.6 }}>{selectedProduct.description}</p>
+            )}
+
+            <div className="pud-catalog-card-meta">
+              {selectedProduct.price > 0 && (
+                <span className="pud-catalog-card-price">
+                  {selectedProduct.currency} {selectedProduct.price.toFixed(2)}
+                </span>
+              )}
+              {selectedProduct.unitOfMeasure && (
+                <span className="pud-catalog-card-uom">per {selectedProduct.unitOfMeasure}</span>
+              )}
+            </div>
+
+            {(selectedProduct.segmentTitle || selectedProduct.familyTitle || selectedProduct.classTitle || selectedProduct.commodityTitle) && (
+              <div className="pud-catalog-card-classification">
+                {selectedProduct.segmentTitle && (
+                  <div className="pud-catalog-classification-row">
+                    <span className="pud-catalog-classification-label">Segment:</span>
+                    <span className="pud-catalog-classification-value">{selectedProduct.segment} - {selectedProduct.segmentTitle}</span>
+                  </div>
+                )}
+                {selectedProduct.familyTitle && (
+                  <div className="pud-catalog-classification-row">
+                    <span className="pud-catalog-classification-label">Family:</span>
+                    <span className="pud-catalog-classification-value">{selectedProduct.family} - {selectedProduct.familyTitle}</span>
+                  </div>
+                )}
+                {selectedProduct.classTitle && (
+                  <div className="pud-catalog-classification-row">
+                    <span className="pud-catalog-classification-label">Class:</span>
+                    <span className="pud-catalog-classification-value">{selectedProduct.class} - {selectedProduct.classTitle}</span>
+                  </div>
+                )}
+                {selectedProduct.commodityTitle && (
+                  <div className="pud-catalog-classification-row">
+                    <span className="pud-catalog-classification-label">Commodity:</span>
+                    <span className="pud-catalog-classification-value">{selectedProduct.commodity} - {selectedProduct.commodityTitle}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {selectedProduct.isPunchOut && selectedProduct.punchOutUrl && (
+              <div className="pud-product-item-action">
+                <button
+                  type="button"
+                  className="pud-product-item-link"
+                  onClick={() => handlePunchOutPreview(selectedProduct.punchOutUrl)}
+                >
+                  <IconExternalLink /> View Catalog
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pud-product-page">
@@ -380,7 +683,7 @@ const Product: React.FC = () => {
                 </option>
                 {classOptions.map((cls) => (
                   <option key={cls.class} value={cls.class}>
-                    {cls.class} - {cls.title}
+                    {cls.class} - {cls.classTitle}
                   </option>
                 ))}
               </select>
@@ -404,7 +707,7 @@ const Product: React.FC = () => {
                 </option>
                 {commodityOptions.map((com) => (
                   <option key={com.commodity} value={com.commodity}>
-                    {com.commodity} - {com.title}
+                    {com.commodity} - {com.commodityTitle}
                   </option>
                 ))}
               </select>
@@ -463,68 +766,76 @@ const Product: React.FC = () => {
               </h2>
             </div>
 
-            <div className="pud-product-list">
-              {catalogResults.map((item) => (
-                <div className="pud-product-item" key={item.catalogId}>
-                  <div className="pud-product-item-header">
-                    <div>
-                      <h3 className="pud-product-item-title">{item.catalogName}</h3>
+            <div className="pud-catalog-grid">
+              {pagedProductResults.map((item) => {
+                const firstAssetId = item.asset && item.asset[0]?.id;
+                const imageSrc = firstAssetId ? productAssetImages[firstAssetId] : undefined;
+                return (
+                  <div
+                    className="pud-catalog-card"
+                    key={item.catalogId}
+                    onClick={() => openProductDetail(item)}
+                    style={{ cursor: "pointer" }}
+                    role="button"
+                    title={`View ${item.catalogName}`}
+                  >
+                    <div className="pud-catalog-card-media">
+                      {imageSrc ? (
+                        <img src={imageSrc} alt={item.catalogName} />
+                      ) : (
+                        <div className="pud-catalog-card-media-placeholder"><IconFileGeneric /></div>
+                      )}
+                      {item.isPunchOut && (
+                        <span className="pud-catalog-card-source pud-catalog-card-source-created">
+                          PunchOut
+                        </span>
+                      )}
+                    </div>
+                    <div className="pud-catalog-card-body">
+                      <div className="pud-catalog-card-name" title={item.catalogName}>{item.catalogName}</div>
                       <p className="pud-product-item-supplier">by {item.supplierName}</p>
+                      {item.description && (
+                        <div className="pud-catalog-card-desc">{item.description}</div>
+                      )}
+                      <div className="pud-catalog-card-meta">
+                        {item.price > 0 && (
+                          <span className="pud-catalog-card-price">
+                            {item.currency} {item.price.toFixed(2)}
+                          </span>
+                        )}
+                        {item.unitOfMeasure && (
+                          <span className="pud-catalog-card-uom">{item.unitOfMeasure}</span>
+                        )}
+                      </div>
                     </div>
-                    {item.isPunchOut && (
-                      <span className="pud-product-item-badge pud-product-item-badge-punchout">
-                        PunchOut
-                      </span>
-                    )}
                   </div>
-
-                  {item.description && (
-                    <p className="pud-product-item-desc">{item.description}</p>
-                  )}
-
-                  <div className="pud-product-item-meta">
-                    {item.price > 0 && (
-                      <span className="pud-product-item-price">
-                        {item.currency} {item.price.toFixed(2)}
-                      </span>
-                    )}
-                    {item.unitOfMeasure && (
-                      <span className="pud-product-item-uom">{item.unitOfMeasure}</span>
-                    )}
-                    {item.catalogType && (
-                      <span className="pud-product-item-type">{item.catalogType}</span>
-                    )}
-                  </div>
-
-                  <div className="pud-product-item-tags">
-                    {item.segmentTitle && (
-                      <span className="pud-product-item-tag">{item.segmentTitle}</span>
-                    )}
-                    {item.familyTitle && (
-                      <span className="pud-product-item-tag">{item.familyTitle}</span>
-                    )}
-                    {item.classTitle && (
-                      <span className="pud-product-item-tag">{item.classTitle}</span>
-                    )}
-                    {item.commodityTitle && (
-                      <span className="pud-product-item-tag">{item.commodityTitle}</span>
-                    )}
-                  </div>
-
-                  {item.isPunchOut && item.punchOutUrl && (
-                    <div className="pud-product-item-action">
-                      <button
-                        type="button"
-                        className="pud-product-item-link"
-                        onClick={() => handlePunchOutPreview(item.punchOutUrl)}
-                      >
-                        Visit Supplier
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
+
+            {catalogResults.length > PRODUCT_PAGE_SIZE && (
+              <div className="pud-catalog-pagination">
+                <button
+                  type="button"
+                  className="pud-btn pud-btn-outline"
+                  disabled={productPage === 0}
+                  onClick={() => setProductPage((p) => Math.max(0, p - 1))}
+                >
+                  <IconChevronLeft /> Previous
+                </button>
+                <span className="pud-catalog-pagination-info">
+                  Page {productPage + 1} of {productTotalPages}
+                </span>
+                <button
+                  type="button"
+                  className="pud-btn pud-btn-outline"
+                  disabled={productPage >= productTotalPages - 1}
+                  onClick={() => setProductPage((p) => Math.min(productTotalPages - 1, p + 1))}
+                >
+                  Next <IconChevronRight />
+                </button>
+              </div>
+            )}
           </>
         ) : (
           !hasSearched && (
@@ -536,53 +847,6 @@ const Product: React.FC = () => {
           )
         )}
       </div>
-
-      {/* ---- PunchOut Preview Modal (mirrors Catalog.tsx) ---- */}
-      {showPunchOutModal && (
-        <div className="pud-modal-overlay" onClick={() => setShowPunchOutModal(false)}>
-          <div className="pud-modal pud-modal-punchout" onClick={(e) => e.stopPropagation()}>
-            <div className="pud-modal-header">
-              <button className="pud-modal-close" onClick={() => setShowPunchOutModal(false)} title="Close">
-                <IconClose />
-              </button>
-              <span className="pud-modal-badge">
-                <IconExternalLink /> PunchOut Catalog
-              </span>
-              <h2 className="pud-modal-name">Catalog Website</h2>
-            </div>
-
-            <div className="pud-modal-body pud-punchout-viewer-container">
-              {punchOutIframeBlocked ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '400px', gap: '16px', color: '#64748b' }}>
-                  <div style={{ fontSize: '14px', textAlign: 'center', maxWidth: '400px' }}>
-                    <p style={{ marginBottom: '12px', fontWeight: '600' }}>Website Cannot Be Embedded</p>
-                    <p style={{ fontSize: '12px', marginBottom: '16px' }}>
-                      This website has restricted embedding for security reasons.
-                    </p>
-                  </div>
-                  <a
-                    href={punchOutPreviewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="pud-btn pud-btn-message"
-                    style={{ background: "#2563eb", color: "#ffffff", textDecoration: "none" }}
-                  >
-                    <IconExternalLink /> Open in New Tab
-                  </a>
-                </div>
-              ) : (
-                <iframe
-                  src={punchOutPreviewUrl}
-                  style={{ width: "100%", height: "100%", border: "none" }}
-                  title="PunchOut Catalog"
-                  onError={() => setPunchOutIframeBlocked(true)}
-                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-pointer-lock"
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

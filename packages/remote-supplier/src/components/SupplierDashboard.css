@@ -1064,7 +1064,8 @@
 
 /* ---------- RFQ Specifications Popup Modal ---------- */
 .pud-modal-rfq {
-  max-width: 850px;
+  max-width: 50rem;
+  height: 51rem;
 }
 
 .pud-spinner {

@@ -6,9 +6,9 @@ import Invitations from "../../../remote-supplier/src/components/Invitations";
 import Product from "../../../remote-buyer/src/components/Product";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import { useNetworkAdminAuthStore } from "../store/useAuthStore";
-import { 
-  getBuyerProfile, 
-  fetchBuyerRFQs, 
+import {
+  getBuyerProfile,
+  fetchBuyerRFQs,
   fetchBuyerRFQById,
   fetchBuyerVerificationTemplates,
   type VerificationTemplate
@@ -583,7 +583,7 @@ const BuyerAdminDash: React.FC = () => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
-      <ToastContainer/>
+      <ToastContainer />
       <Header />
 
       <div
@@ -655,74 +655,74 @@ const BuyerAdminDash: React.FC = () => {
             ) : activeNav === "product" ? (
               <Product />
             ) : rfqPageView === "allRfqs" ? (
-    <>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
-        <div>
-          <h1 className="bad-title">All RFQs</h1>
-          <p className="bad-subtitle" style={{ marginBottom: 0 }}>
-            RFQs posted across your organization, awaiting supplier quotations.
-          </p>
-        </div>
-        <button className="bad-btn bad-btn-outline" onClick={handleBackToDashboard}>
-          ← Back to Dashboard
-        </button>
-      </div>
+              <>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
+                  <div>
+                    <h1 className="bad-title">All RFQs</h1>
+                    <p className="bad-subtitle" style={{ marginBottom: 0 }}>
+                      RFQs posted across your organization, awaiting supplier quotations.
+                    </p>
+                  </div>
+                  <button className="bad-btn bad-btn-outline" onClick={handleBackToDashboard}>
+                    ← Back to Dashboard
+                  </button>
+                </div>
 
-      {loadingAllRfqs ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
-          <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-            <div className="bad-spinner" />
-            <span>Loading all sourcing opportunities...</span>
-          </div>
-        </div>
-      ) : allRfqsError && allRfqsList.length === 0 ? (
-        <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>{allRfqsError}</div>
-      ) : allRfqsList.length === 0 ? (
-        <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
-          No RFQs found.
-        </div>
-      ) : (
-        <div className="bad-rfq-table-container">
-          <table className="bad-rfq-items-table bad-allrfqs-table">
-            <thead>
-              <tr>
-                <th style={{ width: '48px' }}>#</th>
-                <th>RFQ Number</th>
-                <th>Title</th>
-                <th>Organization</th>
-                <th>Delivery Location</th>
-                <th>Closing Date</th>
-                <th style={{ textAlign: 'right' }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allRfqsList.map((rfq: any, idx: number) => (
-                <tr key={rfq.rfqId || idx}>
-                  <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
-                  <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
-                  <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
-                  <td>{rfq.organizationName}</td>
-                  <td>{rfq.deliveryLocation}</td>
-                  <td>
-                    {rfq.endDate
-                      ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                      : "—"}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button
-                      className="bad-btn bad-btn-outline"
-                      onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                    >
-                      View RFQ Details
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </>
+                {loadingAllRfqs ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
+                    <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                      <div className="bad-spinner" />
+                      <span>Loading all sourcing opportunities...</span>
+                    </div>
+                  </div>
+                ) : allRfqsError && allRfqsList.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>{allRfqsError}</div>
+                ) : allRfqsList.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                    No RFQs found.
+                  </div>
+                ) : (
+                  <div className="bad-rfq-table-container">
+                    <table className="bad-rfq-items-table bad-allrfqs-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '48px' }}>#</th>
+                          <th>RFQ Number</th>
+                          <th>Title</th>
+                          <th>Organization</th>
+                          <th>Delivery Location</th>
+                          <th>Closing Date</th>
+                          <th style={{ textAlign: 'right' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allRfqsList.map((rfq: any, idx: number) => (
+                          <tr key={rfq.rfqId || idx}>
+                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
+                            <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
+                            <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                            <td>{rfq.organizationName}</td>
+                            <td>{rfq.deliveryLocation}</td>
+                            <td>
+                              {rfq.endDate
+                                ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                : "—"}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              <button
+                                className="bad-btn bad-btn-outline"
+                                onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                              >
+                                View RFQ Details
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
             ) : rfqPageView === "rfqDetail" ? (
               <>
                 <button

@@ -200,13 +200,21 @@ const Catalog: React.FC<CatalogProps> = ({
     const [showCatalogListModal, setShowCatalogListModal] = useState(false);
     const [_catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
 
-    const [showPunchOutModal, setShowPunchOutModal] = useState(false);
+    const [showPunchOutFullPage, setShowPunchOutFullPage] = useState(false);
     const [punchOutPreviewUrl, setPunchOutPreviewUrl] = useState<string>("");
     const [punchOutIframeBlocked, setPunchOutIframeBlocked] = useState(false);
 
     const [catalogList, setCatalogList] = useState<SupplierCatalogListItem[]>([]);
     const [loadingCatalogList, setLoadingCatalogList] = useState(false);
     const [catalogListError, setCatalogListError] = useState<string | null>(null);
+
+    const CATALOG_PAGE_SIZE = 10;
+    const [catalogPage, setCatalogPage] = useState(0);
+    const catalogTotalPages = Math.max(1, Math.ceil(catalogList.length / CATALOG_PAGE_SIZE));
+    const pagedCatalogList = catalogList.slice(
+        catalogPage * CATALOG_PAGE_SIZE,
+        catalogPage * CATALOG_PAGE_SIZE + CATALOG_PAGE_SIZE
+    );
 
     const [catalogAssetImages, setCatalogAssetImages] = useState<Record<string, string>>({});
 
@@ -243,6 +251,7 @@ const Catalog: React.FC<CatalogProps> = ({
             const data = await fetchSupplierCatalog();
             if (Array.isArray(data)) {
                 setCatalogList(data);
+                setCatalogPage(0);
                 data.forEach((item) => {
                     const firstAssetId = item.assets && item.assets[0]?.id;
                     if (firstAssetId) {
@@ -276,6 +285,7 @@ const Catalog: React.FC<CatalogProps> = ({
     const closeCatalogDetail = () => {
         setSelectedCatalogItem(null);
         setSelectedImageIndex(0);
+        setShowPunchOutFullPage(false);
     };
 
     const selectedCatalogImages: string[] = selectedCatalogItem
@@ -311,8 +321,8 @@ const Catalog: React.FC<CatalogProps> = ({
 
     const [segmentOptions, setSegmentOptions] = useState<Array<{ segment: number; title: string }>>([]);
     const [familyOptions, setFamilyOptions] = useState<Array<{ family: number; title: string }>>([]);
-    const [classOptions, setClassOptions] = useState<Array<{ class: number; title: string }>>([]);
-    const [commodityOptions, setCommodityOptions] = useState<Array<{ commodity: number; title: string }>>([]);
+    const [classOptions, setClassOptions] = useState<Array<{ class: number; classTitle: string }>>([]);
+    const [commodityOptions, setCommodityOptions] = useState<Array<{ commodity: number; commodityTitle: string }>>([]);
 
     const [loadingSegments, setLoadingSegments] = useState(false);
     const [loadingFamilies, setLoadingFamilies] = useState(false);
@@ -427,13 +437,12 @@ const Catalog: React.FC<CatalogProps> = ({
         updateCatalogField("class", classValue);
 
         const selectedClass = classOptions.find(c => c.class === classNum);
-        updateCatalogField("classTitle", selectedClass?.title || "");
+        updateCatalogField("classTitle", selectedClass?.classTitle || "");
 
         updateCatalogField("commodity", "");
         updateCatalogField("commodityTitle", "");
 
         setCommodityOptions([]);
-
         if (classNum) {
             setLoadingCommodities(true);
             try {
@@ -455,12 +464,14 @@ const Catalog: React.FC<CatalogProps> = ({
         updateCatalogField("commodity", commodityValue);
 
         const selectedCommodity = commodityOptions.find(c => c.commodity === commodityNum);
-        updateCatalogField("commodityTitle", selectedCommodity?.title || "");
+        updateCatalogField("commodityTitle", selectedCommodity?.commodityTitle || "");
     };
 
     const updateCatalogField = <K extends keyof CatalogFormState>(field: K, value: CatalogFormState[K]) => {
         setCatalogForm((prev) => ({ ...prev, [field]: value }));
     };
+
+    const isNonCatalogType = (catalogForm.catalogType || "").toString().toLowerCase().includes("non");
 
     const [uploadCatalogFiles, setUploadCatalogFiles] = useState<File[]>([]);
     const [isDraggingUploadFiles, setIsDraggingUploadFiles] = useState(false);
@@ -682,7 +693,7 @@ const Catalog: React.FC<CatalogProps> = ({
 
     const handlePunchOutPreview = (url: string) => {
         setPunchOutPreviewUrl(url);
-        setShowPunchOutModal(true);
+        setShowPunchOutFullPage(true);
         setPunchOutIframeBlocked(false);
     };
     const [unitOptions, setUnitOptions] = useState<UnitItem[]>([]);
@@ -712,7 +723,6 @@ const Catalog: React.FC<CatalogProps> = ({
                 <span className="pud-nav-label">Catalog</span>
                 <span
                     className="pud-nav-chevron"
-                    style={{ transform: isCatalogExpanded ? "rotate(90deg)" : "rotate(0deg)" }}
                 >
                     <IconChevronRight />
                 </span>
@@ -954,7 +964,7 @@ const Catalog: React.FC<CatalogProps> = ({
                                             </option>
                                             {classOptions.map((cls) => (
                                                 <option key={cls.class} value={cls.class}>
-                                                    {cls.class} - {cls.title}
+                                                    {cls.class} - {cls.classTitle}
                                                 </option>
                                             ))}
                                         </select>
@@ -989,7 +999,7 @@ const Catalog: React.FC<CatalogProps> = ({
                                             </option>
                                             {commodityOptions.map((com) => (
                                                 <option key={com.commodity} value={com.commodity}>
-                                                    {com.commodity} - {com.title}
+                                                    {com.commodity} - {com.commodityTitle}
                                                 </option>
                                             ))}
                                         </select>
@@ -1006,32 +1016,37 @@ const Catalog: React.FC<CatalogProps> = ({
                                         />
                                     </div>
 
-                                    <div className="pud-catalog-form-section">
-                                        <span className="pud-catalog-form-section-title">PunchOut</span>
-                                    </div>
+                                    {isNonCatalogType && (
+                                        <>
+                                            <div className="pud-catalog-form-section">
+                                                <span className="pud-catalog-form-section-title">PunchOut</span>
+                                            </div>
 
-                                    <div className="pud-catalog-form-field pud-catalog-checkbox-field pud-catalog-form-full">
-                                        <input
-                                            type="checkbox"
-                                            id="isPunchOut"
-                                            checked={catalogForm.isPunchOut}
-                                            onChange={(e) => updateCatalogField("isPunchOut", e.target.checked)}
-                                        />
-                                        <label htmlFor="isPunchOut">This is a PunchOut catalog item</label>
-                                    </div>
+                                            <div className="pud-catalog-form-field pud-catalog-checkbox-field pud-catalog-form-full">
+                                                <input
+                                                    type="checkbox"
+                                                    id="isPunchOut"
+                                                    checked={catalogForm.isPunchOut}
+                                                    onChange={(e) => updateCatalogField("isPunchOut", e.target.checked)}
+                                                />
+                                                <label htmlFor="isPunchOut">This is a PunchOut catalog item</label>
+                                            </div>
 
-                                    {catalogForm.isPunchOut && (
-                                        <div className="pud-catalog-form-field pud-catalog-form-full">
-                                            <label className="pud-catalog-form-label">PunchOut URL *</label>
-                                            <input
-                                                type="url"
-                                                className="pud-catalog-form-input"
-                                                value={catalogForm.punchOutUrl}
-                                                onChange={(e) => updateCatalogField("punchOutUrl", e.target.value)}
-                                                placeholder="https://supplier.example.com/punchout"
-                                                required={catalogForm.isPunchOut}
-                                            />
-                                        </div>
+                                            {catalogForm.isPunchOut && (
+                                                <div className="pud-catalog-form-field pud-catalog-form-full">
+                                                    <label className="pud-catalog-form-label">PunchOut URL *</label>
+                                                    <input
+                                                        type="url"
+                                                        className="pud-catalog-form-input"
+                                                        value={catalogForm.punchOutUrl}
+                                                        onChange={(e) => updateCatalogField("punchOutUrl", e.target.value)}
+                                                        placeholder="https://supplier.example.com/punchout"
+                                                        required={catalogForm.isPunchOut}
+                                                    />
+                                                </div>
+                                            )}
+
+                                        </>
                                     )}
 
                                     <div className="pud-catalog-form-section">
@@ -1058,7 +1073,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                                 type="file"
                                                 accept="image/*"
                                                 multiple
-                                                style={{ display: "none" }}
                                                 onChange={(e) => {
                                                     handleCatalogFilesAdd(e.target.files);
                                                     e.target.value = "";
@@ -1066,67 +1080,35 @@ const Catalog: React.FC<CatalogProps> = ({
                                             />
                                             {catalogFilePreviews.length > 0 ? (
                                                 <div
-                                                    style={{
-                                                        display: "flex",
-                                                        flexWrap: "wrap",
-                                                        gap: "10px",
-                                                        justifyContent: "center",
-                                                        width: "100%",
-                                                    }}
+                                                    className="pud-file"
                                                 >
                                                     {catalogFilePreviews.map((preview, index) => (
                                                         <div
                                                             key={index}
-                                                            style={{ position: "relative" }}
+                                                            className="map"
                                                             onClick={(e) => e.stopPropagation()}
                                                         >
                                                             <img
                                                                 src={preview}
                                                                 alt={`Catalog preview ${index + 1}`}
                                                                 className="pud-catalog-dropzone-preview"
-                                                                style={{ width: "84px", height: "84px", objectFit: "cover", borderRadius: "8px" }}
                                                             />
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleRemoveCatalogFile(index)}
                                                                 title="Remove image"
-                                                                style={{
-                                                                    position: "absolute",
-                                                                    top: "-6px",
-                                                                    right: "-6px",
-                                                                    width: "20px",
-                                                                    height: "20px",
-                                                                    borderRadius: "50%",
-                                                                    border: "none",
-                                                                    background: "#ef4444",
-                                                                    color: "#fff",
-                                                                    display: "flex",
-                                                                    alignItems: "center",
-                                                                    justifyContent: "center",
-                                                                    cursor: "pointer",
-                                                                    padding: 0,
-                                                                }}
+                                                                className="pud-file-button"
                                                             >
-                                                                <IconClose style={{ width: "11px", height: "11px" }} />
+                                                                <IconClose className="closeIcon" />
                                                             </button>
                                                         </div>
                                                     ))}
                                                     <div
                                                         onClick={(e) => { e.stopPropagation(); catalogFileInputRef.current?.click(); }}
-                                                        style={{
-                                                            width: "84px",
-                                                            height: "84px",
-                                                            display: "flex",
-                                                            alignItems: "center",
-                                                            justifyContent: "center",
-                                                            border: "1.5px dashed #94a3b8",
-                                                            borderRadius: "8px",
-                                                            cursor: "pointer",
-                                                            color: "#64748b",
-                                                        }}
+                                                        className="pud-add-img"
                                                         title="Add more images"
                                                     >
-                                                        <IconPlusCircle style={{ width: "20px", height: "20px" }} />
+                                                        <IconPlusCircle className="iconPlus" />
                                                     </div>
                                                 </div>
                                             ) : (
@@ -1150,7 +1132,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                     type="button"
                                     className="pud-btn pud-btn-outline"
                                     onClick={closeCreateCatalogModal}
-                                    style={{ marginRight: "10px" }}
                                 >
                                     Cancel
                                 </button>
@@ -1158,7 +1139,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                     type="submit"
                                     className="pud-btn pud-btn-message"
                                     disabled={creatingCatalog || catalogFiles.length === 0}
-                                    style={{ background: "#2563eb", color: "#ffffff" }}
                                 >
                                     {creatingCatalog ? "Saving..." : "Save Catalog"}
                                 </button>
@@ -1210,7 +1190,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                     type="file"
                                     multiple
                                     accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
-                                    style={{ display: "none" }}
                                     onChange={(e) => {
                                         handleUploadCatalogFilesAdd(e.target.files);
                                         e.target.value = "";
@@ -1261,7 +1240,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                 type="button"
                                 className="pud-btn pud-btn-outline"
                                 onClick={closeUploadCatalogModal}
-                                style={{ marginRight: "10px" }}
                             >
                                 Cancel
                             </button>
@@ -1270,7 +1248,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                 className="pud-btn pud-btn-message"
                                 disabled={uploadingCatalog || uploadCatalogFiles.length === 0}
                                 onClick={handleUploadCatalogSubmit}
-                                style={{ background: "#2563eb", color: "#ffffff" }}
                             >
                                 {uploadingCatalog ? "Uploading..." : `Upload ${uploadCatalogFiles.length > 0 ? `(${uploadCatalogFiles.length})` : ""}`}
                             </button>
@@ -1281,261 +1258,198 @@ const Catalog: React.FC<CatalogProps> = ({
 
 
 
-            {showPunchOutModal && (
-                <div className="pud-modal-overlay" onClick={() => setShowPunchOutModal(false)}>
-                    <div className="pud-modal pud-modal-punchout" onClick={(e) => e.stopPropagation()}>
-                        <div className="pud-modal-header">
-                            <button className="pud-modal-close" onClick={() => setShowPunchOutModal(false)} title="Close">
-                                <IconClose />
-                            </button>
-                            <span className="pud-modal-badge">
-                                <IconExternalLink /> PunchOut Catalog
-                            </span>
-                            <h2 className="pud-modal-name">Catalog Website</h2>
-                        </div>
-
-                        <div className="pud-modal-body pud-punchout-viewer-container">
-                            {punchOutIframeBlocked ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '400px', gap: '16px', color: '#64748b' }}>
-                                    <div style={{ fontSize: '14px', textAlign: 'center', maxWidth: '400px' }}>
-                                        <p style={{ fontWeight: '600' }}>Website Cannot Be Embedded</p>
-                                        <p style={{ fontSize: '12px' }}>
-                                            This website has restricted embedding for security reasons.
-                                        </p>
-                                    </div>
-                                    <a
-                                        href={punchOutPreviewUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="pud-btn pud-btn-message"
-                                        style={{ background: "#2563eb", color: "#ffffff", textDecoration: "none" }}
-                                    >
-                                        <IconExternalLink style={{ marginRight: "6px" }} /> Open in New Tab
-                                    </a>
-                                </div>
-                            ) : (
-                                <iframe
-                                    src={punchOutPreviewUrl}
-                                    style={{ width: "100%", height: "100%", border: "none" }}
-                                    title="PunchOut Catalog"
-                                    onError={() => setPunchOutIframeBlocked(true)}
-                                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-pointer-lock"
-                                />
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {showCatalogListModal && fullViewContainer && createPortal(
                 <>
                     {selectedCatalogItem ? (
-                        <>
-                            <div className="pud-catalog-fullview-header">
-                                <div>
-                                    <button
-                                        type="button"
-                                        className="pud-btn pud-btn-outline"
-                                        onClick={closeCatalogDetail}
-                                    >
-                                        <IconChevronLeft /> Back to Catalog
-                                    </button>
+                        showPunchOutFullPage ? (
+                            <>
+                                <div className="pud-catalog-fullview-header">
+                                    <div>
+                                        <button
+                                            type="button"
+                                            className="pud-btn pud-btn-outline"
+                                            onClick={() => setShowPunchOutFullPage(false)}
+                                        >
+                                            <IconChevronLeft /> Back to {selectedCatalogItem.catalogName}
+                                        </button>
+                                    </div>
+                                    <div className="pud-catalog-fullview-actions">
+                                        <span className="pud-modal-badge">
+                                            <IconExternalLink /> PunchOut Catalog
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div
-                                style={{
-                                    display: "flex",
-                                    flexWrap: "wrap",
-                                    gap: "32px",
-                                    alignItems: "flex-start",
-                                    padding: "2rem 0.5rem 1rem",
-                                }}
-                            >
-                                <div style={{ flex: "1 1 360px", maxWidth: "480px", minWidth: "280px" }}>
-                                    <div
-                                        style={{
-                                            position: "relative",
-                                            width: "100%",
-                                            aspectRatio: "1 / 1",
-                                            background: "#f8fafc",
-                                            border: "1px solid #e2e8f0",
-                                            borderRadius: "12px",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            overflow: "hidden",
-                                        }}
-                                    >
-                                        {loadingSelectedImages ? (
-                                            <div className="pud-spinner" />
-                                        ) : selectedCatalogImages.length > 0 ? (
-                                            <img
-                                                src={selectedCatalogImages[selectedImageIndex]}
-                                                alt={selectedCatalogItem.catalogName}
-                                                style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                                            />
+                                <div className="pud-punchout-fullpage-body">
+                                    <h1 className="pud-title">{selectedCatalogItem.catalogName}</h1>
+                                    {selectedCatalogItem.description && (
+                                        <p className="pud-subtitle">{selectedCatalogItem.description}</p>
+                                    )}
+                                    <div className="pud-punchout-fullpage-viewer">
+                                        {punchOutIframeBlocked ? (
+                                            <div className="pud-punchout-blocked">
+                                                <div className="pud-punchout-blocked-text">
+                                                    <p className="pud-punchout-blocked-title">Website Cannot Be Embedded</p>
+                                                    <p className="pud-punchout-blocked-desc">
+                                                        This website has restricted embedding for security reasons.
+                                                    </p>
+                                                </div>
+                                                <a
+                                                    href={punchOutPreviewUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="pud-btn pud-btn-message"
+                                                >
+                                                    <IconExternalLink className="pud-icon-mr" /> Open in New Tab
+                                                </a>
+                                            </div>
                                         ) : (
-                                            <div style={{ color: "#94a3b8" }}><IconGridLarge /></div>
+                                            <iframe
+                                                src={punchOutPreviewUrl}
+                                                className="pud-punchout-iframe"
+                                                title="PunchOut Catalog"
+                                                onError={() => setPunchOutIframeBlocked(true)}
+                                                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-pointer-lock"
+                                            />
                                         )}
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="pud-catalog-fullview-header">
+                                    <div>
+                                        <button
+                                            type="button"
+                                            className="pud-btn pud-btn-outline"
+                                            onClick={closeCatalogDetail}
+                                        >
+                                            <IconChevronLeft /> Back to Catalog
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="pud-catalog-detail-layout">
+                                    <div className="pud-catalog-detail-media">
+                                        <div className="pud-catalog-detail-image-frame">
+                                            {loadingSelectedImages ? (
+                                                <div className="pud-spinner" />
+                                            ) : selectedCatalogImages.length > 0 ? (
+                                                <img
+                                                    src={selectedCatalogImages[selectedImageIndex]}
+                                                    alt={selectedCatalogItem.catalogName}
+                                                    className="pud-catalog-detail-image"
+                                                />
+                                            ) : (
+                                                <div className="pud-catalog-detail-placeholder"><IconGridLarge /></div>
+                                            )}
+
+                                            {selectedCatalogImages.length > 1 && (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={goToPrevImage}
+                                                        title="Previous image"
+                                                        className="pud-catalog-image-nav pud-catalog-image-nav-prev"
+                                                    >
+                                                        <IconChevronLeft />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={goToNextImage}
+                                                        title="Next image"
+                                                        className="pud-catalog-image-nav pud-catalog-image-nav-next"
+                                                    >
+                                                        <IconChevronRight />
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
 
                                         {selectedCatalogImages.length > 1 && (
-                                            <>
-                                                <button
-                                                    type="button"
-                                                    onClick={goToPrevImage}
-                                                    title="Previous image"
-                                                    style={{
-                                                        position: "absolute",
-                                                        left: "10px",
-                                                        top: "50%",
-                                                        transform: "translateY(-50%)",
-                                                        width: "36px",
-                                                        height: "36px",
-                                                        borderRadius: "50%",
-                                                        border: "1px solid #e2e8f0",
-                                                        background: "rgba(255,255,255,0.9)",
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        justifyContent: "center",
-                                                        cursor: "pointer",
-                                                    }}
-                                                >
-                                                    <IconChevronLeft />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={goToNextImage}
-                                                    title="Next image"
-                                                    style={{
-                                                        position: "absolute",
-                                                        right: "10px",
-                                                        top: "50%",
-                                                        transform: "translateY(-50%)",
-                                                        width: "36px",
-                                                        height: "36px",
-                                                        borderRadius: "50%",
-                                                        border: "1px solid #e2e8f0",
-                                                        background: "rgba(255,255,255,0.9)",
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        justifyContent: "center",
-                                                        cursor: "pointer",
-                                                    }}
-                                                >
-                                                    <IconChevronRight />
-                                                </button>
-                                            </>
+                                            <div className="pud-catalog-thumb-row">
+                                                {selectedCatalogImages.map((src, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        onClick={() => setSelectedImageIndex(idx)}
+                                                        className={`pud-catalog-thumb${idx === selectedImageIndex ? " pud-catalog-thumb-active" : ""}`}
+                                                    >
+                                                        <img src={src} alt={`thumb-${idx}`} className="pud-catalog-thumb-img" />
+                                                    </div>
+                                                ))}
+                                            </div>
                                         )}
                                     </div>
 
-                                    {selectedCatalogImages.length > 1 && (
-                                        <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
-                                            {selectedCatalogImages.map((src, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    onClick={() => setSelectedImageIndex(idx)}
-                                                    style={{
-                                                        width: "56px",
-                                                        height: "56px",
-                                                        borderRadius: "8px",
-                                                        overflow: "hidden",
-                                                        cursor: "pointer",
-                                                        border: idx === selectedImageIndex ? "2px solid #2563eb" : "1px solid #e2e8f0",
-                                                        opacity: idx === selectedImageIndex ? 1 : 0.75,
-                                                    }}
-                                                >
-                                                    <img src={src} alt={`thumb-${idx}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
+                                    <div className="pud-catalog-detail-info">
+                                        <h1 className="pud-title" >{selectedCatalogItem.catalogName}</h1>
 
-                                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem"}}>
-                                    <h1 className="pud-title" >{selectedCatalogItem.catalogName}</h1>
-
-                                    {selectedCatalogItem.catalogType && (
-                                        <span className="pud-catalog-card-tag" style={{ display: "inline-block"}}>
-                                            {selectedCatalogItem.catalogType}
-                                        </span>
-                                    )}
-
-                                    {selectedCatalogItem.description && (
-                                        <p className="pud-catalog-card-desc" style={{ fontSize: "14px", lineHeight: 1.6}}>
-                                            {selectedCatalogItem.description}
-                                        </p>
-                                    )}
-
-                                    <div style={{ display: "flex", alignItems: "center", gap: "10px"}}>
-                                        {!!selectedCatalogItem.price && (
-                                            <span className="pud-catalog-card-price" style={{ fontSize: "22px" }}>
-                                                {selectedCatalogItem.currency ? `${selectedCatalogItem.currency} ` : ""}
-                                                {Number(selectedCatalogItem.price).toFixed(2)}
+                                        {selectedCatalogItem.catalogType && (
+                                            <span className="pud-catalog-card-tag">
+                                                {selectedCatalogItem.catalogType}
                                             </span>
                                         )}
-                                        {selectedCatalogItem.unitOfMeasure && (
-                                            <span className="pud-catalog-card-uom">per {selectedCatalogItem.unitOfMeasure}</span>
+
+                                        {selectedCatalogItem.description && (
+                                            <p className="pud-catalog-card-desc pud-catalog-detail-desc">
+                                                {selectedCatalogItem.description}
+                                            </p>
+                                        )}
+
+                                        <div className="pud-catalog-detail-price-row">
+                                            {!!selectedCatalogItem.price && (
+                                                <span className="pud-catalog-card-price pud-catalog-detail-price">
+                                                    {selectedCatalogItem.currency ? `${selectedCatalogItem.currency} ` : ""}
+                                                    {Number(selectedCatalogItem.price).toFixed(2)}
+                                                </span>
+                                            )}
+                                            {selectedCatalogItem.unitOfMeasure && (
+                                                <span className="pud-catalog-card-uom">per {selectedCatalogItem.unitOfMeasure}</span>
+                                            )}
+                                        </div>
+
+                                        {selectedCatalogItem.isPunchOut && selectedCatalogItem.punchOutUrl && (
+                                            <button
+                                                className="pud-btn pud-btn-message"
+                                                onClick={() => handlePunchOutPreview(selectedCatalogItem.punchOutUrl)}
+                                            >
+                                                <IconExternalLink className="pud-icon-mr" /> View Catalog
+                                            </button>
+                                        )}
+
+                                        {(selectedCatalogItem.segmentTitle || selectedCatalogItem.familyTitle || selectedCatalogItem.classTitle || selectedCatalogItem.commodityTitle) && (
+                                            <div className="pud-catalog-card-classification">
+                                                <div className="pud-catalog-form-section-title">Classification</div>
+                                                {selectedCatalogItem.segmentTitle && (
+                                                    <div className="pud-catalog-classification-row">
+                                                        <span className="pud-catalog-classification-label">Segment:</span>
+                                                        <span className="pud-catalog-classification-value">{selectedCatalogItem.segment} - {selectedCatalogItem.segmentTitle}</span>
+                                                    </div>
+                                                )}
+                                                {selectedCatalogItem.familyTitle && (
+                                                    <div className="pud-catalog-classification-row">
+                                                        <span className="pud-catalog-classification-label">Family:</span>
+                                                        <span className="pud-catalog-classification-value">{selectedCatalogItem.family} - {selectedCatalogItem.familyTitle}</span>
+                                                    </div>
+                                                )}
+                                                {selectedCatalogItem.classTitle && (
+                                                    <div className="pud-catalog-classification-row">
+                                                        <span className="pud-catalog-classification-label">Class:</span>
+                                                        <span className="pud-catalog-classification-value">{selectedCatalogItem.class} - {selectedCatalogItem.classTitle}</span>
+                                                    </div>
+                                                )}
+                                                {selectedCatalogItem.commodityTitle && (
+                                                    <div className="pud-catalog-classification-row">
+                                                        <span className="pud-catalog-classification-label">Commodity:</span>
+                                                        <span className="pud-catalog-classification-value">{selectedCatalogItem.commodity} - {selectedCatalogItem.commodityTitle}</span>
+                                                    </div>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
-
-                                    {selectedCatalogItem.isPunchOut && selectedCatalogItem.punchOutUrl && (
-                                        <button
-                                            className="pud-btn pud-btn-message"
-                                            onClick={() => handlePunchOutPreview(selectedCatalogItem.punchOutUrl)}
-                                            style={{ background: "#2563eb", color: "#ffffff"}}
-                                        >
-                                            <IconExternalLink style={{ marginRight: "6px" }} /> View Catalog
-                                        </button>
-                                    )}
-
-                                    {(selectedCatalogItem.segmentTitle || selectedCatalogItem.familyTitle || selectedCatalogItem.classTitle || selectedCatalogItem.commodityTitle) && (
-                                        <div className="pud-catalog-card-classification">
-                                            <div className="pud-catalog-form-section-title">Classification</div>
-                                            {selectedCatalogItem.segmentTitle && (
-                                                <div className="pud-catalog-classification-row">
-                                                    <span className="pud-catalog-classification-label">Segment:</span>
-                                                    <span className="pud-catalog-classification-value">{selectedCatalogItem.segment} - {selectedCatalogItem.segmentTitle}</span>
-                                                </div>
-                                            )}
-                                            {selectedCatalogItem.familyTitle && (
-                                                <div className="pud-catalog-classification-row">
-                                                    <span className="pud-catalog-classification-label">Family:</span>
-                                                    <span className="pud-catalog-classification-value">{selectedCatalogItem.family} - {selectedCatalogItem.familyTitle}</span>
-                                                </div>
-                                            )}
-                                            {selectedCatalogItem.classTitle && (
-                                                <div className="pud-catalog-classification-row">
-                                                    <span className="pud-catalog-classification-label">Class:</span>
-                                                    <span className="pud-catalog-classification-value">{selectedCatalogItem.class} - {selectedCatalogItem.classTitle}</span>
-                                                </div>
-                                            )}
-                                            {selectedCatalogItem.commodityTitle && (
-                                                <div className="pud-catalog-classification-row">
-                                                    <span className="pud-catalog-classification-label">Commodity:</span>
-                                                    <span className="pud-catalog-classification-value">{selectedCatalogItem.commodity} - {selectedCatalogItem.commodityTitle}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {selectedCatalogItem.assets && selectedCatalogItem.assets.length > 0 && (
-                                        <div className="pud-catalog-card-assets">
-                                            <div className="pud-catalog-form-section-title">
-                                                Attached Files ({selectedCatalogItem.assets.length})
-                                            </div>
-                                            {selectedCatalogItem.assets.map((asset) => (
-                                                <div className="pud-catalog-card-asset" key={asset.id}>
-                                                    <span className="pud-catalog-asset-filename">
-                                                        {asset.fileName}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
                                 </div>
-                            </div>
-                        </>
+                            </>
+                        )
                     ) : (
                         <>
                             <div className="pud-catalog-fullview-header">
@@ -1551,6 +1465,7 @@ const Catalog: React.FC<CatalogProps> = ({
                                         className="pud-btn pud-btn-outline"
                                         onClick={() => {
                                             setShowCatalogListModal(false);
+                                            setShowPunchOutFullPage(false);
                                             onCloseCatalogList?.();
                                         }}
                                     >
@@ -1561,7 +1476,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                             type="button"
                                             className="pud-btn pud-btn-message"
                                             onClick={() => setShowCreateCatalogModal(true)}
-                                            style={{ background: "#2563eb", color: "#ffffff" }}
                                         >
                                             + Add Catalog
                                         </button>
@@ -1570,17 +1484,17 @@ const Catalog: React.FC<CatalogProps> = ({
                             </div>
 
                             {loadingCatalogList ? (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
-                                    <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                                <div className="pud-catalog-state-center">
+                                    <div className="pud-catalog-state-loading-inner">
                                         <div className="pud-spinner" />
                                         <span>Loading your catalogs...</span>
                                     </div>
                                 </div>
                             ) : catalogListError ? (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px', padding: '16px' }}>
-                                    <div style={{ color: '#ef4444', fontSize: '14px', textAlign: 'center' }}>
+                                <div className="pud-catalog-state-center pud-catalog-state-padded">
+                                    <div className="pud-catalog-state-error-inner">
                                         {catalogListError}
-                                        <div style={{ marginTop: '12px' }}>
+                                        <div className="pud-catalog-state-error-retry">
                                             <button
                                                 type="button"
                                                 className="pud-btn pud-btn-outline"
@@ -1603,51 +1517,71 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
                                 </div>
                             ) : (
-                                <div className="pud-catalog-grid">
-                                    {catalogList.map((item) => (
-                                        <div
-                                            className="pud-catalog-card"
-                                            key={item.id}
-                                            onClick={() => openCatalogDetail(item)}
-                                            style={{ cursor: "pointer" }}
-                                            role="button"
-                                            title={`View ${item.catalogName}`}
-                                        >
-                                            <div className="pud-catalog-card-media">
-                                                {(() => {
-                                                    const firstAssetId = item.assets && item.assets[0]?.id;
-                                                    const imageSrc = firstAssetId ? catalogAssetImages[firstAssetId] : undefined;
-                                                    return imageSrc ? (
-                                                        <img src={imageSrc} alt={item.catalogName} />
-                                                    ) : (
-                                                        <div className="pud-catalog-card-media-placeholder"><IconFileGeneric /></div>
-                                                    );
-                                                })()}
-                                                {item.assets && item.assets.length > 1 && (
-                                                    <span className="pud-catalog-card-source">
-                                                        {item.assets.length} Photos
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="pud-catalog-card-body">
-                                                <div className="pud-catalog-card-name" title={item.catalogName}>{item.catalogName}</div>
-                                                {item.description && (
-                                                    <div className="pud-catalog-card-desc">{item.description}</div>
-                                                )}
-                                                <div className="pud-catalog-card-meta">
-                                                    {!!item.price && (
-                                                        <span className="pud-catalog-card-price">
-                                                            {item.currency ? `${item.currency} ` : ""}{Number(item.price).toFixed(2)}
-                                                        </span>
+                                <>
+                                    <div className="pud-catalog-grid">
+                                        {pagedCatalogList.map((item) => (
+                                            <div
+                                                className="pud-catalog-card"
+                                                key={item.id}
+                                                onClick={() => openCatalogDetail(item)}
+                                                role="button"
+                                                title={`View ${item.catalogName}`}
+                                            >
+                                                <div className="pud-catalog-card-media">
+                                                    {(() => {
+                                                        const firstAssetId = item.assets && item.assets[0]?.id;
+                                                        const imageSrc = firstAssetId ? catalogAssetImages[firstAssetId] : undefined;
+                                                        return imageSrc ? (
+                                                            <img src={imageSrc} alt={item.catalogName} />
+                                                        ) : (
+                                                            <div className="pud-catalog-card-media-placeholder"><IconFileGeneric /></div>
+                                                        );
+                                                    })()}
+                                                </div>
+                                                <div className="pud-catalog-card-body">
+                                                    <div className="pud-catalog-card-name" title={item.catalogName}>{item.catalogName}</div>
+                                                    {item.description && (
+                                                        <div className="pud-catalog-card-desc">{item.description}</div>
                                                     )}
-                                                    {item.unitOfMeasure && (
-                                                        <span className="pud-catalog-card-uom">{item.unitOfMeasure}</span>
-                                                    )}
+                                                    <div className="pud-catalog-card-meta">
+                                                        {!!item.price && (
+                                                            <span className="pud-catalog-card-price">
+                                                                {item.currency ? `${item.currency} ` : ""}{Number(item.price).toFixed(2)}
+                                                            </span>
+                                                        )}
+                                                        {item.unitOfMeasure && (
+                                                            <span className="pud-catalog-card-uom">{item.unitOfMeasure}</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
+                                        ))}
+                                    </div>
+
+                                    {catalogList.length > CATALOG_PAGE_SIZE && (
+                                        <div className="pud-catalog-pagination">
+                                            <button
+                                                type="button"
+                                                className="pud-btn pud-btn-outline"
+                                                disabled={catalogPage === 0}
+                                                onClick={() => setCatalogPage((p) => Math.max(0, p - 1))}
+                                            >
+                                                <IconChevronLeft /> Previous
+                                            </button>
+                                            <span className="pud-catalog-pagination-info">
+                                                Page {catalogPage + 1} of {catalogTotalPages}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                className="pud-btn pud-btn-outline"
+                                                disabled={catalogPage >= catalogTotalPages - 1}
+                                                onClick={() => setCatalogPage((p) => Math.min(catalogTotalPages - 1, p + 1))}
+                                            >
+                                                Next <IconChevronRight />
+                                            </button>
                                         </div>
-                                    ))}
-                                </div>
+                                    )}
+                                </>
                             )}
                         </>
                     )}

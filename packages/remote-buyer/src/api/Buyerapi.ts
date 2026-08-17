@@ -8,6 +8,14 @@ import type {
 } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
 
+export interface BuyerCatalogAssetItem {
+  id: string;
+  assetType: string | null;
+  assetName: string;
+  fileType: string | null;
+  fileName: string;
+}
+
 export interface BuyerCatalogResponse {
   supplierId: string;
   catalogId: string;
@@ -29,6 +37,7 @@ export interface BuyerCatalogResponse {
   isPunchOut: boolean;
   punchOutUrl: string;
   hasCatalog: boolean;
+  asset: BuyerCatalogAssetItem[];
 }
 import type { ErrorResponseDto } from "@vosox/shared-ui";
 import { isErrorResponse } from "@vosox/shared-ui";
@@ -282,6 +291,28 @@ export interface VerificationTemplateQuestionDto {
 
 export interface CreateVerificationTemplateQuestionPayload {
   verificationTemplateQuestionDto: VerificationTemplateQuestionDto;
+}
+
+
+export interface UpdateVerificationTemplateQuestionOptionDto {
+  id?: string;
+  optionText: string;
+  displayOrder: number;
+}
+
+export interface UpdateVerificationTemplateQuestionDto {
+  id: string;
+  verificationTemplateId: string;
+  question: string;
+  questionType: string;
+  isRequired: boolean;
+  displayOrder: number;
+  isDeleted?: boolean;
+  options: UpdateVerificationTemplateQuestionOptionDto[];
+}
+
+export interface UpdateVerificationTemplateQuestionPayload {
+  verificationTemplateQuestionDto: UpdateVerificationTemplateQuestionDto;
 }
 
 
@@ -726,11 +757,62 @@ export const downloadBuyerAsset = async (
   }
 };
 
+export interface BuyerAssetDto {
+  id: string;
+  assetName?: string;
+  fileName?: string;
+  assetType?: string | null;
+  fileType?: string | null;
+  contentType?: string;
+  fileBytes?: string;
+  url?: string;
+  fileUrl?: string;
+}
 
-export const fetchBuyerVerificationTemplates = async (): Promise<VerificationTemplate[] | ErrorResponseDto> => {
+export const fetchBuyerAsset = async (
+  assetId: string
+): Promise<BuyerAssetDto | ErrorResponseDto> => {
+  try {
+    const response = await axiosInstance.get<BuyerAssetDto>(
+      `/api/v1/supplier/asset/${assetId}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch asset',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching the asset.',
+    };
+  }
+};
+
+
+export const fetchBuyerVerificationTemplates = async (
+  index: number = 0,
+  limit: number = 10
+): Promise<VerificationTemplate[] | ErrorResponseDto> => {
   try {
     const response = await axiosInstance.get<VerificationTemplate[]>(
-      '/api/v1/buyer/get-verification-template'
+      '/api/v1/buyer/get-verification-template',
+      { params: { index, limit } }
     );
     return Array.isArray(response.data) ? response.data : [];
   } catch (error: any) {
@@ -863,6 +945,78 @@ export const fetchBuyerVerificationTemplateById = async (
       statusCode: 500,
       message: 'Unexpected Error',
       description: 'Something went wrong while fetching the verification template.',
+    };
+  }
+};
+
+
+export const updateVerificationTemplateQuestion = async (
+  payload: UpdateVerificationTemplateQuestionPayload
+): Promise<string | ErrorResponseDto> => {
+  try {
+    const response = await axiosInstance.put<string>(
+      '/api/v1/buyer/update-verification-template-question',
+      payload
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: "Failed to update template question",
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while updating the verification template question.',
+    };
+  }
+};
+
+export const deleteVerificationTemplate = async (
+  templateId: string
+): Promise<boolean | ErrorResponseDto> => {
+  try {
+    const response = await axiosInstance.delete<boolean>(
+      `/api/v1/buyer/verification-template/${templateId}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message:'Failed to delete template',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while deleting the verification template.',
     };
   }
 };

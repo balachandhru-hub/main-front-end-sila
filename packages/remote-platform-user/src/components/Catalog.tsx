@@ -251,7 +251,6 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
         setCreatingCatalog(true);
         setCreateCatalogError(null);
         try {
-            // organizationId comes from the logged-in user's token claim, mirrored into the auth store
             const organizationId =
                 useAuthStore.getState().organizationId || sessionStorage.getItem("vosox_organization_id") || "";
 
@@ -350,9 +349,6 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
         setUploadingCatalog(true);
         setUploadCatalogError(null);
         try {
-            // TODO: replace with real catalog upload API call once the endpoint is available
-            // const formData = new FormData();
-            // uploadCatalogFiles.forEach((f) => formData.append("files", f));
             await new Promise((resolve) => setTimeout(resolve, 600));
 
             const newItems: CatalogItem[] = await Promise.all(
@@ -402,11 +398,9 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
             setUploadingCatalog(false);
         }
     };
-    // ---- Unit of Measure options state ----
     const [unitOptions, setUnitOptions] = useState<UnitItem[]>([]);
     const [loadingUnits, setLoadingUnits] = useState(false);
 
-    // ---- Load Units (lazy-load on click/focus) ----
     const loadUnits = async () => {
         if (unitOptions.length > 0 || loadingUnits) return;
         setLoadingUnits(true);
@@ -423,7 +417,6 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
 
     return (
         <>
-            {/* ---------- Sidebar nav entry ---------- */}
             <div
                 className="pud-nav-item"
                 onClick={() => setIsCatalogExpanded((prev) => !prev)}
@@ -432,7 +425,6 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                 <span className="pud-nav-label">Catalog</span>
                 <span
                     className="pud-nav-chevron"
-                    style={{ transform: isCatalogExpanded ? "rotate(90deg)" : "rotate(0deg)" }}
                 >
                     <IconChevronRight />
                 </span>
@@ -463,7 +455,6 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                 </div>
             )}
 
-            {/* ---------- Create Catalog Modal ---------- */}
             {showCreateCatalogModal && (
                 <div className="pud-modal-overlay" onClick={closeCreateCatalogModal}>
                     <div className="pud-modal pud-modal-rfq" onClick={(e) => e.stopPropagation()}>
@@ -566,7 +557,6 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                         </select>
                                     </div>
 
-                                    {/* ---- Classification (UNSPSC-style) ---- */}
                                     <div className="pud-catalog-form-section">
                                         <span className="pud-catalog-form-section-title">Classification</span>
                                     </div>
@@ -708,7 +698,6 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                                 ref={catalogFileInputRef}
                                                 type="file"
                                                 accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
-                                                style={{ display: "none" }}
                                                 onChange={(e) => handleCatalogFileSelect(e.target.files ? e.target.files[0] : null)}
                                             />
                                             {catalogFilePreview ? (
@@ -738,7 +727,6 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                     type="button"
                                     className="pud-btn pud-btn-outline"
                                     onClick={closeCreateCatalogModal}
-                                    style={{ marginRight: "10px" }}
                                 >
                                     Cancel
                                 </button>
@@ -746,7 +734,6 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                     type="submit"
                                     className="pud-btn pud-btn-message"
                                     disabled={creatingCatalog}
-                                    style={{ background: "#2563eb", color: "#ffffff" }}
                                 >
                                     {creatingCatalog ? "Saving..." : "Save Catalog"}
                                 </button>
@@ -799,7 +786,6 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                     type="file"
                                     multiple
                                     accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
-                                    style={{ display: "none" }}
                                     onChange={(e) => {
                                         handleUploadCatalogFilesAdd(e.target.files);
                                         e.target.value = "";
@@ -850,7 +836,6 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                 type="button"
                                 className="pud-btn pud-btn-outline"
                                 onClick={closeUploadCatalogModal}
-                                style={{ marginRight: "10px" }}
                             >
                                 Cancel
                             </button>
@@ -859,7 +844,6 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                 className="pud-btn pud-btn-message"
                                 disabled={uploadingCatalog || uploadCatalogFiles.length === 0}
                                 onClick={handleUploadCatalogSubmit}
-                                style={{ background: "#2563eb", color: "#ffffff" }}
                             >
                                 {uploadingCatalog ? "Uploading..." : `Upload ${uploadCatalogFiles.length > 0 ? `(${uploadCatalogFiles.length})` : ""}`}
                             </button>
@@ -868,10 +852,6 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                 </div>
             )}
 
-            {/* ---------- Show Catalogs: full-page view ----------
-                Portaled into the main content area (rendered by the parent
-                dashboard) instead of a modal, so it opens exactly like the
-                other sidebar options do — a full-width page swap. */}
             {showCatalogListModal && fullViewContainer && createPortal(
                 <>
                     <div className="pud-catalog-fullview-header">
@@ -896,7 +876,6 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                 type="button"
                                 className="pud-btn pud-btn-message"
                                 onClick={() => setShowCreateCatalogModal(true)}
-                                style={{ background: "#2563eb", color: "#ffffff" }}
                             >
                                 + Add Catalog
                             </button>
