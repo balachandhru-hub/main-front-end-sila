@@ -445,6 +445,9 @@ const BuyersDashboard: React.FC = () => {
   const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
   const [allRfqsError, setAllRfqsError] = useState<string | null>(null);
   const [allRfqsLoaded, setAllRfqsLoaded] = useState(false);
+  const [allRfqsPage, setAllRfqsPage] = useState(1);
+  const [allRfqsHasMore, setAllRfqsHasMore] = useState(true);
+  const RFQ_PAGE_SIZE = 10;
 
   const [fullPageRfq, setFullPageRfq] = useState<any | null>(null);
   const [loadingFullPageRfq, setLoadingFullPageRfq] = useState(false);
@@ -455,22 +458,52 @@ const BuyersDashboard: React.FC = () => {
     setRfqPageView("allRfqs");
     if (allRfqsLoaded || loadingAllRfqs) return;
 
+    // load page 1 when opening All RFQs
+    await loadAllRfqsPage(1);
+  };
+
+  const getRfqPageRange = (page: number) => {
+    const index = (page - 1) * RFQ_PAGE_SIZE;
+    const limit = RFQ_PAGE_SIZE; // page size
+    return { index, limit };
+  };
+
+  const loadAllRfqsPage = async (page: number) => {
+    if (!buyerId) {
+      setAllRfqsList(rfqs.length > 0 ? rfqs : mockRfqs);
+      setAllRfqsHasMore(false);
+      setAllRfqsLoaded(true);
+      return;
+    }
+
     setLoadingAllRfqs(true);
     setAllRfqsError(null);
+
     try {
-      if (!buyerId) {
-        setAllRfqsList(rfqs.length > 0 ? rfqs : mockRfqs);
-      } else {
-        const data = await fetchBuyerRFQs({ buyerId, index: 0, limit: 100 });
-        setAllRfqsList(data.length > 0 ? data : mockRfqs);
-      }
+      const { index, limit } = getRfqPageRange(page);
+      const data = await fetchBuyerRFQs({ buyerId, index, limit });
+
+      setAllRfqsList(data.length > 0 ? data : mockRfqs);
+      setAllRfqsPage(page);
+      setAllRfqsHasMore(data.length === RFQ_PAGE_SIZE);
     } catch (err: any) {
       setAllRfqsError(err.message || "Failed to load the full RFQ list.");
       setAllRfqsList(rfqs.length > 0 ? rfqs : mockRfqs);
+      setAllRfqsHasMore(false);
     } finally {
       setLoadingAllRfqs(false);
       setAllRfqsLoaded(true);
     }
+  };
+
+  const handleAllRfqsNextPage = () => {
+    if (loadingAllRfqs || !allRfqsHasMore) return;
+    loadAllRfqsPage(allRfqsPage + 1);
+  };
+
+  const handleAllRfqsPrevPage = () => {
+    if (loadingAllRfqs || allRfqsPage <= 1) return;
+    loadAllRfqsPage(allRfqsPage - 1);
   };
 
   const handleBackToDashboard = () => {
@@ -727,11 +760,12 @@ const BuyersDashboard: React.FC = () => {
                     No RFQs found.
                   </div>
                 ) : (
-                  <div className="pud-rfq-table-container">
-                    <table className="pud-rfq-items-table pud-allrfqs-table">
+                  <div>
+                    <div className="pud-rfq-table-container">
+                      <table className="pud-rfq-items-table pud-allrfqs-table">
                       <thead>
                         <tr>
-                          <th style={{ width: '48px' }}>#</th>
+                          <th style={{ width: '48px' }}>S.No</th>
                           <th>RFQ Number</th>
                           <th>Title</th>
                           <th>Organization</th>
@@ -743,7 +777,7 @@ const BuyersDashboard: React.FC = () => {
                       <tbody>
                         {allRfqsList.map((rfq: any, idx: number) => (
                           <tr key={rfq.rfqId || idx}>
-                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
+                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
                             <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
                             <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
                             <td>{rfq.organizationName}</td>
@@ -764,7 +798,32 @@ const BuyersDashboard: React.FC = () => {
                           </tr>
                         ))}
                       </tbody>
-                    </table>
+                      </table>
+                    </div>
+
+                    <div className="budp-pagination budp-allrfqs-pagination">
+                      <button
+                        type="button"
+                        className={`budp-page-btn${allRfqsPage === 1 || loadingAllRfqs ? " budp-page-btn-disabled" : ""}`}
+                        onClick={handleAllRfqsPrevPage}
+                        disabled={allRfqsPage <= 1 || loadingAllRfqs}
+                        aria-label="Previous RFQ page"
+                      >
+                        <IconChevronLeft />
+                      </button>
+
+                      <span className="budp-page-number">Page {allRfqsPage}</span>
+
+                      <button
+                        type="button"
+                        className={`budp-page-btn${!allRfqsHasMore || loadingAllRfqs ? " budp-page-btn-disabled" : ""}`}
+                        onClick={handleAllRfqsNextPage}
+                        disabled={!allRfqsHasMore || loadingAllRfqs}
+                        aria-label="Next RFQ page"
+                      >
+                        <IconChevronRight />
+                      </button>
+                    </div>
                   </div>
                 )}
               </>

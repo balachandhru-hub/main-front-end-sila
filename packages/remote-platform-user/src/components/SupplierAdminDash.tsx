@@ -1467,7 +1467,7 @@ const SupplierAdminDash: React.FC = () => {
                         <table className="pud-rfq-items-table pud-allrfqs-table">
                           <thead>
                             <tr>
-                              <th style={{ width: '48px' }}>#</th>
+                              <th style={{ width: '48px' }}>S.No</th>
                               <th>RFQ Number</th>
                               <th>Title</th>
                               <th>Organization</th>
@@ -1479,7 +1479,7 @@ const SupplierAdminDash: React.FC = () => {
                           <tbody>
                             {allRfqsList.map((rfq: any, idx: number) => (
                               <tr key={rfq.rfqId || idx}>
-                                <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
+                                <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
                                 <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
                                 <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
                                 <td>{rfq.organizationName}</td>
@@ -1503,25 +1503,27 @@ const SupplierAdminDash: React.FC = () => {
                         </table>
                       </div>
 
-                      <div className="pud-allrfqs-pagination">
+                      <div className="pud-pagination pud-allrfqs-pagination">
                         <button
                           type="button"
-                          className="pud-allrfqs-page-btn"
-                          disabled={allRfqsPage <= 1 || loadingAllRfqs}
+                          className={`pud-page-btn${allRfqsPage === 1 || loadingAllRfqs ? " pud-page-btn-disabled" : ""}`}
                           onClick={handleAllRfqsPrevPage}
-                          title="Previous page"
+                          disabled={allRfqsPage <= 1 || loadingAllRfqs}
+                          aria-label="Previous RFQ page"
                         >
-                          ←
+                          <IconChevronLeft />
                         </button>
-                        <span className="pud-allrfqs-page-number">Page {allRfqsPage}</span>
+
+                        <span className="pud-page-number">Page {allRfqsPage}</span>
+
                         <button
                           type="button"
-                          className="pud-allrfqs-page-btn"
-                          disabled={!allRfqsHasMore || loadingAllRfqs}
+                          className={`pud-page-btn${!allRfqsHasMore || loadingAllRfqs ? " pud-page-btn-disabled" : ""}`}
                           onClick={handleAllRfqsNextPage}
-                          title="Next page"
+                          disabled={!allRfqsHasMore || loadingAllRfqs}
+                          aria-label="Next RFQ page"
                         >
-                          →
+                          <IconChevronRight />
                         </button>
                       </div>
                     </>

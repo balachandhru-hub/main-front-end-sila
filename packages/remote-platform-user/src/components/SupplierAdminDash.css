@@ -399,6 +399,44 @@
     text-decoration: none;
 }
 
+/* ---------- Pagination (copied from SupplierDashboard) ---------- */
+.pud-pagination {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.pud-page-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid #e6e8ec;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #6b7280;
+}
+
+.pud-page-btn-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pud-page-btn-active {
+    background: #2f6feb;
+    border-color: #2f6feb;
+    color: #ffffff;
+}
+
+.pud-page-number{
+    font-size: 13px;
+    padding: 0 6px;
+}
+
 .sad-btn {
     border-radius: 0.4375rem;
     font-size: 0.84375rem;

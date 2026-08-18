@@ -1504,7 +1504,7 @@ const SupplierDashboard: React.FC = () => {
                       <table className="pud-rfq-items-table pud-allrfqs-table">
                         <thead>
                           <tr>
-                            <th style={{ width: '48px' }}>#</th>
+                            <th style={{ width: '48px' }}>S.No</th>
                             <th>RFQ Number</th>
                             <th>Title</th>
                             <th>Organization</th>

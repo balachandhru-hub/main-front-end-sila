@@ -255,10 +255,47 @@
 }
 
 .pud-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 1rem;
-    padding: 0.5rem 0rem;
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 1rem;
+}
+
+/* ---------- Buyer dashboard pagination (prefixed budp-) ---------- */
+.budp-pagination {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.budp-page-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid #e6e8ec;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #6b7280;
+}
+
+.budp-page-btn-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.budp-page-btn-active {
+    background: #2f6feb;
+    border-color: #2f6feb;
+    color: #ffffff;
+}
+
+.budp-page-number{
+    font-size: 13px;
+    padding: 0 6px;
 }
 
 .pud-stat-card {
