@@ -569,3 +569,7 @@
   background: #ebf8ff;
   color: #3182ce;
 }
+
+.dept-settings-card-icon.templates {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}

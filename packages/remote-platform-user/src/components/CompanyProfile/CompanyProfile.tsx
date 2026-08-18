@@ -23,7 +23,8 @@ import {
   FaIndustry,
   FaBriefcase,
   FaTags,
-  FaUserCircle
+  FaUserCircle,
+  FaCog
 } from 'react-icons/fa';
 import { useNetworkAdminAuthStore } from '../../store/useAuthStore';
 import { getNetworkAdminProfile } from '../../api/networkAdminApi';
@@ -48,6 +49,7 @@ interface CompanyProfileProps {
   isStatusLoading?: boolean;
   statusError?: string | null;
   onViewDocument?: (assetId: string, fileName?: string) => void;
+  onSettingsClick?: () => void;
 }
 
 const formatCurrency = (amount?: number, currency?: string) => {
@@ -128,6 +130,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
   isStatusLoading = false,
   statusError = null,
   onViewDocument,
+  onSettingsClick,
 }) => {
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
 
@@ -231,38 +234,37 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
   return (
     <div className="cp-page">
       {showHeader && (
-        <div className="cp-page-header" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {onBack && (
+        <div className="cp-page-header cp-page-header-flex">
+          <div className="cp-page-header-left">
+            {onBack && (
+              <button
+                onClick={onBack}
+                title="Back to Dashboard"
+                className="cp-back-btn"
+              >
+                <FaArrowLeft className="cp-back-btn-icon" /> Back
+              </button>
+            )}
+            <div>
+              <h1 className="cp-page-title">Company Details</h1>
+              <p className="cp-page-subtitle">View and manage {entityLabel.toLowerCase()} information</p>
+            </div>
+          </div>
+
+          {onSettingsClick && (
             <button
-              onClick={onBack}
-              title="Back to Dashboard"
-              style={{
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '8px 14px',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                color: '#334155',
-                fontSize: '14px',
-                fontWeight: 600,
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                transition: 'all 0.2s ease',
-              }}
+              className="plat-icon-btn cp-settings-btn"
+              onClick={onSettingsClick}
+              title="Settings"
             >
-              <FaArrowLeft style={{ marginRight: '6px' }} /> Back
+              <FaCog />
             </button>
           )}
-          <div>
-            <h1 className="cp-page-title">Company Details</h1>
-            <p className="cp-page-subtitle">View and manage {entityLabel.toLowerCase()} information</p>
-          </div>
         </div>
       )}
 
       {statusError && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '14px' }}>
+        <div className="cp-status-error-banner">
           {statusError}
         </div>
       )}
@@ -270,24 +272,13 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
       <div className="cp-container">
         <div className="cp-header-card">
           {onBack && !showHeader && (
-            <div style={{ marginBottom: '12px' }}>
+            <div className="cp-back-btn-wrapper">
               <button
                 onClick={onBack}
                 title="Back to Dashboard"
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '6px 14px',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  color: '#334155',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                }}
+                className="cp-back-btn cp-back-btn-sm"
               >
-                <FaArrowLeft style={{ marginRight: '6px' }} /> Back
+                <FaArrowLeft className="cp-back-btn-icon" /> Back
               </button>
             </div>
           )}
@@ -501,14 +492,13 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                                       {reg.asset?.fileName || 'Document'}
                                     </span>
                                     <span
-                                      className="cp-doc-actions"
+                                      className={`cp-doc-actions ${onViewDocument ? 'cp-doc-actions-clickable' : 'cp-doc-actions-default'}`}
                                       onClick={() => {
                                         const assetId = reg.asset?.id || (reg.asset as any)?.id;
                                         if (assetId && onViewDocument) {
                                           onViewDocument(assetId, reg.asset?.fileName);
                                         }
                                       }}
-                                      style={{ cursor: onViewDocument ? 'pointer' : 'default' }}
                                       title="View Document"
                                     >
                                       <FaEye className="cp-eye-icon" />

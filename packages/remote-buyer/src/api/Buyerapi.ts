@@ -807,12 +807,13 @@ export const fetchBuyerAsset = async (
 
 export const fetchBuyerVerificationTemplates = async (
   index: number = 0,
-  limit: number = 10
+  limit: number = 10,
+  organizationId?: string
 ): Promise<VerificationTemplate[] | ErrorResponseDto> => {
   try {
     const response = await axiosInstance.get<VerificationTemplate[]>(
       '/api/v1/buyer/get-verification-template',
-      { params: { index, limit } }
+      { params: { index, limit, organizationId: organizationId || undefined } }
     );
     return Array.isArray(response.data) ? response.data : [];
   } catch (error: any) {
@@ -843,12 +844,14 @@ export const fetchBuyerVerificationTemplates = async (
 };
 
 export const createBuyerVerificationTemplate = async (
-  payload: CreateVerificationTemplatePayload
+  payload: CreateVerificationTemplatePayload,
+  organizationId?: string
 ): Promise<string | ErrorResponseDto> => {
   try {
     const response = await axiosInstance.post<string>(
       '/api/v1/buyer/verification-template',
-      payload
+      payload,
+      { params: { organizationId: organizationId || undefined } }
     );
     return response.data;
   } catch (error: any) {
