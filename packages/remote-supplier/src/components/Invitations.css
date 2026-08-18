@@ -1,4 +1,4 @@
-/* ---------- Tabs bar ---------- */
+/* ---------- Shell (used by parent dashboard) ---------- */
 .inv-shell {
   display: flex;
   min-height: 100vh;
@@ -15,21 +15,23 @@
   background: white;
 }
 
+/* ---------- Page header ---------- */
 .inv-title {
   font-family: 'Segoe UI', sans-serif;
   font-size: 23px;
   font-weight: 500;
   color: #111827;
   letter-spacing: -0.02em;
-  margin: 0 0 6px 0;
+  margin: 0;
 }
 
 .inv-subtitle {
   font-size: 15px;
   color: #64748b;
-  margin: 0 0 20px 0;
+  margin: 6px 0 0 0;
 }
 
+/* ---------- Tabs bar ---------- */
 .inv-tabs-bar {
     background: #ffffff;
     border: 1px solid #e6e8ec;
@@ -39,7 +41,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 20px;
+    margin-top: 20px;
     flex-wrap: wrap;
 }
 
@@ -98,6 +100,48 @@
 
 .inv-search input::placeholder {
     color: #9ca3af;
+}
+
+/* ---------- Loading / error states (shared by list + modal) ---------- */
+.inv-loading-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+}
+
+.inv-loading-inner {
+    color: #64748b;
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.inv-spinner {
+    width: 22px;
+    height: 22px;
+    border: 3px solid #e2e8f0;
+    border-top-color: #2f6feb;
+    border-radius: 50%;
+    animation: inv-spin 0.7s linear infinite;
+}
+
+@keyframes inv-spin {
+    to { transform: rotate(360deg); }
+}
+
+.inv-error-text {
+    padding: 24px;
+    text-align: center;
+    color: #ef4444;
+}
+
+.inv-action-error {
+    color: #ef4444;
+    font-size: 12px;
+    margin-top: 8px;
 }
 
 /* ---------- Card grid ---------- */
@@ -212,7 +256,6 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 12px;
 }
 
 .inv-code-badge {
@@ -232,6 +275,13 @@
     color: #9ca3af;
 }
 
+/* Card's own title (distinct from the page-level .inv-title) */
+.inv-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+    margin-top: 12px;
+}
 
 .inv-company {
     display: flex;
@@ -239,14 +289,15 @@
     gap: 5px;
     font-size: 13px;
     color: #6b7280;
-    margin-bottom: 10px;
+    margin-top: 6px;
 }
 
 .inv-description {
     font-size: 13px;
     line-height: 1.5;
     color: #6b7280;
-    margin: 0 0 18px 0;
+    margin: 0;
+    margin-top: 10px;
     flex: 1;
 }
 
@@ -329,6 +380,16 @@
     background: #255bcc;
 }
 
+.inv-btn-outline {
+    background: #ffffff;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+}
+
+.inv-btn-outline:hover {
+    background: #f8fafc;
+}
+
 /* ---------- Empty state ---------- */
 .inv-empty {
     background: #ffffff;
@@ -351,20 +412,190 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 14px;
 }
 
 .inv-empty-title {
     font-size: 14.5px;
     font-weight: 600;
     color: #111827;
-    margin-bottom: 6px;
+    margin-top: 14px;
 }
 
 .inv-empty-subtitle {
     font-size: 13px;
     color: #94a3b8;
     max-width: 360px;
+    margin-top: 6px;
+}
+
+/* ---------- Details modal ---------- */
+.inv-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.inv-modal {
+    background: #ffffff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.inv-modal-header {
+    position: relative;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e6e8ec;
+}
+
+.inv-modal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #2f6feb;
+}
+
+.inv-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+.inv-modal-close:hover {
+    background: #f1f5f9;
+}
+
+.inv-modal-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    margin-top: 10px;
+}
+
+.inv-modal-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12.5px;
+    color: #64748b;
+    margin-top: 8px;
+}
+
+.inv-modal-meta span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.inv-modal-body {
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.inv-modal-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.inv-modal-section-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.inv-modal-desc {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: #475569;
+    white-space: pre-wrap;
+    margin: 0;
+    margin-top: 8px;
+}
+
+.inv-modal-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    background: #f8fafc;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.inv-modal-stat-label {
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.inv-modal-stat-value {
+    font-size: 13px;
+    color: #1e293b;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.inv-modal-qa-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.inv-modal-qa-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.inv-modal-qa-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+}
+
+.inv-modal-qa-question {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.inv-modal-qa-answer {
+    font-size: 12.5px;
+    color: #334155;
+    margin-top: 6px;
+}
+
+.inv-modal-qa-empty {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.inv-modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #e6e8ec;
+    display: flex;
+    justify-content: flex-end;
 }
 
 /* ---------- Responsive ---------- */

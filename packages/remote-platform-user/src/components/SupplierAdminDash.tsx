@@ -5,6 +5,7 @@ import Header from "./Header";
 import UserAdmin from "../UserAdmin";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import Catalog from "../../../remote-supplier/src/components/Catalog";
+import Invitations from "../../../remote-supplier/src/components/Invitations";
 import { useNetworkAdminAuthStore } from "../store/useAuthStore";
 import {
   fetchRFQMasterData,
@@ -233,6 +234,7 @@ const navItemsBeforeCatalog: { key: string; icon: React.ReactNode; label: string
 ];
 
 const navItemsAfterCatalog: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
+  { key: "invitations", icon: <IconMail />, label: "Invitations" },
   { key: "purchaseOrders", icon: <IconBag />, label: "Purchase Orders" },
   { key: "messages", icon: <IconMessageSquare />, label: "Messages" },
   { key: "companyProfile", icon: <NavIconBuilding />, label: "Company Profile" },
@@ -1430,7 +1432,9 @@ const SupplierAdminDash: React.FC = () => {
                 <UserAdmin />
               ) : activeNav === "companyProfile" ? (
                 <CompanyProfile mode="network-admin" showHeader={false} />
-              ) : rfqPageView === "allRfqs" ? (
+              ) : activeNav === "invitations" ? (
+  <Invitations isAdmin adminRole="supplier" />
+): rfqPageView === "allRfqs" ? (
                 <>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
                     <div>

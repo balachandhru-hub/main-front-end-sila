@@ -478,7 +478,8 @@ const BuyerAdminDash: React.FC = () => {
   const [loadingFullPageRfq, setLoadingFullPageRfq] = useState(false);
   const [fullPageRfqError, setFullPageRfqError] = useState<string | null>(null);
 
-  const handleOpenAllRfqs = async () => {
+ const handleOpenAllRfqs = async () => {
+    setActiveNav("activeRFQs");
     setRfqPageView("allRfqs");
     if (allRfqsLoaded || loadingAllRfqs) return;
 
@@ -500,8 +501,18 @@ const BuyerAdminDash: React.FC = () => {
     }
   };
 
+const handleNavClick = (key: string) => {
+    if (key === "activeRFQs") {
+      handleOpenAllRfqs();
+      return;
+    }
+    setActiveNav(key);
+    setRfqPageView("dashboard");
+  };
+
   const handleBackToDashboard = () => {
     setRfqPageView("dashboard");
+    setActiveNav("dashboard");
   };
 
   const handleViewRfqDetailsFullPage = async (rfqId: string) => {
@@ -595,8 +606,8 @@ const BuyerAdminDash: React.FC = () => {
             {navItems.map((item) => (
               <div
                 key={item.key}
-                className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
-                onClick={() => setActiveNav(item.key)}
+                 className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
+                onClick={() => handleNavClick(item.key)}
               >
                 <span className="bad-nav-icon">{item.icon}</span>
                 <span className="bad-nav-label">{item.label}</span>
@@ -628,8 +639,8 @@ const BuyerAdminDash: React.FC = () => {
           <main className="bad-content">
             {activeNav === "userList" ? (
               <UserAdmin />
-            ) : activeNav === "invitations" ? (
-              <Invitations />
+            )  : activeNav === "invitations" ? (
+  <Invitations isAdmin adminRole="buyer" />
             ) : activeNav === "companyProfile" ? (
               <CompanyProfile mode="network-admin" showHeader={false} />
             ) : activeNav === "template" ? (

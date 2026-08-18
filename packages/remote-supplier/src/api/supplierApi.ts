@@ -27,7 +27,11 @@ export interface SupplierAssetDto {
   url?: string;
   fileUrl?: string;
 }
-
+export interface UpdateInvitationStatusPayload {
+  requestId: string;
+  status: "accept" | "reject";
+  remarks?: string | null;
+}
 export interface PersonDetailDto {
   personId: string;
   userId: string;
@@ -42,6 +46,32 @@ export interface PersonDetailDto {
   roleName: string;
   organizationName: string;
   organizationEmail: string;
+}
+export interface BuyerInvitationItem {
+  rfqNumber: string;
+  title: string;
+  endDate: string;
+  deliveryLocation: string;
+  organizationName: string;
+  rfqId: string;
+  description: string;
+  status: string;
+  id: string;
+}
+export interface InvitationAnswersResponse {
+  requestId: string;
+  rfqId: string;
+  rfqNumber: string;
+  buyerId: string;
+  supplierOrganizationId: string;
+  templateId: string;
+  status: string;
+  remarks: string | null;
+  dueDate: string;
+  organizationName: string;
+  snid: string;
+  description: string;
+  questions: any[];
 }
 
 export type { SupplierProfileResponse, RFQMasterDataItem, RFQDetailResponse, SubmitQuotationPayload } from '../dto/supplierDto';
@@ -879,6 +909,159 @@ export const fetchUnits = async (payload?: {
       statusCode: 500,
       message: 'Unexpected Error',
       description: 'Something went wrong while fetching units.',
+    };
+  }
+};
+
+export const fetchBuyerInvitations = async (payload: {
+  index: number;
+  limit: number;
+}): Promise<BuyerInvitationItem[] | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.get<BuyerInvitationItem[]>(
+      '/api/v1/buyer/buyer-invitation',
+      {
+        params: {
+          index: payload.index,
+          limit: payload.limit,
+        },
+      }
+    );
+    return response.data ?? [];
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch buyer invitations',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching buyer invitations.',
+    };
+  }
+};
+
+export const fetchSupplierInvitations = async (payload: {
+  index: number;
+  limit: number;
+}): Promise<BuyerInvitationItem[] | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.get<BuyerInvitationItem[]>(
+      '/api/v1/buyer/supplier-invitation',
+      {
+        params: {
+          index: payload.index,
+          limit: payload.limit,
+        },
+      }
+    );
+    return response.data ?? [];
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch supplier invitations',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching supplier invitations.',
+    };
+  }
+};
+
+export const updateSupplierInvitationStatus = async (
+  payload: UpdateInvitationStatusPayload
+): Promise<any | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.put('/api/v1/buyer/supplier-invitation-status', payload);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to update invitation status',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while updating invitation status.',
+    };
+  }
+};
+
+export const fetchInvitationAnswers = async (
+  requestId: string
+): Promise<InvitationAnswersResponse | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.get<InvitationAnswersResponse>(
+      '/api/v1/buyer/answers',
+      { params: { requestId } }
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch invitation details',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching invitation details.',
     };
   }
 };
