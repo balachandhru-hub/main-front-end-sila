@@ -299,11 +299,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
     try {
       if (editingLocation?.id) {
-        // UPDATE
-        const updatePayload: UpdateDeliveryLocationDto = {
-          ...basePayload,
-          buyerId: currentUser?.personId|| '',
-        }
+        const updatePayload: UpdateDeliveryLocationDto = basePayload;
         const result = await updateDeliveryLocation(editingLocation.id, updatePayload);
 
         if (isErrorResponse(result)) {
@@ -317,21 +313,20 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
           )
         );
       } else {
-        // CREATE
         const result = await createDeliveryLocation(basePayload);
 
-if (!('id' in result)) {
-  setDispatchFormError(result.message || 'Failed to create location');
-  return;
-}
+        if (!('id' in result)) {
+          setDispatchFormError(result.message || 'Failed to create location');
+          return;
+        }
 
-setDispatchLocations((prev) => [
-  ...prev,
-  {
-    ...basePayload,
-    id: result.id,
-  },
-]);
+        setDispatchLocations((prev) => [
+          ...prev,
+          {
+            ...basePayload,
+            id: result.id,
+          },
+        ]);
       }
 
       setDispatchModalView('list');
@@ -999,8 +994,8 @@ setDispatchLocations((prev) => [
                 {dispatchModalView === 'list'
                   ? 'Dispatch Locations'
                   : editingLocation
-                  ? 'Edit Dispatch Location'
-                  : 'Add Dispatch Location'}
+                    ? 'Edit Dispatch Location'
+                    : 'Add Dispatch Location'}
               </h3>
               <button
                 type="button"
@@ -1191,8 +1186,8 @@ setDispatchLocations((prev) => [
                       {isDispatchSubmitting
                         ? 'Saving...'
                         : editingLocation
-                        ? 'Update Location'
-                        : 'Save Location'}
+                          ? 'Update Location'
+                          : 'Save Location'}
                     </button>
                   </div>
                 </form>
