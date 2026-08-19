@@ -613,3 +613,121 @@
         min-width: 0;
     }
 }
+
+.inv-modal-qa-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.inv-question-input,
+.inv-question-select {
+    width: 100%;
+    box-sizing: border-box;
+    border: 0.0625rem solid #d8dde4;
+    border-radius: 0.4375rem;
+    padding: 0.5625rem 0.75rem;
+    font-size: 0.8125rem;
+    color: #1f2937;
+    background: #ffffff;
+    font-family: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.inv-question-input:focus,
+.inv-question-select:focus {
+    outline: none;
+    border-color: #2f6feb;
+    box-shadow: 0 0 0 0.1875rem rgba(47, 111, 235, 0.12);
+}
+
+.inv-question-input[type="file"] {
+    padding: 0.4375rem 0.75rem;
+    cursor: pointer;
+}
+
+.inv-question-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2.125rem;
+}
+
+.inv-question-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.inv-option-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5625rem;
+    font-size: 0.8125rem;
+    color: #334155;
+    background: #ffffff;
+    border: 0.0625rem solid #e2e8f0;
+    border-radius: 0.4375rem;
+    padding: 0.5625rem 0.75rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.inv-option-label:hover {
+    border-color: #93c5fd;
+    background: #f8fafc;
+}
+
+.inv-option-label:has(input:checked) {
+    border-color: #2f6feb;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 500;
+}
+
+.inv-option-label input[type="radio"],
+.inv-option-label input[type="checkbox"] {
+    width: 0.9375rem;
+    height: 0.9375rem;
+    accent-color: #2f6feb;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.inv-file-upload {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.inv-modal-footer-verification {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.625rem;
+}
+
+.inv-btn-draft {
+    background: #ffffff;
+    color: #334155;
+    border: 0.0625rem solid #d8dde4;
+}
+
+.inv-btn-draft:hover {
+    background: #f1f5f9;
+}
+
+.inv-btn-submit-verification {
+    background: #2f6feb;
+    color: #ffffff;
+}
+
+.inv-btn-submit-verification:hover {
+    background: #255bcc;
+}
+
+.inv-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}

@@ -58,6 +58,22 @@ export interface BuyerInvitationItem {
   status: string;
   id: string;
 }
+
+export interface VerificationQuestionOption {
+  id: string;
+  optionText: string;
+}
+
+export interface VerificationQuestion {
+  verificationTemplateQuestionId: string;
+  question: string;
+  questionType: string;
+  isRequired: boolean;
+  answer?: string | null;
+  verificationTemplateQuestionOptionId?: string | null;
+  options?: VerificationQuestionOption[];
+}
+
 export interface InvitationAnswersResponse {
   requestId: string;
   rfqId: string;
@@ -71,7 +87,7 @@ export interface InvitationAnswersResponse {
   organizationName: string;
   snid: string;
   description: string;
-  questions: any[];
+  questions: VerificationQuestion[];
 }
 
 export type { SupplierProfileResponse, RFQMasterDataItem, RFQDetailResponse, SubmitQuotationPayload } from '../dto/supplierDto';
@@ -1065,3 +1081,63 @@ export const fetchInvitationAnswers = async (
     };
   }
 };
+
+export interface VerificationAnswerPayload {
+  verificationTemplateQuestionId: string;
+  templateId: string;
+  answer: string | null;
+  verificationTemplateQuestionOptionId: string | null;
+  attachment?: {
+    entityType: string;
+    entityId: string;
+    assetType: string;
+    fileBytes: string;
+    fileName: string;
+    contentType: string;
+    isSingletonAsset: boolean;
+  } | null;
+}
+ 
+export interface SubmitVerificationPayload {
+  verificationRequestId: string;
+  supplierId: string;
+  answers: VerificationAnswerPayload[];
+  status: "SUBMITTED" | "DRAFT";
+}
+ 
+export const submitVerificationAnswers = async (
+  payload: SubmitVerificationPayload
+): Promise<boolean | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.put(
+      '/api/v1/supplier/submit-verification',
+      payload
+    );
+    return response.data === true || response.status === 200;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+ 
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to submit verification answers',
+        description: errData.description || 'No details provided',
+      };
+    }
+ 
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while submitting verification answers.',
+    };
+  }
+};
+ 
