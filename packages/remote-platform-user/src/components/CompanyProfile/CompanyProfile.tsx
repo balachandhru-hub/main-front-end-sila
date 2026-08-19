@@ -24,7 +24,10 @@ import {
   FaBriefcase,
   FaTags,
   FaUserCircle,
-  FaCog
+  FaCog,
+  FaEdit,
+  FaSpinner,
+  FaTrash
 } from 'react-icons/fa';
 import { useNetworkAdminAuthStore } from '../../store/useAuthStore';
 import { getNetworkAdminProfile } from '../../api/networkAdminApi';
@@ -47,6 +50,7 @@ import type {
 } from '../../dto/platformDto';
 import { isErrorResponse } from '@vosox/shared-ui';
 import './CompanyProfile.css';
+import { FaPlus } from 'react-icons/fa6';
 
 interface CompanyProfileProps {
   mode?: 'admin-review' | 'network-admin';
