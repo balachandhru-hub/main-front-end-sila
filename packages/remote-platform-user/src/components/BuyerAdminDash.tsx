@@ -242,7 +242,7 @@ const NavIconFilePlus = () => (
 
 const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
-  { key: "invitations", icon: <IconMail />, label: "Invitations", badge: 2 },
+  { key: "invitations", icon: <IconMail />, label: "Invitations" },
   { key: "activeRFQs", icon: <IconFile />, label: "Active RFQs" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product" },
@@ -481,7 +481,7 @@ const BuyerAdminDash: React.FC = () => {
   const [loadingFullPageRfq, setLoadingFullPageRfq] = useState(false);
   const [fullPageRfqError, setFullPageRfqError] = useState<string | null>(null);
 
- const handleOpenAllRfqs = async () => {
+  const handleOpenAllRfqs = async () => {
     setActiveNav("activeRFQs");
     setRfqPageView("allRfqs");
     if (allRfqsLoaded || loadingAllRfqs) return;
@@ -535,7 +535,7 @@ const BuyerAdminDash: React.FC = () => {
     loadAllRfqsPage(allRfqsPage - 1);
   };
 
-const handleNavClick = (key: string) => {
+  const handleNavClick = (key: string) => {
     if (key === "activeRFQs") {
       handleOpenAllRfqs();
       return;
@@ -640,7 +640,7 @@ const handleNavClick = (key: string) => {
             {navItems.map((item) => (
               <div
                 key={item.key}
-                 className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
+                className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
                 onClick={() => handleNavClick(item.key)}
               >
                 <span className="bad-nav-icon">{item.icon}</span>
@@ -673,8 +673,8 @@ const handleNavClick = (key: string) => {
           <main className="bad-content">
             {activeNav === "userList" ? (
               <UserAdmin />
-            )  : activeNav === "invitations" ? (
-  <Invitations isAdmin adminRole="buyer" />
+            ) : activeNav === "invitations" ? (
+              <Invitations isAdmin adminRole="buyer" />
             ) : activeNav === "companyProfile" ? (
               <CompanyProfile mode="network-admin" showHeader={false} />
             ) : activeNav === "template" ? (
@@ -730,41 +730,41 @@ const handleNavClick = (key: string) => {
                   <div>
                     <div className="bad-rfq-table-container">
                       <table className="bad-rfq-items-table bad-allrfqs-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '48px' }}>S.No</th>
-                          <th>RFQ Number</th>
-                          <th>Title</th>
-                          <th>Organization</th>
-                          <th>Delivery Location</th>
-                          <th>Closing Date</th>
-                          <th style={{ textAlign: 'right' }}>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allRfqsList.map((rfq: any, idx: number) => (
-                          <tr key={rfq.rfqId || idx}>
-                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
-                            <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
-                            <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
-                            <td>{rfq.organizationName}</td>
-                            <td>{rfq.deliveryLocation}</td>
-                            <td>
-                              {rfq.endDate
-                                ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                                : "—"}
-                            </td>
-                            <td style={{ textAlign: 'right' }}>
-                              <button
-                                className="bad-btn bad-btn-outline"
-                                onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                              >
-                                View RFQ Details
-                              </button>
-                            </td>
+                        <thead>
+                          <tr>
+                            <th style={{ width: '48px' }}>S.No</th>
+                            <th>RFQ Number</th>
+                            <th>Title</th>
+                            <th>Organization</th>
+                            <th>Delivery Location</th>
+                            <th>Closing Date</th>
+                            <th style={{ textAlign: 'right' }}>Action</th>
                           </tr>
-                        ))}
-                      </tbody>
+                        </thead>
+                        <tbody>
+                          {allRfqsList.map((rfq: any, idx: number) => (
+                            <tr key={rfq.rfqId || idx}>
+                              <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
+                              <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
+                              <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                              <td>{rfq.organizationName}</td>
+                              <td>{rfq.deliveryLocation}</td>
+                              <td>
+                                {rfq.endDate
+                                  ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                  : "—"}
+                              </td>
+                              <td style={{ textAlign: 'right' }}>
+                                <button
+                                  className="bad-btn bad-btn-outline"
+                                  onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                                >
+                                  View RFQ Details
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
                       </table>
                     </div>
 
@@ -796,14 +796,6 @@ const handleNavClick = (key: string) => {
               </>
             ) : rfqPageView === "rfqDetail" ? (
               <>
-                <button
-                  className="bad-btn bad-btn-outline"
-                  onClick={handleBackToAllRfqs}
-                  style={{ marginBottom: '16px' }}
-                >
-                  ← Back to All RFQs
-                </button>
-
                 <div className="bad-modal bad-rfq-fullpage">
                   <div className="bad-modal-header">
                     <span className="bad-modal-badge">
