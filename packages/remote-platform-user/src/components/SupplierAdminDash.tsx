@@ -550,6 +550,9 @@ const SupplierAdminDash: React.FC = () => {
   const handleBackToDashboard = () => {
     setRfqPageView("dashboard");
     setActiveNav("dashboard");
+    setSelectedRfqId(null);
+    setSelectedRfq(null);
+    setRfqDetailError(null);
   };
 
   const handleNavClick = (key: string) => {
@@ -559,6 +562,9 @@ const SupplierAdminDash: React.FC = () => {
     }
     setActiveNav(key);
     setRfqPageView("dashboard");
+    setSelectedRfqId(null);
+    setSelectedRfq(null);
+    setRfqDetailError(null);
   };
 
   const handleViewRfqDetailsFullPage = (rfqId: string) => {
@@ -1387,7 +1393,13 @@ const SupplierAdminDash: React.FC = () => {
             <Catalog
               isAdmin={true}
               onShowCatalogList={() => setActiveNav("catalogList")}
-              onCloseCatalogList={() => setActiveNav("dashboard")}
+              onCloseCatalogList={() => {
+                setActiveNav("dashboard");
+                setRfqPageView("dashboard");
+                setSelectedRfqId(null);
+                setSelectedRfq(null);
+                setRfqDetailError(null);
+              }}
               fullViewContainer={activeNav === "catalogList" ? catalogViewContainer : null}
             />
 
@@ -1433,8 +1445,8 @@ const SupplierAdminDash: React.FC = () => {
               ) : activeNav === "companyProfile" ? (
                 <CompanyProfile mode="network-admin" showHeader={false} />
               ) : activeNav === "invitations" ? (
-  <Invitations isAdmin adminRole="supplier" />
-): rfqPageView === "allRfqs" ? (
+                <Invitations isAdmin adminRole="supplier" />
+              ) : rfqPageView === "allRfqs" ? (
                 <>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
                     <div>
@@ -1531,11 +1543,6 @@ const SupplierAdminDash: React.FC = () => {
                 </>
               ) : rfqPageView === "rfqDetail" ? (
                 <>
-                  <div style={{ marginBottom: '16px' }}>
-                    <button className="pud-btn pud-btn-outline" onClick={() => setRfqPageView("allRfqs")}>
-                      ← Back to All RFQs
-                    </button>
-                  </div>
                   <div className="pud-rfq-fullpage">
                     {renderRfqDetailInner()}
                   </div>
