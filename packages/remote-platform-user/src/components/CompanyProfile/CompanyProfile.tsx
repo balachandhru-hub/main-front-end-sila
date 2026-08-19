@@ -28,7 +28,16 @@ import {
 } from 'react-icons/fa';
 import { useNetworkAdminAuthStore } from '../../store/useAuthStore';
 import { getNetworkAdminProfile } from '../../api/networkAdminApi';
+import {
+  createDeliveryLocation,
+  updateDeliveryLocation,
+  deleteDeliveryLocation,
+} from '../../api/networkAdminApi';
 import type { NetworkAdminRole } from '../../api/networkAdminApi';
+import type {
+  CreateDeliveryLocationDto,
+  UpdateDeliveryLocationDto,
+} from '../../api/networkAdminApi';
 import type { NetworkAdminProfileResponse } from '../../dto/networkAdminDto';
 import type {
   CategoryDto,
@@ -36,6 +45,7 @@ import type {
   BankAccountDto,
   DispatchLocationDto,
 } from '../../dto/platformDto';
+import { isErrorResponse } from '@vosox/shared-ui';
 import './CompanyProfile.css';
 
 interface CompanyProfileProps {
@@ -51,6 +61,21 @@ interface CompanyProfileProps {
   onViewDocument?: (assetId: string, fileName?: string) => void;
   onSettingsClick?: () => void;
 }
+
+type DispatchLocationWithId = DispatchLocationDto & { id?: string };
+
+const emptyDispatchForm: DispatchLocationWithId = {
+  locationName: '',
+  addressLine1: '',
+  addressLine2: '',
+  city: '',
+  state: '',
+  country: '',
+  pinCode: '',
+  contactPerson: '',
+  contactPhone: '',
+  isDefault: false,
+};
 
 const formatCurrency = (amount?: number, currency?: string) => {
   if (amount === undefined || amount === null) return '-';
@@ -146,6 +171,17 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
     categories: true,
   });
 
+  // ---- Dispatch Location Modal State ----
+  const [dispatchLocations, setDispatchLocations] = useState<DispatchLocationWithId[]>([]);
+  const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
+  const [dispatchModalView, setDispatchModalView] = useState<'list' | 'form'>('list');
+  const [editingLocation, setEditingLocation] = useState<DispatchLocationWithId | null>(null);
+  const [dispatchForm, setDispatchForm] = useState<DispatchLocationWithId>(emptyDispatchForm);
+  const [isDispatchSubmitting, setIsDispatchSubmitting] = useState(false);
+  const [dispatchFormError, setDispatchFormError] = useState<string | null>(null);
+  const [deletingLocationId, setDeletingLocationId] = useState<string | null>(null);
+  const [dispatchListError, setDispatchListError] = useState<string | null>(null);
+
   const toggleSection = (key: keyof typeof openSections) =>
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
@@ -186,7 +222,146 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
     };
   }, [fetchProfile, currentUser]);
 
+  // Keep local dispatch-locations state in sync whenever profile loads/reloads
+  useEffect(() => {
+    if (profile?.dispatchLocations) {
+      setDispatchLocations(profile.dispatchLocations);
+    }
+  }, [profile]);
+
   const entityLabel = propsEntityLabel || (isBuyer ? 'Buyer' : 'Supplier');
+
+  // ---- Dispatch Location Handlers ----
+  const openDispatchModal = () => {
+    setDispatchModalView('list');
+    setEditingLocation(null);
+    setDispatchFormError(null);
+    setDispatchListError(null);
+    setIsDispatchModalOpen(true);
+  };
+
+  const closeDispatchModal = () => {
+    setIsDispatchModalOpen(false);
+    setDispatchModalView('list');
+    setEditingLocation(null);
+    setDispatchForm(emptyDispatchForm);
+    setDispatchFormError(null);
+  };
+
+  const openAddLocationForm = () => {
+    setEditingLocation(null);
+    setDispatchForm(emptyDispatchForm);
+    setDispatchFormError(null);
+    setDispatchModalView('form');
+  };
+
+  const openEditLocationForm = (loc: DispatchLocationWithId) => {
+    setEditingLocation(loc);
+    setDispatchForm({ ...loc });
+    setDispatchFormError(null);
+    setDispatchModalView('form');
+  };
+
+  const handleDispatchFormChange = (
+    field: keyof DispatchLocationWithId,
+    value: string | boolean
+  ) => {
+    setDispatchForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleDispatchFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDispatchFormError(null);
+
+    if (!dispatchForm.locationName || !dispatchForm.addressLine1 || !dispatchForm.city) {
+      setDispatchFormError('Please fill in the required fields.');
+      return;
+    }
+
+    setIsDispatchSubmitting(true);
+
+    const basePayload: CreateDeliveryLocationDto = {
+      locationName: dispatchForm.locationName || '',
+      addressLine1: dispatchForm.addressLine1 || '',
+      addressLine2: dispatchForm.addressLine2 || '',
+      city: dispatchForm.city || '',
+      state: dispatchForm.state || '',
+      country: dispatchForm.country || '',
+      pinCode: dispatchForm.pinCode || '',
+      contactPerson: dispatchForm.contactPerson || '',
+      contactPhone: dispatchForm.contactPhone || '',
+      isDefault: !!dispatchForm.isDefault,
+    };
+
+    try {
+      if (editingLocation?.id) {
+        // UPDATE
+        const updatePayload: UpdateDeliveryLocationDto = {
+          ...basePayload,
+          buyerId: currentUser?.personId|| '',
+        }
+        const result = await updateDeliveryLocation(editingLocation.id, updatePayload);
+
+        if (isErrorResponse(result)) {
+          setDispatchFormError(result.message || 'Failed to update location');
+          return;
+        }
+
+        setDispatchLocations((prev) =>
+          prev.map((loc) =>
+            loc.id === editingLocation.id ? { ...basePayload, id: editingLocation.id } : loc
+          )
+        );
+      } else {
+        // CREATE
+        const result = await createDeliveryLocation(basePayload);
+
+if (!('id' in result)) {
+  setDispatchFormError(result.message || 'Failed to create location');
+  return;
+}
+
+setDispatchLocations((prev) => [
+  ...prev,
+  {
+    ...basePayload,
+    id: result.id,
+  },
+]);
+      }
+
+      setDispatchModalView('list');
+      setEditingLocation(null);
+      setDispatchForm(emptyDispatchForm);
+    } catch (err: any) {
+      setDispatchFormError(err.message || 'Something went wrong');
+    } finally {
+      setIsDispatchSubmitting(false);
+    }
+  };
+
+  const handleDeleteLocation = async (loc: DispatchLocationWithId) => {
+    if (!loc.id) return;
+    const confirmed = window.confirm(
+      `Delete dispatch location "${loc.locationName || 'this location'}"? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDispatchListError(null);
+    setDeletingLocationId(loc.id);
+    try {
+      const result = await deleteDeliveryLocation(loc.id);
+      if (isErrorResponse(result)) {
+        setDispatchListError(result.message || 'Failed to delete location');
+        return;
+      }
+      setDispatchLocations((prev) => prev.filter((l) => l.id !== loc.id));
+    } catch (err: any) {
+      setDispatchListError(err.message || 'Something went wrong while deleting');
+    } finally {
+      setDeletingLocationId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -218,7 +393,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
   const bp = profile.businessProfile || {};
   const registrations: RegistrationDto[] = profile.registrations || [];
   const bankAccounts: BankAccountDto[] = profile.bankAccounts || [];
-  const dispatchLocations: DispatchLocationDto[] = profile.dispatchLocations || [];
   const categories: CategoryDto[] =
     (profile as any).categories ||
     (profile as any).buyerCategories ||
@@ -426,27 +600,27 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                         <FaMapMarkerAlt />
                         Address
                       </span>
-                        <span className="cp-field-value">
+                      <span className="cp-field-value">
                         {bp.addressLine1 || '-'}
                         <br />
                         {bp.city || '-'}, {bp.state || '-'}
                         <br />
                         {bp.pinCode || '-'}, {bp.country || '-'}
-                        </span>
-                        <div className="cp-sub-grid">
+                      </span>
+                      <div className="cp-sub-grid">
                         <div className="cp-field">
-                            <span className="cp-field-label">Country</span>
-                            <span className="cp-field-value">{bp.country || '-'}</span>
-                        </div>
-                        <div className="cp-field">
-                            <span className="cp-field-label">State</span>
-                            <span className="cp-field-value">{bp.state || '-'}</span>
+                          <span className="cp-field-label">Country</span>
+                          <span className="cp-field-value">{bp.country || '-'}</span>
                         </div>
                         <div className="cp-field">
-                            <span className="cp-field-label">City</span>
-                            <span className="cp-field-value">{bp.city || '-'}</span>
+                          <span className="cp-field-label">State</span>
+                          <span className="cp-field-value">{bp.state || '-'}</span>
                         </div>
+                        <div className="cp-field">
+                          <span className="cp-field-label">City</span>
+                          <span className="cp-field-value">{bp.city || '-'}</span>
                         </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -522,17 +696,17 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
             <section className="cp-card">
               <div className="cp-card-header-flex">
                 <SectionHeader
-                icon={<FaUniversity />}
-                title="3. Bank Accounts"
-                isOpen={openSections.bank}
-                onToggle={() => toggleSection('bank')}
-                extra={
+                  icon={<FaUniversity />}
+                  title="3. Bank Accounts"
+                  isOpen={openSections.bank}
+                  onToggle={() => toggleSection('bank')}
+                  extra={
                     bankAccounts.some((a) => a.isPrimary) ? (
-                    <span className="cp-pill cp-pill-yes">
+                      <span className="cp-pill cp-pill-yes">
                         <FaCheck /> Primary Account
-                    </span>
+                      </span>
                     ) : undefined
-                }
+                  }
                 />
               </div>
               {openSections.bank && (
@@ -568,7 +742,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                           <div className="cp-field">
                             <span className="cp-field-label">Primary Account</span>
                             <span className={`cp-status-pill ${acc.isPrimary ? 'cp-pill-green' : 'cp-pill-red'}`}>
-                            {acc.isPrimary ? 'Yes' : 'No'}
+                              {acc.isPrimary ? 'Yes' : 'No'}
                             </span>
                           </div>
 
@@ -596,19 +770,31 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
             {/* DISPATCH LOCATIONS SECTION */}
             <section className="cp-card">
-              <SectionHeader
-                icon={<FaTruck />}
-                title="4. Dispatch Locations"
-                isOpen={openSections.dispatch}
-                onToggle={() => toggleSection('dispatch')}
-              />
+              <div className="cp-card-header-flex">
+                <SectionHeader
+                  icon={<FaTruck />}
+                  title="4. Dispatch Locations"
+                  isOpen={openSections.dispatch}
+                  onToggle={() => toggleSection('dispatch')}
+                />
+                {isBuyer && (
+                  <button
+                    type="button"
+                    className="cp-manage-btn"
+                    title="Manage Dispatch Locations"
+                    onClick={openDispatchModal}
+                  >
+                    <FaCog />
+                  </button>
+                )}
+              </div>
               {openSections.dispatch && (
                 <div className="cp-section-box">
                   {dispatchLocations.length === 0 ? (
                     <p className="cp-empty-inline">No dispatch locations added</p>
                   ) : (
                     dispatchLocations.map((loc, idx) => (
-                      <React.Fragment key={idx}>
+                      <React.Fragment key={loc.id || idx}>
                         {idx > 0 && <div className="cp-divider" />}
                         <div className="cp-grid cp-grid-3">
                           <div className="cp-field">
@@ -799,6 +985,218 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
           </aside>
         </div>
       </div>
+
+      {/* DISPATCH LOCATION MODAL */}
+      {isDispatchModalOpen && (
+        <div className="cp-modal-overlay" onClick={closeDispatchModal}>
+          <div className="cp-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cp-modal-header">
+              <h3 className="cp-modal-title">
+                {dispatchModalView === 'list'
+                  ? 'Dispatch Locations'
+                  : editingLocation
+                  ? 'Edit Dispatch Location'
+                  : 'Add Dispatch Location'}
+              </h3>
+              <button
+                type="button"
+                className="cp-modal-close"
+                onClick={closeDispatchModal}
+                aria-label="Close"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <div className="cp-modal-body">
+              {dispatchModalView === 'list' ? (
+                <>
+                  {dispatchListError && (
+                    <div className="cp-modal-error">{dispatchListError}</div>
+                  )}
+
+                  <button
+                    type="button"
+                    className="cp-btn cp-btn-add-location"
+                    onClick={openAddLocationForm}
+                  >
+                    <FaPlus /> Add New Location
+                  </button>
+
+                  {dispatchLocations.length === 0 ? (
+                    <p className="cp-empty-inline" style={{ marginTop: '12px' }}>
+                      No dispatch locations added yet
+                    </p>
+                  ) : (
+                    <div className="cp-location-list">
+                      {dispatchLocations.map((loc, idx) => (
+                        <div className="cp-location-list-item" key={loc.id || idx}>
+                          <div className="cp-location-list-info">
+                            <div className="cp-location-list-name">
+                              {loc.locationName || '-'}
+                              {loc.isDefault && (
+                                <span className="cp-pill cp-pill-yes cp-location-default-tag">
+                                  <FaCheck /> Default
+                                </span>
+                              )}
+                            </div>
+                            <div className="cp-location-list-address">
+                              {loc.addressLine1}
+                              {loc.city ? `, ${loc.city}` : ''}
+                              {loc.state ? `, ${loc.state}` : ''}
+                              {loc.country ? `, ${loc.country}` : ''}
+                            </div>
+                          </div>
+                          <div className="cp-location-list-actions">
+                            <button
+                              type="button"
+                              className="cp-icon-action-btn"
+                              title="Edit"
+                              onClick={() => openEditLocationForm(loc)}
+                              disabled={!loc.id}
+                            >
+                              <FaEdit />
+                            </button>
+                            <button
+                              type="button"
+                              className="cp-icon-action-btn cp-icon-action-btn-danger"
+                              title="Delete"
+                              onClick={() => handleDeleteLocation(loc)}
+                              disabled={!loc.id || deletingLocationId === loc.id}
+                            >
+                              {deletingLocationId === loc.id ? (
+                                <FaSpinner className="cp-spin-icon" />
+                              ) : (
+                                <FaTrash />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <form className="cp-dispatch-form" onSubmit={handleDispatchFormSubmit}>
+                  {dispatchFormError && (
+                    <div className="cp-modal-error">{dispatchFormError}</div>
+                  )}
+
+                  <div className="cp-form-grid">
+                    <div className="cp-form-field">
+                      <label>Location Name *</label>
+                      <input
+                        type="text"
+                        value={dispatchForm.locationName || ''}
+                        onChange={(e) => handleDispatchFormChange('locationName', e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="cp-form-field">
+                      <label>Address Line 1 *</label>
+                      <input
+                        type="text"
+                        value={dispatchForm.addressLine1 || ''}
+                        onChange={(e) => handleDispatchFormChange('addressLine1', e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="cp-form-field">
+                      <label>Address Line 2</label>
+                      <input
+                        type="text"
+                        value={dispatchForm.addressLine2 || ''}
+                        onChange={(e) => handleDispatchFormChange('addressLine2', e.target.value)}
+                      />
+                    </div>
+                    <div className="cp-form-field">
+                      <label>City *</label>
+                      <input
+                        type="text"
+                        value={dispatchForm.city || ''}
+                        onChange={(e) => handleDispatchFormChange('city', e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="cp-form-field">
+                      <label>State</label>
+                      <input
+                        type="text"
+                        value={dispatchForm.state || ''}
+                        onChange={(e) => handleDispatchFormChange('state', e.target.value)}
+                      />
+                    </div>
+                    <div className="cp-form-field">
+                      <label>Country</label>
+                      <input
+                        type="text"
+                        value={dispatchForm.country || ''}
+                        onChange={(e) => handleDispatchFormChange('country', e.target.value)}
+                      />
+                    </div>
+                    <div className="cp-form-field">
+                      <label>Pin Code</label>
+                      <input
+                        type="text"
+                        value={dispatchForm.pinCode || ''}
+                        onChange={(e) => handleDispatchFormChange('pinCode', e.target.value)}
+                      />
+                    </div>
+                    <div className="cp-form-field">
+                      <label>Contact Person</label>
+                      <input
+                        type="text"
+                        value={dispatchForm.contactPerson || ''}
+                        onChange={(e) => handleDispatchFormChange('contactPerson', e.target.value)}
+                      />
+                    </div>
+                    <div className="cp-form-field">
+                      <label>Contact Phone</label>
+                      <input
+                        type="text"
+                        value={dispatchForm.contactPhone || ''}
+                        onChange={(e) => handleDispatchFormChange('contactPhone', e.target.value)}
+                      />
+                    </div>
+                    <div className="cp-form-field cp-form-field-checkbox">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={!!dispatchForm.isDefault}
+                          onChange={(e) => handleDispatchFormChange('isDefault', e.target.checked)}
+                        />
+                        Set as Default Location
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="cp-form-actions">
+                    <button
+                      type="button"
+                      className="cp-btn cp-btn-cancel"
+                      onClick={() => setDispatchModalView('list')}
+                      disabled={isDispatchSubmitting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="cp-btn cp-btn-verify"
+                      disabled={isDispatchSubmitting}
+                    >
+                      {isDispatchSubmitting
+                        ? 'Saving...'
+                        : editingLocation
+                        ? 'Update Location'
+                        : 'Save Location'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

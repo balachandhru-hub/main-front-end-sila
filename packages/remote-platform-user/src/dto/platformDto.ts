@@ -32,6 +32,7 @@ export interface BankAccountDto {
 }
 
 export interface DispatchLocationDto {
+  id?: string; 
   locationName?: string;
   addressLine1?: string;
   addressLine2?: string | null;

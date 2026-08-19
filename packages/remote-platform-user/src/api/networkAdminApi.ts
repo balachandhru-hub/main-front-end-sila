@@ -33,7 +33,29 @@ export interface PersonDetailDto {
   organizationName: string;
   organizationEmail: string;
 }
-
+export interface CreateDeliveryLocationDto {
+  locationName: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  country: string;
+  pinCode: string;
+  contactPerson: string;
+  contactPhone: string;
+  isDefault: boolean;
+}
+ 
+export interface UpdateDeliveryLocationDto extends CreateDeliveryLocationDto {
+  buyerId: string;
+}
+ 
+export interface DeliveryLocationResponseDto {
+  statusCode: number;
+  message: string;
+  description: string;
+  id: string;
+}
 export const getOrganizationUsers = async (organizationId: string): Promise<User[]> => {
   try {
     const response = await platformInstance.get<OrganizationUserDto[]>(
@@ -340,4 +362,112 @@ export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorRe
 
 export const invalidatePersonDetailCache = () => {
   personDetailCache = null;
+};
+
+export const createDeliveryLocation = async (
+  payload: CreateDeliveryLocationDto
+): Promise<DeliveryLocationResponseDto | ErrorResponseDto> => {
+  try {
+    const response = await platformInstance.post<DeliveryLocationResponseDto>(
+      '/api/v1/buyer/delivery-location',
+      payload
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+ 
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to create delivery location',
+        description: errData.description || 'No details provided',
+      };
+    }
+ 
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while creating delivery location.',
+    };
+  }
+};
+ 
+export const updateDeliveryLocation = async (
+  id: string,
+  payload: UpdateDeliveryLocationDto
+): Promise<DeliveryLocationResponseDto | ErrorResponseDto> => {
+  try {
+    const response = await platformInstance.put<DeliveryLocationResponseDto>(
+      `/api/v1/buyer/delivery-location/${id}`,
+      payload
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+ 
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to update delivery location',
+        description: errData.description || 'No details provided',
+      };
+    }
+ 
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while updating delivery location.',
+    };
+  }
+};
+ 
+export const deleteDeliveryLocation = async (
+  id: string
+): Promise<DeliveryLocationResponseDto | ErrorResponseDto> => {
+  try {
+    const response = await platformInstance.delete<DeliveryLocationResponseDto>(
+      `/api/v1/buyer/delivery-location/${id}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+ 
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to delete delivery location',
+        description: errData.description || 'No details provided',
+      };
+    }
+ 
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while deleting delivery location.',
+    };
+  }
 };
