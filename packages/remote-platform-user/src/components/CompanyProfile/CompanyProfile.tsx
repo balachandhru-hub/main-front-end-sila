@@ -299,7 +299,10 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
     try {
       if (editingLocation?.id) {
-        const updatePayload: UpdateDeliveryLocationDto = basePayload;
+        const updatePayload: UpdateDeliveryLocationDto = {
+          ...basePayload,
+          buyerId: sessionStorage.getItem('vosox_buyer_id') || '',
+        }
         const result = await updateDeliveryLocation(editingLocation.id, updatePayload);
 
         if (isErrorResponse(result)) {
@@ -908,7 +911,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                   <span className="cp-summary-label">
                     <FaInfoCircle className="cp-summary-icon" /> Status
                   </span>
-                  <span className="cp-status-dot-inline">
+                  <span className={`cp-status-dot-inline ${statusClass}`}>
                     <span className="cp-status-dot"></span>
                     {statusLabel}
                   </span>

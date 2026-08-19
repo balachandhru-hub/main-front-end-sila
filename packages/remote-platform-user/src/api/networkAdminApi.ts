@@ -33,17 +33,6 @@ export interface PersonDetailDto {
   organizationName: string;
   organizationEmail: string;
 }
-export interface TokenClaimsDto {
-  userId: string;
-  personId: string;
-  organizationId: string;
-  roleId: string;
-  permissions: string[];
-  buyerId: string | null;
-  supplierId: string | null;
-  organizationType: number;
-}
-
 export interface CreateDeliveryLocationDto {
   locationName: string;
   addressLine1: string;
@@ -56,7 +45,10 @@ export interface CreateDeliveryLocationDto {
   contactPhone: string;
   isDefault: boolean;
 }
-export type UpdateDeliveryLocationDto = CreateDeliveryLocationDto;
+
+export interface UpdateDeliveryLocationDto extends CreateDeliveryLocationDto {
+  buyerId: string;
+}
 
 export interface DeliveryLocationResponseDto {
   statusCode: number;
@@ -372,45 +364,6 @@ export const invalidatePersonDetailCache = () => {
   personDetailCache = null;
 };
 
-export const getTokenClaims = async (): Promise<TokenClaimsDto> => {
-  try {
-    const response = await platformInstance.get<TokenClaimsDto>('/api/v1/identity/token-claim');
-    return response.data;
-  } catch (error: any) {
-    const errorMsg =
-      error.response?.data?.message ||
-      error.response?.data?.description ||
-      error.message ||
-      'Failed to fetch token claims';
-    throw new Error(errorMsg);
-  }
-};
-
-let tokenClaimsCache: TokenClaimsDto | null = null;
-let tokenClaimsInFlight: Promise<TokenClaimsDto> | null = null;
-
-export const getTokenClaimsCached = async (): Promise<TokenClaimsDto> => {
-  if (tokenClaimsCache) return tokenClaimsCache;
-  if (tokenClaimsInFlight) return tokenClaimsInFlight;
-
-  tokenClaimsInFlight = getTokenClaims()
-    .then((result) => {
-      tokenClaimsCache = result;
-      tokenClaimsInFlight = null;
-      return result;
-    })
-    .catch((err) => {
-      tokenClaimsInFlight = null;
-      throw err;
-    });
-
-  return tokenClaimsInFlight;
-};
-
-export const invalidateTokenClaimsCache = () => {
-  tokenClaimsCache = null;
-};
-
 export const createDeliveryLocation = async (
   payload: CreateDeliveryLocationDto
 ): Promise<DeliveryLocationResponseDto | ErrorResponseDto> => {
@@ -452,19 +405,9 @@ export const updateDeliveryLocation = async (
   payload: UpdateDeliveryLocationDto
 ): Promise<DeliveryLocationResponseDto | ErrorResponseDto> => {
   try {
-    const { buyerId } = await getTokenClaimsCached();
-
-    if (!buyerId) {
-      return {
-        statusCode: 400,
-        message: 'Missing buyerId',
-        description: 'No buyerId was found on the current session. Please login again.',
-      };
-    }
-
     const response = await platformInstance.put<DeliveryLocationResponseDto>(
       `/api/v1/buyer/delivery-location/${id}`,
-      { ...payload, buyerId }
+      payload
     );
     return response.data;
   } catch (error: any) {

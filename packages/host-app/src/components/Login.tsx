@@ -113,6 +113,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
           sessionStorage.setItem('vosox_user_role', claims.role || '');
           sessionStorage.setItem('vosox_user_email', username);
           sessionStorage.setItem('vosox_user_name', claims.name || 'User');
+          sessionStorage.setItem('vosox_buyer_id', claims.buyerId || '');
+          sessionStorage.setItem('vosox_supplier_id', claims.supplierId || '');
 
           onLoginSuccess?.(details);
 
