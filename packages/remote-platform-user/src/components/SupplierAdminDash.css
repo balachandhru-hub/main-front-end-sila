@@ -404,8 +404,8 @@
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: 8px;
-    margin-top: 20px;
+    gap: 0.5rem;
+    padding-top: 1.25rem;
 }
 
 .pud-page-btn {
@@ -432,7 +432,7 @@
     color: #ffffff;
 }
 
-.pud-page-number {
+.pud-page-number{
     font-size: 13px;
     padding: 0 6px;
 }

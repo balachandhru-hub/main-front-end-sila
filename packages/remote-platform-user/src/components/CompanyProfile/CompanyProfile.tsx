@@ -913,7 +913,7 @@ setDispatchLocations((prev) => [
                   <span className="cp-summary-label">
                     <FaInfoCircle className="cp-summary-icon" /> Status
                   </span>
-                  <span className="cp-status-dot-inline">
+                  <span className={`cp-status-dot-inline ${statusClass}`}>
                     <span className="cp-status-dot"></span>
                     {statusLabel}
                   </span>
