@@ -1,5 +1,5 @@
 // src/components/context/AuthContext.tsx
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { fetchAuthInfo } from './api/authApi';
 
 export type AuthInfo = {
@@ -23,6 +23,11 @@ const AuthContext = createContext<AuthContextType>({
   clearAuth: () => {},
 });
 
+// Global key remotes (buyer/supplier/platform-user) read from.
+// Kept double-underscored + prefixed to avoid collisions with anything else on window.
+const HOST_AUTH_WINDOW_KEY = '__hostAuth__';
+const HOST_AUTH_EVENT = 'host-auth-changed';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [auth, setAuthState] = useState<AuthInfo | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -41,6 +46,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearAuth = useCallback(() => {
     setAuthState(null);
+  }, []);
+  useEffect(() => {
+    (window as any)[HOST_AUTH_WINDOW_KEY] = auth;
+    window.dispatchEvent(new CustomEvent(HOST_AUTH_EVENT, { detail: auth }));
+  }, [auth]);
+
+  useEffect(() => {
+    return () => {
+      delete (window as any)[HOST_AUTH_WINDOW_KEY];
+    };
   }, []);
 
   return (
