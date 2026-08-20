@@ -6,7 +6,7 @@ import Header from "./Header";
 import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, downloadBuyerAsset } from "../api/Buyerapi";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
 import { CompanyProfile } from '@vosox/shared-ui';
-
+import { useAuth } from '../../../host-app/src/AuthContext.tsx';
 /* ---------------------------------- Icons ---------------------------------- */
 
 interface StatCard {
@@ -389,28 +389,32 @@ const BuyersDashboard: React.FC = () => {
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
   const RFQ_INITIAL_VISIBLE = 3;
 
-  const [buyerId, setBuyerId] = useState<string | null>(
-    sessionStorage.getItem("vosox_buyer_id")
-  );
+ const { auth } = useAuth();
+const [buyerId, setBuyerId] = useState<string | null>(auth?.buyerId ?? null);
 
-  useEffect(() => {
-    const loadBuyerProfile = async () => {
-      if (!buyerId) {
-        try {
-          const profile = await getBuyerProfile();
-          if (profile?.id) {
-            sessionStorage.setItem("vosox_buyer_id", profile.id);
-            setBuyerId(profile.id);
-          } else {
-            setRfqsError("Buyer profile not found. Please complete onboarding.");
-          }
-        } catch (err: any) {
-          setRfqsError("Failed to load buyer profile details.");
+useEffect(() => {
+  if (auth?.buyerId) {
+    setBuyerId(auth.buyerId);
+  }
+}, [auth?.buyerId]);
+
+useEffect(() => {
+  const loadBuyerProfile = async () => {
+    if (!buyerId) {
+      try {
+        const profile = await getBuyerProfile();
+        if (profile?.id) {
+          setBuyerId(profile.id); 
+        } else {
+          setRfqsError("Buyer profile not found. Please complete onboarding.");
         }
+      } catch (err: any) {
+        setRfqsError("Failed to load buyer profile details.");
       }
-    };
-    loadBuyerProfile();
-  }, [buyerId]);
+    }
+  };
+  loadBuyerProfile();
+}, [buyerId]);
   useEffect(() => {
     const loadRfqs = async () => {
       if (!buyerId) return;
