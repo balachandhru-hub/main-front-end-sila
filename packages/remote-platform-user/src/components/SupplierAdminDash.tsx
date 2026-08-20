@@ -1003,9 +1003,9 @@ const SupplierAdminDash: React.FC = () => {
                     <thead>
                       <tr>
                         <th>Material Info</th>
-                        <th>Group / Code</th>
-                        <th style={{ textAlign: 'center' }}>Qty Required</th>
-                        {!selectedRfq.addLotOption && <th style={{ textAlign: 'right', width: '130px' }}>Your Unit Quote</th>}
+                        <th>Code</th>
+                        <th>Qty Required</th>
+                        {!selectedRfq.addLotOption && <th style={{width: '130px' }}>Your Unit Quote</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -1018,7 +1018,7 @@ const SupplierAdminDash: React.FC = () => {
                               <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
                               {item.costCenter && (
                                 <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                  Cost Center: {item.costCenter}
+                                  Cost Center: {item.costCenterName}
                                 </div>
                               )}
                               {item.attachments?.map((att) => (
@@ -1028,18 +1028,15 @@ const SupplierAdminDash: React.FC = () => {
                               ))}
                             </td>
                             <td>
-                              <div style={{ fontSize: '13px', color: '#334155' }}>
-                                {item.materialGroup || "N/A"}
-                              </div>
-                              <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                Code: {item.materialCode || "N/A"}
+                              <div>
+                                {item.materialCode || "N/A"}
                               </div>
                             </td>
-                            <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>
-                              {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
+                            <td>
+                              {item.quantity} <span>{item.uom}</span>
                             </td>
                             {!selectedRfq.addLotOption && (
-                              <td style={{ textAlign: 'right' }}>
+                              <td>
                                 <input
                                   type="number"
                                   step="0.01"
@@ -1053,7 +1050,6 @@ const SupplierAdminDash: React.FC = () => {
                                     padding: '6px 10px',
                                     border: '1px solid #cbd5e1',
                                     borderRadius: '6px',
-                                    textAlign: 'right',
                                     fontSize: '13px',
                                     fontWeight: 600,
                                     color: '#0f172a'
@@ -1485,7 +1481,7 @@ const SupplierAdminDash: React.FC = () => {
                               <th>Organization</th>
                               <th>Delivery Location</th>
                               <th>Closing Date</th>
-                              <th style={{ textAlign: 'right' }}>Action</th>
+                              <th>Action</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1501,7 +1497,7 @@ const SupplierAdminDash: React.FC = () => {
                                     ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
                                     : "—"}
                                 </td>
-                                <td style={{ textAlign: 'right' }}>
+                                <td>
                                   <button
                                     className="pud-btn pud-btn-outline"
                                     onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}

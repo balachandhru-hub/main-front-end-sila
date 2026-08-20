@@ -6,12 +6,13 @@ import {
     fetchSupplierInvitations,
     updateSupplierInvitationStatus,
     fetchInvitationAnswers,
+    submitVerificationAnswers,
     type BuyerInvitationItem,
     type InvitationAnswersResponse,
+    type SubmitVerificationPayload,
 } from "../api/supplierApi";
 import { isErrorResponse } from "@vosox/shared-ui";
 
-/* ---------------- Types ---------------- */
 
 type InvitationStatus = "open" | "accepted" | "declined" | "closed";
 
@@ -34,7 +35,14 @@ interface InvitationsProps {
     adminRole?: "buyer" | "supplier";
 }
 
-/* ---------------- Icons (page content) ---------------- */
+interface VerificationAnswer {
+    textAnswer: string;
+    selectedOptionId: string | null;
+    selectedOptionIds: string[];
+    file: File | null;
+    fileBase64: string;
+}
+
 
 const IconTag = () => (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -115,7 +123,6 @@ const IconFile = () => (
     </svg>
 );
 
-/* ---------------- Sample data (used when isAdmin is false) ---------------- */
 
 const officeFurniture: Invitation = {
     code: "RFQ-1024",
@@ -182,14 +189,13 @@ const tabs: { key: TabKey; label: string }[] = [
     { key: "declined", label: "Declined" },
 ];
 
-/* ---------------- Helpers ---------------- */
 
 const mapApiStatus = (status: string): InvitationStatus => {
     const normalized = (status || "").toUpperCase();
     if (normalized === "ACCEPTED" || normalized === "ACCEPT") return "accepted";
     if (normalized === "DECLINED" || normalized === "REJECT" || normalized === "REJECTED") return "declined";
     if (normalized === "CLOSED") return "closed";
-    return "open"; // PENDING and anything else defaults to open
+    return "open";
 };
 
 const mapApiItemToInvitation = (item: BuyerInvitationItem): Invitation => ({
@@ -203,7 +209,7 @@ const mapApiItemToInvitation = (item: BuyerInvitationItem): Invitation => ({
     id: item.id,
 });
 
-/* ===== INVITATION CARD ===== */
+
 const InvitationCard: React.FC<{
     invitation: Invitation;
     showActions: boolean;
@@ -322,6 +328,13 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
     const [loadingDetail, setLoadingDetail] = useState(false);
     const [detailError, setDetailError] = useState<string | null>(null);
 
+    const [verificationAnswers, setVerificationAnswers] = useState<{
+        [questionId: string]: VerificationAnswer;
+    }>({});
+    const [submittingVerification, setSubmittingVerification] = useState(false);
+    const [verificationError, setVerificationError] = useState<string | null>(null);
+    const [verificationSuccess, setVerificationSuccess] = useState(false);
+
     const loadInvitations = async () => {
         if (!isAdmin) {
             setInvitations(mockInvitations);
@@ -351,7 +364,6 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
 
     useEffect(() => {
         loadInvitations();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAdmin, adminRole]);
 
     const showActions = isAdmin && adminRole === "buyer";
@@ -411,6 +423,9 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
         setDetailInvitation(invitation);
         setViewingDetail(null);
         setDetailError(null);
+        setVerificationAnswers({});
+        setVerificationError(null);
+        setVerificationSuccess(false);
         setLoadingDetail(true);
         try {
             const result = await fetchInvitationAnswers(invitation.id);
@@ -419,6 +434,17 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                 return;
             }
             setViewingDetail(result);
+            const initialAnswers: { [questionId: string]: VerificationAnswer } = {};
+            result.questions?.forEach((q) => {
+                initialAnswers[q.verificationTemplateQuestionId] = {
+                    textAnswer: q.answer || "",
+                    selectedOptionId: q.verificationTemplateQuestionOptionId || null,
+                    selectedOptionIds: [],
+                    file: null,
+                    fileBase64: "",
+                };
+            });
+            setVerificationAnswers(initialAnswers);
         } catch (err: any) {
             setDetailError(err.message || "Failed to load invitation details.");
         } finally {
@@ -430,6 +456,202 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
         setViewingDetail(null);
         setDetailInvitation(null);
         setDetailError(null);
+        setVerificationAnswers({});
+    };
+
+    const handleTextAnswerChange = (questionId: string, value: string) => {
+        setVerificationAnswers((prev) => ({
+            ...prev,
+            [questionId]: {
+                ...(prev[questionId] || { textAnswer: "", selectedOptionId: null, selectedOptionIds: [], file: null, fileBase64: "" }),
+                textAnswer: value,
+            },
+        }));
+    };
+
+    const handleRadioChange = (questionId: string, optionId: string) => {
+        setVerificationAnswers((prev) => ({
+            ...prev,
+            [questionId]: {
+                ...(prev[questionId] || { textAnswer: "", selectedOptionId: null, selectedOptionIds: [], file: null, fileBase64: "" }),
+                selectedOptionId: optionId,
+                selectedOptionIds: [optionId],
+            },
+        }));
+    };
+
+    const handleCheckboxChange = (questionId: string, optionId: string, checked: boolean) => {
+        setVerificationAnswers((prev) => {
+            const current = prev[questionId]?.selectedOptionIds || [];
+            const updated = checked ? [...current, optionId] : current.filter((id) => id !== optionId);
+            return {
+                ...prev,
+                [questionId]: {
+                    ...(prev[questionId] || { textAnswer: "", selectedOptionId: null, selectedOptionIds: [], file: null, fileBase64: "" }),
+                    selectedOptionIds: updated,
+                },
+            };
+        });
+    };
+
+    const handleDateChange = (questionId: string, value: string) => {
+        setVerificationAnswers((prev) => ({
+            ...prev,
+            [questionId]: {
+                ...(prev[questionId] || { textAnswer: "", selectedOptionId: null, selectedOptionIds: [], file: null, fileBase64: "" }),
+                textAnswer: value,
+            },
+        }));
+    };
+
+    const handleFileChange = (questionId: string, file: File | null) => {
+        if (!file) {
+            setVerificationAnswers((prev) => ({
+                ...prev,
+                [questionId]: {
+                    ...(prev[questionId] || { textAnswer: "", selectedOptionId: null, selectedOptionIds: [], file: null, fileBase64: "" }),
+                    file: null,
+                    fileBase64: "",
+                },
+            }));
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const result = reader.result as string;
+            const base64Data = result.split(",")[1] || result;
+            setVerificationAnswers((prev) => ({
+                ...prev,
+                [questionId]: {
+                    ...(prev[questionId] || { textAnswer: "", selectedOptionId: null, selectedOptionIds: [], file: null, fileBase64: "" }),
+                    file,
+                    fileBase64: base64Data,
+                    textAnswer: file.name,
+                },
+            }));
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const validateAnswers = (): boolean => {
+        if (!viewingDetail?.questions) return true;
+
+        for (const question of viewingDetail.questions) {
+            if (!question.isRequired) continue;
+
+            const answer = verificationAnswers[question.verificationTemplateQuestionId];
+
+            if (question.questionType === "Text") {
+                if (!answer?.textAnswer?.trim()) {
+                    setVerificationError(`Please answer the required question: "${question.question}"`);
+                    return false;
+                }
+            } else if (question.questionType === "Radio button") {
+                if (!answer?.selectedOptionId) {
+                    setVerificationError(`Please select an option for: "${question.question}"`);
+                    return false;
+                }
+            } else if (question.questionType === "Checkbox") {
+                if (!answer?.selectedOptionIds || answer.selectedOptionIds.length === 0) {
+                    setVerificationError(`Please select at least one option for: "${question.question}"`);
+                    return false;
+                }
+            } else if (question.questionType === "Dropdown") {
+                if (!answer?.selectedOptionId) {
+                    setVerificationError(`Please select an option for: "${question.question}"`);
+                    return false;
+                }
+            } else if (question.questionType === "Date") {
+                if (!answer?.textAnswer?.trim()) {
+                    setVerificationError(`Please enter a date for: "${question.question}"`);
+                    return false;
+                }
+            } else if (question.questionType === "File" || question.questionType === "file") {
+                if (!answer?.file) {
+                    setVerificationError(`Please upload a file for: "${question.question}"`);
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    };
+
+    const handleSubmitAnswers = async (status: "SUBMITTED" | "DRAFT") => {
+        if (!viewingDetail || !detailInvitation) return;
+
+        setVerificationError(null);
+        setVerificationSuccess(false);
+
+        if (status === "SUBMITTED" && !validateAnswers()) {
+            return;
+        }
+
+        setSubmittingVerification(true);
+
+        try {
+            const answers = viewingDetail.questions?.map((question) => {
+                const answer = verificationAnswers[question.verificationTemplateQuestionId];
+
+                let answerText = "";
+                let selectedOptionId: string | null = null;
+
+                if (question.questionType === "Text") {
+                    answerText = answer?.textAnswer || "";
+                } else if (question.questionType === "Radio button" || question.questionType === "Dropdown") {
+                    selectedOptionId = answer?.selectedOptionId || null;
+                    answerText = answer?.textAnswer || "";
+                } else if (question.questionType === "Checkbox") {
+                    answerText = answer?.selectedOptionIds?.join(", ") || "";
+                } else if (question.questionType === "Date") {
+                    answerText = answer?.textAnswer || "";
+                } else if (question.questionType === "File" || question.questionType === "file") {
+                    answerText = answer?.file?.name || "";
+                }
+
+                return {
+                    verificationTemplateQuestionId: question.verificationTemplateQuestionId,
+                    templateId: viewingDetail.templateId,
+                    answer: answerText || null,
+                    verificationTemplateQuestionOptionId: selectedOptionId,
+                    attachment: answer?.file && answer?.fileBase64
+                        ? {
+                            entityType: "SUPPLIER",
+                            entityId: viewingDetail.supplierOrganizationId,
+                            assetType: "VERIFICATION_ATTACHMENT",
+                            fileBytes: answer.fileBase64,
+                            fileName: answer.file.name,
+                            contentType: answer.file.type,
+                            isSingletonAsset: true,
+                        }
+                        : null,
+                };
+            }) || [];
+
+            const payload: SubmitVerificationPayload = {
+                verificationRequestId: viewingDetail.requestId,
+                supplierId: viewingDetail.supplierOrganizationId,
+                answers,
+                status,
+            };
+
+            const result = await submitVerificationAnswers(payload);
+
+            if (isErrorResponse(result)) {
+                setVerificationError(result.description || result.message || `Failed to ${status === "SUBMITTED" ? "submit" : "save"} answers.`);
+                return;
+            }
+
+            setVerificationSuccess(true);
+            setTimeout(() => {
+                closeDetail();
+            }, 1500);
+        } catch (err: any) {
+            setVerificationError(err.message || `Failed to ${status === "SUBMITTED" ? "submit" : "save"} answers.`);
+        } finally {
+            setSubmittingVerification(false);
+        }
     };
 
     const tabCounts = useMemo(() => {
@@ -520,7 +742,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
 
             {detailInvitation && (
                 <div className="inv-modal-overlay" onClick={closeDetail}>
-                    <div className="inv-modal" onClick={(e) => e.stopPropagation()}>
+                    <div className="inv-modal inv-modal-verification" onClick={(e) => e.stopPropagation()}>
                         <div className="inv-modal-header">
                             <span className="inv-modal-badge">
                                 <IconFile /> Invitation Details
@@ -534,7 +756,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                             {viewingDetail && (
                                 <div className="inv-modal-meta">
                                     <span><IconCalendar /> Due: {new Date(viewingDetail.dueDate).toLocaleString()}</span>
-                                    <span><IconBuildingSmall /> {viewingDetail.organizationName}</span>
+                                    <span><IconBuildingSmall /> {viewingDetail.organizationName || "Organization"}</span>
                                 </div>
                             )}
                         </div>
@@ -553,12 +775,14 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                 </div>
                             ) : viewingDetail ? (
                                 <div className="inv-modal-detail">
-                                    <div>
-                                        <div className="inv-modal-section-title">Description</div>
-                                        <p className="inv-modal-desc">
-                                            {viewingDetail.description || "No description provided."}
-                                        </p>
-                                    </div>
+                                    {viewingDetail.description && (
+                                        <div>
+                                            <div className="inv-modal-section-title">Description</div>
+                                            <p className="inv-modal-desc">
+                                                {viewingDetail.description}
+                                            </p>
+                                        </div>
+                                    )}
 
                                     <div className="inv-modal-stats-grid">
                                         <div>
@@ -581,34 +805,163 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                         </div>
                                     </div>
 
-                                    <div className="inv-modal-qa-block">
-                                        <div className="inv-modal-section-title">Questions & Answers</div>
-                                        {viewingDetail.questions && viewingDetail.questions.length > 0 ? (
+                                    {viewingDetail.questions && viewingDetail.questions.length > 0 && (
+                                        <div className="inv-modal-qa-block">
+                                            <div className="inv-modal-section-title">Questions & Answers</div>
+
+                                            {verificationError && (
+                                                <div style={{
+                                                    background: "#fee2e2",
+                                                    border: "1px solid #fca5a5",
+                                                    color: "#b91c1c",
+                                                    padding: "12px 16px",
+                                                    borderRadius: "8px",
+                                                    fontSize: "13px",
+                                                    fontWeight: 500,
+                                                    marginBottom: "16px",
+                                                }}>
+                                                    {verificationError}
+                                                </div>
+                                            )}
+
+                                            {verificationSuccess && (
+                                                <div style={{
+                                                    background: "#dcfce7",
+                                                    border: "1px solid #bbf7d0",
+                                                    color: "#15803d",
+                                                    padding: "12px 16px",
+                                                    borderRadius: "8px",
+                                                    fontSize: "13px",
+                                                    fontWeight: 500,
+                                                    marginBottom: "16px",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "8px",
+                                                }}>
+                                                    <IconCheckCircle /> Answers submitted successfully!
+                                                </div>
+                                            )}
+
                                             <div className="inv-modal-qa-list">
-                                                {viewingDetail.questions.map((q: any, i: number) => (
-                                                    <div key={q.id || q.questionId || i} className="inv-modal-qa-item">
-                                                        <div className="inv-modal-qa-question">
-                                                            Q{i + 1}: {q.question || q.questionText || "Untitled question"}
+                                                {viewingDetail.questions.map((question, index) => {
+                                                    const answer = verificationAnswers[question.verificationTemplateQuestionId];
+                                                    const questionType = question.questionType?.toLowerCase() || "";
+
+                                                    return (
+                                                        <div key={question.verificationTemplateQuestionId} className="inv-modal-qa-item">
+                                                            <div className="inv-modal-qa-question">
+                                                                Q{index + 1}: {question.question}
+                                                                {question.isRequired && <span style={{ color: "#ef4444" }}> *</span>}
+                                                            </div>
+
+                                                            {questionType === "text" && (
+                                                                <input
+                                                                    type="text"
+                                                                    className="inv-question-input"
+                                                                    placeholder="Enter your answer..."
+                                                                    value={answer?.textAnswer || ""}
+                                                                    onChange={(e) => handleTextAnswerChange(question.verificationTemplateQuestionId, e.target.value)}
+                                                                    required={question.isRequired}
+                                                                />
+                                                            )}
+
+                                                            {questionType === "date" && (
+                                                                <input
+                                                                    type="date"
+                                                                    className="inv-question-input"
+                                                                    value={answer?.textAnswer || ""}
+                                                                    onChange={(e) => handleDateChange(question.verificationTemplateQuestionId, e.target.value)}
+                                                                    required={question.isRequired}
+                                                                />
+                                                            )}
+
+                                                            {questionType === "radio button" && question.options && question.options.length > 0 && (
+                                                                <div className="inv-question-options">
+                                                                    {question.options.map((option) => (
+                                                                        <label key={option.id} className="inv-option-label">
+                                                                            <input
+                                                                                type="radio"
+                                                                                name={`radio-${question.verificationTemplateQuestionId}`}
+                                                                                checked={answer?.selectedOptionId === option.id}
+                                                                                onChange={() => handleRadioChange(question.verificationTemplateQuestionId, option.id)}
+                                                                                required={question.isRequired}
+                                                                            />
+                                                                            <span>{option.optionText}</span>
+                                                                        </label>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
+                                                            {questionType === "checkbox" && question.options && question.options.length > 0 && (
+                                                                <div className="inv-question-options">
+                                                                    {question.options.map((option) => (
+                                                                        <label key={option.id} className="inv-option-label">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={answer?.selectedOptionIds?.includes(option.id) || false}
+                                                                                onChange={(e) => handleCheckboxChange(question.verificationTemplateQuestionId, option.id, e.target.checked)}
+                                                                            />
+                                                                            <span>{option.optionText}</span>
+                                                                        </label>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
+                                                            {questionType === "dropdown" && question.options && question.options.length > 0 && (
+                                                                <select
+                                                                    className="inv-question-select"
+                                                                    value={answer?.selectedOptionId || ""}
+                                                                    onChange={(e) => handleRadioChange(question.verificationTemplateQuestionId, e.target.value)}
+                                                                    required={question.isRequired}
+                                                                >
+                                                                    <option value="">-- Select an option --</option>
+                                                                    {question.options.map((option) => (
+                                                                        <option key={option.id} value={option.id}>
+                                                                            {option.optionText}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            )}
+
+                                                            {(questionType === "file" || questionType === "attachment") && (
+                                                                <div className="inv-file-upload">
+                                                                    <input
+                                                                        type="file"
+                                                                        className="inv-question-input"
+                                                                        onChange={(e) => handleFileChange(question.verificationTemplateQuestionId, e.target.files?.[0] || null)}
+                                                                        required={question.isRequired}
+                                                                    />
+                                                                    {answer?.file && (
+                                                                        <div style={{ fontSize: "12px", color: "#64748b", marginTop: "6px" }}>
+                                                                            📄 {answer.file.name}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                        <div className="inv-modal-qa-answer">
-                                                            {q.answer || q.answerText || "No response yet."}
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
-                                        ) : (
-                                            <div className="inv-modal-qa-empty">
-                                                No questions were configured for this invitation.
-                                            </div>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
                             ) : null}
                         </div>
 
-                        <div className="inv-modal-footer">
-                            <button className="inv-btn inv-btn-outline" onClick={closeDetail}>
-                                Close
+                        <div className="inv-modal-footer inv-modal-footer-verification">
+                            <button
+                                className="inv-btn inv-btn-draft"
+                                onClick={() => handleSubmitAnswers("DRAFT")}
+                                disabled={submittingVerification || !viewingDetail}
+                            >
+                                {submittingVerification ? "Saving..." : "Save as Draft"}
+                            </button>
+                            <button
+                                className="inv-btn inv-btn-submit-verification"
+                                onClick={() => handleSubmitAnswers("SUBMITTED")}
+                                disabled={submittingVerification || !viewingDetail}
+                            >
+                                {submittingVerification ? "Submitting..." : "Submit Answers"}
                             </button>
                         </div>
                     </div>

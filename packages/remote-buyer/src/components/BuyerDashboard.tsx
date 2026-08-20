@@ -767,41 +767,41 @@ useEffect(() => {
                   <div>
                     <div className="pud-rfq-table-container">
                       <table className="pud-rfq-items-table pud-allrfqs-table">
-                        <thead>
-                          <tr>
-                            <th style={{ width: '48px' }}>S.No</th>
-                            <th>RFQ Number</th>
-                            <th>Title</th>
-                            <th>Organization</th>
-                            <th>Delivery Location</th>
-                            <th>Closing Date</th>
-                            <th style={{ textAlign: 'right' }}>Action</th>
+                      <thead>
+                        <tr>
+                          <th style={{ width: '48px' }}>S.No</th>
+                          <th>RFQ Number</th>
+                          <th>Title</th>
+                          <th>Organization</th>
+                          <th>Delivery Location</th>
+                          <th>Closing Date</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allRfqsList.map((rfq: any, idx: number) => (
+                          <tr key={rfq.rfqId || idx}>
+                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
+                            <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
+                            <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                            <td>{rfq.organizationName}</td>
+                            <td>{rfq.deliveryLocation}</td>
+                            <td>
+                              {rfq.endDate
+                                ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                : "—"}
+                            </td>
+                            <td>
+                              <button
+                                className="pud-btn pud-btn-outline"
+                                onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                              >
+                                View RFQ Details
+                              </button>
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {allRfqsList.map((rfq: any, idx: number) => (
-                            <tr key={rfq.rfqId || idx}>
-                              <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
-                              <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
-                              <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
-                              <td>{rfq.organizationName}</td>
-                              <td>{rfq.deliveryLocation}</td>
-                              <td>
-                                {rfq.endDate
-                                  ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                                  : "—"}
-                              </td>
-                              <td style={{ textAlign: 'right' }}>
-                                <button
-                                  className="pud-btn pud-btn-outline"
-                                  onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                                >
-                                  View RFQ Details
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
+                        ))}
+                      </tbody>
                       </table>
                     </div>
 
@@ -927,8 +927,8 @@ useEffect(() => {
                                   <thead>
                                     <tr>
                                       <th>Material Info</th>
-                                      <th>Group / Code</th>
-                                      <th style={{ textAlign: 'right' }}>Qty</th>
+                                      <th>Code</th>
+                                      <th>Qty</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -943,15 +943,12 @@ useEffect(() => {
                                           )}
                                         </td>
                                         <td>
-                                          <div style={{ fontSize: '12px', color: '#334155' }}>
-                                            {item.materialGroup || "N/A"}
-                                          </div>
-                                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                            Code: {item.materialCode || "N/A"}
+                                          <div>
+                                            {item.materialCode || "N/A"}  
                                           </div>
                                         </td>
-                                        <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>
-                                          {item.quantity} <span style={{ fontSize: '11px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
+                                        <td>
+                                          {item.quantity} <span>{item.uom}</span>
                                         </td>
                                       </tr>
                                     ))}

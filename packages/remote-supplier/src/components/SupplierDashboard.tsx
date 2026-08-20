@@ -1069,7 +1069,7 @@ useEffect(() => {
                     <thead>
                       <tr>
                         <th>Material Info</th>
-                        <th>Group / Code</th>
+                        <th>Code</th>
                         <th style={{ textAlign: 'left' }}>Qty Required</th>
                         {!selectedRfq.addLotOption && <th style={{ textAlign: 'left', width: '130px' }}>Your Unit Quote</th>}
                       </tr>
@@ -1084,7 +1084,7 @@ useEffect(() => {
                               <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
                               {item.costCenter && (
                                 <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                  Cost Center: {item.costCenter}
+                                  Cost Center: {item.costCenterName}
                                 </div>
                               )}
                               {item.attachments?.map((att) => (
@@ -1094,18 +1094,15 @@ useEffect(() => {
                               ))}
                             </td>
                             <td>
-                              <div style={{ textAlign: 'left', fontSize: '13px', color: '#334155' }}>
-                                {item.materialGroup || "N/A"}
-                              </div>
-                              <div style={{ textAlign: 'left', fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                Code: {item.materialCode || "N/A"}
+                              <div>
+                                {item.materialCode || "N/A"}
                               </div>
                             </td>
-                            <td style={{ textAlign: 'left', fontWeight: 600, color: '#0f172a' }}>
-                              {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
+                            <td>
+                              {item.quantity} <span>{item.uom}</span>
                             </td>
                             {!selectedRfq.addLotOption && (
-                              <td style={{ textAlign: 'left' }}>
+                              <td>
                                 <input
                                   type="number"
                                   step="0.01"
@@ -1119,7 +1116,6 @@ useEffect(() => {
                                     padding: '6px 10px',
                                     border: '1px solid #cbd5e1',
                                     borderRadius: '6px',
-                                    textAlign: 'left',
                                     fontSize: '13px',
                                     fontWeight: 600,
                                     color: '#0f172a'
@@ -1526,7 +1522,7 @@ useEffect(() => {
                             <th>Organization</th>
                             <th>Delivery Location</th>
                             <th>Closing Date</th>
-                            <th style={{ textAlign: 'right' }}>Action</th>
+                            <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1544,7 +1540,7 @@ useEffect(() => {
                                   ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
                                   : "—"}
                               </td>
-                              <td style={{ textAlign: 'right' }}>
+                              <td>
                                 <button
                                   className="pud-btn pud-btn-outline"
                                   onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}

@@ -225,8 +225,8 @@
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: 8px;
-    margin-top: 20px;
+    gap: 0.5rem;
+    padding-top: 1.25rem;
 }
 
 .badp-page-btn {
@@ -499,6 +499,7 @@
 
 .bad-btn-outline {
     background: #ffffff;
+    width: fit-content;
     border-color: #2f6feb;
     color: #2f6feb;
     font-weight: 500;
@@ -678,8 +679,8 @@
 .bad-pagination {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
-    margin-top: 20px;
+    gap: 0.5px;
+    padding-top: 1.25rem;
 }
 
 .bad-page-btn {
