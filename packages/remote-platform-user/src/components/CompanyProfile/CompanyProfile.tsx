@@ -75,7 +75,6 @@ interface CompanyProfileProps {
 type DispatchLocationWithId = DispatchLocationDto & { id?: string };
 type BankAccountWithId = BankAccountDto & { id?: string };
 
-// Confirmation Modal State Type
 interface ConfirmationModalState {
   isOpen: boolean;
   title: string;
@@ -256,6 +255,9 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 }) => {
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const { auth } = useAuth();
+React.useEffect(() => {
+  console.log('auth context value:', auth);
+}, [auth]);
   const [profile, setProfile] = useState<NetworkAdminProfileResponse | any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -307,6 +309,21 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
     currentUser?.userRole === 'BUYER_NETWORK_ADMIN' ||
     currentUser?.userRole === 'BUYER_ADMINISTRATOR' ||
     currentUser?.userRole === 'BUYER_USER';
+
+  // ✅ FIXED: Helper function to get buyerId from multiple sources
+  const getBuyerId = (): string => {
+    // Priority 1: Try from auth context
+    if (auth?.buyerId && auth.buyerId.trim()) return auth.buyerId;
+    
+    // Priority 2: Try from profile business profile
+    if (profile?.businessProfile?.id) return profile.businessProfile.id;
+    
+    // Priority 3: Try from current user organization
+    if (currentUser?.organizationId) return currentUser.organizationId;
+    
+    // Fallback
+    return '';
+  };
 
   // ---- Validation helpers: only one primary bank account / one default location ----
   const hasOtherPrimaryBank = (excludeId?: string) =>
@@ -434,9 +451,18 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
     try {
       if (editingLocation?.id) {
+        // ✅ FIXED: Get buyerId from helper function
+        const buyerId = getBuyerId();
+        
+        if (!buyerId) {
+          setDispatchFormError('Unable to identify buyer. Please refresh the page and try again.');
+          setIsDispatchSubmitting(false);
+          return;
+        }
+
         const updatePayload: UpdateDeliveryLocationDto = {
           ...basePayload,
-          buyerId: auth?.buyerId || '',
+          buyerId: buyerId, // ✅ Now has actual value
         };
         const result = await updateDeliveryLocation(editingLocation.id, updatePayload);
 
@@ -587,9 +613,18 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
     try {
       if (editingBankAccount?.id) {
+        // ✅ FIXED: Get buyerId from helper function
+        const buyerId = getBuyerId();
+        
+        if (!buyerId) {
+          setBankFormError('Unable to identify buyer. Please refresh the page and try again.');
+          setIsBankSubmitting(false);
+          return;
+        }
+
         const updatePayload: UpdateBankAccountDto = {
           ...basePayload,
-          buyerId: auth?.buyerId || '',
+          buyerId: buyerId, // ✅ Now has actual value
           isVerified: editingBankAccount.isVerified || false,
         };
         const result = await updateBankAccount(editingBankAccount.id, updatePayload);
