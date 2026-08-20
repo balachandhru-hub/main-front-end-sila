@@ -15,9 +15,6 @@ export function useHostAuth(): HostAuth | null {
       setAuth((e as CustomEvent<HostAuth>).detail ?? null);
     };
     window.addEventListener('host-auth-changed', handler);
-
-    // In case the event fired before this component mounted (race on
-    // first load), also just check the current window value once.
     if ((window as any).__hostAuth__) {
       setAuth((window as any).__hostAuth__);
     }
