@@ -75,7 +75,6 @@ interface CompanyProfileProps {
 type DispatchLocationWithId = DispatchLocationDto & { id?: string };
 type BankAccountWithId = BankAccountDto & { id?: string };
 
-// Confirmation Modal State Type
 interface ConfirmationModalState {
   isOpen: boolean;
   title: string;
@@ -256,6 +255,9 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 }) => {
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const { auth } = useAuth();
+React.useEffect(() => {
+  console.log('auth context value:', auth);
+}, [auth]);
   const [profile, setProfile] = useState<NetworkAdminProfileResponse | any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -307,6 +309,21 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
     currentUser?.userRole === 'BUYER_NETWORK_ADMIN' ||
     currentUser?.userRole === 'BUYER_ADMINISTRATOR' ||
     currentUser?.userRole === 'BUYER_USER';
+
+  // ✅ FIXED: Helper function to get buyerId from multiple sources
+  const getBuyerId = (): string => {
+    // Priority 1: Try from auth context
+    if (auth?.buyerId && auth.buyerId.trim()) return auth.buyerId;
+    
+    // Priority 2: Try from profile business profile
+    if (profile?.businessProfile?.id) return profile.businessProfile.id;
+    
+    // Priority 3: Try from current user organization
+    if (currentUser?.organizationId) return currentUser.organizationId;
+    
+    // Fallback
+    return '';
+  };
 
   // ---- Validation helpers: only one primary bank account / one default location ----
   const hasOtherPrimaryBank = (excludeId?: string) =>
@@ -434,9 +451,18 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
     try {
       if (editingLocation?.id) {
+        // ✅ FIXED: Get buyerId from helper function
+        const buyerId = getBuyerId();
+        
+        if (!buyerId) {
+          setDispatchFormError('Unable to identify buyer. Please refresh the page and try again.');
+          setIsDispatchSubmitting(false);
+          return;
+        }
+
         const updatePayload: UpdateDeliveryLocationDto = {
           ...basePayload,
-          buyerId: auth?.buyerId || '',
+          buyerId: buyerId, // ✅ Now has actual value
         };
         const result = await updateDeliveryLocation(editingLocation.id, updatePayload);
 
@@ -587,9 +613,18 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
     try {
       if (editingBankAccount?.id) {
+        // ✅ FIXED: Get buyerId from helper function
+        const buyerId = getBuyerId();
+        
+        if (!buyerId) {
+          setBankFormError('Unable to identify buyer. Please refresh the page and try again.');
+          setIsBankSubmitting(false);
+          return;
+        }
+
         const updatePayload: UpdateBankAccountDto = {
           ...basePayload,
-          buyerId: auth?.buyerId || '',
+          buyerId: buyerId, // ✅ Now has actual value
           isVerified: editingBankAccount.isVerified || false,
         };
         const result = await updateBankAccount(editingBankAccount.id, updatePayload);
@@ -1103,11 +1138,12 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
               )}
             </section>
 
+            {/* DISPATCH LOCATIONS SECTION */}
             <section className="cp-card">
               <div className="cp-card-header-flex">
                 <SectionHeader
                   icon={<FaTruck />}
-                  title="4. Delivery Locations"
+                  title="4. Dispatch Locations"
                   isOpen={openSections.dispatch}
                   onToggle={() => toggleSection('dispatch')}
                 />
@@ -1115,7 +1151,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                   <button
                     type="button"
                     className="cp-manage-btn"
-                    title="Manage Delivery Locations"
+                    title="Manage Dispatch Locations"
                     onClick={openDispatchModal}
                   >
                     <FaCog />
@@ -1125,7 +1161,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
               {openSections.dispatch && (
                 <div className="cp-section-box">
                   {dispatchLocations.length === 0 ? (
-                    <p className="cp-empty-inline">No delivery locations added</p>
+                    <p className="cp-empty-inline">No dispatch locations added</p>
                   ) : (
                     dispatchLocations.map((loc, idx) => (
                       <React.Fragment key={loc.id || idx}>
@@ -1295,7 +1331,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaMapMarkerAlt className="cp-summary-icon" /> Delivery Locations
+                    <FaMapMarkerAlt className="cp-summary-icon" /> Dispatch Locations
                   </span>
                   <span className="cp-summary-value">{dispatchLocations.length}</span>
                 </div>
@@ -1523,10 +1559,10 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
             <div className="cp-modal-header">
               <h3 className="cp-modal-title">
                 {dispatchModalView === 'list'
-                  ? 'Delivery Locations'
+                  ? 'Dispatch Locations'
                   : editingLocation
-                    ? 'Edit Delivery Location'
-                    : 'Add Delivery Location'}
+                    ? 'Edit Dispatch Location'
+                    : 'Add Dispatch Location'}
               </h3>
               <button
                 type="button"
@@ -1555,7 +1591,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
                   {dispatchLocations.length === 0 ? (
                     <p className="cp-empty-inline" style={{ marginTop: '12px' }}>
-                      No delivery locations added yet
+                      No dispatch locations added yet
                     </p>
                   ) : (
                     <div className="cp-location-list">
