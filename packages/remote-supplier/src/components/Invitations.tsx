@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import "./SupplierDashboard.css";
 import "./Invitations.css";
+import { DEFAULT_VERIFICATION_TEMPLATE_ID } from "../common";
+import { getSupplierProfileByOrgId, getPersonDetailCached, type SupplierProfileResponse } from "../api/supplierApi";
 import {
     fetchBuyerInvitations,
     fetchSupplierInvitations,
@@ -9,9 +11,10 @@ import {
     submitVerificationAnswers,
     type BuyerInvitationItem,
     type InvitationAnswersResponse,
+     type VerificationQuestion,
     type SubmitVerificationPayload,
 } from "../api/supplierApi";
-import { isErrorResponse } from "@vosox/shared-ui";
+import { isErrorResponse, toastService } from "@vosox/shared-ui";
 
 
 type InvitationStatus = "open" | "accepted" | "declined" | "closed";
@@ -209,6 +212,52 @@ const mapApiItemToInvitation = (item: BuyerInvitationItem): Invitation => ({
     id: item.id,
 });
 
+const BUSINESS_PROFILE_FIELD_MAP: { match: string; getValue: (p: SupplierProfileResponse) => string }[] = [
+    { match: "bank name", getValue: (p) => p.bankAccounts?.[0]?.bankName || "" },
+    { match: "account number", getValue: (p) => p.bankAccounts?.[0]?.accountNumber || "" },
+    { match: "ifsc", getValue: (p) => p.bankAccounts?.[0]?.ifscCode || "" },
+    { match: "bank branch", getValue: (p) => p.bankAccounts?.[0]?.branchName || "" },
+    { match: "company name", getValue: (p) => p.businessProfile?.organizationName || "" },
+    { match: "email", getValue: (p) => p.businessProfile?.email || "" },
+    { match: "phone", getValue: (p) => p.businessProfile?.phone || "" },
+    { match: "country", getValue: (p) => p.businessProfile?.country || "" },
+    { match: "state", getValue: (p) => p.businessProfile?.state || "" },
+    { match: "city", getValue: (p) => p.businessProfile?.city || "" },
+    {
+        match: "address",
+        getValue: (p) =>
+            [p.businessProfile?.addressLine1, p.businessProfile?.addressLine2].filter(Boolean).join(", "),
+    },
+];
+
+const getDefaultAnswerForQuestion = (
+    question: VerificationQuestion,
+    profile: SupplierProfileResponse
+): string => {
+    const matchedReg = profile.registrations?.find((r) =>
+        question.question.toUpperCase().includes(r.registrationType.toUpperCase())
+    );
+
+    if (matchedReg) {
+        if (question.questionType === "File") {
+            return matchedReg.asset?.fileName || "Not submitted";
+        }
+        return matchedReg.registrationNumber || "N/A";
+    }
+
+    if (question.questionType === "File") {
+        return "Not submitted";
+    }
+
+    const questionLower = question.question.toLowerCase();
+    const fieldMatch = BUSINESS_PROFILE_FIELD_MAP.find((f) => questionLower.includes(f.match));
+    if (fieldMatch) {
+        return fieldMatch.getValue(profile) || "N/A";
+    }
+
+    return "N/A";
+};
+
 
 const InvitationCard: React.FC<{
     invitation: Invitation;
@@ -334,6 +383,12 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
     const [submittingVerification, setSubmittingVerification] = useState(false);
     const [verificationError, setVerificationError] = useState<string | null>(null);
     const [verificationSuccess, setVerificationSuccess] = useState(false);
+    const [defaultAnswers, setDefaultAnswers] = useState<Record<string, string>>({});
+    const [hasConfirmedDetails, setHasConfirmedDetails] = useState(false);
+
+    const [supplierProfile, setSupplierProfile] = useState<SupplierProfileResponse | null>(null);
+    const [loadingProfile, setLoadingProfile] = useState(false);
+    const [profileError, setProfileError] = useState<string | null>(null);
 
     const loadInvitations = async () => {
         if (!isAdmin) {
@@ -393,6 +448,77 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
         }
     };
 
+    const loadDefaultAnswers = async (detail: InvitationAnswersResponse) => {
+        setLoadingProfile(true);
+        setProfileError(null);
+        try {
+            const person = await getPersonDetailCached();
+            if (isErrorResponse(person)) {
+                const msg = person.description || person.message || "Failed to identify organization.";
+                setProfileError(msg);
+                toastService.error(msg);
+                return;
+            }
+
+            const result = await getSupplierProfileByOrgId(person.organizationId);
+            if (isErrorResponse(result)) {
+                const msg = result.description || result.message || "Failed to load supplier profile.";
+                setProfileError(msg);
+                toastService.error(msg);
+                return;
+            }
+
+            setSupplierProfile(result);
+
+            const answers: Record<string, string> = {};
+            detail.questions.forEach((q) => {
+                answers[q.verificationTemplateQuestionId] = getDefaultAnswerForQuestion(q, result);
+            });
+            setDefaultAnswers(answers);
+        } catch (err: any) {
+            const msg = err.message || "Failed to load supplier profile.";
+            setProfileError(msg);
+            toastService.error(msg);
+        } finally {
+            setLoadingProfile(false);
+        }
+    };
+
+    const handleSubmitDefault = async () => {
+        if (!viewingDetail || !detailInvitation) return;
+
+        setVerificationError(null);
+        setVerificationSuccess(false);
+        setSubmittingVerification(true);
+
+        try {
+            const payload: SubmitVerificationPayload = {
+                verificationRequestId: viewingDetail.requestId,
+                supplierId: viewingDetail.supplierOrganizationId,
+                answers: null,
+                status: "SUBMITTED",
+            };
+
+            const result = await submitVerificationAnswers(payload);
+
+            if (isErrorResponse(result)) {
+                const msg = result.description || result.message || "Failed to submit.";
+                setVerificationError(msg);
+                toastService.error(msg);
+                return;
+            }
+            setVerificationSuccess(true);
+            toastService.success("Verification submitted successfully!");
+            setTimeout(() => closeDetail(), 1500);
+            } catch (err: any) {
+                const msg = err.message || "Failed to submit.";
+                setVerificationError(msg);
+                toastService.error(msg);
+            } finally {
+            setSubmittingVerification(false);
+        }
+    };
+
     const handleDecline = async (invitation: Invitation) => {
         if (!invitation.id) return;
         setActionLoadingId(invitation.id);
@@ -433,7 +559,13 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                 setDetailError(result.description || result.message || "Failed to load invitation details.");
                 return;
             }
-            setViewingDetail(result);
+        setViewingDetail(result);
+
+        const isDefault = result.templateId?.toLowerCase() === DEFAULT_VERIFICATION_TEMPLATE_ID.toLowerCase();
+
+        if (isDefault) {
+            loadDefaultAnswers(result);
+        } else {
             const initialAnswers: { [questionId: string]: VerificationAnswer } = {};
             result.questions?.forEach((q) => {
                 initialAnswers[q.verificationTemplateQuestionId] = {
@@ -445,6 +577,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                 };
             });
             setVerificationAnswers(initialAnswers);
+        }
         } catch (err: any) {
             setDetailError(err.message || "Failed to load invitation details.");
         } finally {
@@ -452,11 +585,18 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
         }
     };
 
+    const isAlreadySubmitted = viewingDetail?.status === "SUBMITTED";
+    const isDefaultTemplate = viewingDetail?.templateId?.toLowerCase() === DEFAULT_VERIFICATION_TEMPLATE_ID.toLowerCase();
+
     const closeDetail = () => {
         setViewingDetail(null);
         setDetailInvitation(null);
         setDetailError(null);
         setVerificationAnswers({});
+        setSupplierProfile(null);
+        setDefaultAnswers({});
+        setProfileError(null);
+        setHasConfirmedDetails(false);
     };
 
     const handleTextAnswerChange = (questionId: string, value: string) => {
@@ -639,17 +779,22 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
             const result = await submitVerificationAnswers(payload);
 
             if (isErrorResponse(result)) {
-                setVerificationError(result.description || result.message || `Failed to ${status === "SUBMITTED" ? "submit" : "save"} answers.`);
+                const msg = result.description || result.message || `Failed to ${status === "SUBMITTED" ? "submit" : "save"} answers.`;
+                setVerificationError(msg);
+                toastService.error(msg);
                 return;
             }
 
             setVerificationSuccess(true);
+            toastService.success(status === "SUBMITTED" ? "Answers submitted successfully!" : "Draft saved successfully!");
             setTimeout(() => {
                 closeDetail();
             }, 1500);
-        } catch (err: any) {
-            setVerificationError(err.message || `Failed to ${status === "SUBMITTED" ? "submit" : "save"} answers.`);
-        } finally {
+            } catch (err: any) {
+                const msg = err.message || `Failed to ${status === "SUBMITTED" ? "submit" : "save"} answers.`;
+                setVerificationError(msg);
+                toastService.error(msg);
+            } finally {
             setSubmittingVerification(false);
         }
     };
@@ -804,8 +949,38 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                             </div>
                                         </div>
                                     </div>
+                                    {isDefaultTemplate ? (
+                                        <div className="inv-modal-qa-block">
+                                                {loadingProfile && (
+                                                    <div className="inv-loading-inner"><div className="inv-spinner" /><span>Loading your details...</span></div>
+                                                )}
 
-                                    {viewingDetail.questions && viewingDetail.questions.length > 0 && (
+                                                {profileError && !loadingProfile && (
+                                                    <div className="inv-action-error">{profileError}</div>
+                                                )}
+
+                                                {supplierProfile && !loadingProfile && (
+                                                    <div className="inv-modal-qa-empty" style={{ marginBottom: "12px" }}>
+                                                        Please review the answers below. If everything is correct, click <strong>Accept</strong> to confirm, then <strong>Submit</strong> to finalize.
+                                                    </div>
+                                                )}
+
+                                            <div className="inv-modal-qa-list">
+                                                {viewingDetail.questions.map((question, index) => (
+                                                    <div key={question.verificationTemplateQuestionId} className="inv-modal-qa-item">
+                                                        <div className="inv-modal-qa-question">
+                                                            Q{index + 1}: {question.question}
+                                                        </div>
+                                                        <div className="inv-modal-qa-answer">
+                                                            {supplierProfile
+                                                                ? defaultAnswers[question.verificationTemplateQuestionId] || "N/A"
+                                                                : "—"}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : viewingDetail.questions && viewingDetail.questions.length > 0 && (
                                         <div className="inv-modal-qa-block">
                                             <div className="inv-modal-section-title">Questions & Answers</div>
 
@@ -944,25 +1119,47 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                             </div>
                                         </div>
                                     )}
+
                                 </div>
                             ) : null}
                         </div>
 
                         <div className="inv-modal-footer inv-modal-footer-verification">
-                            <button
-                                className="inv-btn inv-btn-draft"
-                                onClick={() => handleSubmitAnswers("DRAFT")}
-                                disabled={submittingVerification || !viewingDetail}
-                            >
-                                {submittingVerification ? "Saving..." : "Save as Draft"}
-                            </button>
-                            <button
-                                className="inv-btn inv-btn-submit-verification"
-                                onClick={() => handleSubmitAnswers("SUBMITTED")}
-                                disabled={submittingVerification || !viewingDetail}
-                            >
-                                {submittingVerification ? "Submitting..." : "Submit Answers"}
-                            </button>
+                            {isDefaultTemplate ? (
+                                <>
+                                    <button
+                                        className="inv-btn inv-btn-draft"
+                                        onClick={() => setHasConfirmedDetails(true)}
+                                        disabled={loadingProfile || !supplierProfile || isAlreadySubmitted || hasConfirmedDetails}
+                                    >
+                                        {hasConfirmedDetails ? "Accepted ✓" : "Accept"}
+                                    </button>
+                                    <button
+                                        className="inv-btn inv-btn-submit-verification"
+                                        onClick={handleSubmitDefault}
+                                        disabled={submittingVerification || isAlreadySubmitted || !hasConfirmedDetails}
+                                    >
+                                        {submittingVerification ? "Submitting..." : "Submit"}
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button
+                                        className="inv-btn inv-btn-draft"
+                                        onClick={() => handleSubmitAnswers("DRAFT")}
+                                        disabled={submittingVerification || !viewingDetail || isAlreadySubmitted}
+                                    >
+                                        {submittingVerification ? "Saving..." : "Save as Draft"}
+                                    </button>
+                                    <button
+                                        className="inv-btn inv-btn-submit-verification"
+                                        onClick={() => handleSubmitAnswers("SUBMITTED")}
+                                        disabled={submittingVerification || !viewingDetail || isAlreadySubmitted}
+                                    >
+                                        {submittingVerification ? "Submitting..." : "Submit Answers"}
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>

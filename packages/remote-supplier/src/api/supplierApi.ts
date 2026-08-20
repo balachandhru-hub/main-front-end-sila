@@ -1101,7 +1101,7 @@ export interface VerificationAnswerPayload {
 export interface SubmitVerificationPayload {
   verificationRequestId: string;
   supplierId: string;
-  answers: VerificationAnswerPayload[];
+  answers: VerificationAnswerPayload[] | null;
   status: "SUBMITTED" | "DRAFT";
 }
  
@@ -1141,3 +1141,38 @@ export const submitVerificationAnswers = async (
   }
 };
  
+export const getSupplierProfileByOrgId = async (
+  organizationId: string
+): Promise<SupplierProfileResponse | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.get<SupplierProfileResponse>(
+      '/api/v1/supplier/profile',
+      { params: { organizationId } }
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch supplier profile',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching supplier profile.',
+    };
+  }
+};
