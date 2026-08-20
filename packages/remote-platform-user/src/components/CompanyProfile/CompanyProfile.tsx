@@ -35,11 +35,17 @@ import {
   createDeliveryLocation,
   updateDeliveryLocation,
   deleteDeliveryLocation,
+  createBankAccount,
+  updateBankAccount,
+  deleteBankAccount,
 } from '../../api/networkAdminApi';
 import type { NetworkAdminRole } from '../../api/networkAdminApi';
+import { useAuth } from '../../../../host-app/src/AuthContext';
 import type {
   CreateDeliveryLocationDto,
   UpdateDeliveryLocationDto,
+  CreateBankAccountDto,
+  UpdateBankAccountDto,
 } from '../../api/networkAdminApi';
 import type { NetworkAdminProfileResponse } from '../../dto/networkAdminDto';
 import type {
@@ -67,6 +73,17 @@ interface CompanyProfileProps {
 }
 
 type DispatchLocationWithId = DispatchLocationDto & { id?: string };
+type BankAccountWithId = BankAccountDto & { id?: string };
+
+// Confirmation Modal State Type
+interface ConfirmationModalState {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  type: 'bank' | 'location' | null;
+  item: BankAccountWithId | DispatchLocationWithId | null;
+  isLoading: boolean;
+}
 
 const emptyDispatchForm: DispatchLocationWithId = {
   locationName: '',
@@ -79,6 +96,18 @@ const emptyDispatchForm: DispatchLocationWithId = {
   contactPerson: '',
   contactPhone: '',
   isDefault: false,
+};
+
+const emptyBankForm: BankAccountWithId = {
+  accountHolderName: '',
+  bankName: '',
+  branchName: '',
+  accountNumber: '',
+  ifscCode: '',
+  swiftCode: '',
+  currency: '',
+  isPrimary: false,
+  isVerified: false,
 };
 
 const formatCurrency = (amount?: number, currency?: string) => {
@@ -148,6 +177,70 @@ const MaskedAccountNumber: React.FC<{ accountNumber?: string }> = ({ accountNumb
   );
 };
 
+// Confirmation Modal Component
+const ConfirmationModal: React.FC<{
+  isOpen: boolean;
+  title: string;
+  message: string;
+  isLoading: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}> = ({ isOpen, title, message, isLoading, onConfirm, onCancel }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="cp-confirmation-overlay" onClick={onCancel}>
+      <div className="cp-confirmation-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="cp-confirmation-header">
+          <h3 className="cp-confirmation-title">{title}</h3>
+          <button
+            type="button"
+            className="cp-confirmation-close"
+            onClick={onCancel}
+            aria-label="Close"
+            disabled={isLoading}
+          >
+            <FaTimes />
+          </button>
+        </div>
+
+        <div className="cp-confirmation-body">
+          <p className="cp-confirmation-message">{message}</p>
+        </div>
+
+        <div className="cp-confirmation-footer">
+          <button
+            type="button"
+            className="cp-confirmation-btn cp-confirmation-btn-cancel"
+            onClick={onCancel}
+            disabled={isLoading}
+          >
+            No, Cancel
+          </button>
+          <button
+            type="button"
+            className="cp-confirmation-btn cp-confirmation-btn-delete"
+            onClick={onConfirm}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <FaSpinner className="cp-confirmation-spinner" />
+                Deleting...
+              </>
+            ) : (
+              <>
+                <FaTrash />
+                Yes, Delete
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const CompanyProfile: React.FC<CompanyProfileProps> = ({
   mode = 'admin-review',
   showHeader = true,
@@ -162,7 +255,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
   onSettingsClick,
 }) => {
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
-
+  const { auth } = useAuth();
   const [profile, setProfile] = useState<NetworkAdminProfileResponse | any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -183,8 +276,29 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
   const [dispatchForm, setDispatchForm] = useState<DispatchLocationWithId>(emptyDispatchForm);
   const [isDispatchSubmitting, setIsDispatchSubmitting] = useState(false);
   const [dispatchFormError, setDispatchFormError] = useState<string | null>(null);
-  const [deletingLocationId, setDeletingLocationId] = useState<string | null>(null);
+  const [, setDeletingLocationId] = useState<string | null>(null);
   const [dispatchListError, setDispatchListError] = useState<string | null>(null);
+
+  // ---- Bank Account Modal State ----
+  const [bankAccounts, setBankAccounts] = useState<BankAccountWithId[]>([]);
+  const [isBankModalOpen, setIsBankModalOpen] = useState(false);
+  const [bankModalView, setBankModalView] = useState<'list' | 'form'>('list');
+  const [editingBankAccount, setEditingBankAccount] = useState<BankAccountWithId | null>(null);
+  const [bankForm, setBankForm] = useState<BankAccountWithId>(emptyBankForm);
+  const [isBankSubmitting, setIsBankSubmitting] = useState(false);
+  const [bankFormError, setBankFormError] = useState<string | null>(null);
+  const [, setDeletingBankAccountId] = useState<string | null>(null);
+  const [bankListError, setBankListError] = useState<string | null>(null);
+
+  // ---- Confirmation Modal State ----
+  const [confirmationModal, setConfirmationModal] = useState<ConfirmationModalState>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: null,
+    item: null,
+    isLoading: false,
+  });
 
   const toggleSection = (key: keyof typeof openSections) =>
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -193,6 +307,13 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
     currentUser?.userRole === 'BUYER_NETWORK_ADMIN' ||
     currentUser?.userRole === 'BUYER_ADMINISTRATOR' ||
     currentUser?.userRole === 'BUYER_USER';
+
+  // ---- Validation helpers: only one primary bank account / one default location ----
+  const hasOtherPrimaryBank = (excludeId?: string) =>
+    bankAccounts.some((a) => a.isPrimary && a.id !== excludeId);
+
+  const hasOtherDefaultLocation = (excludeId?: string) =>
+    dispatchLocations.some((l) => l.isDefault && l.id !== excludeId);
 
   useEffect(() => {
     let cancelled = false;
@@ -230,6 +351,13 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
   useEffect(() => {
     if (profile?.dispatchLocations) {
       setDispatchLocations(profile.dispatchLocations);
+    }
+  }, [profile]);
+
+  // Keep local bank-accounts state in sync whenever profile loads/reloads
+  useEffect(() => {
+    if (profile?.bankAccounts) {
+      setBankAccounts(profile.bankAccounts);
     }
   }, [profile]);
 
@@ -282,6 +410,13 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
       return;
     }
 
+    if (dispatchForm.isDefault && hasOtherDefaultLocation(editingLocation?.id)) {
+      setDispatchFormError(
+        'You already have a default dispatch location. Please unset it before setting a new one as default.'
+      );
+      return;
+    }
+
     setIsDispatchSubmitting(true);
 
     const basePayload: CreateDeliveryLocationDto = {
@@ -301,8 +436,8 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
       if (editingLocation?.id) {
         const updatePayload: UpdateDeliveryLocationDto = {
           ...basePayload,
-          buyerId: sessionStorage.getItem('vosox_buyer_id') || '',
-        }
+          buyerId: auth?.buyerId || '',
+        };
         const result = await updateDeliveryLocation(editingLocation.id, updatePayload);
 
         if (isErrorResponse(result)) {
@@ -342,26 +477,215 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
     }
   };
 
-  const handleDeleteLocation = async (loc: DispatchLocationWithId) => {
-    if (!loc.id) return;
-    const confirmed = window.confirm(
-      `Delete dispatch location "${loc.locationName || 'this location'}"? This cannot be undone.`
-    );
-    if (!confirmed) return;
+  const openDeleteLocationConfirmation = (loc: DispatchLocationWithId) => {
+    setConfirmationModal({
+      isOpen: true,
+      title: 'Delete Dispatch Location',
+      message: `Are you sure you want to delete "${loc.locationName || 'this location'}"? This action cannot be undone.`,
+      type: 'location',
+      item: loc,
+      isLoading: false,
+    });
+  };
 
+  const handleConfirmDeleteLocation = async () => {
+    const loc = confirmationModal.item as DispatchLocationWithId;
+    if (!loc?.id) return;
+
+    setConfirmationModal((prev) => ({ ...prev, isLoading: true }));
     setDispatchListError(null);
     setDeletingLocationId(loc.id);
+
     try {
       const result = await deleteDeliveryLocation(loc.id);
       if (isErrorResponse(result)) {
         setDispatchListError(result.message || 'Failed to delete location');
+        setConfirmationModal((prev) => ({ ...prev, isLoading: false }));
         return;
       }
       setDispatchLocations((prev) => prev.filter((l) => l.id !== loc.id));
+      setConfirmationModal({ isOpen: false, title: '', message: '', type: null, item: null, isLoading: false });
     } catch (err: any) {
       setDispatchListError(err.message || 'Something went wrong while deleting');
+      setConfirmationModal((prev) => ({ ...prev, isLoading: false }));
     } finally {
       setDeletingLocationId(null);
+    }
+  };
+
+  // ---- Bank Account Handlers ----
+  const openBankModal = () => {
+    setBankModalView('list');
+    setEditingBankAccount(null);
+    setBankFormError(null);
+    setBankListError(null);
+    setIsBankModalOpen(true);
+  };
+
+  const closeBankModal = () => {
+    setIsBankModalOpen(false);
+    setBankModalView('list');
+    setEditingBankAccount(null);
+    setBankForm(emptyBankForm);
+    setBankFormError(null);
+  };
+
+  const openAddBankForm = () => {
+    setEditingBankAccount(null);
+    setBankForm(emptyBankForm);
+    setBankFormError(null);
+    setBankModalView('form');
+  };
+
+  const openEditBankForm = (acc: BankAccountWithId) => {
+    setEditingBankAccount(acc);
+    setBankForm({ ...acc });
+    setBankFormError(null);
+    setBankModalView('form');
+  };
+
+  const handleBankFormChange = (
+    field: keyof BankAccountWithId,
+    value: string | boolean
+  ) => {
+    setBankForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleBankFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBankFormError(null);
+
+    if (
+      !bankForm.accountHolderName ||
+      !bankForm.bankName ||
+      !bankForm.accountNumber ||
+      !bankForm.ifscCode
+    ) {
+      setBankFormError('Please fill in the required fields.');
+      return;
+    }
+
+    if (bankForm.isPrimary && hasOtherPrimaryBank(editingBankAccount?.id)) {
+      setBankFormError(
+        'You already have a primary bank account. Please unset it before setting a new one as primary.'
+      );
+      return;
+    }
+
+    setIsBankSubmitting(true);
+
+    const basePayload: CreateBankAccountDto = {
+      accountHolderName: bankForm.accountHolderName || '',
+      bankName: bankForm.bankName || '',
+      branchName: bankForm.branchName || '',
+      accountNumber: bankForm.accountNumber || '',
+      ifscCode: bankForm.ifscCode || '',
+      swiftCode: bankForm.swiftCode || '',
+      currency: bankForm.currency || '',
+      isPrimary: !!bankForm.isPrimary,
+    };
+
+    try {
+      if (editingBankAccount?.id) {
+        const updatePayload: UpdateBankAccountDto = {
+          ...basePayload,
+          buyerId: auth?.buyerId || '',
+          isVerified: editingBankAccount.isVerified || false,
+        };
+        const result = await updateBankAccount(editingBankAccount.id, updatePayload);
+
+        if (isErrorResponse(result)) {
+          setBankFormError(result.message || 'Failed to update bank account');
+          return;
+        }
+
+        setBankAccounts((prev) =>
+          prev.map((acc) =>
+            acc.id === editingBankAccount.id
+              ? { ...basePayload, id: editingBankAccount.id, isVerified: editingBankAccount.isVerified }
+              : acc
+          )
+        );
+      } else {
+        const result = await createBankAccount(basePayload);
+
+        if (!('id' in result)) {
+          setBankFormError(result.message || 'Failed to create bank account');
+          return;
+        }
+
+        setBankAccounts((prev) => [
+          ...prev,
+          {
+            ...basePayload,
+            id: result.id,
+            isVerified: false,
+          },
+        ]);
+      }
+
+      setBankModalView('list');
+      setEditingBankAccount(null);
+      setBankForm(emptyBankForm);
+    } catch (err: any) {
+      setBankFormError(err.message || 'Something went wrong');
+    } finally {
+      setIsBankSubmitting(false);
+    }
+  };
+
+  const openDeleteBankAccountConfirmation = (acc: BankAccountWithId) => {
+    setConfirmationModal({
+      isOpen: true,
+      title: 'Delete Bank Account',
+      message: `Are you sure you want to delete the bank account "${acc.bankName || 'this account'}"? This action cannot be undone.`,
+      type: 'bank',
+      item: acc,
+      isLoading: false,
+    });
+  };
+
+  const handleConfirmDeleteBankAccount = async () => {
+    const acc = confirmationModal.item as BankAccountWithId;
+    if (!acc?.id) return;
+
+    setConfirmationModal((prev) => ({ ...prev, isLoading: true }));
+    setBankListError(null);
+    setDeletingBankAccountId(acc.id);
+
+    try {
+      const result = await deleteBankAccount(acc.id);
+      if (isErrorResponse(result)) {
+        setBankListError(result.message || 'Failed to delete bank account');
+        setConfirmationModal((prev) => ({ ...prev, isLoading: false }));
+        return;
+      }
+      setBankAccounts((prev) => prev.filter((a) => a.id !== acc.id));
+      setConfirmationModal({ isOpen: false, title: '', message: '', type: null, item: null, isLoading: false });
+    } catch (err: any) {
+      setBankListError(err.message || 'Something went wrong while deleting');
+      setConfirmationModal((prev) => ({ ...prev, isLoading: false }));
+    } finally {
+      setDeletingBankAccountId(null);
+    }
+  };
+
+  const handleConfirmationCancel = () => {
+    setConfirmationModal({
+      isOpen: false,
+      title: '',
+      message: '',
+      type: null,
+      item: null,
+      isLoading: false,
+    });
+  };
+
+  const handleConfirmationConfirm = () => {
+    if (confirmationModal.type === 'bank') {
+      handleConfirmDeleteBankAccount();
+    } else if (confirmationModal.type === 'location') {
+      handleConfirmDeleteLocation();
     }
   };
 
@@ -394,7 +718,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
   const bp = profile.businessProfile || {};
   const registrations: RegistrationDto[] = profile.registrations || [];
-  const bankAccounts: BankAccountDto[] = profile.bankAccounts || [];
   const categories: CategoryDto[] =
     (profile as any).categories ||
     (profile as any).buyerCategories ||
@@ -710,6 +1033,16 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                     ) : undefined
                   }
                 />
+                {isBuyer && (
+                  <button
+                    type="button"
+                    className="cp-manage-btn"
+                    title="Manage Bank Accounts"
+                    onClick={openBankModal}
+                  >
+                    <FaCog />
+                  </button>
+                )}
               </div>
               {openSections.bank && (
                 <div className="cp-section-box">
@@ -717,7 +1050,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                     <p className="cp-empty-inline">No bank accounts added</p>
                   ) : (
                     bankAccounts.map((acc, idx) => (
-                      <React.Fragment key={idx}>
+                      <React.Fragment key={acc.id || idx}>
                         {idx > 0 && <div className="cp-divider" />}
                         <div className="cp-grid cp-grid-3">
                           <div className="cp-field">
@@ -770,12 +1103,11 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
               )}
             </section>
 
-            {/* DISPATCH LOCATIONS SECTION */}
             <section className="cp-card">
               <div className="cp-card-header-flex">
                 <SectionHeader
                   icon={<FaTruck />}
-                  title="4. Dispatch Locations"
+                  title="4. Delivery Locations"
                   isOpen={openSections.dispatch}
                   onToggle={() => toggleSection('dispatch')}
                 />
@@ -783,7 +1115,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                   <button
                     type="button"
                     className="cp-manage-btn"
-                    title="Manage Dispatch Locations"
+                    title="Manage Delivery Locations"
                     onClick={openDispatchModal}
                   >
                     <FaCog />
@@ -793,7 +1125,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
               {openSections.dispatch && (
                 <div className="cp-section-box">
                   {dispatchLocations.length === 0 ? (
-                    <p className="cp-empty-inline">No dispatch locations added</p>
+                    <p className="cp-empty-inline">No delivery locations added</p>
                   ) : (
                     dispatchLocations.map((loc, idx) => (
                       <React.Fragment key={loc.id || idx}>
@@ -963,7 +1295,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaMapMarkerAlt className="cp-summary-icon" /> Dispatch Locations
+                    <FaMapMarkerAlt className="cp-summary-icon" /> Delivery Locations
                   </span>
                   <span className="cp-summary-value">{dispatchLocations.length}</span>
                 </div>
@@ -988,6 +1320,202 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
         </div>
       </div>
 
+      {/* BANK ACCOUNT MODAL */}
+      {isBankModalOpen && (
+        <div className="cp-modal-overlay" onClick={closeBankModal}>
+          <div className="cp-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cp-modal-header">
+              <h3 className="cp-modal-title">
+                {bankModalView === 'list'
+                  ? 'Bank Accounts'
+                  : editingBankAccount
+                    ? 'Edit Bank Account'
+                    : 'Add Bank Account'}
+              </h3>
+              <button
+                type="button"
+                className="cp-modal-close"
+                onClick={closeBankModal}
+                aria-label="Close"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <div className="cp-modal-body">
+              {bankModalView === 'list' ? (
+                <>
+                  {bankListError && (
+                    <div className="cp-modal-error">{bankListError}</div>
+                  )}
+
+                  <button
+                    type="button"
+                    className="cp-btn cp-btn-add-location"
+                    onClick={openAddBankForm}
+                  >
+                    <FaPlus /> Add New Bank Account
+                  </button>
+
+                  {bankAccounts.length === 0 ? (
+                    <p className="cp-empty-inline" style={{ marginTop: '12px' }}>
+                      No bank accounts added yet
+                    </p>
+                  ) : (
+                    <div className="cp-location-list">
+                      {bankAccounts.map((acc, idx) => (
+                        <div className="cp-location-list-item" key={acc.id || idx}>
+                          <div className="cp-location-list-info">
+                            <div className="cp-location-list-name">
+                              {acc.bankName || '-'}
+                              {acc.isPrimary && (
+                                <span className="cp-pill cp-pill-yes cp-location-default-tag">
+                                  <FaCheck /> Primary
+                                </span>
+                              )}
+                            </div>
+                            <div className="cp-location-list-address">
+                              {acc.accountHolderName}
+                              {acc.accountNumber ? ` • ****${acc.accountNumber.slice(-4)}` : ''}
+                            </div>
+                          </div>
+                          <div className="cp-location-list-actions">
+                            <button
+                              type="button"
+                              className="cp-icon-action-btn"
+                              title="Edit"
+                              onClick={() => openEditBankForm(acc)}
+                              disabled={!acc.id}
+                            >
+                              <FaEdit />
+                            </button>
+                            <button
+                              type="button"
+                              className="cp-icon-action-btn cp-icon-action-btn-danger"
+                              title="Delete"
+                              onClick={() => openDeleteBankAccountConfirmation(acc)}
+                              disabled={!acc.id}
+                            >
+                              <FaTrash />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <form className="cp-dispatch-form" onSubmit={handleBankFormSubmit}>
+                  {bankFormError && (
+                    <div className="cp-modal-error">{bankFormError}</div>
+                  )}
+
+                  <div className="cp-form-grid">
+                    <div className="cp-form-field">
+                      <label>Account Holder Name *</label>
+                      <input
+                        type="text"
+                        value={bankForm.accountHolderName || ''}
+                        onChange={(e) => handleBankFormChange('accountHolderName', e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="cp-form-field">
+                      <label>Bank Name *</label>
+                      <input
+                        type="text"
+                        value={bankForm.bankName || ''}
+                        onChange={(e) => handleBankFormChange('bankName', e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="cp-form-field">
+                      <label>Branch Name</label>
+                      <input
+                        type="text"
+                        value={bankForm.branchName || ''}
+                        onChange={(e) => handleBankFormChange('branchName', e.target.value)}
+                      />
+                    </div>
+                    <div className="cp-form-field">
+                      <label>Account Number *</label>
+                      <input
+                        type="text"
+                        value={bankForm.accountNumber || ''}
+                        onChange={(e) => handleBankFormChange('accountNumber', e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="cp-form-field">
+                      <label>IFSC Code *</label>
+                      <input
+                        type="text"
+                        value={bankForm.ifscCode || ''}
+                        onChange={(e) => handleBankFormChange('ifscCode', e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="cp-form-field">
+                      <label>SWIFT Code</label>
+                      <input
+                        type="text"
+                        value={bankForm.swiftCode || ''}
+                        onChange={(e) => handleBankFormChange('swiftCode', e.target.value)}
+                      />
+                    </div>
+                    <div className="cp-form-field">
+                      <label>Currency</label>
+                      <input
+                        type="text"
+                        value={bankForm.currency || ''}
+                        onChange={(e) => handleBankFormChange('currency', e.target.value)}
+                        placeholder="e.g. INR, USD"
+                      />
+                    </div>
+                    <div className="cp-form-field cp-form-field-checkbox">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={!!bankForm.isPrimary}
+                          disabled={hasOtherPrimaryBank(editingBankAccount?.id)}
+                          onChange={(e) => handleBankFormChange('isPrimary', e.target.checked)}
+                        />
+                        Set as Primary Account
+                      </label>
+                      {hasOtherPrimaryBank(editingBankAccount?.id) && (
+                        <span className="cp-form-hint">You already have a primary account</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="cp-form-actions">
+                    <button
+                      type="button"
+                      className="cp-btn cp-btn-cancel"
+                      onClick={() => setBankModalView('list')}
+                      disabled={isBankSubmitting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="cp-btn cp-btn-verify"
+                      disabled={isBankSubmitting}
+                    >
+                      {isBankSubmitting
+                        ? 'Saving...'
+                        : editingBankAccount
+                          ? 'Update Account'
+                          : 'Save Account'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* DISPATCH LOCATION MODAL */}
       {isDispatchModalOpen && (
         <div className="cp-modal-overlay" onClick={closeDispatchModal}>
@@ -995,10 +1523,10 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
             <div className="cp-modal-header">
               <h3 className="cp-modal-title">
                 {dispatchModalView === 'list'
-                  ? 'Dispatch Locations'
+                  ? 'Delivery Locations'
                   : editingLocation
-                    ? 'Edit Dispatch Location'
-                    : 'Add Dispatch Location'}
+                    ? 'Edit Delivery Location'
+                    : 'Add Delivery Location'}
               </h3>
               <button
                 type="button"
@@ -1027,7 +1555,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
                   {dispatchLocations.length === 0 ? (
                     <p className="cp-empty-inline" style={{ marginTop: '12px' }}>
-                      No dispatch locations added yet
+                      No delivery locations added yet
                     </p>
                   ) : (
                     <div className="cp-location-list">
@@ -1063,14 +1591,10 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                               type="button"
                               className="cp-icon-action-btn cp-icon-action-btn-danger"
                               title="Delete"
-                              onClick={() => handleDeleteLocation(loc)}
-                              disabled={!loc.id || deletingLocationId === loc.id}
+                              onClick={() => openDeleteLocationConfirmation(loc)}
+                              disabled={!loc.id}
                             >
-                              {deletingLocationId === loc.id ? (
-                                <FaSpinner className="cp-spin-icon" />
-                              ) : (
-                                <FaTrash />
-                              )}
+                              <FaTrash />
                             </button>
                           </div>
                         </div>
@@ -1165,10 +1689,14 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                         <input
                           type="checkbox"
                           checked={!!dispatchForm.isDefault}
+                          disabled={hasOtherDefaultLocation(editingLocation?.id)}
                           onChange={(e) => handleDispatchFormChange('isDefault', e.target.checked)}
                         />
                         Set as Default Location
                       </label>
+                      {hasOtherDefaultLocation(editingLocation?.id) && (
+                        <span className="cp-form-hint">You already have a default location</span>
+                      )}
                     </div>
                   </div>
 
@@ -1199,6 +1727,16 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
           </div>
         </div>
       )}
+
+      {/* CONFIRMATION MODAL */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        isLoading={confirmationModal.isLoading}
+        onConfirm={handleConfirmationConfirm}
+        onCancel={handleConfirmationCancel}
+      />
     </div>
   );
 };

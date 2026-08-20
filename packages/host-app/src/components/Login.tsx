@@ -32,11 +32,15 @@ const CheckIcon = () => (
 
 interface LoginProps {
   onLoginSuccess?: (
-    details?: {
+    details: {
       userId?: string;
       personId?: string;
       organizationId?: string;
       roleId?: string;
+      buyerId?: string;
+      supplierId?: string;
+      permissions?: string[];
+      organizationType?: number;
     }
   ) => void;
   onCreateAccount?: () => void;
@@ -95,34 +99,27 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
       await login(username, password);
       await delay(1000);
 
-      let details: any = {};
       try {
-        const claims = await getTokenClaims(true);
-        if (claims && claims.roleId) {
-          details = {
-            userId: claims.userId,
-            personId: claims.personId,
-            organizationId: claims.organizationId,
-            roleId: claims.roleId,
-          };
+       const claims = await getTokenClaims(true);
+if (claims && claims.roleId) {
+  const details = {
+    userId: claims.userId,
+    personId: claims.personId,
+    organizationId: claims.organizationId,
+    roleId: claims.roleId,
+    buyerId: claims.buyerId,
+    supplierId: claims.supplierId,
+    permissions: claims.permissions,
+    organizationType: claims.organizationType,
+  };
 
-          sessionStorage.setItem('vosox_user_id', claims.userId || '');
-          sessionStorage.setItem('vosox_person_id', claims.personId || '');
-          sessionStorage.setItem('vosox_organization_id', claims.organizationId || '');
-          sessionStorage.setItem('vosox_role_id', claims.roleId || '');
-          sessionStorage.setItem('vosox_user_role', claims.role || '');
-          sessionStorage.setItem('vosox_user_email', username);
-          sessionStorage.setItem('vosox_user_name', claims.name || 'User');
-          sessionStorage.setItem('vosox_buyer_id', claims.buyerId || '');
-          sessionStorage.setItem('vosox_supplier_id', claims.supplierId || '');
+  onLoginSuccess?.(details);
 
-          onLoginSuccess?.(details);
-
-          const redirectUrl = getRedirectUrl(claims.roleId);
-          navigate(redirectUrl, { replace: true });
-        } else {
-          setError('Failed to retrieve user claims. Role ID not found.');
-        }
+  const redirectUrl = getRedirectUrl(claims.roleId);
+  navigate(redirectUrl, { replace: true });
+} else {
+  setError('Failed to retrieve user claims. Role ID not found.');
+}
       } catch (claimsError: any) {
         setError(claimsError.message || 'Failed to retrieve user claims.');
       }

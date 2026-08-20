@@ -18,6 +18,7 @@ import {
 } from "../api/supplierApi";
 import { useLocation } from "react-router-dom";
 import Header from "./Header.tsx";
+import { useAuth } from '../../../host-app/src/AuthContext.tsx';
 interface StatCard {
   icon: React.ReactNode;
   label: string;
@@ -377,9 +378,14 @@ const SupplierDashboard: React.FC = () => {
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
 
-  const [supplierId, setSupplierId] = useState<string | null>(
-    sessionStorage.getItem("vosox_supplier_id")
-  );
+  const { auth } = useAuth();
+const [supplierId, setSupplierId] = useState<string | null>(auth?.supplierId ?? null);
+
+useEffect(() => {
+  if (auth?.supplierId) {
+    setSupplierId(auth.supplierId);
+  }
+}, [auth?.supplierId]);
   const [rfqs, setRfqs] = useState<RFQMasterDataItem[]>([]);
   const [loadingRfqs, setLoadingRfqs] = useState(true);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
@@ -406,27 +412,25 @@ const SupplierDashboard: React.FC = () => {
   const [submitAnswersError, setSubmitAnswersError] = useState<string | null>(null);
   const [submitAnswersSuccess, setSubmitAnswersSuccess] = useState(false);
 
-  useEffect(() => {
-    const loadSupplierProfile = async () => {
-      if (!supplierId) {
-        try {
-          const profile = await getSupplierProfile();
-          if (profile && 'id' in profile && profile.id) {
-            sessionStorage.setItem("vosox_supplier_id", profile.id);
-            setSupplierId(profile.id);
-          } else {
-            setRfqsError("Supplier profile not found. Please complete onboarding.");
-            setLoadingRfqs(false);
-          }
-        } catch (err: any) {
-
-          setRfqsError("Failed to load supplier profile details.");
+ useEffect(() => {
+  const loadSupplierProfile = async () => {
+    if (!supplierId) {
+      try {
+        const profile = await getSupplierProfile();
+        if (profile && 'id' in profile && profile.id) {
+          setSupplierId(profile.id);   
+        } else {
+          setRfqsError("Supplier profile not found. Please complete onboarding.");
           setLoadingRfqs(false);
         }
+      } catch (err: any) {
+        setRfqsError("Failed to load supplier profile details.");
+        setLoadingRfqs(false);
       }
-    };
-    loadSupplierProfile();
-  }, [supplierId]);
+    }
+  };
+  loadSupplierProfile();
+}, [supplierId]);
 
   useEffect(() => {
     const loadRfqs = async () => {
