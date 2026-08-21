@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaPlus, FaTimes, FaBuilding, FaList, FaCheck, FaBox } from 'react-icons/fa';
+import { FaArrowLeft, FaPlus, FaTimes, FaBuilding, FaList, FaCheck, FaBox, FaClipboard } from 'react-icons/fa';
 import { getAllBuyers, createBuyerDepartment } from '../api/platformApi';
-import type { BuyerDto } from '../dto/platformDto';
 import { useDepartmentStore } from './useDepartmentStore'; 
 import './departmentbuyer.css';
 
@@ -11,11 +10,6 @@ const sila_logo = `${window.location.protocol}//${window.location.host}/assets/S
 export const Department: React.FC = () => {
   const navigate = useNavigate();
 
-  // ─── Local state: buyers list (this stays local, not in zustand) ───
-  const [buyers, setBuyers] = useState<BuyerDto[]>([]);
-  const [buyersLoading, setBuyersLoading] = useState(false);
-
-  // ─── Zustand Store: all form + UI state ───
   const {
     selectedBuyer,
     setSelectedBuyer,
@@ -34,25 +28,34 @@ export const Department: React.FC = () => {
     resetForm,
   } = useDepartmentStore();
 
-  // ─── Popup visibility (local, not in zustand) ───
   const [showPopup, setShowPopup] = useState(false);
 
-  // Fetch buyers on mount
-  useEffect(() => {
-    const fetchBuyers = async () => {
-      setBuyersLoading(true);
-      try {
-        const data = await getAllBuyers({ index: 0, limit: 1000 });
-        // Resolve data shape (same pattern as your dashboard)
-        const resolved = Array.isArray(data) ? data : (data as any)?.buyers || (data as any)?.data || [];
-        setBuyers(resolved);
-      } catch (err: any) {
-        console.error('Failed to fetch buyers:', err);
-      } finally {
-        setBuyersLoading(false);
+  const fetchAndSelectBuyer = async () => {
+    try {
+      const data = await getAllBuyers({ index: 0, limit: 1000 });
+      const resolved = Array.isArray(data) ? data : (data as any)?.buyers || (data as any)?.data || [];
+
+      const first = resolved[0] as any;
+      if (first) {
+        const buyerId = first.buyerId || first.id;
+        const orgId = first.organizationId || first.id;
+        const orgName = first.organizationName || first.businessProfile?.organizationName || 'Unnamed';
+
+        if (buyerId) {
+          setSelectedBuyer({
+            id: buyerId,
+            organizationId: orgId,
+            organizationName: orgName,
+          });
+        }
       }
-    };
-    fetchBuyers();
+    } catch (err: any) {
+      console.error('Failed to fetch buyers:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchAndSelectBuyer();
   }, []);
 
   const handleBack = () => {
@@ -63,13 +66,17 @@ export const Department: React.FC = () => {
     navigate('../departmentcostlist');
   };
 
-  // ─── Navigate to Item Master ───
   const handleViewItemMaster = () => {
     navigate('../itemmaster');
   };
 
+  const handleViewTemplates = () => {
+    navigate('../templates');
+  };
+
   const openPopup = () => {
-    resetForm();           // clears zustand form state
+    resetForm();
+    fetchAndSelectBuyer();
     setShowPopup(true);
   };
 
@@ -78,9 +85,8 @@ export const Department: React.FC = () => {
     resetForm();
   };
 
-  // ─── Cost Center Handlers (now use zustand actions) ───
   const handleAddCostCenter = () => {
-    addCostCenter('');     // adds empty string to array
+    addCostCenter('');
   };
 
   const handleRemoveCostCenter = (index: number) => {
@@ -92,9 +98,7 @@ export const Department: React.FC = () => {
     updateCostCenter(index, value);
   };
 
-  // ─── Create Department (uses zustand state) ───
   const handleCreate = async () => {
-    // Validation
     if (!selectedBuyer) {
       setCreateError('Please select a buyer');
       return;
@@ -109,34 +113,24 @@ export const Department: React.FC = () => {
       return;
     }
 
-    // Find full buyer object to get orgId + orgName
-    const buyer = buyers.find((b) => b.id === selectedBuyer.id);
-    if (!buyer) {
-      setCreateError('Invalid buyer selected');
-      return;
-    }
-
     setCreating(true);
     setCreateError(null);
     setCreateSuccess(null);
 
     try {
-      // API call with zustand state values
       await createBuyerDepartment(
-        buyer.id,
-        buyer.organizationId,
+        selectedBuyer.id,
+        selectedBuyer.organizationId,
         departmentName.trim(),
         validCostCenters
       );
 
       setCreateSuccess('Department created successfully!');
-      
-      // Auto-close after success
+
       setTimeout(() => {
         resetForm();
         setShowPopup(false);
       }, 2000);
-
     } catch (err: any) {
       setCreateError(err.message || 'Failed to create department');
     } finally {
@@ -144,31 +138,15 @@ export const Department: React.FC = () => {
     }
   };
 
-  // ─── Buyer Selection Handler ───
-  const handleBuyerSelect = (buyerId: string) => {
-    const buyer = buyers.find((b) => b.id === buyerId);
-    if (buyer) {
-      setSelectedBuyer({
-        id: buyer.id,
-        organizationId: buyer.organizationId,
-        organizationName: buyer.businessProfile?.organizationName || 'Unnamed',
-      });
-    } else {
-      setSelectedBuyer(null);
-    }
-    setCreateError(null);
-    setCreateSuccess(null);
-  };
+
 
   return (
     <div className="dept-page-container">
-      {/* Top Header */}
       <header className="dept-top-header">
         <img src={sila_logo} alt="SILA" className="dept-top-logo" />
       </header>
 
       <div className="dept-content-wrapper">
-        {/* Back Button */}
         <div className="dept-back-wrapper">
           <button className="dept-back-btn-content" onClick={handleBack}>
             <FaArrowLeft />
@@ -176,9 +154,7 @@ export const Department: React.FC = () => {
           </button>
         </div>
 
-        {/* Settings List */}
         <div className="dept-settings-list">
-          {/* Item Master */}
           <div className="dept-settings-card">
             <div className="dept-settings-card-icon item-master">
               <FaBox />
@@ -192,7 +168,6 @@ export const Department: React.FC = () => {
             </button>
           </div>
 
-          {/* Add Department & Cost Center */}
           <div className="dept-settings-card active">
             <div className="dept-settings-card-icon dept">
               <FaBuilding />
@@ -206,7 +181,6 @@ export const Department: React.FC = () => {
             </button>
           </div>
 
-          {/* Department & Cost Center List */}
           <div className="dept-settings-card">
             <div className="dept-settings-card-icon list">
               <FaList />
@@ -219,10 +193,22 @@ export const Department: React.FC = () => {
               View
             </button>
           </div>
+
+          <div className="dept-settings-card">
+            <div className="dept-settings-card-icon templates">
+              <FaClipboard />
+            </div>
+            <div className="dept-settings-card-content">
+              <h3 className="dept-settings-card-title">Templates</h3>
+              <p className="dept-settings-card-desc">Create and manage department templates for quick setup</p>
+            </div>
+            <button className="dept-settings-card-btn primary" onClick={handleViewTemplates}>
+              Manage
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Popup Modal */}
       {showPopup && (
         <div className="dept-popup-overlay" onClick={closePopup}>
           <div className="dept-popup" onClick={(e) => e.stopPropagation()}>
@@ -237,27 +223,6 @@ export const Department: React.FC = () => {
             </div>
 
             <div className="dept-popup-body">
-              {/* Buyer Dropdown */}
-              <div className="dept-form-group">
-                <label className="dept-form-label">
-                  Select Buyer <span className="dept-required">*</span>
-                </label>
-                <select
-                  className="dept-form-select"
-                  value={selectedBuyer?.id || ''}
-                  onChange={(e) => handleBuyerSelect(e.target.value)}
-                  disabled={buyersLoading}
-                >
-                  <option value="">{buyersLoading ? 'Loading buyers...' : '-- Choose a Buyer --'}</option>
-                  {buyers.map((buyer) => (
-                    <option key={buyer.id} value={buyer.id}>
-                      {buyer.businessProfile?.organizationName || 'Unnamed'} — {buyer.businessProfile?.email || 'No email'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Department Input */}
               <div className="dept-form-group">
                 <label className="dept-form-label">
                   Department Name <span className="dept-required">*</span>
@@ -273,7 +238,6 @@ export const Department: React.FC = () => {
                 />
               </div>
 
-              {/* Cost Centers */}
               <div className="dept-form-group">
                 <label className="dept-form-label">
                   Cost Centers <span className="dept-required">*</span>
@@ -312,7 +276,6 @@ export const Department: React.FC = () => {
                 </button>
               </div>
 
-              {/* Messages */}
               {createError && <div className="dept-error-msg">{createError}</div>}
               {createSuccess && (
                 <div className="dept-success-msg">

@@ -220,6 +220,44 @@
     color: #0d9488;
 }
 
+/* ---------- Buyer admin pagination (copied from SupplierDashboard, prefixed with badp-) ---------- */
+.badp-pagination {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    padding-top: 1.25rem;
+}
+
+.badp-page-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid #e6e8ec;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #6b7280;
+}
+
+.badp-page-btn-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.badp-page-btn-active {
+    background: #2f6feb;
+    border-color: #2f6feb;
+    color: #ffffff;
+}
+
+.badp-page-number{
+    font-size: 13px;
+    padding: 0 6px;
+}
+
 .bad-stat-label {
     font-size: 11px;
     font-weight: 600;
@@ -461,6 +499,7 @@
 
 .bad-btn-outline {
     background: #ffffff;
+    width: fit-content;
     border-color: #2f6feb;
     color: #2f6feb;
     font-weight: 500;
@@ -640,8 +679,8 @@
 .bad-pagination {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
-    margin-top: 20px;
+    gap: 0.5px;
+    padding-top: 1.25rem;
 }
 
 .bad-page-btn {

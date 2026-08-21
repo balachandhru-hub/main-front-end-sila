@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  FaArrowLeft,
   FaBox,
   FaPlus,
   FaPen,
@@ -20,13 +19,11 @@ import {
   uploadItemMasterExcel,
 } from '../api/itemmasterapi';
 import type { ItemMasterDto } from '../api/itemmasterapi';
-import type { BuyerDto } from '../dto/platformDto';
 import { useDepartmentStore } from './useDepartmentStore';
 import './ItemMaster.css';
 
 const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;
 
-// ─── Confirmation Popup ───
 interface ConfirmPopupProps {
   isOpen: boolean;
   title: string;
@@ -69,7 +66,6 @@ const ConfirmPopup: React.FC<ConfirmPopupProps> = ({
   );
 };
 
-// ─── Toast ───
 interface ToastProps {
   message: string;
   type: 'error' | 'success';
@@ -95,24 +91,17 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
 export const ItemMaster: React.FC = () => {
   const navigate = useNavigate();
 
-  // ─── Zustand Store ───
   const { selectedBuyer, setSelectedBuyer } = useDepartmentStore();
 
-  // ─── Local State: Buyers List ───
-  const [buyers, setBuyers] = useState<BuyerDto[]>([]);
-  const [buyersLoading, setBuyersLoading] = useState(false);
 
-  // ─── Local State: Item Masters ───
   const [itemMasters, setItemMasters] = useState<ItemMasterDto[]>([]);
   const [itemMastersLoading, setItemMastersLoading] = useState(false);
 
-  // ─── Form State ───
   const [description, setDescription] = useState('');
   const [materialCode, setMaterialCode] = useState('');
   const [materialGroup, setMaterialGroup] = useState('');
   const [creating, setCreating] = useState(false);
 
-  // ─── Edit State ───
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editDescription, setEditDescription] = useState('');
   const [editMaterialCode, setEditMaterialCode] = useState('');
@@ -120,7 +109,6 @@ export const ItemMaster: React.FC = () => {
   const [originalItem, setOriginalItem] = useState<ItemMasterDto | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
-  // ─── Delete State ───
   const [deletePopup, setDeletePopup] = useState<{
     isOpen: boolean;
     itemId: string;
@@ -128,32 +116,39 @@ export const ItemMaster: React.FC = () => {
   }>({ isOpen: false, itemId: '', itemName: '' });
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // ─── Upload State ───
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ─── Toast State ───
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
 
-  // ─── Fetch Buyers on Mount ───
+
   useEffect(() => {
     const fetchBuyers = async () => {
-      setBuyersLoading(true);
       try {
         const data = await getAllBuyers({ index: 0, limit: 1000 });
         const resolved = Array.isArray(data) ? data : (data as any)?.buyers || (data as any)?.data || [];
-        setBuyers(resolved);
+
+        const first = resolved[0] as any;
+        if (first) {
+          const buyerId = first.buyerId || first.id;
+          const orgId = first.organizationId || first.id;
+          const orgName = first.organizationName || first.businessProfile?.organizationName || 'Unnamed';
+
+          if (buyerId) {
+            setSelectedBuyer({
+              id: buyerId,
+              organizationId: orgId,
+              organizationName: orgName,
+            });
+          }
+        }
       } catch (err: any) {
-        console.error('Failed to fetch buyers:', err);
         showToast(err.message || 'Failed to load buyers.', 'error');
-      } finally {
-        setBuyersLoading(false);
       }
     };
     fetchBuyers();
   }, []);
 
-  // ─── Fetch Item Masters when Buyer Selected ───
   const fetchItemMasters = async (buyerId: string) => {
     setItemMastersLoading(true);
     try {
@@ -161,7 +156,6 @@ export const ItemMaster: React.FC = () => {
       const resolved = Array.isArray(data) ? data : (data as any)?.itemMasters || (data as any)?.data || [];
       setItemMasters(resolved);
     } catch (err: any) {
-      console.error('Failed to fetch item masters:', err);
       showToast(err.message || 'Failed to load item masters.', 'error');
     } finally {
       setItemMastersLoading(false);
@@ -174,40 +168,18 @@ export const ItemMaster: React.FC = () => {
       return;
     }
     fetchItemMasters(selectedBuyer.id);
-  }, [selectedBuyer]);
+  }, [selectedBuyer?.id]);
 
-  // ─── Helper: Show Toast ───
   const showToast = (message: string, type: 'error' | 'success') => {
     setToast({ message, type });
   };
 
-  // ─── Buyer Select Handler ───
-  const handleBuyerSelect = (buyerId: string) => {
-    if (!buyerId) {
-      setSelectedBuyer(null);
-      resetForm();
-      return;
-    }
-    const buyer = buyers.find((b) => b.id === buyerId);
-    if (buyer) {
-      setSelectedBuyer({
-        id: buyer.id,
-        organizationId: buyer.organizationId,
-        organizationName: buyer.businessProfile?.organizationName || 'Unnamed',
-      });
-      resetForm();
-      cancelEdit();
-    }
-  };
-
-  // ─── Reset Form ───
   const resetForm = () => {
     setDescription('');
     setMaterialCode('');
     setMaterialGroup('');
   };
 
-  // ─── Create Item Master ───
   const handleCreate = async () => {
     if (!selectedBuyer) {
       showToast('Please select a buyer', 'error');
@@ -245,7 +217,6 @@ export const ItemMaster: React.FC = () => {
     }
   };
 
-  // ─── Start Edit ───
   const startEdit = (item: ItemMasterDto) => {
     setEditingItem(item.id);
     setEditDescription(item.description);
@@ -254,7 +225,6 @@ export const ItemMaster: React.FC = () => {
     setOriginalItem(item);
   };
 
-  // ─── Cancel Edit ───
   const cancelEdit = () => {
     setEditingItem(null);
     setEditDescription('');
@@ -263,7 +233,6 @@ export const ItemMaster: React.FC = () => {
     setOriginalItem(null);
   };
 
-  // ─── Save Edit ───
   const handleSaveEdit = async (itemId: string) => {
     if (!selectedBuyer || !originalItem) return;
 
@@ -295,7 +264,6 @@ export const ItemMaster: React.FC = () => {
     }
   };
 
-  // ─── Open Delete Popup ───
   const openDeletePopup = (item: ItemMasterDto) => {
     setDeletePopup({
       isOpen: true,
@@ -304,12 +272,10 @@ export const ItemMaster: React.FC = () => {
     });
   };
 
-  // ─── Close Delete Popup ───
   const closeDeletePopup = () => {
     setDeletePopup((prev) => ({ ...prev, isOpen: false }));
   };
 
-  // ─── Confirm Delete ───
   const handleConfirmDelete = async () => {
     if (!deletePopup.itemId) return;
 
@@ -328,7 +294,6 @@ export const ItemMaster: React.FC = () => {
     }
   };
 
-  // ─── Upload File ───
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedBuyer) return;
@@ -352,7 +317,7 @@ export const ItemMaster: React.FC = () => {
     fileInputRef.current?.click();
   };
 
-  const handleBack = () => {
+  const handleClose = () => {
     navigate('../settings');
   };
 
@@ -360,60 +325,22 @@ export const ItemMaster: React.FC = () => {
 
   return (
     <div className="im-page-container">
-      {/* Top Header */}
       <header className="im-top-header">
         <img src={sila_logo} alt="SILA" className="im-top-logo" />
       </header>
 
       <div className="im-content-wrapper">
-        {/* Back Button */}
-        <div className="im-back-wrapper">
-          <button className="im-back-btn-content" onClick={handleBack}>
-            <FaArrowLeft />
-            <span>Back</span>
+        <div className="im-page-title-section">
+          <div className="im-title-left">
+            <h1 className="im-page-title">Item Master</h1>
+            <p className="im-page-subtitle">Manage item master data for buyers</p>
+          </div>
+          <button className="im-close-btn" onClick={handleClose} title="Close">
+            <FaTimes />
           </button>
         </div>
 
-        {/* Page Title */}
-        <div className="im-page-title-section">
-          <h1 className="im-page-title">Item Master</h1>
-          <p className="im-page-subtitle">Manage item master data for buyers</p>
-        </div>
-
-        {/* Form Section */}
         <div className="im-form-section">
-          {/* Buyer Dropdown */}
-          <div className="im-form-group">
-            <label className="im-form-label">
-              Buyer Name <span className="im-required">*</span>
-            </label>
-            <div className="im-select-wrapper">
-              <select
-                className="im-form-select"
-                value={selectedBuyer?.id || ''}
-                onChange={(e) => handleBuyerSelect(e.target.value)}
-                disabled={buyersLoading}
-              >
-                <option value="">{buyersLoading ? 'Loading buyers...' : '-- Choose a Buyer --'}</option>
-                {buyers.map((buyer) => (
-                  <option key={buyer.id} value={buyer.id}>
-                    {buyer.businessProfile?.organizationName || 'Unnamed'} — {buyer.businessProfile?.email || 'No email'}
-                  </option>
-                ))}
-              </select>
-              {selectedBuyer && (
-                <button
-                  className="im-clear-select-btn"
-                  onClick={() => handleBuyerSelect('')}
-                  title="Clear buyer"
-                >
-                  <FaTimes />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Description */}
           <div className="im-form-group">
             <label className="im-form-label">
               Description <span className="im-required">*</span>
@@ -428,7 +355,6 @@ export const ItemMaster: React.FC = () => {
             />
           </div>
 
-          {/* Material Code */}
           <div className="im-form-group">
             <label className="im-form-label">
               Material Code <span className="im-required">*</span>
@@ -443,7 +369,6 @@ export const ItemMaster: React.FC = () => {
             />
           </div>
 
-          {/* Material Group */}
           <div className="im-form-group">
             <label className="im-form-label">
               Material Group <span className="im-required">*</span>
@@ -458,7 +383,6 @@ export const ItemMaster: React.FC = () => {
             />
           </div>
 
-          {/* Actions: Create + Upload */}
           <div className="im-form-actions">
             <button
               className="im-btn-create"
@@ -491,10 +415,8 @@ export const ItemMaster: React.FC = () => {
           </div>
         </div>
 
-        {/* Toast */}
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-        {/* Table Section */}
         <div className="im-table-section">
           {!selectedBuyer ? (
             <div className="im-empty-state">
@@ -532,7 +454,6 @@ export const ItemMaster: React.FC = () => {
                         key={item.id}
                         className={index % 2 === 0 ? 'im-row-even' : 'im-row-odd'}
                       >
-                        {/* Description */}
                         <td className="im-td-desc">
                           {editingItem === item.id ? (
                             <input
@@ -546,7 +467,6 @@ export const ItemMaster: React.FC = () => {
                           )}
                         </td>
 
-                        {/* Material Code */}
                         <td className="im-td-code">
                           {editingItem === item.id ? (
                             <input
@@ -560,7 +480,6 @@ export const ItemMaster: React.FC = () => {
                           )}
                         </td>
 
-                        {/* Material Group */}
                         <td className="im-td-group">
                           {editingItem === item.id ? (
                             <input
@@ -574,7 +493,6 @@ export const ItemMaster: React.FC = () => {
                           )}
                         </td>
 
-                        {/* Edit */}
                         <td className="im-td-edit">
                           {editingItem === item.id ? (
                             <div className="im-edit-actions">
@@ -606,7 +524,6 @@ export const ItemMaster: React.FC = () => {
                           )}
                         </td>
 
-                        {/* Delete */}
                         <td className="im-td-delete">
                           <button
                             className="im-delete-btn"
@@ -626,7 +543,6 @@ export const ItemMaster: React.FC = () => {
         </div>
       </div>
 
-      {/* Delete Confirmation Popup */}
       <ConfirmPopup
         isOpen={deletePopup.isOpen}
         title="Delete Item Master"

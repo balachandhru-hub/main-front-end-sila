@@ -20,7 +20,9 @@
 .nad-table-wrapper {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  overflow: hidden;
+  max-height: 460px;
+  overflow-y: auto;
+  overflow-x: auto;
 }
 
 .nad-table {
@@ -29,24 +31,40 @@
   table-layout: fixed;
 }
 
-.nad-table thead,
-.nad-table tbody tr {
-  display: table;
-  width: 100%;
-  table-layout: fixed;
+.nad-table th:nth-child(1),
+.nad-table td:nth-child(1) {
+  width: 16%;
 }
 
-.nad-table thead {
-  width: calc(100% - 8px);
+.nad-table th:nth-child(2),
+.nad-table td:nth-child(2) {
+  width: 24%;
 }
 
-.nad-table tbody {
-  display: block;
-  max-height: 420px;
-  overflow-y: auto;
+.nad-table th:nth-child(3),
+.nad-table td:nth-child(3) {
+  width: 16%;
+}
+
+.nad-table th:nth-child(4),
+.nad-table td:nth-child(4) {
+  width: 18%;
+}
+
+.nad-table th:nth-child(5),
+.nad-table td:nth-child(5) {
+  width: 12%;
+}
+
+.nad-table th:nth-child(6),
+.nad-table td:nth-child(6) {
+  width: 14%;
 }
 
 .nad-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   background: #f8fafc;
   padding: 14px 16px;
   text-align: left;
@@ -61,6 +79,9 @@
   border-bottom: 1px solid #f0f0f0;
   font-size: 0.95rem;
   color: #4a5568;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .nad-table tbody tr:hover {
@@ -92,6 +113,10 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .nad-status {
@@ -146,6 +171,24 @@
   border-color: #fc8181;
 }
 
+.nad-table-wrapper::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.nad-table-wrapper::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.nad-table-wrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+}
+
+.nad-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 @media (max-width: 768px) {
   .nad-table-container {
     padding: 16px;
@@ -153,47 +196,21 @@
   }
 
   .nad-table-wrapper {
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
+    max-height: 320px;
   }
 
   .nad-table {
     min-width: 720px;
   }
 
-  .nad-table tbody {
-    max-height: 320px;
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
-
   .nad-table th,
   .nad-table td {
     padding: 10px 12px;
     font-size: 0.85rem;
-    white-space: nowrap;
   }
 
   .nad-btn-action {
     padding: 6px 10px;
     font-size: 12px;
-  }
-
-  .nad-table-wrapper::-webkit-scrollbar {
-    height: 8px;
-  }
-
-  .nad-table-wrapper::-webkit-scrollbar-track {
-    background: #f1f5f9;
-  }
-
-  .nad-table-wrapper::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 8px;
-  }
-
-  .nad-table-wrapper::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
   }
 }

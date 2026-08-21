@@ -550,6 +550,9 @@ const SupplierAdminDash: React.FC = () => {
   const handleBackToDashboard = () => {
     setRfqPageView("dashboard");
     setActiveNav("dashboard");
+    setSelectedRfqId(null);
+    setSelectedRfq(null);
+    setRfqDetailError(null);
   };
 
   const handleNavClick = (key: string) => {
@@ -559,6 +562,9 @@ const SupplierAdminDash: React.FC = () => {
     }
     setActiveNav(key);
     setRfqPageView("dashboard");
+    setSelectedRfqId(null);
+    setSelectedRfq(null);
+    setRfqDetailError(null);
   };
 
   const handleViewRfqDetailsFullPage = (rfqId: string) => {
@@ -1020,7 +1026,7 @@ const SupplierAdminDash: React.FC = () => {
                               {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
                             </td>
                             {!selectedRfq.addLotOption && (
-                              <td style={{ textAlign: 'right' }}>
+                              <td>
                                 <input
                                   type="number"
                                   step="0.01"
@@ -1034,7 +1040,6 @@ const SupplierAdminDash: React.FC = () => {
                                     padding: '6px 10px',
                                     border: '1px solid #cbd5e1',
                                     borderRadius: '6px',
-                                    textAlign: 'right',
                                     fontSize: '13px',
                                     fontWeight: 600,
                                     color: '#0f172a'
@@ -1374,7 +1379,13 @@ const SupplierAdminDash: React.FC = () => {
             <Catalog
               isAdmin={true}
               onShowCatalogList={() => setActiveNav("catalogList")}
-              onCloseCatalogList={() => setActiveNav("dashboard")}
+              onCloseCatalogList={() => {
+                setActiveNav("dashboard");
+                setRfqPageView("dashboard");
+                setSelectedRfqId(null);
+                setSelectedRfq(null);
+                setRfqDetailError(null);
+              }}
               fullViewContainer={activeNav === "catalogList" ? catalogViewContainer : null}
             />
 
@@ -1420,8 +1431,8 @@ const SupplierAdminDash: React.FC = () => {
               ) : activeNav === "companyProfile" ? (
                 <CompanyProfile mode="network-admin" showHeader={false} />
               ) : activeNav === "invitations" ? (
-  <Invitations isAdmin adminRole="supplier" />
-): rfqPageView === "allRfqs" ? (
+                <Invitations isAdmin adminRole="supplier" />
+              ) : rfqPageView === "allRfqs" ? (
                 <>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
                     <div>
@@ -1454,19 +1465,19 @@ const SupplierAdminDash: React.FC = () => {
                         <table className="pud-rfq-items-table pud-allrfqs-table">
                           <thead>
                             <tr>
-                              <th style={{ width: '48px' }}>#</th>
+                              <th style={{ width: '48px' }}>S.No</th>
                               <th>RFQ Number</th>
                               <th>Title</th>
                               <th>Organization</th>
                               <th>Delivery Location</th>
                               <th>Closing Date</th>
-                              <th style={{ textAlign: 'right' }}>Action</th>
+                              <th>Action</th>
                             </tr>
                           </thead>
                           <tbody>
                             {allRfqsList.map((rfq: any, idx: number) => (
                               <tr key={rfq.rfqId || idx}>
-                                <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
+                                <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
                                 <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
                                 <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
                                 <td>{rfq.organizationName}</td>
@@ -1476,7 +1487,7 @@ const SupplierAdminDash: React.FC = () => {
                                     ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
                                     : "—"}
                                 </td>
-                                <td style={{ textAlign: 'right' }}>
+                                <td>
                                   <button
                                     className="pud-btn pud-btn-outline"
                                     onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
@@ -1490,25 +1501,27 @@ const SupplierAdminDash: React.FC = () => {
                         </table>
                       </div>
 
-                      <div className="pud-allrfqs-pagination">
+                      <div className="pud-pagination pud-allrfqs-pagination">
                         <button
                           type="button"
-                          className="pud-allrfqs-page-btn"
-                          disabled={allRfqsPage <= 1 || loadingAllRfqs}
+                          className={`pud-page-btn${allRfqsPage === 1 || loadingAllRfqs ? " pud-page-btn-disabled" : ""}`}
                           onClick={handleAllRfqsPrevPage}
-                          title="Previous page"
+                          disabled={allRfqsPage <= 1 || loadingAllRfqs}
+                          aria-label="Previous RFQ page"
                         >
-                          ←
+                          <IconChevronLeft />
                         </button>
-                        <span className="pud-allrfqs-page-number">Page {allRfqsPage}</span>
+
+                        <span className="pud-page-number">Page {allRfqsPage}</span>
+
                         <button
                           type="button"
-                          className="pud-allrfqs-page-btn"
-                          disabled={!allRfqsHasMore || loadingAllRfqs}
+                          className={`pud-page-btn${!allRfqsHasMore || loadingAllRfqs ? " pud-page-btn-disabled" : ""}`}
                           onClick={handleAllRfqsNextPage}
-                          title="Next page"
+                          disabled={!allRfqsHasMore || loadingAllRfqs}
+                          aria-label="Next RFQ page"
                         >
-                          →
+                          <IconChevronRight />
                         </button>
                       </div>
                     </>
@@ -1516,11 +1529,6 @@ const SupplierAdminDash: React.FC = () => {
                 </>
               ) : rfqPageView === "rfqDetail" ? (
                 <>
-                  <div style={{ marginBottom: '16px' }}>
-                    <button className="pud-btn pud-btn-outline" onClick={() => setRfqPageView("allRfqs")}>
-                      ← Back to All RFQs
-                    </button>
-                  </div>
                   <div className="pud-rfq-fullpage">
                     {renderRfqDetailInner()}
                   </div>

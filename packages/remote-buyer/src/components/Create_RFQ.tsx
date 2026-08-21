@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from "react";
 import "./Create.RFQ.css";
 import { toastService } from "@vosox/shared-ui";
-import { getBuyerProfile, getAllDepartments, getAllCostCenters, getAllItemMasters, createRFQ, getVerifiedSuppliers, getUnspscSegments, getUnspscFamilies } from "../api/Buyerapi";
+import { getBuyerProfile, getAllDepartments, getAllCostCenters, getAllItemMasters, createRFQ, getVerifiedSuppliers, getUnspscSegments, getUnspscFamilies, fetchBuyerVerificationTemplates, fetchBuyerVerificationTemplateById } from "../api/Buyerapi";
+import type { VerificationTemplate } from "../api/Buyerapi";
 import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../api/masterdataApi";
 import type { CreateRFQPayload, RfqDocumentAssetDto, RfqItemDto, RfqQuestionDto, VerifiedSupplierDto, SupplierVerificationType } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
@@ -12,7 +13,6 @@ const HARDCODED_RFQ_VERIFICATION_TEMPLATE_ID = "3fa85f64-5717-4562-b3fc-2c963f66
 
 interface LineItem {
     id: string;
-    itemName: string;
     description: string;
     quantity: number;
     uom: string;
@@ -152,11 +152,6 @@ const initialLineItems: LineItem[] = [];
 
 const initialCustomFields: CustomField[] = [];
 
-const registrationTemplateOptions = [
-    "Standard Vendor Registration",
-    "Quick Onboarding Form",
-    "IT Hardware Vendor Verification",
-];
 
 const PAGE_LIMIT = 10;
 
@@ -213,30 +208,37 @@ function usePaginatedSearchSelect<T>(
     fetcher: (index: number, limit: number, searchTerm?: string) => Promise<{ items: T[]; totalCount: number }>,
     isOpen: boolean,
     searchTerm: string,
+    getKey: (item: T) => string,
     limit: number = PAGE_LIMIT
 ) {
     const [options, setOptions] = useState<T[]>([]);
     const [pageIndex, setPageIndex] = useState(0);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
+    const inFlightRef = useRef(false);
+
+    const dedupe = (items: T[]) =>
+        Array.from(new Map(items.map((i) => [getKey(i), i])).values());
 
     useEffect(() => {
         if (!isOpen) return;
         const timer = setTimeout(() => {
             const run = async () => {
+                if (inFlightRef.current) return;
+                inFlightRef.current = true;
                 setLoading(true);
                 try {
                     const res = await fetcher(0, limit, searchTerm.trim() || undefined);
                     const items = res?.items || [];
-                    setOptions(items);
+                    setOptions(dedupe(items));
                     setPageIndex(0);
                     setHasMore(items.length === limit);
                 } catch (err) {
-                
                     setOptions([]);
                     setHasMore(false);
                 } finally {
                     setLoading(false);
+                    inFlightRef.current = false;
                 }
             };
             run();
@@ -245,19 +247,20 @@ function usePaginatedSearchSelect<T>(
     }, [isOpen, searchTerm]);
 
     const loadMore = async () => {
-        if (loading || !hasMore) return;
+        if (inFlightRef.current || loading || !hasMore) return;
+        inFlightRef.current = true;
         const nextIndex = pageIndex + 1;
         setLoading(true);
         try {
             const res = await fetcher(nextIndex, limit, searchTerm.trim() || undefined);
             const items = res?.items || [];
-            setOptions((prev) => [...prev, ...items]);
+            setOptions((prev) => dedupe([...prev, ...items]));
             setPageIndex(nextIndex);
             setHasMore(items.length === limit);
         } catch (err) {
-            
         } finally {
             setLoading(false);
+            inFlightRef.current = false;
         }
     };
 
@@ -527,7 +530,7 @@ const getCurrenciesSafe = async (
             return res as { items: CurrencyDto[]; totalCount: number };
         }
     } catch (err) {
-        // ignore, fall through to empty result
+       
     }
     return { items: [], totalCount: 0 };
 };
@@ -570,9 +573,9 @@ const getUnitsSafe = async (
 
     const [isUomDropdownOpen, setIsUomDropdownOpen] = useState(false);
     const [uomSearchTerm, setUomSearchTerm] = useState("");
-const currencySelect = usePaginatedSearchSelect<CurrencyDto>(getCurrenciesSafe, isCurrencyDropdownOpen, currencySearchTerm);
-const regionSelect = usePaginatedSearchSelect<CountryDto>(getCountriesSafe, isRegionDropdownOpen, regionSearchTerm);
-const uomSelect = usePaginatedSearchSelect<UnitDto>(getUnitsSafe, isUomDropdownOpen, uomSearchTerm);
+    const currencySelect = usePaginatedSearchSelect<CurrencyDto>(getCurrenciesSafe, isCurrencyDropdownOpen, currencySearchTerm, (o) => o.id);
+    const regionSelect = usePaginatedSearchSelect<CountryDto>(getCountriesSafe, isRegionDropdownOpen, regionSearchTerm, (o) => o.id);
+    const uomSelect = usePaginatedSearchSelect<UnitDto>(getUnitsSafe, isUomDropdownOpen, uomSearchTerm, (o) => o.id);
     const [description, setDescription] = useState("");
     const [deliveryLocation, setDeliveryLocation] = useState("");
     const [startDateTime, setStartDateTime] = useState("");
@@ -619,7 +622,6 @@ if (Array.isArray(data)) {
         fieldTypeOptions.find((t) => t.key === key)?.description || key;
 
     const [lineItems, setLineItems] = useState<LineItem[]>(initialLineItems);
-    const [newItemName, setNewItemName] = useState("");
     const [newItemDesc, setNewItemDesc] = useState("");
     const [newItemQty, setNewItemQty] = useState(1);
     const [newItemUom, setNewItemUom] = useState("EA");
@@ -648,7 +650,91 @@ if (Array.isArray(data)) {
     const [supplierTypeFilter, setSupplierTypeFilter] = useState<"ALL" | SupplierVerificationType>("ALL");
     const [supplierSearchQuery, setSupplierSearchQuery] = useState("");
     const [registrationTemplate, setRegistrationTemplate] = useState("");
+    const [registrationTemplateId, setRegistrationTemplateId] = useState("");
     const supplierRegistrationLink = "https://supplier.company.com/register";
+
+    const [templateOptions, setTemplateOptions] = useState<VerificationTemplate[]>([]);
+    const [templatePageIndex, setTemplatePageIndex] = useState(0);
+    const [templateLoading, setTemplateLoading] = useState(false);
+    const [templateHasMore, setTemplateHasMore] = useState(true);
+    const [templateSearchTerm, setTemplateSearchTerm] = useState("");
+    const [isTemplateDropdownOpen, setIsTemplateDropdownOpen] = useState(false);
+
+    const templateLoadingRef = useRef(false);
+
+    const loadRegistrationTemplates = async (index: number, append: boolean) => {
+        if (templateLoadingRef.current) return;
+        templateLoadingRef.current = true;
+        setTemplateLoading(true);
+        try {
+            const data = await fetchBuyerVerificationTemplates(index, PAGE_LIMIT);
+            if (Array.isArray(data)) {
+                setTemplateOptions((prev) => {
+                    const base = append ? prev : [];
+                    const merged = new Map(base.map((t) => [t.templateId, t]));
+                    data.forEach((t) => merged.set(t.templateId, t));
+                    return Array.from(merged.values());
+                });
+                setTemplateHasMore(data.length === PAGE_LIMIT);
+                setTemplatePageIndex(index);
+            } else {
+                if (!append) setTemplateOptions([]);
+                setTemplateHasMore(false);
+            }
+        } catch (err) {
+            if (!append) setTemplateOptions([]);
+            setTemplateHasMore(false);
+        } finally {
+            setTemplateLoading(false);
+            templateLoadingRef.current = false;
+        }
+    };
+
+    useEffect(() => {
+        if (isTemplateDropdownOpen && templateOptions.length === 0) {
+            loadRegistrationTemplates(0, false);
+        }
+    }, [isTemplateDropdownOpen]);
+
+    const handleTemplateScrollBottom = () => {
+        if (templateLoading || !templateHasMore) return;
+        loadRegistrationTemplates(templatePageIndex + 1, true);
+    };
+
+    const filteredTemplateOptions = templateOptions.filter((t) =>
+        t.templateName.toLowerCase().includes(templateSearchTerm.trim().toLowerCase())
+    );
+
+    const [isViewTemplateOpen, setIsViewTemplateOpen] = useState(false);
+    const [viewTemplateLoading, setViewTemplateLoading] = useState(false);
+    const [viewTemplateError, setViewTemplateError] = useState<string | null>(null);
+    const [viewTemplateData, setViewTemplateData] = useState<VerificationTemplate | null>(null);
+
+    const handleViewTemplate = async () => {
+        if (!registrationTemplateId) return;
+        setIsViewTemplateOpen(true);
+        setViewTemplateLoading(true);
+        setViewTemplateError(null);
+        try {
+            const data = await fetchBuyerVerificationTemplateById(registrationTemplateId);
+            if (data && "statusCode" in data) {
+                setViewTemplateError(data.message || "Failed to load template.");
+                setViewTemplateData(null);
+            } else {
+                setViewTemplateData(data as VerificationTemplate);
+            }
+        } catch (err: any) {
+            setViewTemplateError(err?.message || "Failed to load template.");
+        } finally {
+            setViewTemplateLoading(false);
+        }
+    };
+
+    const closeViewTemplate = () => {
+        setIsViewTemplateOpen(false);
+        setViewTemplateData(null);
+        setViewTemplateError(null);
+    };
 
     useEffect(() => {
         if (activeStep !== "suppliers") return;
@@ -678,7 +764,12 @@ if (Array.isArray(data)) {
                     if (familyCode) payload.familyCode = familyCode;
 
                     const data = await getVerifiedSuppliers(payload);
-                    setSuppliers(data);
+                    
+                    const uniqueSuppliers = Array.from(
+                        new Map(data.map(s => [s.supplierId, s])).values()
+                    );
+                    
+                    setSuppliers(uniqueSuppliers);
                 } catch (err: any) {
                     setSuppliersError(err?.message || "Failed to fetch suppliers.");
                     setSuppliers([]);
@@ -724,10 +815,9 @@ if (Array.isArray(data)) {
     };
 
     const handleAddLineItem = () => {
-        if (!newItemName.trim()) return;
+        if (!newItemDesc.trim()) return;
         const item: LineItem = {
             id: `li-${Date.now()}`,
-            itemName: newItemName.trim(),
             description: newItemDesc.trim(),
             quantity: newItemQty || 1,
             uom: newItemUom,
@@ -739,7 +829,6 @@ if (Array.isArray(data)) {
             return next;
         });
         setErrors((p) => { const np = { ...p }; delete np.lineItems; return np; });
-        setNewItemName("");
         setNewItemDesc("");
         setNewItemQty(1);
         setNewItemUom("EA");
@@ -820,18 +909,15 @@ if (Array.isArray(data)) {
 
             if (Object.keys(newErrors).length > 0) {
                 setErrors(newErrors);
-                // show toast if toastService is available
                 try {
                     if (typeof toastService !== "undefined" && toastService && typeof toastService.error === "function") {
                         toastService.error("Please fill the required fields");
                     }
                 } catch (e) {
-                    // ignore
                 }
                 return;
             }
 
-            // no errors - clear and move next
             setErrors({});
             setActiveStep("suppliers");
         } else if (activeStep === "suppliers") setActiveStep("summary");
@@ -877,7 +963,7 @@ if (Array.isArray(data)) {
             }));
 
             const items: RfqItemDto[] = lineItems.map((li) => ({
-                description: li.description || li.itemName,
+                description: li.description,
                 quantity: li.quantity,
                 uom: li.uom,
                 materialCode: li.materialCode,
@@ -903,7 +989,7 @@ if (Array.isArray(data)) {
                 questions,
                 items,
                 supplierIds: selectedSupplierIds,
-                rfqVerificationTemplateId: HARDCODED_RFQ_VERIFICATION_TEMPLATE_ID,
+                rfqVerificationTemplateId: registrationTemplateId || HARDCODED_RFQ_VERIFICATION_TEMPLATE_ID,
             };
 
             const response = await createRFQ(payload);
@@ -1519,16 +1605,6 @@ if (Array.isArray(data)) {
                     <div className="bd-item-add-row">
                         <div className="bd-item-add-grid-top">
                             <div className="bd-item-add-field">
-                                <label className="bd-label-sm">ITEM NAME</label>
-                                <input
-                                    className="bd-input-sm"
-                                    type="text"
-                                    placeholder="e.g. Laptop"
-                                    value={newItemName}
-                                    onChange={(e) => setNewItemName(e.target.value)}
-                                />
-                            </div>
-                            <div className="bd-item-add-field">
                                 <label className="bd-label-sm">DESCRIPTION</label>
                                 <input
                                     className="bd-input-sm"
@@ -1606,7 +1682,6 @@ if (Array.isArray(data)) {
                         <table className="bd-table">
                             <thead>
                                 <tr>
-                                    <th>Item Name</th>
                                     <th>Description</th>
                                     <th>Material Code</th>
                                     <th>Quantity</th>
@@ -1617,7 +1692,6 @@ if (Array.isArray(data)) {
                             <tbody>
                                 {lineItems.map((li) => (
                                     <tr key={li.id}>
-                                        <td>{li.itemName}</td>
                                         <td>{li.description}</td>
                                         <td>{li.materialCode}</td>
                                         <td>{li.quantity}</td>
@@ -1636,7 +1710,7 @@ if (Array.isArray(data)) {
                                 ))}
                                 {lineItems.length === 0 && (
                                     <tr>
-                                        <td colSpan={6} className="bd-table-empty">
+                                        <td colSpan={5} className="bd-table-empty">
                                             No line items added yet.
                                         </td>
                                     </tr>
@@ -1779,19 +1853,33 @@ if (Array.isArray(data)) {
                                 <div className="bd-onboarding-left">
                                     <label className="bd-label">Registration Template*</label>
                                     <div className="bd-template-row">
-                                        <select
-                                            className="bd-select"
+                                        <SearchableSelect<VerificationTemplate>
                                             value={registrationTemplate}
-                                            onChange={(e) => setRegistrationTemplate(e.target.value)}
+                                            placeholder="Select Template"
+                                            isOpen={isTemplateDropdownOpen}
+                                            onToggle={() => setIsTemplateDropdownOpen((prev) => !prev)}
+                                            onClose={() => setIsTemplateDropdownOpen(false)}
+                                            searchTerm={templateSearchTerm}
+                                            onSearchChange={setTemplateSearchTerm}
+                                            options={filteredTemplateOptions}
+                                            getOptionLabel={(t) => t.templateName}
+                                            getOptionKey={(t) => t.templateId}
+                                            onSelect={(t) => {
+                                                setRegistrationTemplateId(t.templateId);
+                                                setRegistrationTemplate(t.templateName);
+                                                setIsTemplateDropdownOpen(false);
+                                                setTemplateSearchTerm("");
+                                            }}
+                                            loading={templateLoading}
+                                            onScrollBottom={handleTemplateScrollBottom}
+                                            searchPlaceholder="Search template..."
+                                        />
+                                        <button
+                                            type="button"
+                                            className="bd-btn-view-template"
+                                            onClick={handleViewTemplate}
+                                            disabled={!registrationTemplateId}
                                         >
-                                            <option value="">Select Template</option>
-                                            {registrationTemplateOptions.map((t) => (
-                                                <option key={t} value={t}>
-                                                    {t}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <button type="button" className="bd-btn-view-template">
                                             <IconEye /> View Template
                                         </button>
                                     </div>
@@ -1895,6 +1983,59 @@ if (Array.isArray(data)) {
                         <button className="bd-btn-back" onClick={handleReset} type="button">
                             Back to Dashboard
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {isViewTemplateOpen && (
+                <div className="bd-template-modal-overlay" onClick={closeViewTemplate}>
+                    <div className="bd-template-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="bd-template-modal-header">
+                            <div>
+                                <div className="bd-template-modal-title">
+                                    {viewTemplateData?.templateName || "Registration Template"}
+                                </div>
+                                <div className="bd-template-modal-subtitle">
+                                    {viewTemplateData?.templateType ? `${viewTemplateData.templateType} • ` : ""}
+                                    Code: {viewTemplateData?.templateCode || "-"}
+                                </div>
+                            </div>
+                            <button type="button" className="bd-template-modal-close" onClick={closeViewTemplate}>
+                                Close
+                            </button>
+                        </div>
+
+                        <div className="bd-template-modal-body">
+                            {viewTemplateLoading && (
+                                <div className="bd-template-modal-status">Loading template...</div>
+                            )}
+                            {!viewTemplateLoading && viewTemplateError && (
+                                <div className="bd-template-modal-status bd-template-modal-error">{viewTemplateError}</div>
+                            )}
+                            {!viewTemplateLoading && !viewTemplateError && viewTemplateData && (
+                                viewTemplateData.questions && viewTemplateData.questions.length > 0 ? (
+                                    viewTemplateData.questions
+                                        .slice()
+                                        .sort((a, b) => a.displayOrder - b.displayOrder)
+                                        .map((q) => (
+                                            <div className="bd-template-question-card" key={q.questionId}>
+                                                <div className="bd-template-question-label">{q.question}</div>
+                                                <div className="bd-template-question-meta">Type: {q.questionType}</div>
+                                                {q.options && q.options.length > 0 && (
+                                                    <div className="bd-template-question-meta">
+                                                        Options: {q.options.join(", ")}
+                                                    </div>
+                                                )}
+                                                {q.isRequired && (
+                                                    <div className="bd-template-question-mandatory">MANDATORY</div>
+                                                )}
+                                            </div>
+                                        ))
+                                ) : (
+                                    <div className="bd-template-modal-status">No questions configured for this template.</div>
+                                )
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

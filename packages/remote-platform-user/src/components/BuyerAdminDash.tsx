@@ -242,7 +242,7 @@ const NavIconFilePlus = () => (
 
 const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
-  { key: "invitations", icon: <IconMail />, label: "Invitations", badge: 2 },
+  { key: "invitations", icon: <IconMail />, label: "Invitations" },
   { key: "activeRFQs", icon: <IconFile />, label: "Active RFQs" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product" },
@@ -473,32 +473,66 @@ const BuyerAdminDash: React.FC = () => {
   const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
   const [allRfqsError, setAllRfqsError] = useState<string | null>(null);
   const [allRfqsLoaded, setAllRfqsLoaded] = useState(false);
+  const [allRfqsPage, setAllRfqsPage] = useState(1);
+  const [allRfqsHasMore, setAllRfqsHasMore] = useState(true);
+  const RFQ_PAGE_SIZE = 10;
 
   const [fullPageRfq, setFullPageRfq] = useState<any | null>(null);
   const [loadingFullPageRfq, setLoadingFullPageRfq] = useState(false);
   const [fullPageRfqError, setFullPageRfqError] = useState<string | null>(null);
 
- const handleOpenAllRfqs = async () => {
+  const handleOpenAllRfqs = async () => {
     setActiveNav("activeRFQs");
     setRfqPageView("allRfqs");
     if (allRfqsLoaded || loadingAllRfqs) return;
 
+    // load page 1 when opening
+    await loadAllRfqsPage(1);
+  };
+
+  const getRfqPageRange = (page: number) => {
+    const index = (page - 1) * RFQ_PAGE_SIZE;
+    const limit = RFQ_PAGE_SIZE;
+    return { index, limit };
+  };
+
+  const loadAllRfqsPage = async (page: number) => {
+    if (!buyerId) {
+      setAllRfqsList(rfqs.length > 0 ? rfqs : mockRfqs);
+      setAllRfqsHasMore(false);
+      setAllRfqsLoaded(true);
+      return;
+    }
+
     setLoadingAllRfqs(true);
     setAllRfqsError(null);
+
     try {
-      if (!buyerId) {
-        setAllRfqsList(rfqs.length > 0 ? rfqs : mockRfqs);
-      } else {
-        const data = await fetchBuyerRFQs({ buyerId, index: 0, limit: 100 });
-        setAllRfqsList(data.length > 0 ? data : mockRfqs);
-      }
+      const { index, limit } = getRfqPageRange(page);
+
+      const data = await fetchBuyerRFQs({ buyerId, index, limit });
+
+      setAllRfqsList(data.length > 0 ? data : mockRfqs);
+      setAllRfqsPage(page);
+      setAllRfqsHasMore(data.length === RFQ_PAGE_SIZE);
     } catch (err: any) {
       setAllRfqsError(err.message || "Failed to load the full RFQ list.");
       setAllRfqsList(rfqs.length > 0 ? rfqs : mockRfqs);
+      setAllRfqsHasMore(false);
     } finally {
       setLoadingAllRfqs(false);
       setAllRfqsLoaded(true);
     }
+  };
+
+  const handleAllRfqsNextPage = () => {
+    if (loadingAllRfqs || !allRfqsHasMore) return;
+    loadAllRfqsPage(allRfqsPage + 1);
+  };
+
+  const handleAllRfqsPrevPage = () => {
+    if (loadingAllRfqs || allRfqsPage <= 1) return;
+    loadAllRfqsPage(allRfqsPage - 1);
   };
 
 const handleNavClick = (key: string) => {
@@ -606,7 +640,7 @@ const handleNavClick = (key: string) => {
             {navItems.map((item) => (
               <div
                 key={item.key}
-                 className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
+                className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
                 onClick={() => handleNavClick(item.key)}
               >
                 <span className="bad-nav-icon">{item.icon}</span>
@@ -639,8 +673,8 @@ const handleNavClick = (key: string) => {
           <main className="bad-content">
             {activeNav === "userList" ? (
               <UserAdmin />
-            )  : activeNav === "invitations" ? (
-  <Invitations isAdmin adminRole="buyer" />
+            ) : activeNav === "invitations" ? (
+              <Invitations isAdmin adminRole="buyer" />
             ) : activeNav === "companyProfile" ? (
               <CompanyProfile mode="network-admin" showHeader={false} />
             ) : activeNav === "template" ? (
@@ -693,23 +727,24 @@ const handleNavClick = (key: string) => {
                     No RFQs found.
                   </div>
                 ) : (
-                  <div className="bad-rfq-table-container">
-                    <table className="bad-rfq-items-table bad-allrfqs-table">
+                  <div>
+                    <div className="bad-rfq-table-container">
+                      <table className="bad-rfq-items-table bad-allrfqs-table">
                       <thead>
                         <tr>
-                          <th style={{ width: '48px' }}>#</th>
+                          <th style={{ width: '48px' }}>S.No</th>
                           <th>RFQ Number</th>
                           <th>Title</th>
                           <th>Organization</th>
                           <th>Delivery Location</th>
                           <th>Closing Date</th>
-                          <th style={{ textAlign: 'right' }}>Action</th>
+                          <th>Action</th>
                         </tr>
                       </thead>
                       <tbody>
                         {allRfqsList.map((rfq: any, idx: number) => (
                           <tr key={rfq.rfqId || idx}>
-                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
+                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
                             <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
                             <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
                             <td>{rfq.organizationName}</td>
@@ -719,7 +754,7 @@ const handleNavClick = (key: string) => {
                                 ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
                                 : "—"}
                             </td>
-                            <td style={{ textAlign: 'right' }}>
+                            <td>
                               <button
                                 className="bad-btn bad-btn-outline"
                                 onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
@@ -730,20 +765,37 @@ const handleNavClick = (key: string) => {
                           </tr>
                         ))}
                       </tbody>
-                    </table>
+                      </table>
+                    </div>
+
+                    <div className="badp-pagination badp-allrfqs-pagination">
+                      <button
+                        type="button"
+                        className={`badp-page-btn${allRfqsPage === 1 || loadingAllRfqs ? " badp-page-btn-disabled" : ""}`}
+                        onClick={handleAllRfqsPrevPage}
+                        disabled={allRfqsPage <= 1 || loadingAllRfqs}
+                        aria-label="Previous RFQ page"
+                      >
+                        <IconChevronLeft />
+                      </button>
+
+                      <span className="badp-page-number">Page {allRfqsPage}</span>
+
+                      <button
+                        type="button"
+                        className={`badp-page-btn${!allRfqsHasMore || loadingAllRfqs ? " badp-page-btn-disabled" : ""}`}
+                        onClick={handleAllRfqsNextPage}
+                        disabled={!allRfqsHasMore || loadingAllRfqs}
+                        aria-label="Next RFQ page"
+                      >
+                        <IconChevronRight />
+                      </button>
+                    </div>
                   </div>
                 )}
               </>
             ) : rfqPageView === "rfqDetail" ? (
               <>
-                <button
-                  className="bad-btn bad-btn-outline"
-                  onClick={handleBackToAllRfqs}
-                  style={{ marginBottom: '16px' }}
-                >
-                  ← Back to All RFQs
-                </button>
-
                 <div className="bad-modal bad-rfq-fullpage">
                   <div className="bad-modal-header">
                     <span className="bad-modal-badge">
@@ -816,8 +868,8 @@ const handleNavClick = (key: string) => {
                                   <thead>
                                     <tr>
                                       <th>Material Info</th>
-                                      <th>Group / Code</th>
-                                      <th style={{ textAlign: 'right' }}>Qty</th>
+                                      <th>Code</th>
+                                      <th>Qty</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -832,15 +884,12 @@ const handleNavClick = (key: string) => {
                                           )}
                                         </td>
                                         <td>
-                                          <div style={{ fontSize: '12px', color: '#334155' }}>
-                                            {item.materialGroup || "N/A"}
-                                          </div>
-                                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                            Code: {item.materialCode || "N/A"}
+                                          <div>
+                                            {item.materialCode || "N/A"}
                                           </div>
                                         </td>
-                                        <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>
-                                          {item.quantity} <span style={{ fontSize: '11px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
+                                        <td>
+                                          {item.quantity} <span>{item.uom}</span>
                                         </td>
                                       </tr>
                                     ))}

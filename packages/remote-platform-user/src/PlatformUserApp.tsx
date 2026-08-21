@@ -12,6 +12,7 @@ import SupplierAdminDash from './components/SupplierAdminDash';
 import BuyerAdminDash from './components/BuyerAdminDash';
 import { fetchReferenceList } from './api/masterdataApi';
 import NetworkAdminProfilePage from './pages/NetworkAdminProfilePage';
+import PlatformUserTemplates from './components/PlatformUserTemplates';
 import {
   getNetworkAdminProfile,
   getNetworkAdminOnboardingDetails,
@@ -427,6 +428,7 @@ const PlatformUserApp: React.FC = () => {
           )
         }
       />
+      <Route path="templates" element={<PlatformUserTemplates />} />
 
       <Route path="buyer-admin" element={<BuyerAdminDash />} />
       <Route path="buyer-admin/profile" element={<BuyerAdminProfilePage />} />

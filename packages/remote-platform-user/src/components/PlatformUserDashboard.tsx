@@ -346,14 +346,6 @@ export const PlatformUserDashboard: React.FC = () => {
 
           {/* TOP RIGHT ACTIONS & PROFILE BUTTON */}
           <div className="plat-topbar-actions">
-            <button
-              className="plat-icon-btn"
-              onClick={handleSettingsClick}
-              title="Settings"
-            >
-              <FaCog />
-            </button>
-
             {/* Profile Dropdown Button */}
             <div className="plat-profile-dropdown-wrapper">
               <button
@@ -629,6 +621,7 @@ export const PlatformUserDashboard: React.FC = () => {
               if (activeTab === 'buyers') loadBuyers(buyerIndex);
               else loadSuppliers(supplierIndex);
             }}
+            onSettingsClick={handleSettingsClick}
           />
         </div>
       )}

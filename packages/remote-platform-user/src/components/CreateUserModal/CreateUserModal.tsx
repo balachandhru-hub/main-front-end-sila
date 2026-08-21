@@ -42,6 +42,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
 
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const [countries, setCountries] = useState<CountryDto[]>([]);
@@ -246,6 +247,8 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     });
     setSelectedCountryLabel('');
     setFormErrors({});
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const handleClose = () => {
@@ -264,6 +267,8 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
       setFormErrors({});
       setIsCountryDropdownOpen(false);
       setCountrySearchQuery('');
+      setShowPassword(false);
+      setShowConfirmPassword(false);
       onClose();
     }
   };
@@ -465,6 +470,8 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                   onChange={handleChange}
                   placeholder="Min. 6 characters"
                   disabled={isLoading}
+                  autoComplete="new-password"
+                  data-lpignore="true"
                   className={`nad-input ${formErrors.password ? 'error' : ''}`}
                 />
                 <button
@@ -473,6 +480,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
                   tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
@@ -486,16 +494,30 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
               <label htmlFor="confirmPassword" className="nad-label">
                 Confirm Password <span className="nad-required">*</span>
               </label>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="Confirm password"
-                disabled={isLoading}
-                className={`nad-input ${formErrors.confirmPassword ? 'error' : ''}`}
-              />
+              <div className="nad-password-wrapper">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Confirm password"
+                  disabled={isLoading}
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  className={`nad-input ${formErrors.confirmPassword ? 'error' : ''}`}
+                />
+                <button
+                  type="button"
+                  className="nad-toggle-password"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={isLoading}
+                  tabIndex={-1}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
               {formErrors.confirmPassword && (
                 <span className="nad-error-text">{formErrors.confirmPassword}</span>
               )}

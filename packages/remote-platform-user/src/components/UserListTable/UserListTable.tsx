@@ -33,9 +33,11 @@ const UserListTable: React.FC<UserListTableProps> = ({ users, title, onDelete })
             <tbody>
               {users.map((user) => (
                 <tr key={user.id}>
-                  <td className="nad-name-cell">{user.name}</td>
-                  <td className="nad-email-cell">{user.email}</td>
-                  <td className="nad-username-cell">{user.userName || '-'}</td>
+                  <td className="nad-name-cell" title={user.name}>{user.name}</td>
+                  <td className="nad-email-cell" title={user.email}>{user.email}</td>
+                  <td className="nad-username-cell" title={user.userName || '-'}>
+                    {user.userName || '-'}
+                  </td>
                   <td>
                     <span className="nad-badge">
                       {user.userRole.replace(/_/g, ' ')}

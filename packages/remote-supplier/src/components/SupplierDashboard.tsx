@@ -18,6 +18,7 @@ import {
 } from "../api/supplierApi";
 import { useLocation } from "react-router-dom";
 import Header from "./Header.tsx";
+import { useAuth } from '../../../host-app/src/AuthContext.tsx';
 interface StatCard {
   icon: React.ReactNode;
   label: string;
@@ -377,9 +378,14 @@ const SupplierDashboard: React.FC = () => {
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
 
-  const [supplierId, setSupplierId] = useState<string | null>(
-    sessionStorage.getItem("vosox_supplier_id")
-  );
+  const { auth } = useAuth();
+const [supplierId, setSupplierId] = useState<string | null>(auth?.supplierId ?? null);
+
+useEffect(() => {
+  if (auth?.supplierId) {
+    setSupplierId(auth.supplierId);
+  }
+}, [auth?.supplierId]);
   const [rfqs, setRfqs] = useState<RFQMasterDataItem[]>([]);
   const [loadingRfqs, setLoadingRfqs] = useState(true);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
@@ -406,27 +412,25 @@ const SupplierDashboard: React.FC = () => {
   const [submitAnswersError, setSubmitAnswersError] = useState<string | null>(null);
   const [submitAnswersSuccess, setSubmitAnswersSuccess] = useState(false);
 
-  useEffect(() => {
-    const loadSupplierProfile = async () => {
-      if (!supplierId) {
-        try {
-          const profile = await getSupplierProfile();
-          if (profile && 'id' in profile && profile.id) {
-            sessionStorage.setItem("vosox_supplier_id", profile.id);
-            setSupplierId(profile.id);
-          } else {
-            setRfqsError("Supplier profile not found. Please complete onboarding.");
-            setLoadingRfqs(false);
-          }
-        } catch (err: any) {
-
-          setRfqsError("Failed to load supplier profile details.");
+ useEffect(() => {
+  const loadSupplierProfile = async () => {
+    if (!supplierId) {
+      try {
+        const profile = await getSupplierProfile();
+        if (profile && 'id' in profile && profile.id) {
+          setSupplierId(profile.id);   
+        } else {
+          setRfqsError("Supplier profile not found. Please complete onboarding.");
           setLoadingRfqs(false);
         }
+      } catch (err: any) {
+        setRfqsError("Failed to load supplier profile details.");
+        setLoadingRfqs(false);
       }
-    };
-    loadSupplierProfile();
-  }, [supplierId]);
+    }
+  };
+  loadSupplierProfile();
+}, [supplierId]);
 
   useEffect(() => {
     const loadRfqs = async () => {
@@ -593,6 +597,9 @@ const SupplierDashboard: React.FC = () => {
   const handleBackToDashboard = () => {
     setRfqPageView("dashboard");
     setActiveNav("dashboard");
+    setSelectedRfqId(null);
+    setSelectedRfq(null);
+    setRfqDetailError(null);
   };
 
   const handleNavClick = (key: string) => {
@@ -602,6 +609,9 @@ const SupplierDashboard: React.FC = () => {
     }
     setActiveNav(key);
     setRfqPageView("dashboard");
+    setSelectedRfqId(null);
+    setSelectedRfq(null);
+    setRfqDetailError(null);
   };
 
   const handleViewRfqDetailsFullPage = (rfqId: string) => {
@@ -1059,7 +1069,7 @@ const SupplierDashboard: React.FC = () => {
                     <thead>
                       <tr>
                         <th>Material Info</th>
-                        <th>Group / Code</th>
+                        <th>Code</th>
                         <th style={{ textAlign: 'left' }}>Qty Required</th>
                         {!selectedRfq.addLotOption && <th style={{ textAlign: 'left', width: '130px' }}>Your Unit Quote</th>}
                       </tr>
@@ -1074,7 +1084,7 @@ const SupplierDashboard: React.FC = () => {
                               <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
                               {item.costCenter && (
                                 <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                  Cost Center: {item.costCenter}
+                                  Cost Center: {item.costCenterName}
                                 </div>
                               )}
                               {item.attachments?.map((att) => (
@@ -1084,18 +1094,15 @@ const SupplierDashboard: React.FC = () => {
                               ))}
                             </td>
                             <td>
-                              <div style={{ textAlign: 'left', fontSize: '13px', color: '#334155' }}>
-                                {item.materialGroup || "N/A"}
-                              </div>
-                              <div style={{ textAlign: 'left', fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                Code: {item.materialCode || "N/A"}
+                              <div>
+                                {item.materialCode || "N/A"}
                               </div>
                             </td>
-                            <td style={{ textAlign: 'left', fontWeight: 600, color: '#0f172a' }}>
-                              {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
+                            <td>
+                              {item.quantity} <span>{item.uom}</span>
                             </td>
                             {!selectedRfq.addLotOption && (
-                              <td style={{ textAlign: 'left' }}>
+                              <td>
                                 <input
                                   type="number"
                                   step="0.01"
@@ -1109,7 +1116,6 @@ const SupplierDashboard: React.FC = () => {
                                     padding: '6px 10px',
                                     border: '1px solid #cbd5e1',
                                     borderRadius: '6px',
-                                    textAlign: 'left',
                                     fontSize: '13px',
                                     fontWeight: 600,
                                     color: '#0f172a'
@@ -1442,7 +1448,13 @@ const SupplierDashboard: React.FC = () => {
 
             <Catalog
               onShowCatalogList={() => setActiveNav("catalogList")}
-              onCloseCatalogList={() => setActiveNav("dashboard")}
+              onCloseCatalogList={() => {
+                setActiveNav("dashboard");
+                setRfqPageView("dashboard");
+                setSelectedRfqId(null);
+                setSelectedRfq(null);
+                setRfqDetailError(null);
+              }}
               fullViewContainer={activeNav === "catalogList" ? catalogViewContainer : null}
             />
 
@@ -1504,13 +1516,13 @@ const SupplierDashboard: React.FC = () => {
                       <table className="pud-rfq-items-table pud-allrfqs-table">
                         <thead>
                           <tr>
-                            <th style={{ width: '48px' }}>#</th>
+                            <th style={{ width: '48px' }}>S.No</th>
                             <th>RFQ Number</th>
                             <th>Title</th>
                             <th>Organization</th>
                             <th>Delivery Location</th>
                             <th>Closing Date</th>
-                            <th style={{ textAlign: 'right' }}>Action</th>
+                            <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1528,7 +1540,7 @@ const SupplierDashboard: React.FC = () => {
                                   ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
                                   : "—"}
                               </td>
-                              <td style={{ textAlign: 'right' }}>
+                              <td>
                                 <button
                                   className="pud-btn pud-btn-outline"
                                   onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
@@ -1572,11 +1584,6 @@ const SupplierDashboard: React.FC = () => {
               </>
             ) : rfqPageView === "rfqDetail" ? (
               <>
-                <div style={{ marginBottom: '16px' }}>
-                  <button className="pud-btn pud-btn-outline" onClick={() => setRfqPageView("allRfqs")}>
-                    ← Back to All RFQs
-                  </button>
-                </div>
                 <div className="pud-rfq-fullpage">
                   {renderRfqDetailInner()}
                 </div>

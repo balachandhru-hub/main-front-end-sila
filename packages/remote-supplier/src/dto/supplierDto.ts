@@ -261,6 +261,7 @@ export interface RFQDetailItem {
   materialCode: string;
   materialGroup: string;
   costCenter: string;
+  costCenterName: string;
   attachments: RFQDetailDocument[];
   questions: RFQQuestion[];
 }

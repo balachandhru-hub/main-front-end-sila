@@ -727,6 +727,7 @@
 .pud-pagination {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 8px;
   margin-top: 20px;
 }
@@ -753,6 +754,11 @@
   background: #2f6feb;
   border-color: #2f6feb;
   color: #ffffff;
+}
+
+.pud-page-number {
+  font-size: 13px;
+  padding: 0 6px;
 }
 
 /* ---------- Responsive ---------- */
@@ -1065,7 +1071,7 @@
 /* ---------- RFQ Specifications Popup Modal ---------- */
 .pud-modal-rfq {
   max-width: 50rem;
-  height: 51rem;
+  height: 35rem;
 }
 
 .pud-spinner {

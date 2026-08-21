@@ -564,8 +564,17 @@
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  color: #d97706;
   font-weight: 500;
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+.cp-status-dot-inline.cp-status-pending,
+.cp-status-dot-inline.cp-status-verified,
+.cp-status-dot-inline.cp-status-rejected {
+  background: transparent;
 }
 
 .cp-empty-inline {

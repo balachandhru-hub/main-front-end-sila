@@ -1,5 +1,5 @@
 import axiosInstance from './axiosInstance';
-
+import type { AuthInfo } from '../AuthContext';
 export const sendOtp = async (email: string) => {
     try {
         const response = await axiosInstance.post('/api/v1/identity/auth/send-otp', {
@@ -70,4 +70,15 @@ export const getTokenClaims = async (skipRefresh = false) => {
         }
         throw new Error('Could not reach the server. Please check your connection and try again.');
     }
+};
+export const fetchAuthInfo = async (skipRefresh = false): Promise<AuthInfo | null> => {
+  try {
+    const data = await getTokenClaims(skipRefresh);
+    if (data && typeof data === 'object' && 'userId' in data && 'roleId' in data) {
+      return data as AuthInfo;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 };

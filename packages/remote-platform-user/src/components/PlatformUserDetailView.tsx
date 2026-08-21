@@ -21,6 +21,7 @@ interface PlatformUserDetailViewProps {
   record: PlatformRecordDto;
   onBack: () => void;
   onStatusUpdated?: () => void;
+  onSettingsClick?: () => void;
 }
 
 const base64ToBlob = (base64: string, contentType: string): Blob => {
@@ -51,6 +52,7 @@ export const PlatformUserDetailView: React.FC<PlatformUserDetailViewProps> = ({
   record,
   onBack,
   onStatusUpdated,
+   onSettingsClick,
 }) => {
   const [statusLoading, setStatusLoading] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -191,6 +193,7 @@ export const PlatformUserDetailView: React.FC<PlatformUserDetailViewProps> = ({
         isStatusLoading={statusLoading}
         statusError={statusError}
         onViewDocument={handleViewDoc}
+        onSettingsClick={onSettingsClick}
       />
 
       {showRejectModal && (

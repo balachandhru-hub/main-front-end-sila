@@ -35,6 +35,7 @@ interface VerificationTemplate {
 
 interface UserTemplateProps {
   templates?: VerificationTemplate[];
+  organizationId?: string;
 }
 
 interface FormField {
@@ -53,7 +54,7 @@ interface TemplateFormData {
   fields: FormField[];
 }
 
-export default function UserTemplate({ templates = [] }: UserTemplateProps) {
+export default function UserTemplate({ templates = [], organizationId }: UserTemplateProps) {
   const [apiTemplates, setApiTemplates] = useState<VerificationTemplate[]>(templates);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -112,7 +113,7 @@ export default function UserTemplate({ templates = [] }: UserTemplateProps) {
     setTemplatesError(null);
     try {
       const index = (page - 1) * itemsPerPage;
-      const result = await fetchBuyerVerificationTemplates(index, itemsPerPage);
+      const result = await fetchBuyerVerificationTemplates(index, itemsPerPage, organizationId);
 
       if (!Array.isArray(result)) {
         setTemplatesError(result.message || 'Failed to load templates');
@@ -137,7 +138,7 @@ export default function UserTemplate({ templates = [] }: UserTemplateProps) {
 
   useEffect(() => {
     loadPage(1);
-  }, []);
+  }, [organizationId]);
 
   const handleNextPage = () => {
     if (hasNextPage && !loadingTemplates) {
@@ -269,7 +270,7 @@ export default function UserTemplate({ templates = [] }: UserTemplateProps) {
         description: formData.description,
       };
 
-      const templateResult = await createBuyerVerificationTemplate(templatePayload);
+      const templateResult = await createBuyerVerificationTemplate(templatePayload, organizationId);
 
       if (typeof templateResult !== 'string') {
         setPublishError(templateResult.message || 'Failed to create template');
