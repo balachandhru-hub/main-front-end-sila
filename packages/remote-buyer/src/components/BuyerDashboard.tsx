@@ -898,17 +898,17 @@ useEffect(() => {
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px 18px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
                               <div>
-                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
-                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                                  {new Date(fullPageRfq.startDate).toLocaleString()}
-                                </div>
-                              </div>
-                              <div>
-                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>End Date</div>
-                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                                  {new Date(fullPageRfq.endDate).toLocaleString()}
-                                </div>
-                              </div>
+  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
+  <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+    {new Date(fullPageRfq.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+  </div>
+</div>
+<div>
+  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>End Date</div>
+  <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+    {new Date(fullPageRfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+  </div>
+</div>
                               <div>
                                 <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Add Lot Option</div>
                                 <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>

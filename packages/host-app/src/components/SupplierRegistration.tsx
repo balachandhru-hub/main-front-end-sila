@@ -22,6 +22,13 @@ interface SupplierRegistrationProps {
     businessEmail?: string;
 }
 
+// Fields we validate in step 3
+type FieldErrors = Partial<Record<
+    | 'companyName' | 'phone' | 'country' | 'addressLine1' | 'city' | 'stateVal' | 'zip'
+    | 'name' | 'adminEmail' | 'pw' | 'pw2',
+    string
+>>;
+
 const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
     businessEmail: initialEmail,
 }) => {
@@ -32,7 +39,6 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
     const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
     const [secondsLeft, setSecondsLeft] = useState(OTP_DURATION);
     const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
-
 
     const [isSendingOtp, setIsSendingOtp] = useState(false);
     const [otpError, setOtpError] = useState('');
@@ -51,14 +57,15 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
     const [adminEmail, setAdminEmail] = useState('');
     const [pw, setPw] = useState('');
     const [pw2, setPw2] = useState('');
-    const [showPassword, setShowPassword] = useState(false); // ✅ NEW: Track password visibility
-    const [showPassword2, setShowPassword2] = useState(false); // ✅ NEW: Track repeat password visibility
+    const [showPassword, setShowPassword] = useState(false);
+    const [showPassword2, setShowPassword2] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
+
+    const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
     const [isCreatingAccount, setIsCreatingAccount] = useState(false);
     const [createError, setCreateError] = useState('');
     const navigate = useNavigate();
-
 
     useEffect(() => {
         if (step !== 2) return;
@@ -146,8 +153,49 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
         }
     };
 
+    const validateStep3 = (): boolean => {
+        const errors: FieldErrors = {};
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!companyName.trim()) errors.companyName = 'Company legal name is required.';
+        if (!phone.trim()) errors.phone = 'Phone number is required.';
+        else if (!/^[0-9+()\-\s]{6,20}$/.test(phone.trim())) errors.phone = 'Enter a valid phone number.';
+
+        if (!country) errors.country = 'Please select a country.';
+        if (!addressLine1.trim()) errors.addressLine1 = 'Address line 1 is required.';
+        if (!city.trim()) errors.city = 'City is required.';
+        if (!stateVal) errors.stateVal = 'Please select a state.';
+        if (!zip.trim()) errors.zip = 'ZIP / pin code is required.';
+
+        if (!name.trim()) errors.name = 'Name is required.';
+
+        if (!adminEmail.trim()) errors.adminEmail = 'Email is required.';
+        else if (!emailRegex.test(adminEmail.trim())) errors.adminEmail = 'Enter a valid email address.';
+
+        if (!pw) errors.pw = 'Password is required.';
+        else if (pw.length < 8) errors.pw = 'Password must be at least 8 characters.';
+
+        if (!pw2) errors.pw2 = 'Please repeat the password.';
+        else if (pw !== pw2) errors.pw2 = 'Passwords do not match.';
+
+        setFieldErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
     const handleCreateAccount = async () => {
-        if (!agreeTerms || isCreatingAccount) return;
+        if (isCreatingAccount) return;
+
+        const isValid = validateStep3();
+        if (!isValid) {
+            setCreateError('Please fill in all required fields correctly.');
+            return;
+        }
+
+        if (!agreeTerms) {
+            setCreateError('Please agree to the Terms of Use to continue.');
+            return;
+        }
+
         setIsCreatingAccount(true);
         setCreateError('');
         try {
@@ -172,6 +220,16 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
             setCreateError(error.response?.data?.message || error.message || 'Failed to create account');
         } finally {
             setIsCreatingAccount(false);
+        }
+    };
+
+    const clearFieldError = (key: keyof FieldErrors) => {
+        if (fieldErrors[key]) {
+            setFieldErrors((prev: FieldErrors) => {
+                const next = { ...prev };
+                delete next[key];
+                return next;
+            });
         }
     };
 
@@ -310,46 +368,68 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                 <div className="vr-field vr-field--full">
                                     <label className="vr-label vr-label--plain">Company Legal Name*</label>
                                     <input
-                                        className="vr-input"
+                                        className={`vr-input ${fieldErrors.companyName ? 'vr-input--error' : ''}`}
                                         value={companyName}
-                                        onChange={(e) => setCompanyName(e.target.value)}
+                                        onChange={(e) => {
+                                            setCompanyName(e.target.value);
+                                            clearFieldError('companyName');
+                                        }}
                                     />
+                                    {fieldErrors.companyName && (
+                                        <p className="vr-hint vr-hint--error">{fieldErrors.companyName}</p>
+                                    )}
                                 </div>
 
                                 <div className="vr-field vr-field--full">
                                     <label className="vr-label vr-label--plain">Phone Number*</label>
                                     <input
-                                        className="vr-input"
+                                        className={`vr-input ${fieldErrors.phone ? 'vr-input--error' : ''}`}
                                         value={phone}
-                                        onChange={(e) => setPhone(e.target.value)}
+                                        onChange={(e) => {
+                                            setPhone(e.target.value);
+                                            clearFieldError('phone');
+                                        }}
                                     />
+                                    {fieldErrors.phone && (
+                                        <p className="vr-hint vr-hint--error">{fieldErrors.phone}</p>
+                                    )}
                                 </div>
 
                                 <div className="vr-field">
                                     <label className="vr-label vr-label--plain">Country / Region*</label>
                                     <select
-                                        className="vr-input vr-select"
+                                        className={`vr-input vr-select ${fieldErrors.country ? 'vr-input--error' : ''}`}
                                         value={country}
                                         onChange={(e) => {
                                             setCountry(e.target.value);
                                             setStateVal('');
+                                            clearFieldError('country');
                                         }}
                                     >
                                         <option value="">Select Country</option>
-                                        {Country.getAllCountries().map((c) => (
+                                        {Country.getAllCountries().map((c: any) => (
                                             <option key={c.isoCode} value={c.isoCode}>
                                                 {c.name}
                                             </option>
                                         ))}
                                     </select>
+                                    {fieldErrors.country && (
+                                        <p className="vr-hint vr-hint--error">{fieldErrors.country}</p>
+                                    )}
                                 </div>
                                 <div className="vr-field">
                                     <label className="vr-label vr-label--plain">Address Line 1*</label>
                                     <input
-                                        className="vr-input"
+                                        className={`vr-input ${fieldErrors.addressLine1 ? 'vr-input--error' : ''}`}
                                         value={addressLine1}
-                                        onChange={(e) => setAddressLine1(e.target.value)}
+                                        onChange={(e) => {
+                                            setAddressLine1(e.target.value);
+                                            clearFieldError('addressLine1');
+                                        }}
                                     />
+                                    {fieldErrors.addressLine1 && (
+                                        <p className="vr-hint vr-hint--error">{fieldErrors.addressLine1}</p>
+                                    )}
                                 </div>
 
                                 <div className="vr-field">
@@ -362,28 +442,54 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                 </div>
                                 <div className="vr-field">
                                     <label className="vr-label vr-label--plain">City*</label>
-                                    <input className="vr-input" value={city} onChange={(e) => setCity(e.target.value)} />
+                                    <input
+                                        className={`vr-input ${fieldErrors.city ? 'vr-input--error' : ''}`}
+                                        value={city}
+                                        onChange={(e) => {
+                                            setCity(e.target.value);
+                                            clearFieldError('city');
+                                        }}
+                                    />
+                                    {fieldErrors.city && (
+                                        <p className="vr-hint vr-hint--error">{fieldErrors.city}</p>
+                                    )}
                                 </div>
 
                                 <div className="vr-field">
                                     <label className="vr-label vr-label--plain">State*</label>
                                     <select
-                                        className="vr-input vr-select"
+                                        className={`vr-input vr-select ${fieldErrors.stateVal ? 'vr-input--error' : ''}`}
                                         value={stateVal}
-                                        onChange={(e) => setStateVal(e.target.value)}
+                                        onChange={(e) => {
+                                            setStateVal(e.target.value);
+                                            clearFieldError('stateVal');
+                                        }}
                                         disabled={!country}
                                     >
                                         <option value="">Select State</option>
-                                        {country && State.getStatesOfCountry(country).map((s) => (
+                                        {country && State.getStatesOfCountry(country).map((s: any) => (
                                             <option key={s.isoCode} value={s.isoCode}>
                                                 {s.name}
                                             </option>
                                         ))}
                                     </select>
+                                    {fieldErrors.stateVal && (
+                                        <p className="vr-hint vr-hint--error">{fieldErrors.stateVal}</p>
+                                    )}
                                 </div>
                                 <div className="vr-field">
                                     <label className="vr-label vr-label--plain">ZIP Code / Pin Code*</label>
-                                    <input className="vr-input" value={zip} onChange={(e) => setZip(e.target.value)} />
+                                    <input
+                                        className={`vr-input ${fieldErrors.zip ? 'vr-input--error' : ''}`}
+                                        value={zip}
+                                        onChange={(e) => {
+                                            setZip(e.target.value);
+                                            clearFieldError('zip');
+                                        }}
+                                    />
+                                    {fieldErrors.zip && (
+                                        <p className="vr-hint vr-hint--error">{fieldErrors.zip}</p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -394,31 +500,45 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                 <div className="vr-field">
                                     <label className="vr-label vr-label--plain">Name*</label>
                                     <input
-                                        className="vr-input"
+                                        className={`vr-input ${fieldErrors.name ? 'vr-input--error' : ''}`}
                                         value={name}
-                                        onChange={(e) => setName(e.target.value)}
+                                        onChange={(e) => {
+                                            setName(e.target.value);
+                                            clearFieldError('name');
+                                        }}
                                     />
+                                    {fieldErrors.name && (
+                                        <p className="vr-hint vr-hint--error">{fieldErrors.name}</p>
+                                    )}
                                 </div>
 
                                 <div className="vr-field vr-field--full">
                                     <label className="vr-label vr-label--plain">Email*</label>
                                     <input
-                                        className="vr-input"
+                                        className={`vr-input ${fieldErrors.adminEmail ? 'vr-input--error' : ''}`}
                                         type="email"
                                         value={adminEmail}
-                                        onChange={(e) => setAdminEmail(e.target.value)}
+                                        onChange={(e) => {
+                                            setAdminEmail(e.target.value);
+                                            clearFieldError('adminEmail');
+                                        }}
                                     />
+                                    {fieldErrors.adminEmail && (
+                                        <p className="vr-hint vr-hint--error">{fieldErrors.adminEmail}</p>
+                                    )}
                                 </div>
 
-                                {/* ✅ FIXED: Password field with Show/Hide eye icon */}
                                 <div className="vr-field">
                                     <label className="vr-label vr-label--plain">Password*</label>
                                     <div style={{ position: 'relative' }}>
                                         <input
-                                            className="vr-input"
+                                            className={`vr-input ${fieldErrors.pw ? 'vr-input--error' : ''}`}
                                             type={showPassword ? 'text' : 'password'}
                                             value={pw}
-                                            onChange={(e) => setPw(e.target.value)}
+                                            onChange={(e) => {
+                                                setPw(e.target.value);
+                                                clearFieldError('pw');
+                                            }}
                                             style={{ paddingRight: '40px' }}
                                         />
                                         <button
@@ -443,17 +563,22 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                             {showPassword ? <FaEyeSlash /> : <FaEye />}
                                         </button>
                                     </div>
+                                    {fieldErrors.pw && (
+                                        <p className="vr-hint vr-hint--error">{fieldErrors.pw}</p>
+                                    )}
                                 </div>
 
-                                {/* ✅ FIXED: Repeat Password field with Show/Hide eye icon */}
                                 <div className="vr-field">
                                     <label className="vr-label vr-label--plain">Repeat Password*</label>
                                     <div style={{ position: 'relative' }}>
                                         <input
-                                            className="vr-input"
+                                            className={`vr-input ${fieldErrors.pw2 ? 'vr-input--error' : ''}`}
                                             type={showPassword2 ? 'text' : 'password'}
                                             value={pw2}
-                                            onChange={(e) => setPw2(e.target.value)}
+                                            onChange={(e) => {
+                                                setPw2(e.target.value);
+                                                clearFieldError('pw2');
+                                            }}
                                             style={{ paddingRight: '40px' }}
                                         />
                                         <button
@@ -478,6 +603,9 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                             {showPassword2 ? <FaEyeSlash /> : <FaEye />}
                                         </button>
                                     </div>
+                                    {fieldErrors.pw2 && (
+                                        <p className="vr-hint vr-hint--error">{fieldErrors.pw2}</p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -504,7 +632,7 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
                                 variant="primary"
                                 size="md"
                                 onClick={handleCreateAccount}
-                                disabled={isCreatingAccount || !agreeTerms}
+                                disabled={isCreatingAccount}
                             >
                                 {isCreatingAccount ? 'Creating...' : 'Create Account'}
                             </Button>
