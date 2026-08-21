@@ -256,9 +256,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 }) => {
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const auth = useHostAuth();
-  React.useEffect(() => {
-  console.log('auth context value:', auth);
-}, [auth]);
   const [profile, setProfile] = useState<NetworkAdminProfileResponse | any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

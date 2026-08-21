@@ -22,9 +22,6 @@ const AuthContext = createContext<AuthContextType>({
   setAuth: () => {},
   clearAuth: () => {},
 });
-
-// Global key remotes (buyer/supplier/platform-user) read from.
-// Kept double-underscored + prefixed to avoid collisions with anything else on window.
 const HOST_AUTH_WINDOW_KEY = '__hostAuth__';
 const HOST_AUTH_EVENT = 'host-auth-changed';
 
