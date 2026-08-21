@@ -62,6 +62,13 @@ interface Agreements {
     authorizeVerification: boolean;
 }
 
+interface FormErrors {
+    industry?: string;
+    businessType?: string;
+    products?: string;
+    subProducts?: string;
+}
+
 interface NetworkAdminOnboardingProps {
     onComplete?: (data: {
         businessInfo: BusinessInfo;
@@ -489,6 +496,7 @@ if (Array.isArray(data)) {
     const [submitted, setSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [errors, setErrors] = useState<FormErrors>({});
 
     useEffect(() => {
         if (rejectedProfile) {
@@ -628,14 +636,55 @@ if (Array.isArray(data)) {
     }
 
     function handleNext() {
+        // if (!validateStep1()) {
+        //     return;
+        // }
+            let isValid = true;
+
+        if (currentStep === 1) {
+            isValid = validateStep1();
+        }
+
+        if (!isValid) {
+            return;
+        }
         const next = Math.min(currentStep + 1, STEP_LABELS.length);
         setCurrentStep(next);
         setFurthestStep((prev) => Math.max(prev, next));
     }
 
     function handleBack() {
+        setErrors({});
         setCurrentStep((prev) => Math.max(prev - 1, 1));
     }
+
+    function validateStep1() {
+        const newErrors: FormErrors = {};
+
+        if (!businessInfo.industry) {
+            newErrors.industry = "Industry is required";
+        }
+        if (!businessInfo.businessType) {
+            newErrors.businessType = "Business Type is required";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    }
+
+//     function validateStep2(): boolean {
+//     const newErrors: FormErrors = {};
+
+//     if (selectedProducts.length === 0) {
+//         newErrors.products = "Select at least one product";
+//     }
+//     if (selectedSubProducts.length === 0) {
+//         newErrors.subProducts = "Select at least one sub-product";
+//     }
+
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+// }
 
     function updateBusinessInfo<K extends keyof BusinessInfo>(field: K, value: BusinessInfo[K]) {
         setBusinessInfo((prev) => ({ ...prev, [field]: value }));
@@ -855,10 +904,16 @@ if (Array.isArray(data)) {
                             </label>
                             <select
                                 id="industry"
+                                className={errors.industry ? "bp-input-error" : ""}
                                 value={businessInfo.industry}
                                 onFocus={handleIndustryFocus}
                                 onClick={handleIndustryFocus}
-                                onChange={(e) => updateBusinessInfo("industry", e.target.value)}
+                                onChange={(e) => {
+                                    updateBusinessInfo("industry", e.target.value)
+                                    if (errors.industry) {
+                                        setErrors((prev) => ({ ...prev, industry: undefined }));
+                                    }
+                                }}
                             >
                                 <option value="">{loadingIndustries ? "Loading..." : "Select Industry"}</option>
                                 {industries.length > 0 &&
@@ -868,6 +923,7 @@ if (Array.isArray(data)) {
                                         </option>
                                     ))}
                             </select>
+                            {errors.industry && <span className="bp-error-text">{errors.industry}</span>}
                         </div>
 
                         <div className="bp-field">
@@ -876,10 +932,16 @@ if (Array.isArray(data)) {
                             </label>
                             <select
                                 id="businessType"
+                                className={errors.businessType ? "bp-input-error" : ""}
                                 value={businessInfo.businessType}
                                 onFocus={handleBusinessTypeFocus}
                                 onClick={handleBusinessTypeFocus}
-                                onChange={(e) => updateBusinessInfo("businessType", e.target.value)}
+                                onChange={(e) => {
+                                    updateBusinessInfo("businessType", e.target.value);
+                                    if (errors.businessType) {
+                                        setErrors((prev) => ({ ...prev, businessType: undefined }));
+                                    }
+                                }}
                             >
                                 <option value="">{loadingBusinessTypes ? "Loading..." : "Select Business Type"}</option>
                                 {businessTypes.length > 0 &&
@@ -889,6 +951,7 @@ if (Array.isArray(data)) {
                                         </option>
                                     ))}
                             </select>
+                            {errors.businessType && <span className="bp-error-text">{errors.businessType}</span>}
                         </div>
 
                         <div className="bp-field">
@@ -991,9 +1054,15 @@ if (Array.isArray(data)) {
                         </label>
                         <ProductDropdown
                             segments={segments}
-                            onSelect={handleSelectProduct}
+                            onSelect={(p)=>{
+                                handleSelectProduct(p)
+                                // if(errors.products) {
+                                //     setErrors((prev) => ({ ...prev, products: undefined }));
+                                // }
+                            }}
                             loading={loadingSegments}
                         />
+                        {/* {errors.products && <span className="bp-error-text">{errors.products}</span>} */}
                     </div>
 
                     <div className="bp-category-section-subtitle">
@@ -1038,10 +1107,16 @@ if (Array.isArray(data)) {
                         </label>
                         <SubProductDropdown
                             classes={classes}
-                            onSelect={handleSelectSubProduct}
+                            onSelect={(p)=>{
+                                handleSelectSubProduct(p)
+                                // if(errors.subProducts) {
+                                //     setErrors((prev) => ({ ...prev, subProducts: undefined }));
+                                // }
+                            }}
                             disabled={!activeProduct}
                             loading={loadingClasses}
                         />
+                        {/* {errors.subProducts && <span className="bp-error-text">{errors.subProducts}</span>} */}
                     </div>
 
                     <div className="bp-category-section-subtitle">
