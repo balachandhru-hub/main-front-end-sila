@@ -89,7 +89,15 @@ const BuyersRegistration: React.FC<BuyersRegistrationProps> = ({
         }
     };
 
+    const isValidEmail = (email: string): boolean => {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    };
+
     const handleSendOtp = async () => {
+        if (!isValidEmail(email)) {
+            setOtpError('Please enter a valid email address.');
+            return;
+        }
         if (!email || isSendingOtp) return;
         setOtpError('');
         setIsSendingOtp(true);
@@ -215,7 +223,13 @@ const BuyersRegistration: React.FC<BuyersRegistrationProps> = ({
                                             type="email"
                                             placeholder="name@company.com"
                                             value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
+                                            onChange={(e) => {
+                                                const value = e?.target?.value
+                                                setEmail(value)
+
+                                                if (isValidEmail(value)) {
+                                                    setOtpError('');
+                                                }}}
                                         />
                                         <p className="vr-hint">Please use your official company email address.</p>
                                         {otpError && (
@@ -259,7 +273,7 @@ const BuyersRegistration: React.FC<BuyersRegistrationProps> = ({
                                         Didn&apos;t receive the code?{' '}
                                         <a
                                             href="#"
-                                            className={`vr-link ${isResendingOtp ? 'vr-link--disabled' : ''}`}
+                                            className={`vr-link ${secondsLeft > 0 || isResendingOtp ? 'vr-link--disabled' : ''}`}
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 if (!isResendingOtp) handleResend();

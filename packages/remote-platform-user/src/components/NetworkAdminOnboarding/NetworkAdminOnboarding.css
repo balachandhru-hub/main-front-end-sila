@@ -172,7 +172,7 @@
 .bp-field {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 }
 
 .bp-field-wide {
@@ -188,6 +188,15 @@
 .bp-required {
     color: var(--bp-danger);
     margin-left: 2px;
+}
+
+.bp-input-error {
+    border-color: #e53e3e !important;
+}
+.bp-error-text {
+    color: #e53e3e;
+    font-size: 12px;
+    display: block;
 }
 
 .bp-field input[type="text"],
