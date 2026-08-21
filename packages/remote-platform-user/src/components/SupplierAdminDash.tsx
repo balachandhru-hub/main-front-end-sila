@@ -1004,8 +1004,8 @@ const SupplierAdminDash: React.FC = () => {
                       <tr>
                         <th>Material Info</th>
                         <th>Code</th>
-                        <th>Qty Required</th>
-                        {!selectedRfq.addLotOption && <th style={{width: '130px' }}>Your Unit Quote</th>}
+                        <th style={{ textAlign: 'left' }}>Qty Required</th>
+                        {!selectedRfq.addLotOption && <th style={{ textAlign: 'left', width: '130px' }}>Your Unit Quote</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -1016,24 +1016,14 @@ const SupplierAdminDash: React.FC = () => {
                           <tr key={idx}>
                             <td>
                               <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
-                              {item.costCenter && (
-                                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                  Cost Center: {item.costCenterName}
-                                </div>
-                              )}
-                              {item.attachments?.map((att) => (
-                                <div key={att.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f1f5f9', color: '#475569', fontSize: '11px', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', marginRight: '4px' }}>
-                                  <IconFile /> {att.fileName}
-                                </div>
-                              ))}
                             </td>
                             <td>
-                              <div>
+                              <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
                                 {item.materialCode || "N/A"}
                               </div>
                             </td>
-                            <td>
-                              {item.quantity} <span>{item.uom}</span>
+                            <td style={{ textAlign: 'left', fontWeight: 600, color: '#0f172a' }}>
+                              {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
                             </td>
                             {!selectedRfq.addLotOption && (
                               <td>
@@ -1929,9 +1919,9 @@ const SupplierAdminDash: React.FC = () => {
                             <thead>
                               <tr>
                                 <th>Material Info</th>
-                                <th>Group / Code</th>
-                                <th style={{ textAlign: 'right' }}>Qty Required</th>
-                                {!selectedRfq.addLotOption && <th style={{ textAlign: 'right', width: '130px' }}>Your Unit Quote</th>}
+                                <th>Code</th>
+                                <th style={{ textAlign: 'left' }}>Qty Required</th>
+                                {!selectedRfq.addLotOption && <th style={{ textAlign: 'left', width: '130px' }}>Your Unit Quote</th>}
                               </tr>
                             </thead>
                             <tbody>
@@ -1942,26 +1932,13 @@ const SupplierAdminDash: React.FC = () => {
                                   <tr key={idx}>
                                     <td>
                                       <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
-                                      {item.costCenter && (
-                                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                          Cost Center: {item.costCenter}
-                                        </div>
-                                      )}
-                                      {item.attachments?.map((att) => (
-                                        <div key={att.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f1f5f9', color: '#475569', fontSize: '11px', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', marginRight: '4px' }}>
-                                          <IconFile /> {att.fileName}
-                                        </div>
-                                      ))}
                                     </td>
                                     <td>
-                                      <div style={{ fontSize: '13px', color: '#334155' }}>
-                                        {item.materialGroup || "N/A"}
-                                      </div>
                                       <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                        Code: {item.materialCode || "N/A"}
+                                        {item.materialCode || "N/A"}
                                       </div>
                                     </td>
-                                    <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>
+                                    <td style={{ textAlign: 'left', fontWeight: 600, color: '#0f172a' }}>
                                       {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
                                     </td>
                                     {!selectedRfq.addLotOption && (
