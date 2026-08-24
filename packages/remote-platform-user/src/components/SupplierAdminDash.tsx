@@ -948,13 +948,13 @@ const SupplierAdminDash: React.FC = () => {
                   <div>
                     <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
                     <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                      {new Date(selectedRfq.startDate).toLocaleString()}
+                      {new Date(selectedRfq.startDate).toLocaleDateString()}
                     </div>
                   </div>
                   <div>
                     <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>End Date</div>
                     <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                      {new Date(selectedRfq.endDate).toLocaleString()}
+                      {new Date(selectedRfq.endDate).toLocaleDateString()}
                     </div>
                   </div>
                   <div>
