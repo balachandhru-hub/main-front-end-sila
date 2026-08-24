@@ -9,9 +9,10 @@ import {
     updateSupplierInvitationStatus,
     fetchInvitationAnswers,
     submitVerificationAnswers,
+    fetchSupplierAsset,
     type BuyerInvitationItem,
     type InvitationAnswersResponse,
-     type VerificationQuestion,
+    type VerificationQuestion,
     type SubmitVerificationPayload,
 } from "../api/supplierApi";
 import { isErrorResponse, toastService } from "@vosox/shared-ui";
@@ -201,6 +202,19 @@ const mapApiStatus = (status: string): InvitationStatus => {
     return "open";
 };
 
+
+type QuestionKind = "text" | "radio" | "checkbox" | "file" | "label" | "other";
+
+const getQuestionKind = (rawType: string): QuestionKind => {
+    const t = (rawType || "").toUpperCase().replace(/[\s_-]/g, "");
+    if (t === "TEXT" || t === "INPUT") return "text";
+    if (t === "RADIOBUTTON" || t === "RADIO") return "radio";
+    if (t === "CHECKBOX") return "checkbox";
+    if (t === "FILE" || t === "ATTACHMENT") return "file";
+    if (t === "LABEL") return "label";
+    return "other";
+};
+
 const mapApiItemToInvitation = (item: BuyerInvitationItem): Invitation => ({
     code: item.rfqNumber,
     status: mapApiStatus(item.status),
@@ -234,18 +248,19 @@ const getDefaultAnswerForQuestion = (
     question: VerificationQuestion,
     profile: SupplierProfileResponse
 ): string => {
+    const kind = getQuestionKind(question.questionType);
     const matchedReg = profile.registrations?.find((r) =>
         question.question.toUpperCase().includes(r.registrationType.toUpperCase())
     );
 
     if (matchedReg) {
-        if (question.questionType === "File") {
+        if (kind === "file") {
             return matchedReg.asset?.fileName || "Not submitted";
         }
         return matchedReg.registrationNumber || "N/A";
     }
 
-    if (question.questionType === "File") {
+    if (kind === "file") {
         return "Not submitted";
     }
 
@@ -519,6 +534,37 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
         }
     };
 
+    const handleDownloadAsset = async (assetId: string) => {
+        try {
+            const result = await fetchSupplierAsset(assetId);
+            if (isErrorResponse(result)) {
+                toastService.error(result.description || result.message || "Failed to load file.");
+                return;
+            }
+            const url = result.url || result.fileUrl;
+            if (url) {
+                window.open(url, "_blank");
+                return;
+            }
+            if (result.fileBytes && result.contentType) {
+                const byteChars = atob(result.fileBytes);
+                const byteNumbers = new Array(byteChars.length);
+                for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+                const blob = new Blob([new Uint8Array(byteNumbers)], { type: result.contentType });
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = blobUrl;
+                a.download = result.fileName || result.assetName || "file";
+                a.click();
+                URL.revokeObjectURL(blobUrl);
+                return;
+            }
+            toastService.error("File data unavailable.");
+        } catch (err: any) {
+            toastService.error(err.message || "Failed to load file.");
+        }
+    };
+
     const handleDecline = async (invitation: Invitation) => {
         if (!invitation.id) return;
         setActionLoadingId(invitation.id);
@@ -563,15 +609,20 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
 
         const isDefault = result.templateId?.toLowerCase() === DEFAULT_VERIFICATION_TEMPLATE_ID.toLowerCase();
 
-        if (isDefault) {
+        if (isDefault && adminRole === "supplier") {
             loadDefaultAnswers(result);
-        } else {
+        } else if (!isDefault) {
             const initialAnswers: { [questionId: string]: VerificationAnswer } = {};
             result.questions?.forEach((q) => {
+                const kind = getQuestionKind(q.questionType);
+                const savedOptionIds = kind === "checkbox" && q.answer
+                    ? q.answer.split(",").map((s) => s.trim()).filter(Boolean)
+                    : [];
+
                 initialAnswers[q.verificationTemplateQuestionId] = {
                     textAnswer: q.answer || "",
                     selectedOptionId: q.verificationTemplateQuestionOptionId || null,
-                    selectedOptionIds: [],
+                    selectedOptionIds: savedOptionIds,
                     file: null,
                     fileBase64: "",
                 };
@@ -634,15 +685,6 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
         });
     };
 
-    const handleDateChange = (questionId: string, value: string) => {
-        setVerificationAnswers((prev) => ({
-            ...prev,
-            [questionId]: {
-                ...(prev[questionId] || { textAnswer: "", selectedOptionId: null, selectedOptionIds: [], file: null, fileBase64: "" }),
-                textAnswer: value,
-            },
-        }));
-    };
 
     const handleFileChange = (questionId: string, file: File | null) => {
         if (!file) {
@@ -681,34 +723,25 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
             if (!question.isRequired) continue;
 
             const answer = verificationAnswers[question.verificationTemplateQuestionId];
+            const kind = getQuestionKind(question.questionType);
 
-            if (question.questionType === "Text") {
+            if (kind === "text") {
                 if (!answer?.textAnswer?.trim()) {
                     setVerificationError(`Please answer the required question: "${question.question}"`);
                     return false;
                 }
-            } else if (question.questionType === "Radio button") {
+            } else if (kind === "radio") {
                 if (!answer?.selectedOptionId) {
                     setVerificationError(`Please select an option for: "${question.question}"`);
                     return false;
                 }
-            } else if (question.questionType === "Checkbox") {
+            } else if (kind === "checkbox") {
                 if (!answer?.selectedOptionIds || answer.selectedOptionIds.length === 0) {
                     setVerificationError(`Please select at least one option for: "${question.question}"`);
                     return false;
                 }
-            } else if (question.questionType === "Dropdown") {
-                if (!answer?.selectedOptionId) {
-                    setVerificationError(`Please select an option for: "${question.question}"`);
-                    return false;
-                }
-            } else if (question.questionType === "Date") {
-                if (!answer?.textAnswer?.trim()) {
-                    setVerificationError(`Please enter a date for: "${question.question}"`);
-                    return false;
-                }
-            } else if (question.questionType === "File" || question.questionType === "file") {
-                if (!answer?.file) {
+            } else if (kind === "file") {
+                if (!answer?.file && !question.assetId) {
                     setVerificationError(`Please upload a file for: "${question.question}"`);
                     return false;
                 }
@@ -733,20 +766,19 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
         try {
             const answers = viewingDetail.questions?.map((question) => {
                 const answer = verificationAnswers[question.verificationTemplateQuestionId];
+                const kind = getQuestionKind(question.questionType);
 
                 let answerText = "";
                 let selectedOptionId: string | null = null;
 
-                if (question.questionType === "Text") {
+                if (kind === "text") {
                     answerText = answer?.textAnswer || "";
-                } else if (question.questionType === "Radio button" || question.questionType === "Dropdown") {
+                } else if (kind === "radio") {
                     selectedOptionId = answer?.selectedOptionId || null;
                     answerText = answer?.textAnswer || "";
-                } else if (question.questionType === "Checkbox") {
+                } else if (kind === "checkbox") {
                     answerText = answer?.selectedOptionIds?.join(", ") || "";
-                } else if (question.questionType === "Date") {
-                    answerText = answer?.textAnswer || "";
-                } else if (question.questionType === "File" || question.questionType === "file") {
+                } else if (kind === "file") {
                     answerText = answer?.file?.name || "";
                 }
 
@@ -951,19 +983,23 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                     </div>
                                     {isDefaultTemplate ? (
                                         <div className="inv-modal-qa-block">
-                                                {loadingProfile && (
-                                                    <div className="inv-loading-inner"><div className="inv-spinner" /><span>Loading your details...</span></div>
-                                                )}
+                                            {adminRole === "supplier" && (
+                                                <>
+                                                    {loadingProfile && (
+                                                        <div className="inv-loading-inner"><div className="inv-spinner" /><span>Loading your details...</span></div>
+                                                    )}
 
-                                                {profileError && !loadingProfile && (
-                                                    <div className="inv-action-error">{profileError}</div>
-                                                )}
+                                                    {profileError && !loadingProfile && (
+                                                        <div className="inv-action-error">{profileError}</div>
+                                                    )}
 
-                                                {supplierProfile && !loadingProfile && (
-                                                    <div className="inv-modal-qa-empty" style={{ marginBottom: "12px" }}>
-                                                        Please review the answers below. If everything is correct, click <strong>Accept</strong> to confirm, then <strong>Submit</strong> to finalize.
-                                                    </div>
-                                                )}
+                                                    {supplierProfile && !loadingProfile && (
+                                                        <div className="inv-modal-qa-empty" style={{ marginBottom: "12px" }}>
+                                                            Please review the answers below. If everything is correct, click <strong>Accept</strong> to confirm, then <strong>Submit</strong> to finalize.
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
 
                                             <div className="inv-modal-qa-list">
                                                 {viewingDetail.questions.map((question, index) => (
@@ -972,9 +1008,11 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                             Q{index + 1}: {question.question}
                                                         </div>
                                                         <div className="inv-modal-qa-answer">
-                                                            {supplierProfile
-                                                                ? defaultAnswers[question.verificationTemplateQuestionId] || "N/A"
-                                                                : "—"}
+                                                            {adminRole === "buyer"
+                                                                ? question.answer || "Not yet submitted"
+                                                                : supplierProfile
+                                                                    ? defaultAnswers[question.verificationTemplateQuestionId] || "N/A"
+                                                                    : "—"}
                                                         </div>
                                                     </div>
                                                 ))}
@@ -1020,7 +1058,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                             <div className="inv-modal-qa-list">
                                                 {viewingDetail.questions.map((question, index) => {
                                                     const answer = verificationAnswers[question.verificationTemplateQuestionId];
-                                                    const questionType = question.questionType?.toLowerCase() || "";
+                                                    const kind = getQuestionKind(question.questionType);
 
                                                     return (
                                                         <div key={question.verificationTemplateQuestionId} className="inv-modal-qa-item">
@@ -1029,7 +1067,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                                 {question.isRequired && <span style={{ color: "#ef4444" }}> *</span>}
                                                             </div>
 
-                                                            {questionType === "text" && (
+                                                            {kind === "text" && (
                                                                 <input
                                                                     type="text"
                                                                     className="inv-question-input"
@@ -1037,20 +1075,13 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                                     value={answer?.textAnswer || ""}
                                                                     onChange={(e) => handleTextAnswerChange(question.verificationTemplateQuestionId, e.target.value)}
                                                                     required={question.isRequired}
+                                                                    disabled={isAlreadySubmitted}
                                                                 />
                                                             )}
 
-                                                            {questionType === "date" && (
-                                                                <input
-                                                                    type="date"
-                                                                    className="inv-question-input"
-                                                                    value={answer?.textAnswer || ""}
-                                                                    onChange={(e) => handleDateChange(question.verificationTemplateQuestionId, e.target.value)}
-                                                                    required={question.isRequired}
-                                                                />
-                                                            )}
 
-                                                            {questionType === "radio button" && question.options && question.options.length > 0 && (
+
+                                                            {kind === "radio" && question.options && question.options.length > 0 && (
                                                                 <div className="inv-question-options">
                                                                     {question.options.map((option) => (
                                                                         <label key={option.id} className="inv-option-label">
@@ -1060,6 +1091,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                                                 checked={answer?.selectedOptionId === option.id}
                                                                                 onChange={() => handleRadioChange(question.verificationTemplateQuestionId, option.id)}
                                                                                 required={question.isRequired}
+                                                                                disabled={isAlreadySubmitted}
                                                                             />
                                                                             <span>{option.optionText}</span>
                                                                         </label>
@@ -1067,7 +1099,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                                 </div>
                                                             )}
 
-                                                            {questionType === "checkbox" && question.options && question.options.length > 0 && (
+                                                            {kind === "checkbox" && question.options && question.options.length > 0 && (
                                                                 <div className="inv-question-options">
                                                                     {question.options.map((option) => (
                                                                         <label key={option.id} className="inv-option-label">
@@ -1075,6 +1107,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                                                 type="checkbox"
                                                                                 checked={answer?.selectedOptionIds?.includes(option.id) || false}
                                                                                 onChange={(e) => handleCheckboxChange(question.verificationTemplateQuestionId, option.id, e.target.checked)}
+                                                                                disabled={isAlreadySubmitted}
                                                                             />
                                                                             <span>{option.optionText}</span>
                                                                         </label>
@@ -1082,34 +1115,34 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                                 </div>
                                                             )}
 
-                                                            {questionType === "dropdown" && question.options && question.options.length > 0 && (
-                                                                <select
-                                                                    className="inv-question-select"
-                                                                    value={answer?.selectedOptionId || ""}
-                                                                    onChange={(e) => handleRadioChange(question.verificationTemplateQuestionId, e.target.value)}
-                                                                    required={question.isRequired}
-                                                                >
-                                                                    <option value="">-- Select an option --</option>
-                                                                    {question.options.map((option) => (
-                                                                        <option key={option.id} value={option.id}>
-                                                                            {option.optionText}
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-                                                            )}
 
-                                                            {(questionType === "file" || questionType === "attachment") && (
+
+                                                            {kind === "file" && (
                                                                 <div className="inv-file-upload">
-                                                                    <input
-                                                                        type="file"
-                                                                        className="inv-question-input"
-                                                                        onChange={(e) => handleFileChange(question.verificationTemplateQuestionId, e.target.files?.[0] || null)}
-                                                                        required={question.isRequired}
-                                                                    />
-                                                                    {answer?.file && (
-                                                                        <div style={{ fontSize: "12px", color: "#64748b", marginTop: "6px" }}>
-                                                                            📄 {answer.file.name}
-                                                                        </div>
+                                                                    {question.assetId ? (
+                                                                        <button
+                                                                            type="button"
+                                                                            className="inv-btn inv-btn-outline"
+                                                                            onClick={() => handleDownloadAsset(question.assetId!)}
+                                                                        >
+                                                                            View Uploaded File
+                                                                        </button>
+                                                                    ) : isAlreadySubmitted ? (
+                                                                        <div style={{ fontSize: "12px", color: "#64748b" }}>No file uploaded</div>
+                                                                    ) : (
+                                                                        <>
+                                                                            <input
+                                                                                type="file"
+                                                                                className="inv-question-input"
+                                                                                onChange={(e) => handleFileChange(question.verificationTemplateQuestionId, e.target.files?.[0] || null)}
+                                                                                required={question.isRequired}
+                                                                            />
+                                                                            {answer?.file && (
+                                                                                <div style={{ fontSize: "12px", color: "#64748b", marginTop: "6px" }}>
+                                                                                    📄 {answer.file.name}
+                                                                                </div>
+                                                                            )}
+                                                                        </>
                                                                     )}
                                                                 </div>
                                                             )}
@@ -1125,7 +1158,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                         </div>
 
                         <div className="inv-modal-footer inv-modal-footer-verification">
-                            {isDefaultTemplate ? (
+                            {adminRole === "buyer" ? null : isDefaultTemplate ? (
                                 <>
                                     <button
                                         className="inv-btn inv-btn-draft"

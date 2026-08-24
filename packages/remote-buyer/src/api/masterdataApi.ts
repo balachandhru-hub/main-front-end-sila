@@ -17,6 +17,13 @@ export interface SelectedSubProduct {
     parentTitle?: string;        
 }
 
+export interface ReferenceListItemDto {
+  id: string;
+  key: string;      
+  type: string;       
+  description: string;  
+}
+
 export async function fetchSegments(): Promise<any[] | ErrorResponseDto> {
     try {
         const res = await axiosInstance.get(`/api/v1/masterdata/unspsc/segment?pageIndex=1&pageSize=10`);
@@ -115,6 +122,40 @@ export async function fetchReferenceList(keys: string[]): Promise<any[] | ErrorR
     }
 }
 
+
+export async function fetchDropdownReferenceList(
+  keys: string[]
+): Promise<ReferenceListItemDto[] | ErrorResponseDto> {
+  try {
+    const res = await axiosInstance.post<ReferenceListItemDto[]>(
+      `/api/v1/masterdata/metadata/reference-list`,
+      keys
+    );
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch reference list',
+        description: errData.description || 'No details provided',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching reference list.',
+    };
+  }
+}
 /* ---------------------------------- Countries ---------------------------------- */
 
 export interface CountryDto {

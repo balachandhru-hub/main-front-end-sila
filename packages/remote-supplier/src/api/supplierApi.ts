@@ -70,6 +70,7 @@ export interface VerificationQuestion {
   questionType: string;
   isRequired: boolean;
   answer?: string | null;
+  assetId?: string | null;
   verificationTemplateQuestionOptionId?: string | null;
   options?: VerificationQuestionOption[];
 }

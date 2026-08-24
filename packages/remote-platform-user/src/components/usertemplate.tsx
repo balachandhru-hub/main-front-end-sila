@@ -12,6 +12,7 @@ import {
   type CreateVerificationTemplatePayload,
   type VerificationTemplateQuestionDto,
 } from '../../../remote-buyer/src/api/Buyerapi';
+import { fetchDropdownReferenceList, type ReferenceListItemDto } from '../../../remote-buyer/src/api/masterdataApi';
 
 interface TemplateQuestion {
   questionId: string;
@@ -42,7 +43,7 @@ interface FormField {
   id: number;
   questionId?: string;
   label: string;
-  type: 'Text' | 'Dropdown' | 'Radio button' | 'Checkbox' | 'Date' | 'Email';
+  type: string;
   placeholder?: string;
   options?: string[];
   mandatory: boolean;
@@ -68,7 +69,7 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
   const [editingFieldId, setEditingFieldId] = useState<number | null>(null);
   const [fieldForm, setFieldForm] = useState({
     label: '',
-    type: 'Text' as 'Text' | 'Dropdown' | 'Radio button' | 'Checkbox' | 'Date' | 'Email',
+    type: '',
     options: '',
     mandatory: false,
   });
@@ -100,13 +101,32 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
   const [editingFieldIdForEdit, setEditingFieldIdForEdit] = useState<number | null>(null);
   const [editFieldForm, setEditFieldForm] = useState({
     label: '',
-    type: 'Text' as 'Text' | 'Dropdown' | 'Radio button' | 'Checkbox' | 'Date' | 'Email',
+    type: '',
     options: '',
     mandatory: false,
   });
   const [showEditFieldForm, setShowEditFieldForm] = useState(false);
   const [updatingTemplate, setUpdatingTemplate] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [questionTypes, setQuestionTypes] = useState<ReferenceListItemDto[]>([]);
+  const [loadingQuestionTypes, setLoadingQuestionTypes] = useState(false);
+  const [questionTypesError, setQuestionTypesError] = useState<string | null>(null);
+  const loadQuestionTypes = async () => {
+    setLoadingQuestionTypes(true);
+    setQuestionTypesError(null);
+    try {
+      const result = await fetchDropdownReferenceList(['QUESTION_TYPE']);
+      if (!Array.isArray(result)) {
+        setQuestionTypesError(result.message || 'Failed to load question types');
+        return;
+      }
+      setQuestionTypes(result);
+    } catch (err: any) {
+      setQuestionTypesError(err?.message || 'Failed to load question types');
+    } finally {
+      setLoadingQuestionTypes(false);
+    }
+  };
 
   const loadPage = async (page: number): Promise<boolean> => {
     setLoadingTemplates(true);
@@ -140,6 +160,10 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
     loadPage(1);
   }, [organizationId]);
 
+  useEffect(() => {
+    loadQuestionTypes();
+  }, []);
+
   const handleNextPage = () => {
     if (hasNextPage && !loadingTemplates) {
       loadPage(currentPage + 1);
@@ -152,14 +176,11 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
     }
   };
 
-  const fieldTypes = [
-    'Text',
-    'Dropdown',
-    'Radio button',
-    'Checkbox',
-    'Date',
-    'Email',
-  ];
+  const getQuestionTypeLabel = (key: string) =>
+    questionTypes.find((qt) => qt.key === key)?.description || key;
+
+  const isOptionsType = (key: string) => key === 'RADIO_BUTTON' || key === 'CHECK_BOX';
+
 
   const handleCreateTemplate = () => {
     setShowCreateForm(true);
@@ -187,7 +208,7 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
     setEditingFieldId(null);
     setFieldForm({
       label: '',
-      type: 'Text',
+      type: questionTypes[0]?.key || '',
       options: '',
       mandatory: false,
     });
@@ -218,6 +239,10 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
   const handleSaveField = () => {
     if (!fieldForm.label.trim()) {
       toastService.error('Please enter a question label');
+      return;
+    }
+    if (!fieldForm.type) {
+      toastService.error('Please select a field type');
       return;
     }
 
@@ -344,7 +369,7 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
       id: idx,
       questionId: q.questionId,
       label: q.question,
-      type: q.questionType as 'Text' | 'Dropdown' | 'Radio button' | 'Checkbox' | 'Date' | 'Email',
+      type: q.questionType,
       options: q.options && q.options.length > 0 ? q.options : undefined,
       mandatory: q.isRequired ?? false,
     }));
@@ -369,7 +394,7 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
     setEditingFieldIdForEdit(null);
     setEditFieldForm({
       label: '',
-      type: 'Text',
+      type: questionTypes[0]?.key || '',
       options: '',
       mandatory: false,
     });
@@ -404,11 +429,14 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
   };
 
   const handleSaveFieldForEdit = () => {
-    if (!editFieldForm.label.trim()) {
-      toastService.error('Please enter a question label');
-      return;
-    }
-
+      if (!editFieldForm.label.trim()) {
+        toastService.error('Please enter a question label');
+        return;
+      }
+      if (!editFieldForm.type) {
+        toastService.error('Please select a field type');
+        return;
+      }
     const originalField =
       editingFieldIdForEdit !== null
         ? editFormData.fields.find((f) => f.id === editingFieldIdForEdit)
@@ -654,21 +682,21 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
                 <div className="ut-inline-form-container">
                   <div className="ut-form-group">
                     <label>Field Type</label>
-                    <select
-                      value={fieldForm.type}
-                      onChange={(e) =>
-                        setFieldForm({
-                          ...fieldForm,
-                          type: e.target.value as 'Text' | 'Dropdown' | 'Radio button' | 'Checkbox' | 'Date' | 'Email'
-                        })
-                      }
-                    >
-                      {fieldTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
+                      <select
+                        value={fieldForm.type}
+                        onChange={(e) => setFieldForm({ ...fieldForm, type: e.target.value })}
+                        disabled={loadingQuestionTypes}
+                      >
+                        <option value="" disabled>
+                          {loadingQuestionTypes ? 'Loading...' : 'Select a field type'}
                         </option>
-                      ))}
-                    </select>
+                        {questionTypes.map((qt) => (
+                          <option key={qt.id} value={qt.key}>{qt.description}</option>
+                        ))}
+                      </select>
+                      {questionTypesError && (
+                        <div className="ut-error-message">{questionTypesError}</div>
+                      )}
                   </div>
 
                   <div className="ut-form-group">
@@ -683,8 +711,7 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
                     />
                   </div>
 
-                  {(fieldForm.type === 'Dropdown' ||
-                    fieldForm.type === 'Radio button') && (
+                  {isOptionsType(fieldForm.type) && (
                     <div className="ut-form-group">
                       <label>Available Options (Comma Separated)</label>
                       <input
@@ -742,7 +769,7 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
                   <div key={field.id} className="ut-field-item">
                     <div className="ut-field-info">
                       <div className="ut-field-name">{field.label}</div>
-                      <div className="ut-field-type">Type: {field.type}</div>
+                      <div className="ut-field-type">Type: {getQuestionTypeLabel(field.type)}</div>
                       {field.mandatory && (
                         <div className="ut-field-mandatory">Mandatory</div>
                       )}
@@ -938,7 +965,7 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
                     <div key={q.questionId} className="ut-field-item ut-field-item--flush">
                       <div className="ut-field-info">
                         <div className="ut-field-name">{q.question}</div>
-                        <div className="ut-field-type">Type: {q.questionType}</div>
+                        <div className="ut-field-type">Type: {getQuestionTypeLabel(q.questionType)}</div>
                         {q.options && q.options.length > 0 && (
                           <div className="ut-field-type">Options: {q.options.join(', ')}</div>
                         )}
@@ -994,21 +1021,21 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
                 <div className="ut-inline-form-container">
                   <div className="ut-form-group">
                     <label>Field Type</label>
-                    <select
-                      value={editFieldForm.type}
-                      onChange={(e) =>
-                        setEditFieldForm({
-                          ...editFieldForm,
-                          type: e.target.value as 'Text' | 'Dropdown' | 'Radio button' | 'Checkbox' | 'Date' | 'Email'
-                        })
-                      }
-                    >
-                      {fieldTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
+                      <select
+                        value={editFieldForm.type}
+                        onChange={(e) => setEditFieldForm({ ...editFieldForm, type: e.target.value })}
+                        disabled={loadingQuestionTypes}
+                      >
+                        <option value="" disabled>
+                          {loadingQuestionTypes ? 'Loading...' : 'Select a field type'}
                         </option>
-                      ))}
-                    </select>
+                        {questionTypes.map((qt) => (
+                          <option key={qt.id} value={qt.key}>{qt.description}</option>
+                        ))}
+                      </select>
+                      {questionTypesError && (
+                        <div className="ut-error-message">{questionTypesError}</div>
+                      )}
                   </div>
 
                   <div className="ut-form-group">
@@ -1023,8 +1050,7 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
                     />
                   </div>
 
-                  {(editFieldForm.type === 'Dropdown' ||
-                    editFieldForm.type === 'Radio button') && (
+                  {isOptionsType(editFieldForm.type) && (
                     <div className="ut-form-group">
                       <label>Available Options (Comma Separated)</label>
                       <input
@@ -1082,7 +1108,7 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
                   <div key={field.id} className="ut-field-item">
                     <div className="ut-field-info">
                       <div className="ut-field-name">{field.label}</div>
-                      <div className="ut-field-type">Type: {field.type}</div>
+                      <div className="ut-field-type">Type: {getQuestionTypeLabel(field.type)}</div>
                       {field.mandatory && (
                         <div className="ut-field-mandatory">Mandatory</div>
                       )}
