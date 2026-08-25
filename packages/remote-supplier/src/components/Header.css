@@ -5,6 +5,8 @@
     display: flex;
     align-items: center;
     padding: 0 2rem;
+    position: relative;
+    width: 100%; 
 }
 
 .vsx-header-logo {
@@ -116,6 +118,11 @@
 @media (max-width: 768px) {
     .vsx-header {
         padding: 0 1rem;
+        position: fixed;  
+        top: 0;            
+        left: 0;          
+        right: 0;         
+        z-index: 1300;    
     }
     .vsx-header-logo {
         height: 2rem;

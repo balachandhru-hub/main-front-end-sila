@@ -51,6 +51,14 @@ const IconClose = () => (
   </svg>
 );
 
+const IconMenu = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
+
 
 const IconMail = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -389,6 +397,8 @@ const BuyersDashboard: React.FC = () => {
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
   const RFQ_INITIAL_VISIBLE = 3;
 
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
  const { auth } = useAuth();
 const [buyerId, setBuyerId] = useState<string | null>(auth?.buyerId ?? null);
 
@@ -462,13 +472,12 @@ useEffect(() => {
     setRfqPageView("allRfqs");
     if (allRfqsLoaded || loadingAllRfqs) return;
 
-    // load page 1 when opening All RFQs
     await loadAllRfqsPage(1);
   };
 
   const getRfqPageRange = (page: number) => {
     const index = (page - 1) * RFQ_PAGE_SIZE;
-    const limit = RFQ_PAGE_SIZE; // page size
+    const limit = RFQ_PAGE_SIZE;
     return { index, limit };
   };
 
@@ -516,6 +525,7 @@ useEffect(() => {
   };
 
   const handleNavClick = (key: string) => {
+    setIsMobileSidebarOpen(false);
     if (key === "activeRFQs") {
       handleOpenAllRfqs();
       return;
@@ -689,10 +699,25 @@ useEffect(() => {
       <Header />
 
       <div
-        className="pud-shell"
+        className={`pud-shell${isMobileSidebarOpen ? " pud-sidebar-open-mobile" : ""}`}
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
       >
 
+        <button
+          type="button"
+          className="pud-mobile-sidebar-toggle"
+          onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
+          aria-label={isMobileSidebarOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMobileSidebarOpen}
+        >
+          {isMobileSidebarOpen ? <IconClose /> : <IconMenu />}
+        </button>
+
+        <div
+          className="pud-sidebar-backdrop"
+          onClick={() => setIsMobileSidebarOpen(false)}
+          aria-hidden="true"
+        />
 
         <aside className="pud-sidebar">
           <nav className="pud-nav">
@@ -738,7 +763,7 @@ useEffect(() => {
               <UserTemplate />
             ) : rfqPageView === "allRfqs" ? (
               <>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
                   <div>
                     <h1 className="pud-title">All RFQs</h1>
                     <p className="pud-subtitle" style={{ marginBottom: 0 }}>
@@ -887,9 +912,9 @@ useEffect(() => {
                         {fullPageRfqError}
                       </div>
                     ) : fullPageRfq ? (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px' }}>
+                      <div className="pud-rfq-detail-grid">
                         {/* Left Column: RFQ Specifications & Materials */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
                           <div>
                             <div className="pud-modal-section-title">Description</div>
                             <p className="pud-modal-desc" style={{ whiteSpace: 'pre-wrap', fontSize: '13.5px', color: '#334155', lineHeight: '1.6' }}>
@@ -1006,7 +1031,7 @@ useEffect(() => {
                                         transition: 'border-color 0.2s ease'
                                       }}
                                     >
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                                           <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
                                             Quote ID: {quote.quotationId ? `${quote.quotationId.substring(0, 8)}...` : `Quote #${index + 1}`}
@@ -1064,7 +1089,7 @@ useEffect(() => {
 
                         </div>
                         {/* Right Column: Evaluation Questions & Answers */}
-                        <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div className="pud-rfq-detail-right">
                           <div className="pud-modal-section-title">Evaluation Questions & Answers</div>
 
                           {fullPageRfq.questions && fullPageRfq.questions.length > 0 ? (
@@ -1085,7 +1110,7 @@ useEffect(() => {
                                     {answers.length > 0 ? (
                                       <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                         {answers.map((ans, ai) => (
-                                          <div key={ai} style={{ background: '#ffffff', border: '1px solid #dbeafe', borderRadius: '6px', padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                                          <div key={ai} style={{ background: '#ffffff', border: '1px solid #dbeafe', borderRadius: '6px', padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
                                             <div style={{ fontSize: '12.5px', color: '#334155' }}>
                                               {ans.display}
                                             </div>

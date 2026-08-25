@@ -268,11 +268,11 @@ const IconCheckCircle = () => (
   </svg>
 );
 
-const IconAlertCircle = () => (
+const IconMenu = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" />
-    <line x1="12" y1="8" x2="12" y2="12" />
-    <line x1="12" y1="16" x2="12.01" y2="16" />
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
   </svg>
 );
 
@@ -384,6 +384,7 @@ const SupplierDashboard: React.FC = () => {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
+ const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // ✅ NEW STATE: Confirmation Modal for Submit Quotation
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
@@ -613,6 +614,7 @@ useEffect(() => {
   };
 
   const handleNavClick = (key: string) => {
+    setIsMobileSidebarOpen(false); 
     if (key === "rfqs") {
       handleOpenAllRfqs();
       return;
@@ -1448,7 +1450,26 @@ useEffect(() => {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9' }}>
       <Header />
 
-      <div className="pud-shell">
+      <div
+        className={`pud-shell${isMobileSidebarOpen ? " pud-sidebar-open-mobile" : ""}`}
+        style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
+      >
+        <button
+          type="button"
+          className="pud-mobile-sidebar-toggle"
+          onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
+          aria-label={isMobileSidebarOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMobileSidebarOpen}
+        >
+          {isMobileSidebarOpen ? <IconClose /> : <IconMenu />}
+        </button>
+
+        <div
+          className="pud-sidebar-backdrop"
+          onClick={() => setIsMobileSidebarOpen(false)}
+          aria-hidden="true"
+        />
+
         <aside className="pud-sidebar">
           <nav className="pud-nav">
             {navItems.map((item) => (
