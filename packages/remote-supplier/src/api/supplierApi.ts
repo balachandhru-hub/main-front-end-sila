@@ -12,12 +12,13 @@ import type {
   SubmitRfqAnswersPayload,
   CurrencyListResponse,
   SupplierCatalogListItem,
+  CatalogDetailResponse,
 } from '../dto/supplierDto';
 import type { ErrorResponseDto } from '@vosox/shared-ui';
 import { isErrorResponse } from '@vosox/shared-ui';
 
 export interface SupplierAssetDto {
-  id: string;
+  id: string; 
   assetName?: string;
   fileName?: string;
   assetType?: string | null;
@@ -92,7 +93,15 @@ export interface InvitationAnswersResponse {
 }
 
 export type { SupplierProfileResponse, RFQMasterDataItem, RFQDetailResponse, SubmitQuotationPayload } from '../dto/supplierDto';
-export type { CatalogAssetDto, CatalogDetailDto, CreateSupplierCatalogPayload, SubmitRfqAnswersPayload, RfqDocumentAssetDto, SupplierCatalogListItem } from '../dto/supplierDto';
+export type {
+  CatalogAssetDto,
+  CatalogDetailDto,
+  CatalogDetailResponseItem,
+  CreateSupplierCatalogPayload,
+  SubmitRfqAnswersPayload,
+  RfqDocumentAssetDto,
+  SupplierCatalogListItem
+} from '../dto/supplierDto';
 export type { ErrorResponseDto } from '../dto/supplierDto';
 
 export const createSupplierProfile = async (
@@ -1174,6 +1183,42 @@ export const getSupplierProfileByOrgId = async (
       statusCode: 500,
       message: 'Unexpected Error',
       description: 'Something went wrong while fetching supplier profile.',
+    };
+  }
+};
+// Add after the fetchSupplierCatalog function
+
+export const fetchSupplierCatalogDetail = async (
+  catalogId: string
+): Promise<CatalogDetailResponse | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.get<CatalogDetailResponse>(
+      `/api/v1/supplier/catalog/${catalogId}`
+    );
+    return response.data ?? [];
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch catalog details',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching catalog details.',
     };
   }
 };

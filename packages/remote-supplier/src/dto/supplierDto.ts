@@ -59,7 +59,42 @@ export interface SupplierCatalogListItem {
 }
 export type MetadataReferenceListRequest = MetadataReferenceType[];
 export type MetadataReferenceListResponse = MetadataReferenceItem[];
+// ============================================================================
+// SUPPLIER CATALOG DETAIL DTOs
+// ============================================================================
 
+export interface CatalogDetailAssetItem {
+  id: string;
+  assetType: string | null;
+  assetName: string;
+  fileType: string | null;
+  fileName: string;
+}
+export interface CatalogDetailResponseItem {
+  supplierId: string;
+  catalogId: string;
+  supplierName: string;
+  catalogName: string;
+  description: string;
+  price: number;
+  currency: string;
+  unitOfMeasure: string;
+  segment: number;
+  segmentTitle: string;
+  family: number;
+  familyTitle: string;
+  commodity: number;
+  commodityTitle: string;
+  class: number;
+  classTitle: string;
+  catalogType: string;
+  asset: CatalogDetailAssetItem[];
+  isPunchOut: boolean;
+  punchOutUrl: string;
+}
+
+// Response is an array (even though single catalogId is passed)
+export type CatalogDetailResponse = CatalogDetailResponseItem[];
 // ============================================================================
 // SUPPLIER BUSINESS PROFILE
 // ============================================================================

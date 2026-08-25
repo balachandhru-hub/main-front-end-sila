@@ -1289,7 +1289,7 @@ if (Array.isArray(data)) {
                         <div>
                             <div className="bd-toggle-row-title">Lot Option</div>
                             <div className="bd-toggle-row-desc">
-                                Enable item-level price evaluation. When disabled, evaluation is based on Total Budget.
+                                Disable item-level price evaluation. When enabled, evaluation is based on Total Budget.
                             </div>
                         </div>
                         <label className="bd-switch">

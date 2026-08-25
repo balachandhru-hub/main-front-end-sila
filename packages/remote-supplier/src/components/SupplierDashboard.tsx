@@ -268,6 +268,14 @@ const IconCheckCircle = () => (
   </svg>
 );
 
+const IconAlertCircle = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+);
+
 const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
   { key: "invitations", icon: <NavIconMail />, label: "Invitations" },
@@ -279,7 +287,6 @@ const navItems: { key: string; icon: React.ReactNode; label: string; badge?: num
   { key: "payments", icon: <NavIconPayment />, label: "Payments" },
   { key: "messages", icon: <NavIconMessage />, label: "Messages" },
   { key: "companyProfile", icon: <NavIconBuilding />, label: "Company Profile" },
-  // { key: "template", icon: <NavIconTemplate />, label: "Template" },
   { key: "settings", icon: <NavIconSettings />, label: "Settings" },
 ];
 
@@ -377,6 +384,9 @@ const SupplierDashboard: React.FC = () => {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
+
+  // ✅ NEW STATE: Confirmation Modal for Submit Quotation
+  const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
 
   const { auth } = useAuth();
 const [supplierId, setSupplierId] = useState<string | null>(auth?.supplierId ?? null);
@@ -881,10 +891,17 @@ useEffect(() => {
     }
   };
 
-  const handleSubmitQuotation = async (e: React.FormEvent) => {
+  // ✅ UPDATED: Handle submit button click - shows confirmation modal
+  const handleSubmitQuotationClick = (e: React.FormEvent) => {
     e.preventDefault();
+    setShowConfirmSubmit(true);
+  };
+
+  // ✅ NEW: Actual submission logic (called after user confirms)
+  const handleConfirmSubmitQuotation = async () => {
     if (!selectedRfq) return;
 
+    setShowConfirmSubmit(false);
     setSubmittingQuote(true);
     setSubmitQuoteError(null);
     setSubmitQuoteSuccess(false);
@@ -979,7 +996,7 @@ useEffect(() => {
         )}
       </div>
 
-      <form onSubmit={handleSubmitQuotation}>
+      <form onSubmit={handleSubmitQuotationClick}>
         <div className="pud-modal-body">
           {loadingRfqDetail && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', gap: '12px' }}>
@@ -1865,6 +1882,53 @@ useEffect(() => {
                     <IconSend /> Send Interest
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showConfirmSubmit && (
+          <div className="pud-modal-overlay" onClick={() => setShowConfirmSubmit(false)} style={{ zIndex: 9999 }}>
+            <div className="pud-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', zIndex: 10000 }}>
+              <div className="pud-modal-header" style={{ paddingBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
+                <span className="pud-modal-badge" style={{ background: '#fef3c7', color: '#d97706' }}>
+                  <IconAlertCircle /> Confirmation Required
+                </span>
+                <button 
+                  className="pud-modal-close" 
+                  onClick={() => setShowConfirmSubmit(false)}
+                >
+                  <IconClose />
+                </button>
+              </div>
+
+              <div className="pud-modal-body" style={{ textAlign: 'center', paddingTop: '24px', paddingBottom: '24px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b', marginBottom: '12px' }}>
+                  Submit Quotation?
+                </h3>
+                <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '0', lineHeight: '1.5' }}>
+                  Are you sure you want to submit this quotation? Once submitted, it will be sent to the buyer and cannot be easily modified.
+                </p>
+              </div>
+
+              <div className="pud-modal-footer" style={{ borderTop: '1px solid #e2e8f0', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="pud-btn pud-btn-outline"
+                  onClick={() => setShowConfirmSubmit(false)}
+                  style={{ flex: 1 }}
+                >
+                  No, Cancel
+                </button>
+                <button
+                  type="button"
+                  className="pud-btn pud-btn-message"
+                  onClick={handleConfirmSubmitQuotation}
+                  disabled={submittingQuote}
+                  style={{ flex: 1, background: '#2563eb', color: '#ffffff' }}
+                >
+                  {submittingQuote ? "Submitting..." : "Yes, Submit"}
+                </button>
               </div>
             </div>
           </div>

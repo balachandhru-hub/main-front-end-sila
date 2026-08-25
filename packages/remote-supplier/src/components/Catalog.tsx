@@ -11,10 +11,13 @@ import {
     fetchClassifications,
     fetchCommodities,
     fetchSupplierCatalog,
+    fetchSupplierCatalogDetail,
     fetchSupplierAsset,
     fetchUnits,
     type UnitItem,
+    type CatalogDetailResponseItem,
 } from "../api/supplierApi";
+import { isErrorResponse } from '@vosox/shared-ui';
 import type { CatalogAssetDto, CatalogDetailDto, SupplierCatalogListItem } from "../dto/supplierDto";
 
 /* ============================== Types ============================== */
@@ -162,15 +165,12 @@ const IconCheckCircle = (props: IconProps) => (
     </svg>
 );
 
-
 const IconFileGeneric = (props: IconProps) => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
         <path d="M14 2v6h6" />
     </svg>
 );
-
-
 
 const IconExternalLink = (props: IconProps) => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -179,7 +179,6 @@ const IconExternalLink = (props: IconProps) => (
         <line x1="10" y1="14" x2="21" y2="3" />
     </svg>
 );
-
 
 interface CatalogProps {
     onShowCatalogList?: () => void;
@@ -218,29 +217,54 @@ const Catalog: React.FC<CatalogProps> = ({
 
     const [catalogAssetImages, setCatalogAssetImages] = useState<Record<string, string>>({});
 
-    const [selectedCatalogItem, setSelectedCatalogItem] = useState<SupplierCatalogListItem | null>(null);
+    // ✅ NEW STATE: Catalog Detail API
+    const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogDetailResponseItem | null>(null);
+    const [loadingCatalogDetail, setLoadingCatalogDetail] = useState(false);
+    const [catalogDetailError, setCatalogDetailError] = useState<string | null>(null);
+
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [loadingSelectedImages, setLoadingSelectedImages] = useState(false);
+
     const loadCatalogAssetImage = async (assetId: string) => {
         if (!assetId || catalogAssetImages[assetId]) return;
         try {
             const asset: any = await fetchSupplierAsset(assetId);
-            if (!asset || asset.statusCode) return;
+            if (!asset) {
+                console.warn(`No asset data returned for assetId: ${assetId}`);
+                return;
+            }
+
+            // ✅ Check for error response
+            if (asset.statusCode && asset.statusCode >= 400) {
+                console.warn(`Error loading asset ${assetId}:`, asset);
+                return;
+            }
 
             let src: string | null = null;
+            
+            // ✅ Try multiple approaches to get image source
             if (asset.fileBytes) {
-                const mime = asset.contentType || asset.fileType || "image/png";
+                const mime = asset.contentType || asset.mimeType || "image/jpeg";
                 src = `data:${mime};base64,${asset.fileBytes}`;
+                console.log(`Loaded asset ${assetId} from fileBytes`);
             } else if (asset.url) {
                 src = asset.url;
+                console.log(`Loaded asset ${assetId} from url:`, src);
             } else if (asset.fileUrl) {
                 src = asset.fileUrl;
+                console.log(`Loaded asset ${assetId} from fileUrl:`, src);
+            } else if (asset.downloadUrl) {
+                src = asset.downloadUrl;
+                console.log(`Loaded asset ${assetId} from downloadUrl:`, src);
+            } else {
+                console.warn(`No image source found for asset ${assetId}. Asset data:`, asset);
             }
 
             if (src) {
                 setCatalogAssetImages((prev) => ({ ...prev, [assetId]: src as string }));
             }
         } catch (error) {
+            console.error(`Failed to load asset ${assetId}:`, error);
         }
     };
 
@@ -262,23 +286,51 @@ const Catalog: React.FC<CatalogProps> = ({
                 setCatalogListError((data as any)?.message || "Failed to load catalogs. Please try again.");
             }
         } catch (error: any) {
-
             setCatalogListError(error?.message || "Failed to load catalogs. Please try again.");
         } finally {
             setLoadingCatalogList(false);
         }
     };
 
-    const openCatalogDetail = async (item: SupplierCatalogListItem) => {
-        setSelectedCatalogItem(item);
+    // ✅ UPDATED: Handler to fetch catalog details from API
+    const openCatalogDetail = async (catalogId: string) => {
+        setLoadingCatalogDetail(true);
+        setCatalogDetailError(null);
+        setSelectedCatalogItem(null);
         setSelectedImageIndex(0);
-        const assetIds = (item.assets || []).map((a) => a.id).filter(Boolean) as string[];
-        if (assetIds.length === 0) return;
-        setLoadingSelectedImages(true);
+
         try {
-            await Promise.all(assetIds.map((id) => loadCatalogAssetImage(id)));
+            const response = await fetchSupplierCatalogDetail(catalogId);
+
+            // ✅ Check if error response
+            if (isErrorResponse(response)) {
+                setCatalogDetailError(
+                    response.description || response.message || 'Failed to load catalog details.'
+                );
+                return;
+            }
+
+            // ✅ Handle array response - get first item
+            if (Array.isArray(response) && response.length > 0) {
+                setSelectedCatalogItem(response[0]);
+                
+                // Load images for the detailed catalog
+                const assetIds = (response[0].asset || []).map((a) => a.id).filter(Boolean) as string[];
+                if (assetIds.length > 0) {
+                    setLoadingSelectedImages(true);
+                    try {
+                        await Promise.all(assetIds.map((id) => loadCatalogAssetImage(id)));
+                    } finally {
+                        setLoadingSelectedImages(false);
+                    }
+                }
+            } else {
+                setCatalogDetailError('No catalog details found.');
+            }
+        } catch (error: any) {
+            setCatalogDetailError(error.message || 'Failed to load catalog details.');
         } finally {
-            setLoadingSelectedImages(false);
+            setLoadingCatalogDetail(false);
         }
     };
 
@@ -286,10 +338,12 @@ const Catalog: React.FC<CatalogProps> = ({
         setSelectedCatalogItem(null);
         setSelectedImageIndex(0);
         setShowPunchOutFullPage(false);
+        setCatalogDetailError(null);
     };
 
+    // ✅ Get images from selected catalog detail
     const selectedCatalogImages: string[] = selectedCatalogItem
-        ? ((selectedCatalogItem.assets || [])
+        ? ((selectedCatalogItem.asset || [])
             .map((a) => (a.id ? catalogAssetImages[a.id] : undefined))
             .filter(Boolean) as string[])
         : [];
@@ -345,7 +399,6 @@ const Catalog: React.FC<CatalogProps> = ({
                 setCurrencyOptions(result.items);
             }
         } catch (error) {
-
         } finally {
             setLoadingCurrencies(false);
         }
@@ -360,7 +413,6 @@ const Catalog: React.FC<CatalogProps> = ({
                 setSegmentOptions(segments);
             }
         } catch (error) {
-
         } finally {
             setLoadingSegments(false);
         }
@@ -393,7 +445,6 @@ const Catalog: React.FC<CatalogProps> = ({
                     setFamilyOptions(families);
                 }
             } catch (error) {
-
             } finally {
                 setLoadingFamilies(false);
             }
@@ -424,7 +475,6 @@ const Catalog: React.FC<CatalogProps> = ({
                     setClassOptions(classes);
                 }
             } catch (error) {
-
             } finally {
                 setLoadingClasses(false);
             }
@@ -451,7 +501,6 @@ const Catalog: React.FC<CatalogProps> = ({
                     setCommodityOptions(commodities);
                 }
             } catch (error) {
-
             } finally {
                 setLoadingCommodities(false);
             }
@@ -548,7 +597,6 @@ const Catalog: React.FC<CatalogProps> = ({
             const entityTypes = Array.isArray(entityTypesRaw) ? entityTypesRaw : [];
             const supplierEntityId = entityTypes.find((e) => e.key === 'SUPPLIER')?.id || '59476530-3c10-438b-b3b3-9db9e96e8d93';
             const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
-
 
             const assets: CatalogAssetDto[] = await Promise.all(
                 catalogFiles.map(async (file, index) => {
@@ -690,12 +738,12 @@ const Catalog: React.FC<CatalogProps> = ({
         }
     };
 
-
     const handlePunchOutPreview = (url: string) => {
         setPunchOutPreviewUrl(url);
         setShowPunchOutFullPage(true);
         setPunchOutIframeBlocked(false);
     };
+
     const [unitOptions, setUnitOptions] = useState<UnitItem[]>([]);
     const [loadingUnits, setLoadingUnits] = useState(false);
 
@@ -721,9 +769,7 @@ const Catalog: React.FC<CatalogProps> = ({
             >
                 <span className="pud-nav-icon"><NavIconCatalog /></span>
                 <span className="pud-nav-label">Catalog</span>
-                <span
-                    className="pud-nav-chevron"
-                >
+                <span className="pud-nav-chevron">
                     <IconChevronRight />
                 </span>
             </div>
@@ -753,11 +799,11 @@ const Catalog: React.FC<CatalogProps> = ({
                     >
                         <span className="pud-nav-icon"><IconGrid /></span>
                         <span className="pud-nav-label">Show Catalogs</span>
-
                     </div>
                 </div>
             )}
 
+            {/* Create Catalog Modal */}
             {showCreateCatalogModal && (
                 <div className="pud-modal-overlay" onClick={closeCreateCatalogModal}>
                     <div className="pud-modal pud-modal-catalog" onClick={(e) => e.stopPropagation()}>
@@ -1045,7 +1091,6 @@ const Catalog: React.FC<CatalogProps> = ({
                                                     />
                                                 </div>
                                             )}
-
                                         </>
                                     )}
 
@@ -1079,15 +1124,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                                 }}
                                             />
                                             {catalogFilePreviews.length > 0 ? (
-                                                <div
-                                                    className="pud-file"
-                                                >
+                                                <div className="pud-file">
                                                     {catalogFilePreviews.map((preview, index) => (
-                                                        <div
-                                                            key={index}
-                                                            className="map"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        >
+                                                        <div key={index} className="map" onClick={(e) => e.stopPropagation()}>
                                                             <img
                                                                 src={preview}
                                                                 alt={`Catalog preview ${index + 1}`}
@@ -1128,11 +1167,7 @@ const Catalog: React.FC<CatalogProps> = ({
                             </div>
 
                             <div className="pud-modal-footer">
-                                <button
-                                    type="button"
-                                    className="pud-btn pud-btn-outline"
-                                    onClick={closeCreateCatalogModal}
-                                >
+                                <button type="button" className="pud-btn pud-btn-outline" onClick={closeCreateCatalogModal}>
                                     Cancel
                                 </button>
                                 <button
@@ -1148,6 +1183,7 @@ const Catalog: React.FC<CatalogProps> = ({
                 </div>
             )}
 
+            {/* Upload Catalog Modal */}
             {showUploadCatalogModal && (
                 <div className="pud-modal-overlay" onClick={closeUploadCatalogModal}>
                     <div className="pud-modal" onClick={(e) => e.stopPropagation()}>
@@ -1236,11 +1272,7 @@ const Catalog: React.FC<CatalogProps> = ({
                         </div>
 
                         <div className="pud-modal-footer">
-                            <button
-                                type="button"
-                                className="pud-btn pud-btn-outline"
-                                onClick={closeUploadCatalogModal}
-                            >
+                            <button type="button" className="pud-btn pud-btn-outline" onClick={closeUploadCatalogModal}>
                                 Cancel
                             </button>
                             <button
@@ -1256,8 +1288,7 @@ const Catalog: React.FC<CatalogProps> = ({
                 </div>
             )}
 
-
-
+            {/* Catalog List Portal */}
             {showCatalogListModal && fullViewContainer && createPortal(
                 <>
                     {selectedCatalogItem ? (
@@ -1332,8 +1363,19 @@ const Catalog: React.FC<CatalogProps> = ({
                                 <div className="pud-catalog-detail-layout">
                                     <div className="pud-catalog-detail-media">
                                         <div className="pud-catalog-detail-image-frame">
-                                            {loadingSelectedImages ? (
+                                            {loadingCatalogDetail || loadingSelectedImages ? (
                                                 <div className="pud-spinner" />
+                                            ) : catalogDetailError ? (
+                                                <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
+                                                    <div style={{ fontSize: '15px', marginBottom: '16px' }}>{catalogDetailError}</div>
+                                                    <button
+                                                        type="button"
+                                                        className="pud-btn pud-btn-outline"
+                                                        onClick={() => selectedCatalogItem && openCatalogDetail(selectedCatalogItem.catalogId)}
+                                                    >
+                                                        Retry Loading
+                                                    </button>
+                                                </div>
                                             ) : selectedCatalogImages.length > 0 ? (
                                                 <img
                                                     src={selectedCatalogImages[selectedImageIndex]}
@@ -1382,7 +1424,7 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-detail-info">
-                                        <h1 className="pud-title" >{selectedCatalogItem.catalogName}</h1>
+                                        <h1 className="pud-title">{selectedCatalogItem.catalogName}</h1>
 
                                         {selectedCatalogItem.catalogType && (
                                             <span className="pud-catalog-card-tag">
@@ -1417,31 +1459,44 @@ const Catalog: React.FC<CatalogProps> = ({
                                             </button>
                                         )}
 
-                                        {(selectedCatalogItem.segmentTitle || selectedCatalogItem.familyTitle || selectedCatalogItem.classTitle || selectedCatalogItem.commodityTitle) && (
+                                        {/* ✅ FIXED: Show classification even if titles are null */}
+                                        {(selectedCatalogItem.segment || selectedCatalogItem.family || selectedCatalogItem.class || selectedCatalogItem.commodity) && (
                                             <div className="pud-catalog-card-classification">
                                                 <div className="pud-catalog-form-section-title">Classification</div>
-                                                {selectedCatalogItem.segmentTitle && (
+                                                {selectedCatalogItem.segment && (
                                                     <div className="pud-catalog-classification-row">
                                                         <span className="pud-catalog-classification-label">Segment:</span>
-                                                        <span className="pud-catalog-classification-value">{selectedCatalogItem.segment} - {selectedCatalogItem.segmentTitle}</span>
+                                                        <span className="pud-catalog-classification-value">
+                                                            {selectedCatalogItem.segment}
+                                                            {selectedCatalogItem.segmentTitle && ` - ${selectedCatalogItem.segmentTitle}`}
+                                                        </span>
                                                     </div>
                                                 )}
-                                                {selectedCatalogItem.familyTitle && (
+                                                {selectedCatalogItem.family && (
                                                     <div className="pud-catalog-classification-row">
                                                         <span className="pud-catalog-classification-label">Family:</span>
-                                                        <span className="pud-catalog-classification-value">{selectedCatalogItem.family} - {selectedCatalogItem.familyTitle}</span>
+                                                        <span className="pud-catalog-classification-value">
+                                                            {selectedCatalogItem.family}
+                                                            {selectedCatalogItem.familyTitle && ` - ${selectedCatalogItem.familyTitle}`}
+                                                        </span>
                                                     </div>
                                                 )}
-                                                {selectedCatalogItem.classTitle && (
+                                                {selectedCatalogItem.class && (
                                                     <div className="pud-catalog-classification-row">
                                                         <span className="pud-catalog-classification-label">Class:</span>
-                                                        <span className="pud-catalog-classification-value">{selectedCatalogItem.class} - {selectedCatalogItem.classTitle}</span>
+                                                        <span className="pud-catalog-classification-value">
+                                                            {selectedCatalogItem.class}
+                                                            {selectedCatalogItem.classTitle && ` - ${selectedCatalogItem.classTitle}`}
+                                                        </span>
                                                     </div>
                                                 )}
-                                                {selectedCatalogItem.commodityTitle && (
+                                                {selectedCatalogItem.commodity && (
                                                     <div className="pud-catalog-classification-row">
                                                         <span className="pud-catalog-classification-label">Commodity:</span>
-                                                        <span className="pud-catalog-classification-value">{selectedCatalogItem.commodity} - {selectedCatalogItem.commodityTitle}</span>
+                                                        <span className="pud-catalog-classification-value">
+                                                            {selectedCatalogItem.commodity}
+                                                            {selectedCatalogItem.commodityTitle && ` - ${selectedCatalogItem.commodityTitle}`}
+                                                        </span>
                                                     </div>
                                                 )}
                                             </div>
@@ -1523,7 +1578,7 @@ const Catalog: React.FC<CatalogProps> = ({
                                             <div
                                                 className="pud-catalog-card"
                                                 key={item.id}
-                                                onClick={() => openCatalogDetail(item)}
+                                                onClick={() => openCatalogDetail(item.id)}
                                                 role="button"
                                                 title={`View ${item.catalogName}`}
                                             >

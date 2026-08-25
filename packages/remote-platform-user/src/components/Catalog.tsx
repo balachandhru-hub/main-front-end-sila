@@ -1,10 +1,19 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import "./Catalog.css";
 import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
-import { createSupplierCatalog, fetchUnits, type UnitItem, } from "../../../remote-supplier/src/api/supplierApi";
+import { 
+  createSupplierCatalog, 
+  fetchUnits, 
+  fetchSupplierCatalogDetail,
+  fetchSupplierCatalog,
+  type UnitItem,
+  type CatalogDetailResponseItem,
+  type SupplierCatalogListItem,
+} from "../../../remote-supplier/src/api/supplierApi";
 import type { CatalogAssetDto, CatalogDetailDto } from "../../../remote-supplier/src/dto/supplierDto";
 import { fetchMetadataReferenceList } from "../../../remote-supplier/src/api/supplierApi"
+import { isErrorResponse } from "@vosox/shared-ui";
 
 /* ============================== Types ============================== */
 
@@ -29,6 +38,7 @@ export interface CatalogItem {
     filePreview?: string | null;
     fileType?: string;
     addedAt: string;
+    id?: string;
 }
 
 const emptyCatalogForm = {
@@ -188,6 +198,13 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
     const [showUploadCatalogModal, setShowUploadCatalogModal] = useState(false);
     const [showCatalogListModal, setShowCatalogListModal] = useState(false);
     const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
+    const [loadingCatalogs, setLoadingCatalogs] = useState(true);
+    const [catalogsError, setCatalogsError] = useState<string | null>(null);
+
+    // ---- Catalog Detail Modal State ----
+    const [selectedCatalogForDetail, setSelectedCatalogForDetail] = useState<CatalogDetailResponseItem | null>(null);
+    const [loadingCatalogDetail, setLoadingCatalogDetail] = useState(false);
+    const [catalogDetailError, setCatalogDetailError] = useState<string | null>(null);
 
     // ---- Create Catalog form state ----
     const [catalogForm, setCatalogForm] = useState<CatalogFormState>(emptyCatalogForm);
@@ -199,6 +216,7 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
     const [createCatalogSuccess, setCreateCatalogSuccess] = useState(false);
     const catalogFileInputRef = useRef<HTMLInputElement>(null);
     const [catalogTypeOptions, setCatalogTypeOptions] = useState<Array<{ id: string; key: string }>>([]);
+    
     const loadCatalogTypes = async () => {
         const types = await fetchMetadataReferenceList(['CATALOG_TYPE']);
         if (Array.isArray(types)) {
@@ -217,6 +235,55 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
     const [uploadCatalogError, setUploadCatalogError] = useState<string | null>(null);
     const [uploadCatalogSuccess, setUploadCatalogSuccess] = useState(false);
     const uploadCatalogInputRef = useRef<HTMLInputElement>(null);
+
+    // ---- Load catalogs from API on mount ----
+    useEffect(() => {
+        const loadCatalogsFromAPI = async () => {
+            setLoadingCatalogs(true);
+            setCatalogsError(null);
+            try {
+                const response = await fetchSupplierCatalog();
+
+                // Check if error response
+                if (isErrorResponse(response)) {
+                    setCatalogsError(response.description || response.message || 'Failed to load catalogs.');
+                    setCatalogItems([]);
+                    setLoadingCatalogs(false);
+                    return;
+                }
+
+                // Convert API response to CatalogItem format
+                const items: CatalogItem[] = response.map((catalog: SupplierCatalogListItem) => ({
+                    source: "created",
+                    id: catalog.id,
+                    catalogName: catalog.catalogName,
+                    description: catalog.description,
+                    price: catalog.price,
+                    unitOfMeasure: catalog.unitOfMeasure,
+                    catalogType: catalog.catalogType,
+                    segment: catalog.segment,
+                    segmentTitle: catalog.segmentTitle,
+                    family: catalog.family,
+                    familyTitle: catalog.familyTitle,
+                    commodity: catalog.commodity,
+                    commodityTitle: catalog.commodityTitle,
+                    class: catalog.class,
+                    classTitle: catalog.classTitle,
+                    isPunchOut: catalog.isPunchOut,
+                    punchOutUrl: catalog.punchOutUrl,
+                    addedAt: new Date().toISOString(),
+                }));
+
+                setCatalogItems(items);
+            } catch (error: any) {
+                setCatalogsError(error.message || 'Failed to load catalogs.');
+            } finally {
+                setLoadingCatalogs(false);
+            }
+        };
+
+        loadCatalogsFromAPI();
+    }, []);
 
     const closeCreateCatalogModal = () => {
         setShowCreateCatalogModal(false);
@@ -302,17 +369,32 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                 catalog: catalogPayload,
             });
 
-            setCatalogItems((prev) => [
-                {
+            // Reload catalogs from API after creating
+            const updatedResponse = await fetchSupplierCatalog();
+            if (!isErrorResponse(updatedResponse)) {
+                const items: CatalogItem[] = updatedResponse.map((catalog: SupplierCatalogListItem) => ({
                     source: "created",
-                    ...catalogPayload,
-                    fileName: catalogFile?.name,
-                    filePreview: catalogFilePreview,
-                    fileType: catalogFile?.type,
+                    id: catalog.id,
+                    catalogName: catalog.catalogName,
+                    description: catalog.description,
+                    price: catalog.price,
+                    unitOfMeasure: catalog.unitOfMeasure,
+                    catalogType: catalog.catalogType,
+                    segment: catalog.segment,
+                    segmentTitle: catalog.segmentTitle,
+                    family: catalog.family,
+                    familyTitle: catalog.familyTitle,
+                    commodity: catalog.commodity,
+                    commodityTitle: catalog.commodityTitle,
+                    class: catalog.class,
+                    classTitle: catalog.classTitle,
+                    isPunchOut: catalog.isPunchOut,
+                    punchOutUrl: catalog.punchOutUrl,
                     addedAt: new Date().toISOString(),
-                },
-                ...prev,
-            ]);
+                }));
+                setCatalogItems(items);
+            }
+
             setCreateCatalogSuccess(true);
             setTimeout(closeCreateCatalogModal, 900);
         } catch (error: any) {
@@ -398,6 +480,7 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
             setUploadingCatalog(false);
         }
     };
+
     const [unitOptions, setUnitOptions] = useState<UnitItem[]>([]);
     const [loadingUnits, setLoadingUnits] = useState(false);
 
@@ -413,6 +496,41 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
         } finally {
             setLoadingUnits(false);
         }
+    };
+
+    // ---- Handler to fetch catalog details from API ----
+    const handleCatalogCardClick = async (catalogId: string) => {
+        setLoadingCatalogDetail(true);
+        setCatalogDetailError(null);
+        setSelectedCatalogForDetail(null);
+
+        try {
+            const response = await fetchSupplierCatalogDetail(catalogId);
+
+            // Check if error response
+            if (isErrorResponse(response)) {
+                setCatalogDetailError(
+                    response.description || response.message || 'Failed to load catalog details.'
+                );
+                return;
+            }
+
+            // Response is an array, get first item
+            if (Array.isArray(response) && response.length > 0) {
+                setSelectedCatalogForDetail(response[0]);
+            } else {
+                setCatalogDetailError('No catalog details found.');
+            }
+        } catch (error: any) {
+            setCatalogDetailError(error.message || 'Failed to load catalog details.');
+        } finally {
+            setLoadingCatalogDetail(false);
+        }
+    };
+
+    const closeCatalogDetailModal = () => {
+        setSelectedCatalogForDetail(null);
+        setCatalogDetailError(null);
     };
 
     return (
@@ -858,7 +976,7 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                         <div>
                             <h1 className="pud-title">Your Catalogs</h1>
                             <p className="pud-subtitle">
-                                <IconGrid /> {catalogItems.length} {catalogItems.length === 1 ? "Item" : "Items"} created or uploaded to your catalog
+                                <IconGrid /> {catalogItems.length} {catalogItems.length === 1 ? "Item" : "Items"} in your catalog
                             </p>
                         </div>
                         <div className="pud-catalog-fullview-actions">
@@ -882,7 +1000,18 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                         </div>
                     </div>
 
-                    {catalogItems.length === 0 ? (
+                    {loadingCatalogs ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
+                            <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                                <div className="pud-spinner" />
+                                <span>Loading catalogs...</span>
+                            </div>
+                        </div>
+                    ) : catalogsError ? (
+                        <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
+                            {catalogsError}
+                        </div>
+                    ) : catalogItems.length === 0 ? (
                         <div className="pud-catalog-empty-state">
                             <div className="pud-catalog-dropzone-icon"><IconGridLarge /></div>
                             <div className="pud-catalog-dropzone-text">No catalogs yet</div>
@@ -893,7 +1022,12 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                     ) : (
                         <div className="pud-catalog-grid">
                             {catalogItems.map((item) => (
-                                <div className="pud-catalog-card">
+                                <div 
+                                    key={item.id || item.catalogName}
+                                    className="pud-catalog-card"
+                                    onClick={() => item.id && handleCatalogCardClick(item.id)}
+                                    style={{ cursor: item.id ? 'pointer' : 'default' }}
+                                >
                                     <div className="pud-catalog-card-media">
                                         {item.filePreview ? (
                                             <img src={item.filePreview} alt={item.catalogName} />
@@ -932,6 +1066,153 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                     )}
                 </>,
                 fullViewContainer
+            )}
+
+            {/* ---------- Catalog Detail Modal ---------- */}
+            {selectedCatalogForDetail && (
+                <div className="pud-modal-overlay" onClick={closeCatalogDetailModal}>
+                    <div className="pud-modal pud-modal-rfq" onClick={(e) => e.stopPropagation()}>
+                        {/* Modal Header */}
+                        <div className="pud-modal-header">
+                            <span className="pud-modal-badge">
+                                <NavIconCatalog /> Catalog Details
+                            </span>
+                            <button className="pud-modal-close" onClick={closeCatalogDetailModal} title="Close">
+                                <IconClose />
+                            </button>
+                            <h2 className="pud-modal-name">{selectedCatalogForDetail.catalogName}</h2>
+                            <div className="pud-modal-meta">
+                                <span>Supplier: {selectedCatalogForDetail.supplierName}</span>
+                                <span>Type: {selectedCatalogForDetail.catalogType}</span>
+                            </div>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="pud-modal-body">
+                            {loadingCatalogDetail && (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', gap: '12px' }}>
+                                    <div className="pud-spinner" />
+                                    <span style={{ color: '#64748b', fontSize: '14px' }}>Loading catalog details...</span>
+                                </div>
+                            )}
+
+                            {catalogDetailError && (
+                                <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
+                                    <div style={{ fontSize: '15px', marginBottom: '16px' }}>{catalogDetailError}</div>
+                                    <button
+                                        type="button"
+                                        className="pud-btn pud-btn-outline"
+                                        onClick={() => handleCatalogCardClick(selectedCatalogForDetail.catalogId)}
+                                    >
+                                        Retry Loading
+                                    </button>
+                                </div>
+                            )}
+
+                            {selectedCatalogForDetail && !loadingCatalogDetail && !catalogDetailError && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    {/* Basic Info */}
+                                    <div>
+                                        <div className="pud-modal-section-title">Description</div>
+                                        <p className="pud-modal-desc" style={{ whiteSpace: 'pre-wrap' }}>
+                                            {selectedCatalogForDetail.description || "No description provided."}
+                                        </p>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
+                                            <div>
+                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Price</div>
+                                                <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                                                    {selectedCatalogForDetail.currency} {Number(selectedCatalogForDetail.price).toFixed(2)}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Unit of Measure</div>
+                                                <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                                                    {selectedCatalogForDetail.unitOfMeasure || "N/A"}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Classification */}
+                                    <div>
+                                        <div className="pud-modal-section-title">Classification (UNSPSC)</div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                            <div>
+                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Segment</div>
+                                                <div style={{ fontSize: '12px', color: '#1e293b', marginTop: '2px' }}>
+                                                    {selectedCatalogForDetail.segment} - {selectedCatalogForDetail.segmentTitle}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Family</div>
+                                                <div style={{ fontSize: '12px', color: '#1e293b', marginTop: '2px' }}>
+                                                    {selectedCatalogForDetail.family} - {selectedCatalogForDetail.familyTitle}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Commodity</div>
+                                                <div style={{ fontSize: '12px', color: '#1e293b', marginTop: '2px' }}>
+                                                    {selectedCatalogForDetail.commodity} - {selectedCatalogForDetail.commodityTitle}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Class</div>
+                                                <div style={{ fontSize: '12px', color: '#1e293b', marginTop: '2px' }}>
+                                                    {selectedCatalogForDetail.class} - {selectedCatalogForDetail.classTitle}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Assets */}
+                                    {selectedCatalogForDetail.asset && selectedCatalogForDetail.asset.length > 0 && (
+                                        <div>
+                                            <div className="pud-modal-section-title">Attachments</div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                                                {selectedCatalogForDetail.asset.map((asset, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        style={{
+                                                            background: '#ffffff',
+                                                            border: '1px solid #e2e8f0',
+                                                            borderRadius: '8px',
+                                                            padding: '12px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '10px',
+                                                        }}
+                                                    >
+                                                        <IconFileGeneric />
+                                                        <div style={{ minWidth: 0 }}>
+                                                            <div style={{ fontSize: '12px', fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={asset.fileName}>
+                                                                {asset.fileName}
+                                                            </div>
+                                                            <div style={{ fontSize: '10px', color: '#64748b' }}>
+                                                                {asset.fileType || asset.assetType || "File"}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="pud-modal-footer">
+                            <button
+                                type="button"
+                                className="pud-btn pud-btn-outline"
+                                onClick={closeCatalogDetailModal}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </>
     );

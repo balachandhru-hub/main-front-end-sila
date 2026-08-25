@@ -7,9 +7,12 @@ import {
   fetchClassifications,
   fetchCommodities,
 } from "../api/masterdataApi";
-import { fetchBuyerCatalog } from "../api/Buyerapi";
-import { fetchBuyerAsset } from "../api/Buyerapi";
-import type { BuyerCatalogResponse } from "../api/Buyerapi";
+import { 
+  fetchBuyerCatalog,
+  fetchBuyerAsset,
+  fetchBuyerCatalogDetail} from "../api/Buyerapi";
+import type { BuyerCatalogResponse as BuyerCatalogResponseType } from "../api/Buyerapi";
+import { isErrorResponse } from "@vosox/shared-ui";
 
 /* ============================== Icons ============================== */
 
@@ -100,7 +103,7 @@ const Product: React.FC = () => {
   const [loadingResults, setLoadingResults] = useState(false);
 
   // ---- Results State ----
-  const [catalogResults, setCatalogResults] = useState<BuyerCatalogResponse[]>([]);
+  const [catalogResults, setCatalogResults] = useState<BuyerCatalogResponseType[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -114,9 +117,12 @@ const Product: React.FC = () => {
 
   const [productAssetImages, setProductAssetImages] = useState<Record<string, string>>({});
 
-  const [selectedProduct, setSelectedProduct] = useState<BuyerCatalogResponse | null>(null);
+  // ✅ NEW STATE: Detail view
+  const [selectedProduct, setSelectedProduct] = useState<BuyerCatalogResponseType | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [loadingSelectedImages, setLoadingSelectedImages] = useState(false);
+  const [loadingProductDetail, setLoadingProductDetail] = useState(false);
+  const [productDetailError, setProductDetailError] = useState<string | null>(null);
 
   const [showPunchOutFullPage, setShowPunchOutFullPage] = useState(false);
   const [punchOutPreviewUrl, setPunchOutPreviewUrl] = useState<string>("");
@@ -267,7 +273,7 @@ const Product: React.FC = () => {
       if (Array.isArray(results)) {
         setCatalogResults(results);
         setProductPage(0);
-        results.forEach((item: BuyerCatalogResponse) => {
+        results.forEach((item: BuyerCatalogResponseType) => {
           const firstAssetId = item.asset && item.asset[0]?.id;
           if (firstAssetId) {
             loadProductAssetImage(firstAssetId);
@@ -314,18 +320,41 @@ const Product: React.FC = () => {
     }
   };
 
-  const openProductDetail = async (item: BuyerCatalogResponse) => {
-    setSelectedProduct(item);
+  // ✅ UPDATED: Open product detail with API call
+  const openProductDetail = async (catalogId: string) => {
+    setLoadingProductDetail(true);
+    setProductDetailError(null);
+    setSelectedProduct(null);
     setSelectedImageIndex(0);
-    setShowPunchOutFullPage(false);
 
-    const assetIds = (item.asset || []).map((a) => a.id).filter(Boolean) as string[];
-    if (assetIds.length === 0) return;
-    setLoadingSelectedImages(true);
     try {
-      await Promise.all(assetIds.map((id) => loadProductAssetImage(id)));
+      const response = await fetchBuyerCatalogDetail(catalogId);
+
+      // ✅ Check if error response
+      if (isErrorResponse(response)) {
+        setProductDetailError(
+          response.description || response.message || 'Failed to load product details.'
+        );
+        return;
+      }
+
+      // ✅ Set the product detail
+      setSelectedProduct(response);
+
+      // ✅ Load images for the detailed product
+      const assetIds = (response.asset || []).map((a) => a.id).filter(Boolean) as string[];
+      if (assetIds.length > 0) {
+        setLoadingSelectedImages(true);
+        try {
+          await Promise.all(assetIds.map((id) => loadProductAssetImage(id)));
+        } finally {
+          setLoadingSelectedImages(false);
+        }
+      }
+    } catch (error: any) {
+      setProductDetailError(error.message || 'Failed to load product details.');
     } finally {
-      setLoadingSelectedImages(false);
+      setLoadingProductDetail(false);
     }
   };
 
@@ -333,6 +362,7 @@ const Product: React.FC = () => {
     setSelectedProduct(null);
     setSelectedImageIndex(0);
     setShowPunchOutFullPage(false);
+    setProductDetailError(null);
   };
 
   const selectedProductImages: string[] = selectedProduct
@@ -451,8 +481,19 @@ const Product: React.FC = () => {
                 overflow: "hidden",
               }}
             >
-              {loadingSelectedImages ? (
+              {loadingProductDetail || loadingSelectedImages ? (
                 <div className="pud-spinner" />
+              ) : productDetailError ? (
+                <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
+                  <div style={{ fontSize: '15px', marginBottom: '16px' }}>{productDetailError}</div>
+                  <button
+                    type="button"
+                    className="pud-btn pud-btn-outline"
+                    onClick={() => selectedProduct && openProductDetail(selectedProduct.catalogId)}
+                  >
+                    Retry Loading
+                  </button>
+                </div>
               ) : selectedProductImages.length > 0 ? (
                 <img
                   src={selectedProductImages[selectedImageIndex]}
@@ -561,30 +602,44 @@ const Product: React.FC = () => {
               )}
             </div>
 
-            {(selectedProduct.segmentTitle || selectedProduct.familyTitle || selectedProduct.classTitle || selectedProduct.commodityTitle) && (
+            {/* ✅ FIXED: Show classification even if titles are null */}
+            {(selectedProduct.segment || selectedProduct.family || selectedProduct.class || selectedProduct.commodity) && (
               <div className="pud-catalog-card-classification">
-                {selectedProduct.segmentTitle && (
+                <div className="pud-catalog-form-section-title">Classification</div>
+                {selectedProduct.segment && (
                   <div className="pud-catalog-classification-row">
                     <span className="pud-catalog-classification-label">Segment:</span>
-                    <span className="pud-catalog-classification-value">{selectedProduct.segment} - {selectedProduct.segmentTitle}</span>
+                    <span className="pud-catalog-classification-value">
+                      {selectedProduct.segment}
+                      {selectedProduct.segmentTitle && ` - ${selectedProduct.segmentTitle}`}
+                    </span>
                   </div>
                 )}
-                {selectedProduct.familyTitle && (
+                {selectedProduct.family && (
                   <div className="pud-catalog-classification-row">
                     <span className="pud-catalog-classification-label">Family:</span>
-                    <span className="pud-catalog-classification-value">{selectedProduct.family} - {selectedProduct.familyTitle}</span>
+                    <span className="pud-catalog-classification-value">
+                      {selectedProduct.family}
+                      {selectedProduct.familyTitle && ` - ${selectedProduct.familyTitle}`}
+                    </span>
                   </div>
                 )}
-                {selectedProduct.classTitle && (
+                {selectedProduct.class && (
                   <div className="pud-catalog-classification-row">
                     <span className="pud-catalog-classification-label">Class:</span>
-                    <span className="pud-catalog-classification-value">{selectedProduct.class} - {selectedProduct.classTitle}</span>
+                    <span className="pud-catalog-classification-value">
+                      {selectedProduct.class}
+                      {selectedProduct.classTitle && ` - ${selectedProduct.classTitle}`}
+                    </span>
                   </div>
                 )}
-                {selectedProduct.commodityTitle && (
+                {selectedProduct.commodity && (
                   <div className="pud-catalog-classification-row">
                     <span className="pud-catalog-classification-label">Commodity:</span>
-                    <span className="pud-catalog-classification-value">{selectedProduct.commodity} - {selectedProduct.commodityTitle}</span>
+                    <span className="pud-catalog-classification-value">
+                      {selectedProduct.commodity}
+                      {selectedProduct.commodityTitle && ` - ${selectedProduct.commodityTitle}`}
+                    </span>
                   </div>
                 )}
               </div>
@@ -774,7 +829,7 @@ const Product: React.FC = () => {
                   <div
                     className="pud-catalog-card"
                     key={item.catalogId}
-                    onClick={() => openProductDetail(item)}
+                    onClick={() => openProductDetail(item.catalogId)}
                     style={{ cursor: "pointer" }}
                     role="button"
                     title={`View ${item.catalogName}`}
