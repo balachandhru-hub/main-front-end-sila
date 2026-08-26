@@ -66,7 +66,6 @@ const BuyerAdminProfilePage: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#ffffff' }}>
       <Header />
-      <div style={{ marginTop: '4rem' }}>
         <ProfileView
           personDetail={personDetail}
           loading={loading}
@@ -75,7 +74,6 @@ const BuyerAdminProfilePage: React.FC = () => {
           onSave={handleSave}
           onBack={() => navigate('/platform-user/buyer-admin')}
         />
-      </div>
     </div>
   );
 };

@@ -7,7 +7,7 @@
 }
 
 .sad-sidebar {
-    width: 248px;
+    width: 15.5rem;
     background: #ffffff;
     border-right: 0.0625rem solid #e6e8ec;
     display: flex;
@@ -15,12 +15,6 @@
     z-index: 100;
     overflow-y: auto;
     transition: width 0.3s ease, padding 0.3s ease, border 0.3s ease;
-}
-
-.sad-sidebar-closed .sad-sidebar {
-    width: 0;
-    padding: 1.25rem 0;
-    border-right: none;
 }
 
 .sad-logo {
@@ -87,7 +81,7 @@
     font-weight: 700;
     min-width: 1.25rem;
     height: 1.25rem;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -251,7 +245,7 @@
 .sad-stat-label {
     font-size: 0.6875rem;
     font-weight: 600;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.03125rem;
     color: #64748b;
     margin-bottom: 0.5rem;
 }
@@ -279,7 +273,7 @@
     background: #ffffff;
     border: 0.0625rem solid #e5e7eb;
     border-radius: 0.5rem;
-    padding: 20px;
+    padding: 1.25rem;
     box-shadow: 0 0.0625rem 0.1875rem 0 rgba(0, 0, 0, 0.05);
 }
 
@@ -399,7 +393,6 @@
     text-decoration: none;
 }
 
-/* ---------- Pagination (copied from SupplierDashboard) ---------- */
 .pud-pagination {
     display: flex;
     justify-content: flex-end;
@@ -409,10 +402,10 @@
 }
 
 .pud-page-btn {
-    width: 34px;
-    height: 34px;
+    width: 2.125rem;
+    height: 2.125rem;
     border-radius: 50%;
-    border: 1px solid #e6e8ec;
+    border: 0.0625rem solid #e6e8ec;
     background: #ffffff;
     display: flex;
     align-items: center;
@@ -433,8 +426,8 @@
 }
 
 .pud-page-number{
-    font-size: 13px;
-    padding: 0 6px;
+    font-size: 0.8125rem;
+    padding: 0 0.375rem;
 }
 
 .sad-btn {
@@ -488,7 +481,7 @@
     background: #ffffff;
     border: 0.0625rem solid #e5e7eb;
     border-radius: 0.5rem;
-    padding: 20px;
+    padding: 1.25rem;
     box-shadow: 0 0.0625rem 0.1875rem 0 rgba(0, 0, 0, 0.05);
 }
 
@@ -679,7 +672,7 @@
     max-width: 38.75rem;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
+    box-shadow: 0 1.25rem 3.125rem rgba(15, 23, 42, 0.35);
 }
 
 .sad-modal-header {
@@ -863,95 +856,32 @@
     font-size: 0.875rem;
 }
 
-@media (max-width: 1200px) {
-    .sad-stats-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
+.sad-mobile-sidebar-toggle {
+    display: none;
+    position: fixed;
+    top: 4.75rem;
+    left: 0.75rem;
+    z-index: 1100;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.5rem;
+    border: 0.0625rem solid #e6e8ec;
+    background: #ffffff;
+    color: #2f6feb;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0.125rem 0.375rem rgba(15, 23, 42, 0.08);
 }
 
-@media (max-width: 1024px) {
-    .sad-panels {
-        grid-template-columns: 1fr;
-    }
-
-    .sad-match-grid {
-        grid-template-columns: 1fr;
-    }
+.sad-mobile-sidebar-toggle:hover {
+    background: #f3f4f6;
 }
 
-@media (max-width: 768px) {
-    .sad-sidebar {
-        position: fixed;
-        top: 4rem;
-        left: 0;
-        bottom: 0;
-        z-index: 1000;
-        transform: translateX(0);
-        box-shadow: 0.125rem 0 0.5rem rgba(0, 0, 0, 0.1);
-    }
-
-    .sad-sidebar-closed .sad-sidebar {
-        transform: translateX(-100%);
-        width: 15.5rem !important;
-        border-right: 0.0625rem solid #e6e8ec;
-        padding: 1.25rem 0;
-    }
-
-    .sad-stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .sad-po-row {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .sad-po-right {
-        text-align: left;
-        margin-top: 0.5rem;
-    }
-
-    .sad-match-top {
-        flex-direction: column;
-    }
-
-    .sad-match-actions {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .sad-match-actions button {
-        width: 100%;
-    }
-
-    .sad-matchmaker-header {
-        margin-left: -1rem;
-        margin-right: -1rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
+.sad-sidebar-backdrop {
+    display: none;
 }
 
-@media (max-width: 480px) {
-    .sad-stats-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 560px) {
-
-    .sad-modal-analytics-grid,
-    .sad-modal-info-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .sad-modal-header,
-    .sad-modal-body,
-    .sad-modal-footer {
-        padding-left: 1.25rem;
-        padding-right: 1.25rem;
-    }
-}
 
 .pud-title {
     font-family: 'Segoe UI', sans-serif;
@@ -983,7 +913,7 @@
     border-radius: 0.875rem;
     width: 100%;
     overflow-y: auto;
-    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
+    box-shadow: 0 1.25rem 3.125rem rgba(15, 23, 42, 0.35);
 }
 
 .pud-modal-rfq {
@@ -1181,7 +1111,7 @@
     font-weight: 700;
     min-width: 1.25rem;
     height: 1.25rem;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1189,27 +1119,25 @@
     margin-left: auto;
 }
 
-/* ---------- All RFQs Pagination ---------- */
-
 .pud-allrfqs-pagination {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 12px;
-    padding-top: 16px;
-    padding: 12px 0;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    padding: 0.75rem 0;
 }
 
 .pud-allrfqs-page-btn {
-    width: 36px;
-    height: 36px;
+    width: 2.25rem;
+    height: 2.25rem;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
+    border: 0.0625rem solid #e2e8f0;
+    border-radius: 0.375rem;
 
     background: #ffffff;
     color: #475569;
@@ -1230,10 +1158,134 @@
 }
 
 .pud-allrfqs-page-number {
-    min-width: 70px;
+    min-width: 4.375rem;
     text-align: center;
 
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
     color: #334155;
+}
+
+@media (max-width: 64rem) {
+    .sad-stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .sad-panels {
+        grid-template-columns: 1fr;
+    }
+
+    .sad-match-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sad-mobile-sidebar-toggle {
+        display: flex;
+    }
+
+    .sad-sidebar {
+        position: fixed;
+        top: 4rem;
+        left: 0;
+        bottom: 0;
+        z-index: 1100;
+        width: 15.5rem;
+        max-width: 80vw;
+        transform: translateX(-100%);
+        box-shadow: 0.125rem 0 0.5rem rgba(0, 0, 0, 0.15);
+        transition: transform 0.3s ease;
+    }
+
+    .sad-shell.sad-sidebar-open-mobile .sad-sidebar {
+        transform: translateX(0);
+    }
+
+    .sad-sidebar-backdrop {
+        display: block;
+        position: fixed;
+        top: 4rem;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 23, 42, 0.45);
+        z-index: 1050;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+    }
+
+    .sad-shell.sad-sidebar-open-mobile .sad-sidebar-backdrop {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .sad-main,
+    .sad-content {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .sad-content {
+        padding-top: 3.5rem;
+    }
+}
+
+@media (max-width: 48rem) {
+    .sad-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .sad-po-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .sad-po-right {
+        text-align: left;
+        padding-top: 0.5rem;
+    }
+
+    .sad-match-top {
+        flex-direction: column;
+    }
+
+    .sad-match-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .sad-match-actions button {
+        width: 100%;
+    }
+
+    .sad-matchmaker-header {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .sad-modal-analytics-grid,
+    .sad-modal-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sad-modal-header,
+    .sad-modal-body,
+    .sad-modal-footer {
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+    }
+
+    .sad-content {
+        padding-top: 7.75rem;
+    }
+}
+
+@media (max-width: 30rem) {
+    .sad-stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .profile-banner{
+        align-items: center;
+    }
 }
