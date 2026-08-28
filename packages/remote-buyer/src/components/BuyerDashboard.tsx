@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./BuyerDashBoard.css";
 import CreateRFQ from "./Create_RFQ.tsx";
 import Product from "./Product.tsx";
+import Models from "./Models.tsx";
 import Header from "./Header";
 import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, downloadBuyerAsset } from "../api/Buyerapi";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
@@ -140,6 +141,15 @@ const NavIconSettings = () => (
   </svg>
 );
 
+const NavIconModels = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7" rx="1" />
+    <rect x="14" y="3" width="7" height="7" rx="1" />
+    <rect x="3" y="14" width="7" height="7" rx="1" />
+    <rect x="14" y="14" width="7" height="7" rx="1" />
+  </svg>
+);
+
 const LogoutIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -273,6 +283,7 @@ const navItems: { key: string; icon: React.ReactNode; label: string; badge?: num
   { key: "evaluateQuotations", icon: <NavIconFileCheck />, label: "Evaluate Quotations" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product" },
   { key: "purchaseOrders", icon: <NavIconBag />, label: "Purchase Orders" },
+  { key: "models", icon: <NavIconModels />, label: "Models" },
   { key: "supplierDirectory", icon: <NavIconUsers />, label: "Supplier Directory" },
   { key: "spendReports", icon: <NavIconBarChart />, label: "Procurement Spend Reports" },
   { key: "messages", icon: <NavIconMessage />, label: "Messages" },
@@ -759,6 +770,8 @@ useEffect(() => {
               <CreateRFQ />
             ) : activeNav === "product" ? (
               <Product />
+            ) : activeNav === "models" ? (
+              <Models />
             ) : activeNav === "template" ? (
               <UserTemplate />
             ) : rfqPageView === "allRfqs" ? (
