@@ -108,6 +108,7 @@ export const PlatformUserDetailView: React.FC<PlatformUserDetailViewProps> = ({
       registrations: baseRecord.registrations || raw.registrations || [],
       bankAccounts: baseRecord.bankAccounts || raw.bankAccounts || [],
       dispatchLocations: baseRecord.dispatchLocations || raw.dispatchLocations || [],
+      models: baseRecord.models || raw.models || [], 
     };
 
     setCurrentProfile(data);
