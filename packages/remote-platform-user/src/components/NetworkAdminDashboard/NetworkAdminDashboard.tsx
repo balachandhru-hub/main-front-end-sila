@@ -55,6 +55,21 @@ const LogoutIcon = () => (
   </svg>
 );
 
+const IconClose = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const IconMenu = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
+
 const navItems: { key: string; icon: React.ReactNode; label: string }[] = [
   { key: 'manageUsers', icon: <NavIconUsers />, label: 'Manage Users' },
   { key: 'companyProfile', icon: <NavIconBuilding />, label: 'Company Profile' },
@@ -102,6 +117,7 @@ const NetworkAdminDashboard: React.FC = () => {
   );
 
   const [activeNav, setActiveNav] = useState<string>('manageUsers');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     useNetworkAdminAuthStore.getState().initializeFromSession();
@@ -194,6 +210,11 @@ const NetworkAdminDashboard: React.FC = () => {
     }
   };
 
+  const handleNavClick = (key: string) => {
+    setIsMobileSidebarOpen(false);
+    setActiveNav(key);
+  };
+
   const handleLogout = useCallback(async () => {
     if (loggingOut) return;
     setLoggingOut(true);
@@ -276,14 +297,30 @@ const NetworkAdminDashboard: React.FC = () => {
 
       <Header />
 
-      <div className="nad-shell">
+      <div className={`nad-shell${isMobileSidebarOpen ? ' nad-sidebar-open-mobile' : ''}`}>
+        <button
+          type="button"
+          className="nad-mobile-sidebar-toggle"
+          onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
+          aria-label={isMobileSidebarOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMobileSidebarOpen}
+        >
+          {isMobileSidebarOpen ? <IconClose /> : <IconMenu />}
+        </button>
+
+        <div
+          className="nad-sidebar-backdrop"
+          onClick={() => setIsMobileSidebarOpen(false)}
+          aria-hidden="true"
+        />
+
         <aside className="nad-sidebar">
           <nav className="nad-nav">
             {navItems.map((item) => (
               <div
                 key={item.key}
                 className={`nad-nav-item${activeNav === item.key ? ' nad-nav-item-active' : ''}`}
-                onClick={() => setActiveNav(item.key)}
+                onClick={() => handleNavClick(item.key)}
                 role="button"
                 tabIndex={0}
                 title={item.label}

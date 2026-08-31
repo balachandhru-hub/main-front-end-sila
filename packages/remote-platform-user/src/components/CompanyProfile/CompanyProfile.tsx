@@ -40,6 +40,12 @@ import {
   createBankAccount,
   updateBankAccount,
   deleteBankAccount,
+  createSupplierBankAccount,
+  createSupplierDeliveryLocation,
+  updateSupplierBankAccount,
+  updateSupplierDeliveryLocation,
+  deleteSupplierBankAccount,
+  deleteSupplierDeliveryLocation,
 } from '../../api/networkAdminApi';
 import type { NetworkAdminRole } from '../../api/networkAdminApi';
 import { useHostAuth } from './useHostAuth';
@@ -48,6 +54,10 @@ import type {
   UpdateDeliveryLocationDto,
   CreateBankAccountDto,
   UpdateBankAccountDto,
+  CreateSupplierBankAccountDto,
+  CreateSupplierDeliveryLocationDto,
+  UpdateSupplierBankAccountDto,
+  UpdateSupplierDeliveryLocationDto,
 } from '../../api/networkAdminApi';
 import type { NetworkAdminProfileResponse } from '../../dto/networkAdminDto';
 import type {
@@ -96,6 +106,7 @@ const emptyDispatchForm: DispatchLocationWithId = {
   pinCode: '',
   contactPerson: '',
   contactPhone: '',
+  contactEmail: '',
   isDefault: false,
 };
 
@@ -106,6 +117,7 @@ const emptyBankForm: BankAccountWithId = {
   accountNumber: '',
   ifscCode: '',
   swiftCode: '',
+  iban: '',
   currency: '',
   isPrimary: false,
   isVerified: false,
@@ -306,6 +318,14 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
     currentUser?.userRole === 'BUYER_ADMINISTRATOR' ||
     currentUser?.userRole === 'BUYER_USER';
 
+  const isSupplier =
+    currentUser?.userRole === 'SUPPLIER_NETWORK_ADMIN' ||
+    currentUser?.userRole === 'SUPPLIER_ADMINISTRATOR' ||
+    currentUser?.userRole === 'SUPPLIER_USER';
+
+  const isManageable = isBuyer || isSupplier;
+
+  // ---- Validation helpers: only one primary bank account / one default location ----
   const hasOtherPrimaryBank = (excludeId?: string) =>
     bankAccounts.some((a) => a.isPrimary && a.id !== excludeId);
 
@@ -424,7 +444,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
     setIsDispatchSubmitting(true);
 
-    const basePayload: CreateDeliveryLocationDto = {
+    const basePayload = {
       locationName: dispatchForm.locationName || '',
       addressLine1: dispatchForm.addressLine1 || '',
       addressLine2: dispatchForm.addressLine2 || '',
@@ -439,11 +459,27 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
     try {
       if (editingLocation?.id) {
-        const updatePayload: UpdateDeliveryLocationDto = {
-          ...basePayload,
-          buyerId: auth?.buyerId || '',
-        };
-        const result = await updateDeliveryLocation(editingLocation.id, updatePayload);
+        // UPDATE - works for both buyer and supplier
+        let result;
+
+        if (isBuyer) {
+          const updatePayload: UpdateDeliveryLocationDto = {
+            ...basePayload,
+            buyerId: auth?.buyerId || '',
+          };
+          result = await updateDeliveryLocation(editingLocation.id, updatePayload);
+        } else if (isSupplier) {
+          const updateSupplierPayload: UpdateSupplierDeliveryLocationDto = {
+            ...basePayload,
+            contactEmail: dispatchForm.contactEmail || '',
+            supplierId: auth?.supplierId || '',
+          } as UpdateSupplierDeliveryLocationDto;
+          result = await updateSupplierDeliveryLocation(editingLocation.id, updateSupplierPayload);
+        } else {
+          setDispatchFormError('Unable to determine user type');
+          setIsDispatchSubmitting(false);
+          return;
+        }
 
         if (isErrorResponse(result)) {
           setDispatchFormError(result.message || 'Failed to update location');
@@ -456,7 +492,23 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
           )
         );
       } else {
-        const result = await createDeliveryLocation(basePayload);
+        // CREATE - works for both buyer and supplier
+        let result;
+
+        if (isBuyer) {
+          const createPayload: CreateDeliveryLocationDto = basePayload as CreateDeliveryLocationDto;
+          result = await createDeliveryLocation(createPayload);
+        } else if (isSupplier) {
+          const createSupplierPayload: CreateSupplierDeliveryLocationDto = {
+            ...basePayload,
+            contactEmail: dispatchForm.contactEmail || '',
+          } as CreateSupplierDeliveryLocationDto;
+          result = await createSupplierDeliveryLocation(createSupplierPayload);
+        } else {
+          setDispatchFormError('Unable to determine user type');
+          setIsDispatchSubmitting(false);
+          return;
+        }
 
         if (!('id' in result)) {
           setDispatchFormError(result.message || 'Failed to create location');
@@ -502,7 +554,18 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
     setDeletingLocationId(loc.id);
 
     try {
-      const result = await deleteDeliveryLocation(loc.id);
+      let result;
+
+      if (isBuyer) {
+        result = await deleteDeliveryLocation(loc.id);
+      } else if (isSupplier) {
+        result = await deleteSupplierDeliveryLocation(loc.id);
+      } else {
+        setDispatchListError('Unable to determine user type');
+        setConfirmationModal((prev) => ({ ...prev, isLoading: false }));
+        return;
+      }
+
       if (isErrorResponse(result)) {
         setDispatchListError(result.message || 'Failed to delete location');
         setConfirmationModal((prev) => ({ ...prev, isLoading: false }));
@@ -578,7 +641,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
     setIsBankSubmitting(true);
 
-    const basePayload: CreateBankAccountDto = {
+    const basePayload = {
       accountHolderName: bankForm.accountHolderName || '',
       bankName: bankForm.bankName || '',
       branchName: bankForm.branchName || '',
@@ -591,12 +654,29 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
     try {
       if (editingBankAccount?.id) {
-        const updatePayload: UpdateBankAccountDto = {
-          ...basePayload,
-          buyerId: auth?.buyerId || '',
-          isVerified: editingBankAccount.isVerified || false,
-        };
-        const result = await updateBankAccount(editingBankAccount.id, updatePayload);
+        // UPDATE - works for both buyer and supplier
+        let result;
+
+        if (isBuyer) {
+          const updatePayload: UpdateBankAccountDto = {
+            ...basePayload,
+            buyerId: auth?.buyerId || '',
+            isVerified: editingBankAccount.isVerified || false,
+          };
+          result = await updateBankAccount(editingBankAccount.id, updatePayload);
+        } else if (isSupplier) {
+          const updateSupplierPayload: UpdateSupplierBankAccountDto = {
+            ...basePayload,
+            iban: bankForm.iban || '',
+            isVerified: editingBankAccount.isVerified || false,
+            supplierId: auth?.supplierId || '',
+          } as UpdateSupplierBankAccountDto;
+          result = await updateSupplierBankAccount(editingBankAccount.id, updateSupplierPayload);
+        } else {
+          setBankFormError('Unable to determine user type');
+          setIsBankSubmitting(false);
+          return;
+        }
 
         if (isErrorResponse(result)) {
           setBankFormError(result.message || 'Failed to update bank account');
@@ -611,7 +691,23 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
           )
         );
       } else {
-        const result = await createBankAccount(basePayload);
+        // CREATE - works for both buyer and supplier
+        let result;
+
+        if (isBuyer) {
+          const createPayload: CreateBankAccountDto = basePayload as CreateBankAccountDto;
+          result = await createBankAccount(createPayload);
+        } else if (isSupplier) {
+          const createSupplierPayload: CreateSupplierBankAccountDto = {
+            ...basePayload,
+            iban: bankForm.iban || '',
+          } as CreateSupplierBankAccountDto;
+          result = await createSupplierBankAccount(createSupplierPayload);
+        } else {
+          setBankFormError('Unable to determine user type');
+          setIsBankSubmitting(false);
+          return;
+        }
 
         if (!('id' in result)) {
           setBankFormError(result.message || 'Failed to create bank account');
@@ -658,7 +754,18 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
     setDeletingBankAccountId(acc.id);
 
     try {
-      const result = await deleteBankAccount(acc.id);
+      let result;
+
+      if (isBuyer) {
+        result = await deleteBankAccount(acc.id);
+      } else if (isSupplier) {
+        result = await deleteSupplierBankAccount(acc.id);
+      } else {
+        setBankListError('Unable to determine user type');
+        setConfirmationModal((prev) => ({ ...prev, isLoading: false }));
+        return;
+      }
+
       if (isErrorResponse(result)) {
         setBankListError(result.message || 'Failed to delete bank account');
         setConfirmationModal((prev) => ({ ...prev, isLoading: false }));
@@ -1034,7 +1141,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                     ) : undefined
                   }
                 />
-                {isBuyer && (
+                {isManageable && (
                   <button
                     type="button"
                     className="cp-manage-btn"
@@ -1112,7 +1219,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                   isOpen={openSections.dispatch}
                   onToggle={() => toggleSection('dispatch')}
                 />
-                {isBuyer && (
+                {isManageable && (
                   <button
                     type="button"
                     className="cp-manage-btn"
@@ -1481,6 +1588,16 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                         onChange={(e) => handleBankFormChange('swiftCode', e.target.value)}
                       />
                     </div>
+                    {isSupplier && (
+                      <div className="cp-form-field">
+                        <label>IBAN</label>
+                        <input
+                          type="text"
+                          value={bankForm.iban || ''}
+                          onChange={(e) => handleBankFormChange('iban', e.target.value)}
+                        />
+                      </div>
+                    )}
                     <div className="cp-form-field">
                       <label>Currency</label>
                       <input
@@ -1693,6 +1810,16 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                         onChange={(e) => handleDispatchFormChange('contactPerson', e.target.value)}
                       />
                     </div>
+                    {isSupplier && (
+                      <div className="cp-form-field">
+                        <label>Contact Email</label>
+                        <input
+                          type="email"
+                          value={dispatchForm.contactEmail || ''}
+                          onChange={(e) => handleDispatchFormChange('contactEmail', e.target.value)}
+                        />
+                      </div>
+                    )}
                     <div className="cp-form-field">
                       <label>Contact Phone</label>
                       <input
