@@ -27,8 +27,10 @@ import {
   FaCog,
   FaEdit,
   FaSpinner,
-  FaTrash
+  FaTrash,
+  FaCubes
 } from 'react-icons/fa';
+import OrganizationModelAccess from '../OrganizationModelAccess';
 import { useNetworkAdminAuthStore } from '../../store/useAuthStore';
 import { getNetworkAdminProfile } from '../../api/networkAdminApi';
 import {
@@ -64,9 +66,9 @@ import type {
   BankAccountDto,
   DispatchLocationDto,
 } from '../../dto/platformDto';
-import { isErrorResponse } from '@vosox/shared-ui';
 import './CompanyProfile.css';
 import { FaPlus } from 'react-icons/fa6';
+import { isErrorResponse, toastService } from '@vosox/shared-ui';
 
 interface CompanyProfileProps {
   mode?: 'admin-review' | 'network-admin';
@@ -85,7 +87,6 @@ interface CompanyProfileProps {
 type DispatchLocationWithId = DispatchLocationDto & { id?: string };
 type BankAccountWithId = BankAccountDto & { id?: string };
 
-// Confirmation Modal State Type
 interface ConfirmationModalState {
   isOpen: boolean;
   title: string;
@@ -189,7 +190,6 @@ const MaskedAccountNumber: React.FC<{ accountNumber?: string }> = ({ accountNumb
   );
 };
 
-// Confirmation Modal Component
 const ConfirmationModal: React.FC<{
   isOpen: boolean;
   title: string;
@@ -278,9 +278,9 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
     bank: true,
     dispatch: true,
     categories: true,
+    models: true,
   });
 
-  // ---- Dispatch Location Modal State ----
   const [dispatchLocations, setDispatchLocations] = useState<DispatchLocationWithId[]>([]);
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
   const [dispatchModalView, setDispatchModalView] = useState<'list' | 'form'>('list');
@@ -291,7 +291,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
   const [, setDeletingLocationId] = useState<string | null>(null);
   const [dispatchListError, setDispatchListError] = useState<string | null>(null);
 
-  // ---- Bank Account Modal State ----
   const [bankAccounts, setBankAccounts] = useState<BankAccountWithId[]>([]);
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [bankModalView, setBankModalView] = useState<'list' | 'form'>('list');
@@ -302,7 +301,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
   const [, setDeletingBankAccountId] = useState<string | null>(null);
   const [bankListError, setBankListError] = useState<string | null>(null);
 
-  // ---- Confirmation Modal State ----
   const [confirmationModal, setConfirmationModal] = useState<ConfirmationModalState>({
     isOpen: false,
     title: '',
@@ -366,14 +364,23 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
     };
   }, [fetchProfile, currentUser]);
 
-  // Keep local dispatch-locations state in sync whenever profile loads/reloads
+  const reloadProfile = async () => {
+    try {
+      if (fetchProfile) {
+        const data = await fetchProfile();
+        setProfile(data);
+      }
+    } catch (err: any) {
+      toastService.error('Failed to reload profile after model access is updated.');
+    }
+  };
+
   useEffect(() => {
     if (profile?.dispatchLocations) {
       setDispatchLocations(profile.dispatchLocations);
     }
   }, [profile]);
 
-  // Keep local bank-accounts state in sync whenever profile loads/reloads
   useEffect(() => {
     if (profile?.bankAccounts) {
       setBankAccounts(profile.bankAccounts);
@@ -382,7 +389,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
   const entityLabel = propsEntityLabel || (isBuyer ? 'Buyer' : 'Supplier');
 
-  // ---- Dispatch Location Handlers ----
   const openDispatchModal = () => {
     setDispatchModalView('list');
     setEditingLocation(null);
@@ -575,7 +581,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
     }
   };
 
-  // ---- Bank Account Handlers ----
   const openBankModal = () => {
     setBankModalView('list');
     setEditingBankAccount(null);
@@ -951,7 +956,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
         <div className="cp-body">
           <div className="cp-main-col">
-            {/* BUSINESS PROFILE SECTION */}
             <section className="cp-card">
               <SectionHeader
                 icon={<FaBuilding />}
@@ -1058,7 +1062,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
               )}
             </section>
 
-            {/* BUSINESS REGISTRATIONS SECTION */}
             <section className="cp-card">
               <SectionHeader
                 icon={<FaFileContract />}
@@ -1123,7 +1126,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
               )}
             </section>
 
-            {/* BANK ACCOUNTS SECTION */}
             <section className="cp-card">
               <div className="cp-card-header-flex">
                 <SectionHeader
@@ -1282,7 +1284,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
               )}
             </section>
 
-            {/* PRODUCT CATEGORIES SECTION */}
             <section className="cp-card">
               <SectionHeader
                 icon={<FaThLarge />}
@@ -1326,9 +1327,28 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                 </div>
               )}
             </section>
+
+            {mode === 'admin-review' && (profile as any)?.organizationId && (
+              <section className="cp-card">
+                <SectionHeader
+                  icon={<FaCubes />}
+                  title="6. Model Access"
+                  isOpen={openSections.models}
+                  onToggle={() => toggleSection('models')}
+                />
+                {openSections.models && (
+                  <div className="cp-section-box">
+                    <OrganizationModelAccess
+                      organizationId={(profile as any).organizationId}
+                      assignedModels={(profile as any).models || []}
+                      onAccessUpdated={() => reloadProfile()}
+                    />
+                  </div>
+                )}
+              </section>
+            )}
           </div>
 
-          {/* SIDEBAR SUMMARY CARD */}
           <aside className="cp-side-col">
             <div className="cp-card cp-summary-card">
               <div className="cp-card-title cp-card-title-static">
@@ -1426,7 +1446,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
         </div>
       </div>
 
-      {/* BANK ACCOUNT MODAL */}
       {isBankModalOpen && (
         <div className="cp-modal-overlay" onClick={closeBankModal}>
           <div className="cp-modal" onClick={(e) => e.stopPropagation()}>
@@ -1632,7 +1651,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
         </div>
       )}
 
-      {/* DISPATCH LOCATION MODAL */}
       {isDispatchModalOpen && (
         <div className="cp-modal-overlay" onClick={closeDispatchModal}>
           <div className="cp-modal" onClick={(e) => e.stopPropagation()}>
@@ -1854,7 +1872,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
         </div>
       )}
 
-      {/* CONFIRMATION MODAL */}
       <ConfirmationModal
         isOpen={confirmationModal.isOpen}
         title={confirmationModal.title}

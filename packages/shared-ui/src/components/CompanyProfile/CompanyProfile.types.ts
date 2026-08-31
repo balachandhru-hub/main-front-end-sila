@@ -75,6 +75,12 @@ export interface CategoryDto {
   commodityTitle?: string;
 }
 
+export interface ModelDto {
+  id?: string;
+  key?: string;
+  modelName?: string;
+}
+
 export interface CompanyProfileData {
   id: string;
   organizationId: string;
@@ -86,4 +92,5 @@ export interface CompanyProfileData {
   registrations?: RegistrationDto[];
   bankAccounts?: BankAccountDto[];
   dispatchLocations?: DispatchLocationDto[];
+  models?: ModelDto[];
 }
