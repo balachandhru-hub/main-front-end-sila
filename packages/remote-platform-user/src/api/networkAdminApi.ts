@@ -66,7 +66,60 @@ export interface CreateBankAccountDto {
   currency: string;
   isPrimary: boolean;
 }
+export interface CreateSupplierBankAccountDto {
+  accountHolderName: string;
+  bankName: string;
+  branchName: string;
+  accountNumber: string;
+  ifscCode: string;
+  swiftCode?: string;
+  iban?: string;
+  currency: string;
+  isPrimary: boolean;
+}
+ 
+export interface CreateSupplierDeliveryLocationDto {
+  locationName: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  country: string;
+  pinCode: string;
+  contactPerson: string;
+  contactEmail?: string;
+  contactPhone: string;
+  isDefault: boolean;
+}
 
+export interface UpdateSupplierBankAccountDto {
+  supplierId: string; 
+  accountHolderName: string;
+  bankName: string;
+  branchName: string;
+  accountNumber: string;
+  ifscCode: string;
+  swiftCode?: string;
+  iban?: string;
+  currency: string;
+  isPrimary: boolean;
+  isVerified: boolean;
+}
+ 
+export interface UpdateSupplierDeliveryLocationDto {
+  supplierId: string;
+  locationName: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  country: string;
+  pinCode: string;
+  contactPerson: string;
+  contactEmail?: string;
+  contactPhone: string;
+  isDefault: boolean;
+}
 export interface UpdateBankAccountDto extends CreateBankAccountDto {
   buyerId: string;
   isVerified: boolean;
@@ -602,3 +655,224 @@ export const deleteBankAccount = async (
     };
   }
 };
+ 
+export const createSupplierBankAccount = async (
+  payload: CreateSupplierBankAccountDto
+): Promise<BankAccountResponseDto | ErrorResponseDto> => {
+  try {
+    const response = await platformInstance.post<BankAccountResponseDto>(
+      '/api/v1/supplier/bank-account',
+      payload
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+ 
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to create bank account',
+        description: errData.description || 'No details provided',
+      };
+    }
+ 
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while creating bank account.',
+    };
+  }
+};
+ 
+export const createSupplierDeliveryLocation = async (
+  payload: CreateSupplierDeliveryLocationDto
+): Promise<DeliveryLocationResponseDto | ErrorResponseDto> => {
+  try {
+    const response = await platformInstance.post<DeliveryLocationResponseDto>(
+      '/api/v1/supplier/dispatch-location',
+      payload
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+ 
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to create delivery location',
+        description: errData.description || 'No details provided',
+      };
+    }
+ 
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while creating delivery location.',
+    };
+  }
+};
+ 
+export const updateSupplierBankAccount = async (
+  id: string,
+  payload: UpdateSupplierBankAccountDto
+): Promise<BankAccountResponseDto | ErrorResponseDto> => {
+  try {
+    const response = await platformInstance.put<BankAccountResponseDto>(
+      `/api/v1/supplier/bank-account/${id}`,
+      payload
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+ 
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to update bank account',
+        description: errData.description || 'No details provided',
+      };
+    }
+ 
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while updating bank account.',
+    };
+  }
+};
+ 
+export const updateSupplierDeliveryLocation = async (
+  id: string,
+  payload: UpdateSupplierDeliveryLocationDto
+): Promise<DeliveryLocationResponseDto | ErrorResponseDto> => {
+  try {
+    const response = await platformInstance.put<DeliveryLocationResponseDto>(
+      `/api/v1/supplier/dispatch-location/${id}`,
+      payload
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+ 
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to update delivery location',
+        description: errData.description || 'No details provided',
+      };
+    }
+ 
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while updating delivery location.',
+    };
+  }
+};
+ 
+// ============================================
+// SUPPLIER DELETE API FUNCTIONS
+// ============================================
+ 
+export const deleteSupplierBankAccount = async (
+  id: string
+): Promise<BankAccountResponseDto | ErrorResponseDto> => {
+  try {
+    const response = await platformInstance.delete<BankAccountResponseDto>(
+      `/api/v1/supplier/bank-account/${id}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+ 
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to delete bank account',
+        description: errData.description || 'No details provided',
+      };
+    }
+ 
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while deleting bank account.',
+    };
+  }
+};
+ 
+export const deleteSupplierDeliveryLocation = async (
+  id: string
+): Promise<DeliveryLocationResponseDto | ErrorResponseDto> => {
+  try {
+    const response = await platformInstance.delete<DeliveryLocationResponseDto>(
+      `/api/v1/supplier/dispatch-location/${id}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+ 
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to delete delivery location',
+        description: errData.description || 'No details provided',
+      };
+    }
+ 
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while deleting delivery location.',
+    };
+  }
+};
+ 

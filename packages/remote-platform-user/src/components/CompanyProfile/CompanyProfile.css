@@ -514,7 +514,7 @@
   color: var(--cp-text-secondary);
 }
 
-.cp-form-field input[type='text'] {
+.cp-form-field input {
   border: var(--cp-border-width) solid var(--cp-border-color);
   border-radius: 0.375rem;
   padding: 0.5rem 0.625rem;
@@ -739,7 +739,7 @@
     gap: 0.3rem;
   }
  
-  .cp-form-field input[type='text'] {
+  .cp-form-field input {
     padding: 0.625rem 0.5rem;
     font-size: 1rem;
   }
@@ -915,7 +915,7 @@
     border-radius: 1rem;
   }
  
-  .cp-form-field input[type='text'] {
+  .cp-form-field{
     padding: 0.625rem 0.5rem;
     font-size: 16px;
   }
