@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import "./SupplierDashboard.css";
 import Catalog from "./Catalog.tsx";
 import { CompanyProfile } from '@vosox/shared-ui';
@@ -481,7 +481,7 @@ const SupplierDashboard: React.FC = () => {
   const [submitAnswersError, setSubmitAnswersError] = useState<string | null>(null);
   const [submitAnswersSuccess, setSubmitAnswersSuccess] = useState(false);
 
-  const [, setRfqWindowTick] = useState(0);
+  const [rfqWindowTick, setRfqWindowTick] = useState(0);
 
   useEffect(() => {
     if (!selectedRfq) return;
@@ -1639,7 +1639,11 @@ const SupplierDashboard: React.FC = () => {
 
     </>
   );
-  const { notYetOpen, closed, canSubmit } = getRfqSubmissionWindowStatus(selectedRfq);
+
+  const { notYetOpen, closed, canSubmit } = useMemo(
+    () => getRfqSubmissionWindowStatus(selectedRfq),
+    [selectedRfq, rfqWindowTick],
+  );
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9' }}>
       <Header />
