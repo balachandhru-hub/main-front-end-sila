@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./SupplierDashboard.css";
 import Catalog from "./Catalog.tsx";
 import { CompanyProfile } from '@vosox/shared-ui';
-import Invitations from "./Invitations.tsx";
+// import Invitations from "./Invitations.tsx";
 import {
   logoutSupplier,
   fetchRFQMasterData,
@@ -54,12 +54,12 @@ interface MatchCard {
 }
 
 
-const IconMail = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="4" width="20" height="16" rx="2" />
-    <path d="m22 6-10 7L2 6" />
-  </svg>
-);
+// const IconMail = () => (
+//   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <rect x="2" y="4" width="20" height="16" rx="2" />
+//     <path d="m22 6-10 7L2 6" />
+//   </svg>
+// );
 
 const IconFile = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -106,12 +106,12 @@ const NavIconHome = () => (
   </svg>
 );
 
-const NavIconMail = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="4" width="20" height="16" rx="2" />
-    <path d="m22 6-10 7L2 6" />
-  </svg>
-);
+// const NavIconMail = () => (
+//   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <rect x="2" y="4" width="20" height="16" rx="2" />
+//     <path d="m22 6-10 7L2 6" />
+//   </svg>
+// );
 
 const NavIconFile = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -287,7 +287,7 @@ const IconAlertCircle = () => (
 
 const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
-  { key: "invitations", icon: <NavIconMail />, label: "Invitations" },
+  // { key: "invitations", icon: <NavIconMail />, label: "Invitations" },
   { key: "rfqs", icon: <NavIconFile />, label: "RFQs" },
   { key: "quotations", icon: <NavIconUser />, label: "Quotations" },
   { key: "purchaseOrders", icon: <NavIconBag />, label: "Purchase Orders" },
@@ -300,7 +300,7 @@ const navItems: { key: string; icon: React.ReactNode; label: string; badge?: num
 ];
 
 const statCards: StatCard[] = [
-  { icon: <IconMail />, label: "INVITATIONS", value: 2, linkText: "Pending review >", colorClass: "pud-stat-icon-blue" },
+  // { icon: <IconMail />, label: "INVITATIONS", value: 2, linkText: "Pending review >", colorClass: "pud-stat-icon-blue" },
   { icon: <IconFile />, label: "ACTIVE RFQS", value: 2, linkText: "Bids open >", colorClass: "pud-stat-icon-indigo" },
   { icon: <IconTrend />, label: "BIDS SUBMITTED", value: 3, linkText: "Track outcomes", colorClass: "pud-stat-icon-green" },
   { icon: <IconBag />, label: "PURCHASE ORDER", value: 4, linkText: "Accept orders >", colorClass: "pud-stat-icon-purple" },
@@ -1646,10 +1646,10 @@ useEffect(() => {
                   }
                   return null;
                 }}
-              />
-            ) : activeNav === "invitations" ? (
-              <Invitations />
-            ) : (
+              /> ) : (
+            // ) : activeNav === "invitations" ? (
+            //   <Invitations />
+            // ) : (
               <>
                 <h1 className="pud-title">Supplier Operations Command</h1>
                 <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
