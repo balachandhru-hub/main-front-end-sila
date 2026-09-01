@@ -13,6 +13,8 @@ import type {
   CurrencyListResponse,
   SupplierCatalogListItem,
   CatalogDetailResponse,
+  OtpActionResponse,
+  VerifyOtpPayload,
 } from '../dto/supplierDto';
 import type { ErrorResponseDto } from '@vosox/shared-ui';
 import { isErrorResponse } from '@vosox/shared-ui';
@@ -1219,6 +1221,70 @@ export const fetchSupplierCatalogDetail = async (
       statusCode: 500,
       message: 'Unexpected Error',
       description: 'Something went wrong while fetching catalog details.',
+    };
+  }
+};
+
+export const sendOtp = async (): Promise<OtpActionResponse | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.post('/api/v1/supplier/send-otp');
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to send OTP',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while sending the OTP.',
+    };
+  }
+};
+
+export const verifyOtp = async (
+  payload: VerifyOtpPayload
+): Promise<OtpActionResponse | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.post('/api/v1/supplier/verify-otp', payload);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to verify OTP',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while verifying the OTP.',
     };
   }
 };
