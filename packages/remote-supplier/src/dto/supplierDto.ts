@@ -346,6 +346,7 @@ export interface SubmitQuotationPayload {
   discountType: string;
   tax: number;
   taxType: string;
+  temporaryVerificationToken?: string;
   items?: {
     supplierRFQItemId?: string | null;
     buyerRFQItemId: string;
@@ -419,4 +420,17 @@ export interface ErrorResponseDto {
   status_code: number;
   message: string;
   description: string;
+}
+
+export interface OtpActionResponse {
+  success?: boolean;
+  statusCode: number;
+  message: string;
+  description: string;
+  token?: string;
+}
+
+export interface VerifyOtpPayload {
+  email: string;
+  otp: string;
 }
