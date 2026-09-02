@@ -15,8 +15,14 @@ import {
 } from "../../../remote-buyer/src/api/Buyerapi";
 import CreateRFQ from "./UserListTable/CreateRFQ";
 import { logoutPlatformUser } from "../api/platformApi";
+import type { SupplierQuotationComparisonResponse } from "../api/networkAdminApi";
+import { fetchSupplierQuotationComparison } from "../api/networkAdminApi";
+import { isErrorResponse } from "@vosox/shared-ui";
 import UserTemplate from "./usertemplate"
 import { ToastContainer } from "@vosox/shared-ui";
+import type { ErrorResponseDto } from "../dto/platformDto";
+import QuotationComparisonCard from "./Quotationcomparisoncard";
+import "./Quotationcomparisoncard.css";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -375,6 +381,12 @@ const BuyerAdminDash: React.FC = () => {
     sessionStorage.getItem("vosox_buyer_id")
   );
 
+  // STATE FOR QUOTATION COMPARISON
+  const [selectedQuotationsRfq, setSelectedQuotationsRfq] = useState<any | null>(null);
+  const [quotationComparisonData, setQuotationComparisonData] = useState<SupplierQuotationComparisonResponse[]>([]);
+  const [loadingQuotations, setLoadingQuotations] = useState(false);
+  const [quotationsError, setQuotationsError] = useState<string | null>(null);
+
   useEffect(() => {
     useNetworkAdminAuthStore.getState().initializeFromSession();
   }, []);
@@ -467,7 +479,7 @@ const BuyerAdminDash: React.FC = () => {
   }, [activeNav]);
 
 
-  const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
+  const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail" | "quotationComparison">("dashboard");
 
   const [allRfqsList, setAllRfqsList] = useState<any[]>([]);
   const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
@@ -535,7 +547,7 @@ const BuyerAdminDash: React.FC = () => {
     loadAllRfqsPage(allRfqsPage - 1);
   };
 
-const handleNavClick = (key: string) => {
+  const handleNavClick = (key: string) => {
     if (key === "activeRFQs") {
       handleOpenAllRfqs();
       return;
@@ -573,6 +585,68 @@ const handleNavClick = (key: string) => {
     setRfqPageView("allRfqs");
     setFullPageRfq(null);
     setFullPageRfqError(null);
+  };
+
+  // HANDLER FOR QUOTATION COMPARISON - FULL PAGE VIEW
+  const handleOpenQuotationComparison = async (rfq: any) => {
+    setSelectedQuotationsRfq(rfq);
+    setRfqPageView("quotationComparison");
+    setLoadingQuotations(true);
+    setQuotationsError(null);
+    setQuotationComparisonData([]);
+
+    try {
+      // First, fetch full RFQ details to get the latest supplierQuotation data
+      let rfqDetails = rfq;
+      
+      if (!rfq.supplierQuotation) {
+        // If rfq doesn't have supplierQuotation, fetch full RFQ details from API
+        rfqDetails = await fetchBuyerRFQById(rfq.rfqId);
+      }
+
+      // Now fetch quotation comparison data for each quotation ID
+      if (rfqDetails.supplierQuotation && rfqDetails.supplierQuotation.length > 0) {
+        const comparisonDataList: SupplierQuotationComparisonResponse[] = [];
+        const errors: string[] = [];
+
+        // Fetch comparison data for each quotation ID
+        for (const quotation of rfqDetails.supplierQuotation) {
+          if (quotation.quotationId) {
+            const result = await fetchSupplierQuotationComparison(quotation.quotationId);
+
+            if (!isErrorResponse(result)) {
+              comparisonDataList.push(result as SupplierQuotationComparisonResponse);
+            } else {
+              const errorData = result as unknown as ErrorResponseDto;
+              errors.push(
+                errorData.message || `Failed to load quotation ${quotation.quotationId}`
+              );
+            }
+          }
+        }
+
+        if (comparisonDataList.length > 0) {
+          setQuotationComparisonData(comparisonDataList);
+        }
+
+        if (errors.length > 0 && comparisonDataList.length === 0) {
+          setQuotationsError(errors.join(", "));
+        }
+      } else {
+        setQuotationsError("No quotations found for this RFQ.");
+      }
+    } catch (error: any) {
+      setQuotationsError(error.message || "Failed to load quotation comparisons.");
+    } finally {
+      setLoadingQuotations(false);
+    }
+  };
+
+  const handleBackFromQuotationComparison = () => {
+    setRfqPageView("rfqDetail");
+    setSelectedQuotationsRfq(null);
+    setQuotationComparisonData([]);
+    setQuotationsError(null);
   };
 
   const handleLogout = async () => {
@@ -730,41 +804,41 @@ const handleNavClick = (key: string) => {
                   <div>
                     <div className="bad-rfq-table-container">
                       <table className="bad-rfq-items-table bad-allrfqs-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '48px' }}>S.No</th>
-                          <th>RFQ Number</th>
-                          <th>Title</th>
-                          <th>Organization</th>
-                          <th>Delivery Location</th>
-                          <th>Closing Date</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allRfqsList.map((rfq: any, idx: number) => (
-                          <tr key={rfq.rfqId || idx}>
-                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
-                            <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
-                            <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
-                            <td>{rfq.organizationName}</td>
-                            <td>{rfq.deliveryLocation}</td>
-                            <td>
-                              {rfq.endDate
-                                ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                                : "—"}
-                            </td>
-                            <td>
-                              <button
-                                className="bad-btn bad-btn-outline"
-                                onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                              >
-                                View RFQ Details
-                              </button>
-                            </td>
+                        <thead>
+                          <tr>
+                            <th style={{ width: '48px' }}>S.No</th>
+                            <th>RFQ Number</th>
+                            <th>Title</th>
+                            <th>Organization</th>
+                            <th>Delivery Location</th>
+                            <th>Closing Date</th>
+                            <th>Action</th>
                           </tr>
-                        ))}
-                      </tbody>
+                        </thead>
+                        <tbody>
+                          {allRfqsList.map((rfq: any, idx: number) => (
+                            <tr key={rfq.rfqId || idx}>
+                              <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
+                              <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
+                              <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                              <td>{rfq.organizationName}</td>
+                              <td>{rfq.deliveryLocation}</td>
+                              <td>
+                                {rfq.endDate
+                                  ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                  : "—"}
+                              </td>
+                              <td>
+                                <button
+                                  className="bad-btn bad-btn-outline"
+                                  onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                                >
+                                  View RFQ Details
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
                       </table>
                     </div>
 
@@ -811,6 +885,14 @@ const handleNavClick = (key: string) => {
                       <div className="bad-modal-meta">
                         <span><IconCalendar /> Closes: {new Date(fullPageRfq.endDate).toLocaleDateString()}</span>
                         <span><IconPin /> Delivery: {fullPageRfq.deliveryLocation}</span>
+                        <button
+                          className="bad-btn bad-btn-outline"
+                          onClick={() => handleOpenQuotationComparison(fullPageRfq)}
+                          title="View Supplier Quotations"
+                          style={{ marginLeft: 'auto' }}
+                        >
+                          📊 Bid Comparison
+                        </button>
                       </div>
                     )}
                   </div>
@@ -839,17 +921,17 @@ const handleNavClick = (key: string) => {
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px 18px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
                               <div>
-  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
-  <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-    {new Date(fullPageRfq.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-  </div>
-</div>
-<div>
-  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>End Date</div>
-  <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-    {new Date(fullPageRfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-  </div>
-</div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
+                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                                  {new Date(fullPageRfq.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                </div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>End Date</div>
+                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                                  {new Date(fullPageRfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                </div>
+                              </div>
                               <div>
                                 <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Add Lot Option</div>
                                 <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
@@ -927,84 +1009,6 @@ const handleNavClick = (key: string) => {
                               </div>
                             )}
 
-                          {/* Supplier Quotations Received */}
-                          <div>
-                            <div className="bad-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                              <IconSparkles /> Supplier Quotations Received
-                            </div>
-                            {fullPageRfq.supplierQuotation &&
-                              fullPageRfq.supplierQuotation.filter((q: any) => q.quotationId || q.totalPrice !== null).length > 0 ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '480px', overflowY: 'auto' }}>
-                                {fullPageRfq.supplierQuotation
-                                  .filter((q: any) => q.quotationId || q.totalPrice !== null)
-                                  .map((quote: any, index: number) => (
-                                    <div
-                                      key={index}
-                                      style={{
-                                        background: '#ffffff',
-                                        border: '1px solid #cbd5e1',
-                                        borderRadius: '10px',
-                                        padding: '16px',
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                                        transition: 'border-color 0.2s ease'
-                                      }}
-                                    >
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
-                                            Quote ID: {quote.quotationId ? `${quote.quotationId.substring(0, 8)}...` : `Quote #${index + 1}`}
-                                          </span>
-                                          <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                            Delivery: {quote.deliveryType || "Standard"}
-                                          </span>
-                                        </div>
-                                        <span
-                                          className={`bad-status-badge`}
-                                          style={{
-                                            background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
-                                            color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
-                                            padding: '3px 8px',
-                                            borderRadius: '6px',
-                                            fontSize: '11px',
-                                            fontWeight: 600
-                                          }}
-                                        >
-                                          {quote.status || "RECEIVED"}
-                                        </span>
-                                      </div>
-
-                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #f1f5f9', marginBottom: '12px', fontSize: '12px' }}>
-                                        <div>
-                                          <span style={{ color: '#64748b' }}>Delivery Charge:</span>
-                                          <div style={{ fontWeight: 600, color: '#334155', marginTop: '2px' }}>${quote.deliveryCharge ?? 0}</div>
-                                        </div>
-                                        <div>
-                                          <span style={{ color: '#64748b' }}>Tax:</span>
-                                          <div style={{ fontWeight: 600, color: '#334155', marginTop: '2px' }}>${quote.tax ?? 0}</div>
-                                        </div>
-                                        <div>
-                                          <span style={{ color: '#64748b' }}>Discount:</span>
-                                          <div style={{ fontWeight: 600, color: '#dc2626', marginTop: '2px' }}>-${quote.discount ?? 0}</div>
-                                        </div>
-                                        <div>
-                                          <span style={{ color: '#64748b' }}>Total Quote:</span>
-                                          <div style={{ fontWeight: 700, color: '#16a34a', marginTop: '2px', fontSize: '13px' }}>${quote.totalPrice ?? 0}</div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                              </div>
-                            ) : (
-                              <div className="bad-rfq-no-quote-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 20px' }}>
-                                <IconMail />
-                                <div style={{ fontWeight: 600, color: '#475569', marginTop: '12px' }}>No Quotations Received Yet</div>
-                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', lineHeight: '1.5', maxWidth: '240px' }}>
-                                  When suppliers submit commercial bids, they will populate here in real-time.
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
                         </div>
 
                         {/* Right Column: Evaluation Questions & Answers */}
@@ -1072,6 +1076,61 @@ const handleNavClick = (key: string) => {
                       </button>
                     </div>
                   )}
+                </div>
+              </>
+            ) : rfqPageView === "quotationComparison" ? (
+              <>
+                <div className="bad-modal bad-rfq-fullpage">
+                  <div className="bad-modal-header">
+                    <span className="bad-modal-badge">
+                      <IconSparkles /> Bid Comparison
+                    </span>
+                    <button className="bad-modal-close" onClick={handleBackFromQuotationComparison}>
+                      <IconClose />
+                    </button>
+                    <h2 className="bad-modal-name">
+                      {selectedQuotationsRfq?.title || "RFQ Quotations"}
+                    </h2>
+                    {selectedQuotationsRfq && (
+                      <div className="bad-modal-meta">
+                        <span><IconFile /> {selectedQuotationsRfq.rfqNumber}</span>
+                        <span><IconPin /> {selectedQuotationsRfq.deliveryLocation}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bad-modal-body" style={{ maxHeight: 'calc(100% - 120px)', overflowY: 'auto', padding: '24px' }}>
+                    {loadingQuotations ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+                        <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                          <div className="bad-spinner" style={{ width: '32px', height: '32px' }} />
+                          <span>Loading quotation comparisons...</span>
+                        </div>
+                      </div>
+                    ) : quotationsError && quotationComparisonData.length === 0 ? (
+                      <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
+                        {quotationsError}
+                      </div>
+                    ) : quotationComparisonData.length === 0 ? (
+                      <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                        No quotation data available.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        {quotationComparisonData.map((comparison, index) => (
+                          <QuotationComparisonCard
+                            key={comparison.supplierQuotationId || index}
+                            quotation={comparison}
+                            rfqTitle={selectedQuotationsRfq.title}
+                            rfqNumber={selectedQuotationsRfq.rfqNumber}
+                            supplierName={`Supplier ${index + 1}`}
+                            contactPerson="Contact Person"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </>
             ) : (
@@ -1341,8 +1400,6 @@ const handleNavClick = (key: string) => {
             </div>
           </div>
         )}
-
-
       </div>
     </div>
   );
