@@ -92,6 +92,13 @@ export interface InvitationAnswersResponse {
   questions: VerificationQuestion[];
 }
 
+export type FetchSupplierInvitationsPayload = {
+  index: number;
+  limit: number;
+  status?: string;
+  search?: string;
+};
+
 export type { SupplierProfileResponse, RFQMasterDataItem, RFQDetailResponse, SubmitQuotationPayload } from '../dto/supplierDto';
 export type {
   CatalogAssetDto,
@@ -939,10 +946,23 @@ export const fetchUnits = async (payload?: {
   }
 };
 
-export const fetchBuyerInvitations = async (payload: {
-  index: number;
-  limit: number;
-}): Promise<BuyerInvitationItem[] | ErrorResponseDto> => {
+export interface InvitationSummaryResponse {
+  all: number;
+  submitted: number;
+  pending: number;
+  accepted: number;
+  declined: number;
+}
+
+export const fetchInvitationSummary = async (): Promise<InvitationSummaryResponse | any> => {
+  const response = await supplierInstance.get(
+      "/api/v1/buyer/invitation-summary"
+  );
+
+  return response.data;
+};
+
+export const fetchBuyerInvitations = async (payload: FetchSupplierInvitationsPayload): Promise<BuyerInvitationItem[] | ErrorResponseDto> => {
   try {
     const response = await supplierInstance.get<BuyerInvitationItem[]>(
       '/api/v1/buyer/buyer-invitation',
@@ -950,6 +970,8 @@ export const fetchBuyerInvitations = async (payload: {
         params: {
           index: payload.index,
           limit: payload.limit,
+          ...(payload.status ? { status: payload.status } : {}),
+          ...(payload.search ? { search: payload.search } : {}),
         },
       }
     );
@@ -981,10 +1003,7 @@ export const fetchBuyerInvitations = async (payload: {
   }
 };
 
-export const fetchSupplierInvitations = async (payload: {
-  index: number;
-  limit: number;
-}): Promise<BuyerInvitationItem[] | ErrorResponseDto> => {
+export const fetchSupplierInvitations = async (payload: FetchSupplierInvitationsPayload): Promise<BuyerInvitationItem[] | ErrorResponseDto> => {
   try {
     const response = await supplierInstance.get<BuyerInvitationItem[]>(
       '/api/v1/buyer/supplier-invitation',
@@ -992,6 +1011,8 @@ export const fetchSupplierInvitations = async (payload: {
         params: {
           index: payload.index,
           limit: payload.limit,
+          ...(payload.status ? { status: payload.status } : {}),
+          ...(payload.search ? { search: payload.search } : {}),
         },
       }
     );
