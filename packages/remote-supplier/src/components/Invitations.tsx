@@ -378,7 +378,7 @@ const InvitationCard: React.FC<{
                         </span>
                     </div>
                 )}
-                {(!showActions && status === "open") || status === "closed" ? <div className="inv-footer-left" /> : null}
+                {(!showActions && (status === "open" || status === "submitted")) || status === "closed" ? <div className="inv-footer-left" /> : null}
 
                 <button
                     className="inv-btn inv-btn-view"
