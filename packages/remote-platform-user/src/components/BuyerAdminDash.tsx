@@ -110,6 +110,14 @@ const IconBell = () => (
   </svg>
 );
 
+const IconMenu = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
+
 const NavIconHome = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -372,6 +380,7 @@ const BuyerAdminDash: React.FC = () => {
   const [rfqs, setRfqs] = useState<any[]>(mockRfqs);
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
   const RFQ_INITIAL_VISIBLE = 3;
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const [templates, setTemplates] = useState<VerificationTemplate[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
@@ -547,7 +556,8 @@ const BuyerAdminDash: React.FC = () => {
     loadAllRfqsPage(allRfqsPage - 1);
   };
 
-  const handleNavClick = (key: string) => {
+const handleNavClick = (key: string) => {
+  setIsMobileSidebarOpen(false); 
     if (key === "activeRFQs") {
       handleOpenAllRfqs();
       return;
@@ -704,11 +714,25 @@ const BuyerAdminDash: React.FC = () => {
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
       <ToastContainer />
       <Header />
-
       <div
-        className="bad-shell"
+        className={`bad-shell${isMobileSidebarOpen ? " bad-sidebar-open-mobile" : ""}`}
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
       >
+        <button
+          type="button"
+          className="bad-mobile-sidebar-toggle"
+          onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
+          aria-label={isMobileSidebarOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMobileSidebarOpen}
+        >
+          {isMobileSidebarOpen ? <IconClose /> : <IconMenu />}
+        </button>
+
+        <div
+          className="bad-sidebar-backdrop"
+          onClick={() => setIsMobileSidebarOpen(false)}
+          aria-hidden="true"
+        />
         <aside className="bad-sidebar">
           <nav className="bad-nav" >
             {navItems.map((item) => (
