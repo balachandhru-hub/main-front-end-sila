@@ -121,12 +121,12 @@ const NavIconFile = () => (
   </svg>
 );
 
-const NavIconUser = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="8" r="4" />
-    <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
-  </svg>
-);
+// const NavIconUser = () => (
+//   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <circle cx="12" cy="8" r="4" />
+//     <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
+//   </svg>
+// );
 
 const NavIconBag = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -290,7 +290,7 @@ const navItems: { key: string; icon: React.ReactNode; label: string; badge?: num
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
   // { key: "invitations", icon: <NavIconMail />, label: "Invitations" },
   { key: "rfqs", icon: <NavIconFile />, label: "RFQs" },
-  { key: "quotations", icon: <NavIconUser />, label: "Quotations" },
+  // { key: "quotations", icon: <NavIconUser />, label: "Quotations" },
   { key: "purchaseOrders", icon: <NavIconBag />, label: "Purchase Orders" },
   { key: "contracts", icon: <NavIconContract />, label: "Contracts" },
   { key: "invoices", icon: <NavIconInvoice />, label: "Invoices" },
@@ -1669,6 +1669,7 @@ const SupplierDashboard: React.FC = () => {
 
         <aside className="pud-sidebar">
           <nav className="pud-nav">
+          
             {navItems.map((item) => (
               <div
                 key={item.key}
@@ -1680,6 +1681,7 @@ const SupplierDashboard: React.FC = () => {
                 {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
               </div>
             ))}
+          
 
             <Catalog
               onShowCatalogList={() => setActiveNav("catalogList")}
