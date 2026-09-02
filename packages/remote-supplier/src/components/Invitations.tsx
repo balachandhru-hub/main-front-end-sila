@@ -346,7 +346,7 @@ const InvitationCard: React.FC<{
             </div>
 
             <div className="inv-card-footer">
-                {showActions && status === "open" && (
+                {showActions && (status === "open" || status === "submitted") && (
                     <div className="inv-footer-left">
                         <button
                             className="inv-btn inv-btn-accept"
@@ -375,13 +375,6 @@ const InvitationCard: React.FC<{
                     <div className="inv-footer-left">
                         <span className="inv-footer-status inv-footer-status-declined">
                             <IconXCircle /> Invitation Declined
-                        </span>
-                    </div>
-                )}
-                {status === "submitted" && (
-                    <div className="inv-footer-left">
-                        <span className="inv-footer-status inv-footer-status-submitted">
-                            <IconSend /> Invitation Submitted
                         </span>
                     </div>
                 )}
