@@ -393,19 +393,19 @@ const SupplierDashboard: React.FC = () => {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
- const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // ✅ NEW STATE: Confirmation Modal for Submit Quotation
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
 
   const { auth } = useAuth();
-const [supplierId, setSupplierId] = useState<string | null>(auth?.supplierId ?? null);
+  const [supplierId, setSupplierId] = useState<string | null>(auth?.supplierId ?? null);
 
-useEffect(() => {
-  if (auth?.supplierId) {
-    setSupplierId(auth.supplierId);
-  }
-}, [auth?.supplierId]);
+  useEffect(() => {
+    if (auth?.supplierId) {
+      setSupplierId(auth.supplierId);
+    }
+  }, [auth?.supplierId]);
   const [rfqs, setRfqs] = useState<RFQMasterDataItem[]>([]);
   const [loadingRfqs, setLoadingRfqs] = useState(true);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
@@ -432,25 +432,25 @@ useEffect(() => {
   const [submitAnswersError, setSubmitAnswersError] = useState<string | null>(null);
   const [submitAnswersSuccess, setSubmitAnswersSuccess] = useState(false);
 
- useEffect(() => {
-  const loadSupplierProfile = async () => {
-    if (!supplierId) {
-      try {
-        const profile = await getSupplierProfile();
-        if (profile && 'id' in profile && profile.id) {
-          setSupplierId(profile.id);   
-        } else {
-          setRfqsError("Supplier profile not found. Please complete onboarding.");
+  useEffect(() => {
+    const loadSupplierProfile = async () => {
+      if (!supplierId) {
+        try {
+          const profile = await getSupplierProfile();
+          if (profile && 'id' in profile && profile.id) {
+            setSupplierId(profile.id);
+          } else {
+            setRfqsError("Supplier profile not found. Please complete onboarding.");
+            setLoadingRfqs(false);
+          }
+        } catch (err: any) {
+          setRfqsError("Failed to load supplier profile details.");
           setLoadingRfqs(false);
         }
-      } catch (err: any) {
-        setRfqsError("Failed to load supplier profile details.");
-        setLoadingRfqs(false);
       }
-    }
-  };
-  loadSupplierProfile();
-}, [supplierId]);
+    };
+    loadSupplierProfile();
+  }, [supplierId]);
 
   useEffect(() => {
     const loadRfqs = async () => {
@@ -623,7 +623,7 @@ useEffect(() => {
   };
 
   const handleNavClick = (key: string) => {
-    setIsMobileSidebarOpen(false); 
+    setIsMobileSidebarOpen(false);
     if (key === "rfqs") {
       handleOpenAllRfqs();
       return;
@@ -835,6 +835,7 @@ useEffect(() => {
       const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
       const payload = {
         supplierRFQId: supplierRFQId as string,
+        supplierId: supplierId as string,
         answers: Object.values(rfqAnswers).map((a) => {
           const question = selectedRfq.questions?.find(q => q.questionId === a.rfqQuestionId);
 
@@ -1924,8 +1925,8 @@ useEffect(() => {
                 <span className="pud-modal-badge" style={{ background: '#fef3c7', color: '#d97706' }}>
                   <IconAlertCircle /> Confirmation Required
                 </span>
-                <button 
-                  className="pud-modal-close" 
+                <button
+                  className="pud-modal-close"
                   onClick={() => setShowConfirmSubmit(false)}
                 >
                   <IconClose />

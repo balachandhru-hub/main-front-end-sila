@@ -4,7 +4,8 @@ import CreateRFQ from "./Create_RFQ.tsx";
 import Product from "./Product.tsx";
 import Models from "./Models.tsx";
 import Header from "./Header";
-import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, downloadBuyerAsset } from "../api/Buyerapi";
+import QsAns from "./Qsans.tsx";
+import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById } from "../api/Buyerapi";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
 import { CompanyProfile } from '@vosox/shared-ui';
 import { useAuth } from '../../../host-app/src/AuthContext.tsx';
@@ -410,32 +411,32 @@ const BuyersDashboard: React.FC = () => {
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
- const { auth } = useAuth();
-const [buyerId, setBuyerId] = useState<string | null>(auth?.buyerId ?? null);
+  const { auth } = useAuth();
+  const [buyerId, setBuyerId] = useState<string | null>(auth?.buyerId ?? null);
 
-useEffect(() => {
-  if (auth?.buyerId) {
-    setBuyerId(auth.buyerId);
-  }
-}, [auth?.buyerId]);
-
-useEffect(() => {
-  const loadBuyerProfile = async () => {
-    if (!buyerId) {
-      try {
-        const profile = await getBuyerProfile();
-        if (profile?.id) {
-          setBuyerId(profile.id); 
-        } else {
-          setRfqsError("Buyer profile not found. Please complete onboarding.");
-        }
-      } catch (err: any) {
-        setRfqsError("Failed to load buyer profile details.");
-      }
+  useEffect(() => {
+    if (auth?.buyerId) {
+      setBuyerId(auth.buyerId);
     }
-  };
-  loadBuyerProfile();
-}, [buyerId]);
+  }, [auth?.buyerId]);
+
+  useEffect(() => {
+    const loadBuyerProfile = async () => {
+      if (!buyerId) {
+        try {
+          const profile = await getBuyerProfile();
+          if (profile?.id) {
+            setBuyerId(profile.id);
+          } else {
+            setRfqsError("Buyer profile not found. Please complete onboarding.");
+          }
+        } catch (err: any) {
+          setRfqsError("Failed to load buyer profile details.");
+        }
+      }
+    };
+    loadBuyerProfile();
+  }, [buyerId]);
   useEffect(() => {
     const loadRfqs = async () => {
       if (!buyerId) return;
@@ -464,7 +465,7 @@ useEffect(() => {
   }, [buyerId]);
 
 
-  const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
+  const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail" | "qsAns">("dashboard");
 
   const [allRfqsList, setAllRfqsList] = useState<any[]>([]);
   const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
@@ -570,6 +571,14 @@ useEffect(() => {
     setFullPageRfqError(null);
   };
 
+  const handleOpenQsAns = () => {
+    setRfqPageView("qsAns");
+  };
+
+  const handleBackToRfqDetail = () => {
+    setRfqPageView("rfqDetail");
+  };
+
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
@@ -585,124 +594,6 @@ useEffect(() => {
     }
   };
 
-  const resolveAnswersForQuestion = (
-    rfq: any,
-    question: any
-  ): { supplierId: string | null; display: string; attachment: any | null }[] => {
-    const supplierAnswerSets = rfq?.supplierAnswers?.supplierAnswers;
-    const questionId = question?.id ?? question?.rfqQuestionId;
-    if (!Array.isArray(supplierAnswerSets) || !questionId) return [];
-
-    const results: { supplierId: string | null; display: string; attachment: any | null }[] = [];
-
-    supplierAnswerSets.forEach((supplierAnswerSet: any) => {
-      const answerList = Array.isArray(supplierAnswerSet?.answers) ? supplierAnswerSet.answers : [];
-      const match = answerList.find((a: any) => a?.rfqQuestionId === questionId);
-      if (!match) return;
-
-      const display = (match.answer && match.answer.trim() !== "")
-        ? match.answer
-        : (match.attachment?.fileName || "");
-      if (!display) return;
-
-      results.push({
-        supplierId: supplierAnswerSet?.supplierId || null,
-        display,
-        attachment: match.attachment || null,
-      });
-    });
-
-    return results;
-  };
-
-  const [downloadingAssetId, setDownloadingAssetId] = useState<string | null>(null);
-  const [downloadAssetError, setDownloadAssetError] = useState<string | null>(null);
-
-  const handleDownloadAnswerAttachment = async (attachment: any) => {
-    if (!attachment?.id || downloadingAssetId) return;
-    setDownloadingAssetId(attachment.id);
-    setDownloadAssetError(null);
-    try {
-      const asset = await downloadBuyerAsset(attachment.id);
-      if ('statusCode' in asset) {
-        throw new Error(asset.message || 'Failed to download document');
-      }
-      const byteCharacters = atob(asset.fileBytes);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: asset.contentType || "application/octet-stream" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = asset.fileName || attachment.fileName || "download";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      setDownloadAssetError(err.message || "Failed to download the document.");
-    } finally {
-      setDownloadingAssetId(null);
-    }
-  };
-  const [viewingAttachment, setViewingAttachment] = useState<{ fileName: string; url: string; contentType: string } | null>(null);
-  const [viewingAssetId, setViewingAssetId] = useState<string | null>(null);
-  const [viewAssetError, setViewAssetError] = useState<string | null>(null);
-
-  const handleViewAnswerAttachment = async (attachment: any) => {
-    if (!attachment?.id || viewingAssetId) return;
-    setViewingAssetId(attachment.id);
-    setViewAssetError(null);
-    try {
-      const asset = await downloadBuyerAsset(attachment.id);
-      if ('statusCode' in asset) {
-        throw new Error(asset.message || 'Failed to download document');
-      }
-      const byteCharacters = atob(asset.fileBytes);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const resolvedFileName = asset.fileName || attachment.fileName || "Document";
-      const extension = resolvedFileName.split(".").pop()?.toLowerCase() || "";
-      const extensionMimeMap: Record<string, string> = {
-        pdf: "application/pdf",
-        png: "image/png",
-        jpg: "image/jpeg",
-        jpeg: "image/jpeg",
-        gif: "image/gif",
-        webp: "image/webp",
-        svg: "image/svg+xml",
-        txt: "text/plain",
-      };
-      const viewContentType =
-        extensionMimeMap[extension] ||
-        (asset.contentType && asset.contentType !== "application/octet-stream" ? asset.contentType : "application/pdf");
-
-      const blob = new Blob([byteArray], { type: viewContentType });
-      const url = window.URL.createObjectURL(blob);
-      setViewingAttachment({
-        fileName: resolvedFileName,
-        url,
-        contentType: viewContentType,
-      });
-    } catch (err: any) {
-      setViewAssetError(err.message || "Failed to load the document.");
-    } finally {
-      setViewingAssetId(null);
-    }
-  };
-
-  const closeAttachmentViewer = () => {
-    if (viewingAttachment?.url) {
-      window.URL.revokeObjectURL(viewingAttachment.url);
-    }
-    setViewingAttachment(null);
-  };
 
 
   return (
@@ -805,41 +696,41 @@ useEffect(() => {
                   <div>
                     <div className="pud-rfq-table-container">
                       <table className="pud-rfq-items-table pud-allrfqs-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '48px' }}>S.No</th>
-                          <th>RFQ Number</th>
-                          <th>Title</th>
-                          <th>Organization</th>
-                          <th>Delivery Location</th>
-                          <th>Closing Date</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allRfqsList.map((rfq: any, idx: number) => (
-                          <tr key={rfq.rfqId || idx}>
-                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
-                            <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
-                            <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
-                            <td>{rfq.organizationName}</td>
-                            <td>{rfq.deliveryLocation}</td>
-                            <td>
-                              {rfq.endDate
-                                ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                                : "—"}
-                            </td>
-                            <td>
-                              <button
-                                className="pud-btn pud-btn-outline"
-                                onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                              >
-                                View RFQ Details
-                              </button>
-                            </td>
+                        <thead>
+                          <tr>
+                            <th style={{ width: '48px' }}>S.No</th>
+                            <th>RFQ Number</th>
+                            <th>Title</th>
+                            <th>Organization</th>
+                            <th>Delivery Location</th>
+                            <th>Closing Date</th>
+                            <th>Action</th>
                           </tr>
-                        ))}
-                      </tbody>
+                        </thead>
+                        <tbody>
+                          {allRfqsList.map((rfq: any, idx: number) => (
+                            <tr key={rfq.rfqId || idx}>
+                              <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
+                              <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
+                              <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                              <td>{rfq.organizationName}</td>
+                              <td>{rfq.deliveryLocation}</td>
+                              <td>
+                                {rfq.endDate
+                                  ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                  : "—"}
+                              </td>
+                              <td>
+                                <button
+                                  className="pud-btn pud-btn-outline"
+                                  onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                                >
+                                  View RFQ Details
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
                       </table>
                     </div>
 
@@ -873,10 +764,22 @@ useEffect(() => {
               <>
                 <div className="pud-modal pud-rfq-fullpage">
                   <div className="pud-modal-header">
-                    <span className="pud-modal-badge">
-                      <IconFile /> RFQ Specification
-                    </span>
-                    <button className="pud-modal-close" onClick={() => (viewingAttachment ? closeAttachmentViewer() : handleBackToAllRfqs())}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <span className="pud-modal-badge">
+                        <IconFile /> RFQ Specification
+                      </span>
+                      {fullPageRfq && (
+                        <button
+                          type="button"
+                          className="pud-modal-badge"
+                          style={{ border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,0.18)', color: '#ffffff' }}
+                          onClick={handleOpenQsAns}
+                        >
+                          <IconFile /> RFQ Question Answers
+                        </button>
+                      )}
+                    </div>
+                    <button className="pud-modal-close" onClick={handleBackToAllRfqs}>
                       <IconClose />
                     </button>
                     <h2 className="pud-modal-name">
@@ -891,29 +794,7 @@ useEffect(() => {
                   </div>
 
                   <div className="pud-modal-body">
-                    {viewingAttachment ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '520px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                          <button
-                            type="button"
-                            className="pud-btn pud-btn-outline"
-                            style={{ padding: '5px 12px', fontSize: '12px' }}
-                            onClick={closeAttachmentViewer}
-                          >
-                            ← Back
-                          </button>
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
-                            {viewingAttachment.fileName}
-                          </span>
-                          <span style={{ width: '70px' }} />
-                        </div>
-                        <iframe
-                          src={viewingAttachment.url}
-                          title={viewingAttachment.fileName}
-                          style={{ flex: 1, width: '100%', minHeight: '480px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}
-                        />
-                      </div>
-                    ) : loadingFullPageRfq ? (
+                    {loadingFullPageRfq ? (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
                         <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <div className="pud-spinner" style={{ width: '32px', height: '32px' }} />
@@ -925,8 +806,7 @@ useEffect(() => {
                         {fullPageRfqError}
                       </div>
                     ) : fullPageRfq ? (
-                      <div className="pud-rfq-detail-grid">
-                        {/* Left Column: RFQ Specifications & Materials */}
+                      <div className="pud-rfq-detail-grid pud-rfq-detail-grid-single">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
                           <div>
                             <div className="pud-modal-section-title">Description</div>
@@ -936,17 +816,17 @@ useEffect(() => {
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px 18px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
                               <div>
-  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
-  <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-    {new Date(fullPageRfq.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-  </div>
-</div>
-<div>
-  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>End Date</div>
-  <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-    {new Date(fullPageRfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-  </div>
-</div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
+                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                                  {new Date(fullPageRfq.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                </div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>End Date</div>
+                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                                  {new Date(fullPageRfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                </div>
+                              </div>
                               <div>
                                 <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Add Lot Option</div>
                                 <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
@@ -982,7 +862,7 @@ useEffect(() => {
                                         </td>
                                         <td>
                                           <div>
-                                            {item.materialCode || "N/A"}  
+                                            {item.materialCode || "N/A"}
                                           </div>
                                         </td>
                                         <td>
@@ -1101,76 +981,6 @@ useEffect(() => {
                           </div>
 
                         </div>
-                        {/* Right Column: Evaluation Questions & Answers */}
-                        <div className="pud-rfq-detail-right">
-                          <div className="pud-modal-section-title">Evaluation Questions & Answers</div>
-
-                          {fullPageRfq.questions && fullPageRfq.questions.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '600px', overflowY: 'auto' }}>
-                              {fullPageRfq.questions.map((q: any, i: number) => {
-                                const answers = resolveAnswersForQuestion(fullPageRfq, q);
-                                return (
-                                  <div key={i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
-                                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
-                                        Q{i + 1}: {q.question}
-                                      </span>
-                                      <span style={{ fontSize: '11px', color: '#64748b', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
-                                        {q.questionType} {q.isRequired ? "(Required)" : ""}
-                                      </span>
-                                    </div>
-
-                                    {answers.length > 0 ? (
-                                      <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        {answers.map((ans, ai) => (
-                                          <div key={ai} style={{ background: '#ffffff', border: '1px solid #dbeafe', borderRadius: '6px', padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-                                            <div style={{ fontSize: '12.5px', color: '#334155' }}>
-                                              {ans.display}
-                                            </div>
-                                            {ans.attachment && (
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                                <button
-                                                  type="button"
-                                                  className="pud-btn pud-btn-outline"
-                                                  style={{ padding: '4px 10px', fontSize: '11.5px' }}
-                                                  disabled={viewingAssetId === ans.attachment.id}
-                                                  onClick={() => handleViewAnswerAttachment(ans.attachment)}
-                                                >
-                                                  {viewingAssetId === ans.attachment.id ? "Loading..." : "View"}
-                                                </button>
-                                                <button
-                                                  type="button"
-                                                  className="pud-btn pud-btn-outline"
-                                                  style={{ padding: '4px 10px', fontSize: '11.5px' }}
-                                                  disabled={downloadingAssetId === ans.attachment.id}
-                                                  onClick={() => handleDownloadAnswerAttachment(ans.attachment)}
-                                                >
-                                                  {downloadingAssetId === ans.attachment.id ? "Downloading..." : "Download"}
-                                                </button>
-                                              </div>
-                                            )}
-                                          </div>
-                                        ))}
-                                        {downloadAssetError && (
-                                          <div style={{ fontSize: '11px', color: '#ef4444' }}>{downloadAssetError}</div>
-                                        )}
-                                        {viewAssetError && (
-                                          <div style={{ fontSize: '11px', color: '#ef4444' }}>{viewAssetError}</div>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <div style={{ marginTop: '8px', fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
-                                        No response yet.
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <div style={{ fontSize: '13px', color: '#64748b' }}>No evaluation questions were configured for this RFQ.</div>
-                          )}
-                        </div>
                       </div>
                     ) : null}
                   </div>
@@ -1179,20 +989,25 @@ useEffect(() => {
                     <div className="pud-modal-footer">
                       <button
                         className="pud-btn pud-btn-outline"
-                        onClick={() => (viewingAttachment ? closeAttachmentViewer() : handleBackToAllRfqs())}
+                        onClick={handleBackToAllRfqs}
                         style={{ marginRight: '10px' }}
                       >
-                        {viewingAttachment ? "Back" : "Close"}
+                        Close
                       </button>
-                      {!viewingAttachment && (
-                        <button className="pud-btn pud-btn-message" style={{ background: '#2563eb', color: '#ffffff' }}>
-                          Evaluate Quotations
-                        </button>
-                      )}
+                      <button className="pud-btn pud-btn-message" style={{ background: '#2563eb', color: '#ffffff' }}>
+                        Evaluate Quotations
+                      </button>
                     </div>
                   )}
                 </div>
               </>
+            ) : rfqPageView === "qsAns" ? (
+              <QsAns
+                rfq={fullPageRfq}
+                loading={loadingFullPageRfq}
+                error={fullPageRfqError && !fullPageRfq ? fullPageRfqError : null}
+                onBack={handleBackToRfqDetail}
+              />
             ) : activeNav === "companyProfile" ? (
               <CompanyProfile
                 mode="network-admin"
