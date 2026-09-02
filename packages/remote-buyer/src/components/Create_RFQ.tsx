@@ -7,6 +7,7 @@ import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../ap
 import type { CreateRFQPayload, RfqDocumentAssetDto, RfqItemDto, RfqQuestionDto, VerifiedSupplierDto, SupplierVerificationType } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
 import type { CountryDto, UnitDto, CurrencyDto } from "../api/masterdataApi";
+import ItemMasterModal from "./ItemMasterModal";
 
 
 const HARDCODED_RFQ_VERIFICATION_TEMPLATE_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
@@ -709,6 +710,7 @@ if (Array.isArray(data)) {
     const [viewTemplateLoading, setViewTemplateLoading] = useState(false);
     const [viewTemplateError, setViewTemplateError] = useState<string | null>(null);
     const [viewTemplateData, setViewTemplateData] = useState<VerificationTemplate | null>(null);
+    const [isItemMasterModalOpen, setIsItemMasterModalOpen] = useState(false);
 
     const handleViewTemplate = async () => {
         if (!registrationTemplateId) return;
@@ -1669,9 +1671,18 @@ if (Array.isArray(data)) {
                                     })}
                                 </select>
                             </div>
-                            <button className="bd-btn-add" onClick={handleAddLineItem} type="button">
-                                <IconPlus /> Add
-                            </button>
+                            <div className="bd-item-button-section">
+                                <button className="bd-btn-add" onClick={handleAddLineItem} type="button">
+                                    <IconPlus /> Add
+                                </button>
+                                <button
+                                    type="button"
+                                    className="bd-btn-add"
+                                    onClick={() => setIsItemMasterModalOpen(true)}
+                                >
+                                    + Add Item Master
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -2039,6 +2050,12 @@ if (Array.isArray(data)) {
                     </div>
                 </div>
             )}
+
+            <ItemMasterModal
+                isOpen={isItemMasterModalOpen}
+                onClose={() => setIsItemMasterModalOpen(false)}
+                buyerId={buyerProfileId}
+            />
         </div>
     );
 };
