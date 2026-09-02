@@ -651,7 +651,7 @@ if (Array.isArray(data)) {
     const [supplierTypeFilter, setSupplierTypeFilter] = useState<"ALL" | SupplierVerificationType>("ALL");
     const [supplierSearchQuery, setSupplierSearchQuery] = useState("");
     const [registrationTemplate, setRegistrationTemplate] = useState("");
-    const supplierRegistrationLink = "https://supplier.company.com/register";
+    // const supplierRegistrationLink = "https://supplier.company.com/register";
 
     useEffect(() => {
         if (activeStep !== "suppliers") return;
@@ -1771,10 +1771,10 @@ if (Array.isArray(data)) {
                                             <IconEye /> View Template
                                         </button>
                                     </div>
-                                    <label className="bd-label bd-reg-link-label">Supplier Registration Link</label>
-                                    <input className="bd-input bd-reg-link-box" type="text" readOnly value={supplierRegistrationLink} />
+                                    {/* <label className="bd-label bd-reg-link-label">Supplier Registration Link</label>
+                                    <input className="bd-input bd-reg-link-box" type="text" readOnly value={supplierRegistrationLink} /> */}
                                 </div>
-                                <div className="bd-onboarding-right">
+                                {/* <div className="bd-onboarding-right">
                                     <div className="bd-metrics-title">Pipeline Metrics</div>
                                     <div className="bd-metrics-grid">
                                         <div className="bd-metric-card bd-metric-card-green">
@@ -1789,7 +1789,7 @@ if (Array.isArray(data)) {
                                     <p className="bd-metrics-note">
                                         Unverified suppliers will be redirected to complete the selected form before bidding.
                                     </p>
-                                </div>
+                                </div> */}
                             </div>
                         </div>
                     )}
