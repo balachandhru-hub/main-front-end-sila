@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./QsAns.css";
+import "./Qsans.css";
 import { downloadBuyerAsset } from "../api/Buyerapi";
 
 /* ---------------------------------- Icons ---------------------------------- */
