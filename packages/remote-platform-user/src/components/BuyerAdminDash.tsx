@@ -22,7 +22,6 @@ import UserTemplate from "./usertemplate"
 import { ToastContainer } from "@vosox/shared-ui";
 import type { ErrorResponseDto } from "../dto/platformDto";
 import QuotationComparisonCard from "./Quotationcomparisoncard";
-import "./Quotationcomparisoncard.css";
 
 interface StatCard {
   icon: React.ReactNode;

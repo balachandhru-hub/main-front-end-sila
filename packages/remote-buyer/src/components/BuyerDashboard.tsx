@@ -7,7 +7,6 @@ import Header from "./Header";
 import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, downloadBuyerAsset } from "../api/Buyerapi";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
 import QuotationComparisonCard from "../../../remote-platform-user/src/components/Quotationcomparisoncard.tsx";
-import "../../../remote-platform-user/src/components/Quotationcomparisoncard.css";
 import { CompanyProfile } from '@vosox/shared-ui';
 import { useAuth } from '../../../host-app/src/AuthContext.tsx';
 import type { SupplierQuotationComparisonResponse } from "../../../remote-platform-user/src/api/networkAdminApi";
