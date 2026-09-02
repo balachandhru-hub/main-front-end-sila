@@ -1,4 +1,6 @@
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     box-sizing: border-box;
 }
 
@@ -809,13 +811,19 @@
     min-width: 0;
 }
 
-@media (max-width: 1200px){
+.pud-rfq-detail-grid-single {
+    grid-template-columns: 1fr;
+    width: 51.25rem;
+    padding: 0 auto;
+}
+
+@media (max-width: 1200px) {
     .pud-stats-grid {
         grid-template-columns: repeat(3, 1fr);
     }
 }
 
-@media (max-width: 1024px){
+@media (max-width: 1024px) {
     .pud-panels {
         grid-template-columns: 1fr;
     }
@@ -891,7 +899,7 @@
         padding: 0 1rem;
     }
 
-    .pud-subtitle{
+    .pud-subtitle {
         width: auto !important;
         font-size: 0.875rem !important;
     }

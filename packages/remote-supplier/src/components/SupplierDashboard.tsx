@@ -394,7 +394,7 @@ const SupplierDashboard: React.FC = () => {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
- const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
 
@@ -457,7 +457,7 @@ const SupplierDashboard: React.FC = () => {
     if (!rfq) return { notYetOpen: false, closed: false, canSubmit: false };
     const startMs = parseAsUtcMs(rfq.startDate);
     const endMs = parseAsUtcMs(rfq.endDate);
-    const nowMs = Date.now(); 
+    const nowMs = Date.now();
 
     const notYetOpen = startMs !== null && nowMs < startMs;
     const closed = endMs !== null && nowMs > endMs;
@@ -494,7 +494,7 @@ const SupplierDashboard: React.FC = () => {
         try {
           const profile = await getSupplierProfile();
           if (profile && 'id' in profile && profile.id) {
-            setSupplierId(profile.id);   
+            setSupplierId(profile.id);
           } else {
             setRfqsError("Supplier profile not found. Please complete onboarding.");
             setLoadingRfqs(false);
@@ -679,7 +679,7 @@ const SupplierDashboard: React.FC = () => {
   };
 
   const handleNavClick = (key: string) => {
-    setIsMobileSidebarOpen(false); 
+    setIsMobileSidebarOpen(false);
     if (key === "rfqs") {
       handleOpenAllRfqs();
       return;
@@ -891,6 +891,7 @@ const SupplierDashboard: React.FC = () => {
       const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
       const payload = {
         supplierRFQId: supplierRFQId as string,
+        supplierId: supplierId as string,
         answers: Object.values(rfqAnswers).map((a) => {
           const question = selectedRfq.questions?.find(q => q.questionId === a.rfqQuestionId);
 
@@ -1610,29 +1611,29 @@ const SupplierDashboard: React.FC = () => {
           >
             Close
           </button>
-            {selectedRfq && (
-              <button
-                type="submit"
-                className="pud-btn pud-btn-message"
-                disabled={submittingQuote || !canSubmit}
-                style={{ background: '#2563eb', color: '#ffffff' }}
-                title={
-                  notYetOpen
-                    ? "This RFQ hasn't opened for bidding yet."
-                    : closed
+          {selectedRfq && (
+            <button
+              type="submit"
+              className="pud-btn pud-btn-message"
+              disabled={submittingQuote || !canSubmit}
+              style={{ background: '#2563eb', color: '#ffffff' }}
+              title={
+                notYetOpen
+                  ? "This RFQ hasn't opened for bidding yet."
+                  : closed
                     ? "This RFQ's submission window has closed."
                     : undefined
-                }
-              >
-                {submittingQuote
-                  ? "Submitting..."
-                  : notYetOpen
+              }
+            >
+              {submittingQuote
+                ? "Submitting..."
+                : notYetOpen
                   ? "Not Yet Open"
                   : closed
-                  ? "Submission Closed"
-                  : "Submit Quotation"}
-              </button>
-            )}
+                    ? "Submission Closed"
+                    : "Submit Quotation"}
+            </button>
+          )}
         </div>
       </form>
 
@@ -1669,7 +1670,7 @@ const SupplierDashboard: React.FC = () => {
 
         <aside className="pud-sidebar">
           <nav className="pud-nav">
-          
+
             {navItems.map((item) => (
               <div
                 key={item.key}
@@ -1681,7 +1682,7 @@ const SupplierDashboard: React.FC = () => {
                 {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
               </div>
             ))}
-          
+
 
             <Catalog
               onShowCatalogList={() => setActiveNav("catalogList")}
@@ -1836,10 +1837,10 @@ const SupplierDashboard: React.FC = () => {
                   }
                   return null;
                 }}
-              /> ) : (
-            // ) : activeNav === "invitations" ? (
-            //   <Invitations />
-            // ) : (
+              />) : (
+              // ) : activeNav === "invitations" ? (
+              //   <Invitations />
+              // ) : (
               <>
                 <h1 className="pud-title">Supplier Operations Command</h1>
                 <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
@@ -2189,13 +2190,13 @@ const SupplierDashboard: React.FC = () => {
                     color: '#0f172a'
                   }}
                 />
-                  {otpRemaining <= 0 ? (
-                    <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '10px', textAlign: 'center' }}>
-                      Code expired. Please resend the OTP.
-                    </div>
-                  ) : otpError ? (
-                    <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '10px', textAlign: 'center' }}>{otpError}</div>
-                  ) : null}
+                {otpRemaining <= 0 ? (
+                  <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '10px', textAlign: 'center' }}>
+                    Code expired. Please resend the OTP.
+                  </div>
+                ) : otpError ? (
+                  <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '10px', textAlign: 'center' }}>{otpError}</div>
+                ) : null}
                 <div style={{ textAlign: 'center', marginTop: '10px' }}>
                   <button
                     type="button"
@@ -2238,8 +2239,8 @@ const SupplierDashboard: React.FC = () => {
                 <span className="pud-modal-badge" style={{ background: '#fef3c7', color: '#d97706' }}>
                   <IconAlertCircle /> Confirmation Required
                 </span>
-                <button 
-                  className="pud-modal-close" 
+                <button
+                  className="pud-modal-close"
                   onClick={() => setShowConfirmSubmit(false)}
                 >
                   <IconClose />

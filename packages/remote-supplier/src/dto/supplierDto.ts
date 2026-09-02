@@ -414,6 +414,7 @@ export interface SubmitRfqAnswerItemDto {
 
 export interface SubmitRfqAnswersPayload {
   supplierRFQId: string;
+  supplierId: string;
   answers: SubmitRfqAnswerItemDto[];
 }
 export interface ErrorResponseDto {

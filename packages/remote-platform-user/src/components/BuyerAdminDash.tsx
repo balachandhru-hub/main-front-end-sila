@@ -17,6 +17,7 @@ import CreateRFQ from "./UserListTable/CreateRFQ";
 import { logoutPlatformUser } from "../api/platformApi";
 import UserTemplate from "./usertemplate"
 import { ToastContainer } from "@vosox/shared-ui";
+import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -476,7 +477,7 @@ const BuyerAdminDash: React.FC = () => {
   }, [activeNav]);
 
 
-  const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
+  const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail" | "qsAns">("dashboard");
 
   const [allRfqsList, setAllRfqsList] = useState<any[]>([]);
   const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
@@ -544,8 +545,8 @@ const BuyerAdminDash: React.FC = () => {
     loadAllRfqsPage(allRfqsPage - 1);
   };
 
-const handleNavClick = (key: string) => {
-  setIsMobileSidebarOpen(false); 
+  const handleNavClick = (key: string) => {
+    setIsMobileSidebarOpen(false);
     if (key === "activeRFQs") {
       handleOpenAllRfqs();
       return;
@@ -585,6 +586,14 @@ const handleNavClick = (key: string) => {
     setFullPageRfqError(null);
   };
 
+  const handleOpenQsAns = () => {
+    setRfqPageView("qsAns");
+  };
+
+  const handleBackToRfqDetail = () => {
+    setRfqPageView("rfqDetail");
+  };
+
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
@@ -598,42 +607,6 @@ const handleNavClick = (key: string) => {
       window.dispatchEvent(new CustomEvent("session:expired"));
       setLoggingOut(false);
     }
-  };
-
-  const resolveAnswersForQuestion = (
-    rfq: any,
-    question: any,
-    _index: number
-  ): { supplierName: string | null; display: string }[] => {
-    const answerList = rfq?.supplierAnswers?.answers;
-    if (!Array.isArray(answerList) || !question?.id) return [];
-
-    const match = answerList.find((a: any) => a?.rfqQuestionId === question.id);
-    if (!match) return [];
-
-    const resolveOptionLabels = (ids: string[]): string[] => {
-      const optionList = question?.questionOptions;
-      if (!Array.isArray(optionList)) return [];
-      return ids
-        .map((id) => optionList.find((opt: any) => opt?.id === id)?.label)
-        .filter((label: any): label is string => Boolean(label));
-    };
-
-    let display: string | null = null;
-
-    if (match.attachment) {
-      display = match.attachment.fileName || match.answer || "Attached file";
-    } else if (match.answer) {
-      display = match.answer;
-    } else if (Array.isArray(match.questionOptionIds) && match.questionOptionIds.length > 0) {
-      const labels = resolveOptionLabels(match.questionOptionIds);
-      display = labels.length > 0 ? labels.join(", ") : match.questionOptionIds.join(", ");
-    } else if (match.questionOptionId) {
-      const labels = resolveOptionLabels([match.questionOptionId]);
-      display = labels[0] || match.questionOptionId;
-    }
-
-    return display ? [{ supplierName: null, display }] : [];
   };
 
   return (
@@ -754,41 +727,41 @@ const handleNavClick = (key: string) => {
                   <div>
                     <div className="bad-rfq-table-container">
                       <table className="bad-rfq-items-table bad-allrfqs-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '48px' }}>S.No</th>
-                          <th>RFQ Number</th>
-                          <th>Title</th>
-                          <th>Organization</th>
-                          <th>Delivery Location</th>
-                          <th>Closing Date</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allRfqsList.map((rfq: any, idx: number) => (
-                          <tr key={rfq.rfqId || idx}>
-                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
-                            <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
-                            <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
-                            <td>{rfq.organizationName}</td>
-                            <td>{rfq.deliveryLocation}</td>
-                            <td>
-                              {rfq.endDate
-                                ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                                : "—"}
-                            </td>
-                            <td>
-                              <button
-                                className="bad-btn bad-btn-outline"
-                                onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                              >
-                                View RFQ Details
-                              </button>
-                            </td>
+                        <thead>
+                          <tr>
+                            <th style={{ width: '48px' }}>S.No</th>
+                            <th>RFQ Number</th>
+                            <th>Title</th>
+                            <th>Organization</th>
+                            <th>Delivery Location</th>
+                            <th>Closing Date</th>
+                            <th>Action</th>
                           </tr>
-                        ))}
-                      </tbody>
+                        </thead>
+                        <tbody>
+                          {allRfqsList.map((rfq: any, idx: number) => (
+                            <tr key={rfq.rfqId || idx}>
+                              <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
+                              <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
+                              <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                              <td>{rfq.organizationName}</td>
+                              <td>{rfq.deliveryLocation}</td>
+                              <td>
+                                {rfq.endDate
+                                  ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                  : "—"}
+                              </td>
+                              <td>
+                                <button
+                                  className="bad-btn bad-btn-outline"
+                                  onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                                >
+                                  View RFQ Details
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
                       </table>
                     </div>
 
@@ -822,9 +795,21 @@ const handleNavClick = (key: string) => {
               <>
                 <div className="bad-modal bad-rfq-fullpage">
                   <div className="bad-modal-header">
-                    <span className="bad-modal-badge">
-                      <IconFile /> RFQ Specification
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <span className="bad-modal-badge">
+                        <IconFile /> RFQ Specification
+                      </span>
+                      {fullPageRfq && (
+                        <button
+                          type="button"
+                          className="bad-modal-badge"
+                          style={{ border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,0.18)', color: '#ffffff' }}
+                          onClick={handleOpenQsAns}
+                        >
+                          <IconFile /> RFQ Question Answers
+                        </button>
+                      )}
+                    </div>
                     <button className="bad-modal-close" onClick={handleBackToAllRfqs}>
                       <IconClose />
                     </button>
@@ -852,8 +837,8 @@ const handleNavClick = (key: string) => {
                         {fullPageRfqError}
                       </div>
                     ) : fullPageRfq ? (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px' }}>
-                        {/* Left Column: RFQ Specifications & Materials */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '28px', maxWidth: '820px', margin: '0 auto' }}>
+                        {/* RFQ Specifications & Materials */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                           <div>
                             <div className="bad-modal-section-title">Description</div>
@@ -863,17 +848,17 @@ const handleNavClick = (key: string) => {
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px 18px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
                               <div>
-  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
-  <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-    {new Date(fullPageRfq.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-  </div>
-</div>
-<div>
-  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>End Date</div>
-  <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-    {new Date(fullPageRfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-  </div>
-</div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
+                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                                  {new Date(fullPageRfq.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                </div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>End Date</div>
+                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                                  {new Date(fullPageRfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                </div>
+                              </div>
                               <div>
                                 <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Add Lot Option</div>
                                 <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
@@ -1031,53 +1016,6 @@ const handleNavClick = (key: string) => {
 
                         </div>
 
-                        {/* Right Column: Evaluation Questions & Answers */}
-                        <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                          <div className="bad-modal-section-title">Evaluation Questions & Answers</div>
-
-                          {fullPageRfq.questions && fullPageRfq.questions.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '600px', overflowY: 'auto' }}>
-                              {fullPageRfq.questions.map((q: any, i: number) => {
-                                const answers = resolveAnswersForQuestion(fullPageRfq, q, i);
-                                return (
-                                  <div key={i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
-                                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
-                                        Q{i + 1}: {q.question}
-                                      </span>
-                                      <span style={{ fontSize: '11px', color: '#64748b', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
-                                        {q.questionType} {q.isRequired ? "(Required)" : ""}
-                                      </span>
-                                    </div>
-
-                                    {answers.length > 0 ? (
-                                      <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        {answers.map((ans, ai) => (
-                                          <div key={ai} style={{ background: '#ffffff', border: '1px solid #dbeafe', borderRadius: '6px', padding: '8px 10px' }}>
-                                            {ans.supplierName && (
-                                              <div style={{ fontSize: '10.5px', fontWeight: 600, color: '#2563eb', marginBottom: '3px' }}>
-                                                {ans.supplierName}
-                                              </div>
-                                            )}
-                                            <div style={{ fontSize: '12.5px', color: '#334155' }}>
-                                              {ans.display}
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <div style={{ marginTop: '8px', fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
-                                        No response yet.
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <div style={{ fontSize: '13px', color: '#64748b' }}>No evaluation questions were configured for this RFQ.</div>
-                          )}
-                        </div>
                       </div>
                     ) : null}
                   </div>
@@ -1098,6 +1036,13 @@ const handleNavClick = (key: string) => {
                   )}
                 </div>
               </>
+            ) : rfqPageView === "qsAns" ? (
+              <AdminQsAns
+                rfq={fullPageRfq}
+                loading={loadingFullPageRfq}
+                error={fullPageRfqError && !fullPageRfq ? fullPageRfqError : null}
+                onBack={handleBackToRfqDetail}
+              />
             ) : (
               <>
                 <h1 className="bad-title">Buyer Admin Command Center</h1>
