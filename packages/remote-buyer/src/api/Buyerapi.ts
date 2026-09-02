@@ -315,6 +315,20 @@ export interface UpdateVerificationTemplateQuestionPayload {
   verificationTemplateQuestionDto: UpdateVerificationTemplateQuestionDto;
 }
 
+export interface ItemMasterDto {
+  id: string;
+  buyerId: string;
+  description: string;
+  materialCode: string;
+  materialGroup: string;
+}
+
+export interface CreateItemMasterRequestDto {
+  buyerId: string;
+  description: string;
+  materialCode: string;
+  materialGroup: string;
+}
 
 export const getBuyerProfile = async (): Promise<BuyerProfileResponse | null> => {
   try {
@@ -1065,5 +1079,30 @@ export const fetchBuyerCatalogDetail = async (
       message: 'Unexpected Error',
       description: 'Something went wrong while fetching product details.',
     };
+  }
+};
+
+export const createItemMaster = async (
+  payload: CreateItemMasterRequestDto
+): Promise<ItemMasterDto> => {
+  try {
+    const response = await axiosInstance.post('/api/v1/buyer/item-master', payload);
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+
+    let errMsg = 'Failed to create item master.';
+    if (typeof responseData === 'string') {
+      errMsg = responseData;
+    } else if (responseData?.message) {
+      errMsg = responseData.message;
+    } else if (responseData?.description) {
+      errMsg = responseData.description;
+    } else if (error.message) {
+      errMsg = error.message;
+    }
+
+    throw new Error(`${errMsg} (${status})`);
   }
 };

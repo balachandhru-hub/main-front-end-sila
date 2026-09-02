@@ -414,6 +414,11 @@
     align-items: end;
 }
 
+.bd-item-button-section{
+    display: flex;
+    gap: 0.5rem;
+}
+
 .bd-item-add-field {
     display: flex;
     flex-direction: column;
