@@ -290,7 +290,7 @@ const navItems: { key: string; icon: React.ReactNode; label: string; badge?: num
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
   // { key: "invitations", icon: <NavIconMail />, label: "Invitations" },
   { key: "rfqs", icon: <NavIconFile />, label: "RFQs" },
-  { key: "quotations", icon: <NavIconUser />, label: "Quotations" },
+  // { key: "quotations", icon: <NavIconUser />, label: "Quotations" },
   { key: "purchaseOrders", icon: <NavIconBag />, label: "Purchase Orders" },
   { key: "contracts", icon: <NavIconContract />, label: "Contracts" },
   { key: "invoices", icon: <NavIconInvoice />, label: "Invoices" },
@@ -1669,6 +1669,7 @@ const SupplierDashboard: React.FC = () => {
 
         <aside className="pud-sidebar">
           <nav className="pud-nav">
+          
             {navItems.map((item) => (
               <div
                 key={item.key}
@@ -1680,6 +1681,7 @@ const SupplierDashboard: React.FC = () => {
                 {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
               </div>
             ))}
+          
 
             <Catalog
               onShowCatalogList={() => setActiveNav("catalogList")}
