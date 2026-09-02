@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import "./SupplierAdminDash.css";
 import "../../../remote-supplier/src/components/SupplierDashboard.css"
 import Header from "./Header";
@@ -14,6 +14,8 @@ import {
   submitSupplierQuotation,
   submitRfqAnswers,
   fetchMetadataReferenceList,
+  sendOtp,
+  verifyOtp,
   type RFQMasterDataItem,
   type RFQDetailResponse,
   type SubmitQuotationPayload,
@@ -351,6 +353,54 @@ const SupplierAdminDash: React.FC = () => {
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
 
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
+  const [otpStage, setOtpStage] = useState<"none" | "send" | "verify">("none");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
+  const [otpRemaining, setOtpRemaining] = useState(600);
+  const supplierEmailRef = useRef<string | null>(null);
+
+  const OTP_WINDOW_MS = 10 * 60 * 1000;
+
+  const formatOtpTimer = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, "0");
+    const s = (secs % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
+  const parseAsUtcMs = (dateStr?: string | null): number | null => {
+    if (!dateStr) return null;
+    const hasTz = /Z$|[+-]\d{2}:\d{2}$/.test(dateStr);
+    const ms = Date.parse(hasTz ? dateStr : `${dateStr}Z`);
+    return Number.isNaN(ms) ? null : ms;
+  };
+
+  const getRfqSubmissionWindowStatus = (rfq: RFQDetailResponse | null) => {
+    if (!rfq) return { notYetOpen: false, closed: false, canSubmit: false };
+    const startMs = parseAsUtcMs(rfq.startDate);
+    const endMs = parseAsUtcMs(rfq.endDate);
+    const nowMs = Date.now();
+
+    const notYetOpen = startMs !== null && nowMs < startMs;
+    const closed = endMs !== null && nowMs > endMs;
+
+    return { notYetOpen, closed, canSubmit: !notYetOpen && !closed };
+  };
+
+
+
+  useEffect(() => {
+    if (otpStage !== "verify" || !otpExpiresAt) return;
+    const tick = () => {
+      const left = Math.max(0, Math.round((otpExpiresAt - Date.now()) / 1000));
+      setOtpRemaining(left);
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [otpStage, otpExpiresAt]);
 
   useEffect(() => {
     useNetworkAdminAuthStore.getState().initializeFromSession();
@@ -387,7 +437,19 @@ const SupplierAdminDash: React.FC = () => {
   const [submittingAnswers, setSubmittingAnswers] = useState(false);
   const [submitAnswersError, setSubmitAnswersError] = useState<string | null>(null);
   const [submitAnswersSuccess, setSubmitAnswersSuccess] = useState(false);
+  const [rfqWindowTick, setRfqWindowTick] = useState(0);
 
+  useEffect(() => {
+    if (!selectedRfq) return;
+    const t = setInterval(() => setRfqWindowTick((n) => n + 1), 30000);
+    return () => clearInterval(t);
+  }, [selectedRfq]);
+
+  const { notYetOpen, closed, canSubmit } = useMemo(
+    () => getRfqSubmissionWindowStatus(selectedRfq),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedRfq, rfqWindowTick],
+  );
   // supplierId comes straight from sessionStorage (set during login) — no
   // profile-fetch call here, since getSupplierProfile() is a supplier-role
   // scoped endpoint and 401/403s when called from the network-admin session.
@@ -835,12 +897,120 @@ const SupplierAdminDash: React.FC = () => {
   // ✅ UPDATED: Handle submit button click - shows confirmation modal
   const handleSubmitQuotationClick = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setShowConfirmSubmit(true);
+    setOtpError(null);
+
+    const { canSubmit: withinWindow } = getRfqSubmissionWindowStatus(selectedRfq);
+    if (!withinWindow) {
+      setSubmitQuoteError("This RFQ is outside its active submission window and can no longer accept quotations.");
+      return;
+    }
+
+    const storedExpiry = Number(sessionStorage.getItem("vsx_otp_expiry") || 0);
+    const alreadyVerified = sessionStorage.getItem("vsx_verification_token");
+
+    if (alreadyVerified && storedExpiry && Date.now() < storedExpiry) {
+      setShowConfirmSubmit(true);
+      return;
+    }
+
+    if (storedExpiry && Date.now() < storedExpiry) {
+      setOtpCode("");
+      setOtpExpiresAt(storedExpiry);
+      setOtpRemaining(Math.max(0, Math.round((storedExpiry - Date.now()) / 1000)));
+      setOtpStage("verify");
+      return;
+    }
+
+    sessionStorage.removeItem("vsx_verification_token");
+    sessionStorage.removeItem("vsx_otp_expiry");
+    setOtpCode("");
+    setOtpStage("send");
+  };
+
+  const handleSendOtp = async () => {
+    setOtpError(null);
+    setSendingOtp(true);
+    try {
+      if (!supplierEmailRef.current) {
+        const profile = await getSupplierProfile();
+        if (!isErrorResponse(profile) && profile && "businessProfile" in profile) {
+          supplierEmailRef.current = (profile as any).businessProfile?.email || null;
+        }
+      }
+      const res = await sendOtp();
+      if (res && "statusCode" in res && (res as any).statusCode >= 400) {
+        setOtpError((res as any).message || "Couldn't send the code, try again.");
+        return;
+      }
+      const expiry = Date.now() + OTP_WINDOW_MS;
+      sessionStorage.setItem("vsx_otp_expiry", String(expiry));
+      sessionStorage.removeItem("vsx_verification_token");
+      setOtpExpiresAt(expiry);
+      setOtpRemaining(600);
+      setOtpCode("");
+      setOtpStage("verify");
+    } catch (err: any) {
+      setOtpError(err?.message || "Couldn't send the code, try again.");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpCode.trim()) {
+      setOtpError("Enter the code we emailed you.");
+      return;
+    }
+    if (otpRemaining <= 0) {
+      setOtpError("Code expired. Please resend the OTP.");
+      return;
+    }
+    setVerifyingOtp(true);
+    setOtpError(null);
+    try {
+      const res = await verifyOtp({ email: supplierEmailRef.current || "", otp: otpCode.trim() });
+      if (!res || (res as any).success === false || ("statusCode" in res && (res as any).statusCode >= 400)) {
+        setOtpError((res as any)?.message || "That code didn't match, try again.");
+        return;
+      }
+      const token = (res as any).token;
+      if (!token) {
+        setOtpError("Verification failed, please retry.");
+        return;
+      }
+      sessionStorage.setItem("vsx_verification_token", token);
+      setOtpStage("none");
+      setShowConfirmSubmit(true);
+    } catch (err: any) {
+      setOtpError(err?.message || "That code didn't match, try again.");
+    } finally {
+      setVerifyingOtp(false);
+    }
   };
 
   // ✅ NEW: Actual submission logic (called after user confirms)
   const handleConfirmSubmitQuotation = async () => {
     if (!selectedRfq) return;
+
+    const { canSubmit: withinWindow } = getRfqSubmissionWindowStatus(selectedRfq);
+    if (!withinWindow) {
+      setShowConfirmSubmit(false);
+      setSubmitQuoteError("This RFQ's submission window has closed. You can no longer submit a quotation.");
+      return;
+    }
+
+    const verificationToken = sessionStorage.getItem("vsx_verification_token");
+    const tokenExpiry = Number(sessionStorage.getItem("vsx_otp_expiry") || 0);
+    if (!verificationToken || !tokenExpiry || Date.now() > tokenExpiry) {
+      sessionStorage.removeItem("vsx_verification_token");
+      sessionStorage.removeItem("vsx_otp_expiry");
+      setShowConfirmSubmit(false);
+      setSubmitQuoteError("Your verification code expired. Please verify again.");
+      setOtpCode("");
+      setOtpError(null);
+      setOtpStage("send");
+      return;
+    }
 
     setShowConfirmSubmit(false);
     setSubmittingQuote(true);
@@ -860,6 +1030,7 @@ const SupplierAdminDash: React.FC = () => {
         discountType: quoteDiscountType,
         tax: Number(quoteTax),
         taxType: quoteTaxType,
+        temporaryVerificationToken: verificationToken,
         ...(!selectedRfq.addLotOption ? {
           items: selectedRfq.items.map((item, idx) => {
             const key = item.id || item.buyerRFQItemId || `item-${idx}`;
@@ -874,6 +1045,8 @@ const SupplierAdminDash: React.FC = () => {
       };
 
       await submitSupplierQuotation(payload);
+      sessionStorage.removeItem("vsx_verification_token");
+      sessionStorage.removeItem("vsx_otp_expiry");
       setSubmitQuoteSuccess(true);
 
       const updatedDetails = await fetchRFQById(selectedRfqId!);
@@ -1355,6 +1528,18 @@ const SupplierAdminDash: React.FC = () => {
           )}
         </div>
 
+        {selectedRfq && !canSubmit && (
+          <div style={{
+            background: '#fef3c7', border: '1px solid #fde68a', color: '#92400e',
+            padding: '10px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
+            marginTop: '16px', textAlign: 'center'
+          }}>
+            {notYetOpen
+              ? "This RFQ hasn't opened for bidding yet — check back after the start date."
+              : "This RFQ's submission window has closed. You can no longer submit a quotation."}
+          </div>
+        )}
+
         {/* Modal Footer */}
         <div className="pud-modal-footer">
           <button
@@ -1369,10 +1554,23 @@ const SupplierAdminDash: React.FC = () => {
             <button
               type="submit"
               className="pud-btn pud-btn-message"
-              disabled={submittingQuote}
+              disabled={submittingQuote || !canSubmit}
               style={{ background: '#2563eb', color: '#ffffff' }}
+              title={
+                notYetOpen
+                  ? "This RFQ hasn't opened for bidding yet."
+                  : closed
+                  ? "This RFQ's submission window has closed."
+                  : undefined
+              }
             >
-              {submittingQuote ? "Submitting..." : "Submit Quotation"}
+              {submittingQuote
+                ? "Submitting..."
+                : notYetOpen
+                ? "Not Yet Open"
+                : closed
+                ? "Submission Closed"
+                : "Submit Quotation"}
             </button>
           )}
         </div>
@@ -1845,6 +2043,129 @@ const SupplierAdminDash: React.FC = () => {
           </div>
         )}
 
+        {otpStage === "send" && (
+          <div className="pud-modal-overlay" onClick={() => setOtpStage("none")} style={{ zIndex: 9999 }}>
+            <div className="pud-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', zIndex: 10000 }}>
+              <div className="pud-modal-header" style={{ paddingBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
+                <span className="pud-modal-badge">
+                  <IconMail /> Verify It's You
+                </span>
+                <button className="pud-modal-close" onClick={() => setOtpStage("none")}>
+                  <IconClose />
+                </button>
+              </div>
+
+              <div className="pud-modal-body" style={{ textAlign: 'center', paddingTop: '24px', paddingBottom: '24px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b', marginBottom: '12px' }}>
+                  Confirm Your Quotation
+                </h3>
+                <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '0', lineHeight: '1.5' }}>
+                  For security, we'll send a one-time code to your registered email before this quotation goes to the buyer.
+                </p>
+                {otpError && (
+                  <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '14px' }}>{otpError}</div>
+                )}
+              </div>
+
+              <div className="pud-modal-footer" style={{ borderTop: '1px solid #e2e8f0', gap: '10px' }}>
+                <button type="button" className="pud-btn pud-btn-outline" onClick={() => setOtpStage("none")} style={{ flex: 1 }}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="pud-btn pud-btn-message"
+                  onClick={handleSendOtp}
+                  disabled={sendingOtp}
+                  style={{ flex: 1, background: '#2563eb', color: '#ffffff' }}
+                >
+                  {sendingOtp ? "Sending..." : "Send OTP"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {otpStage === "verify" && (
+          <div className="pud-modal-overlay" onClick={() => setOtpStage("none")} style={{ zIndex: 9999 }}>
+            <div className="pud-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', zIndex: 10000 }}>
+              <div className="pud-modal-header" style={{ paddingBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
+                <span className="pud-modal-badge">
+                  <IconMail /> Enter Verification Code
+                </span>
+                <button className="pud-modal-close" onClick={() => setOtpStage("none")}>
+                  <IconClose />
+                </button>
+              </div>
+
+              <div className="pud-modal-body" style={{ paddingTop: '20px', paddingBottom: '8px' }}>
+                <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px', textAlign: 'center' }}>
+                  We've sent a 6-digit code to your email. It expires in{" "}
+                  <strong style={{ color: otpRemaining <= 30 ? '#ef4444' : '#1e293b' }}>
+                    {formatOtpTimer(otpRemaining)}
+                  </strong>.
+                </p>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  className="pud-rfq-item-input"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="Enter OTP"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    fontSize: '18px',
+                    letterSpacing: '4px',
+                    textAlign: 'center',
+                    fontWeight: 700,
+                    color: '#0f172a'
+                  }}
+                />
+                {otpRemaining <= 0 ? (
+                  <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '10px', textAlign: 'center' }}>
+                    Code expired. Please resend the OTP.
+                  </div>
+                ) : otpError ? (
+                  <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '10px', textAlign: 'center' }}>{otpError}</div>
+                ) : null}
+                <div style={{ textAlign: 'center', marginTop: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={sendingOtp || otpRemaining > 0}
+                    style={{
+                      background: 'none', border: 'none', padding: 0,
+                      color: otpRemaining > 0 ? '#94a3b8' : '#2563eb',
+                      fontSize: '13px',
+                      cursor: otpRemaining > 0 ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    Resend OTP
+                  </button>
+                </div>
+              </div>
+
+              <div className="pud-modal-footer" style={{ borderTop: '1px solid #e2e8f0', gap: '10px' }}>
+                <button type="button" className="pud-btn pud-btn-outline" onClick={() => setOtpStage("none")} style={{ flex: 1 }}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="pud-btn pud-btn-message"
+                  onClick={handleVerifyOtp}
+                  disabled={verifyingOtp || otpRemaining <= 0}
+                  style={{ flex: 1, background: '#2563eb', color: '#ffffff' }}
+                >
+                  {verifyingOtp ? "Verifying..." : "Verify OTP"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {showConfirmSubmit && (
           <div className="pud-modal-overlay" onClick={() => setShowConfirmSubmit(false)} style={{ zIndex: 9999 }}>
             <div className="pud-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', zIndex: 10000 }}>
@@ -2335,6 +2656,18 @@ const SupplierAdminDash: React.FC = () => {
                   )}
                 </div>
 
+                {selectedRfq && !canSubmit && (
+                  <div style={{
+                    background: '#fef3c7', border: '1px solid #fde68a', color: '#92400e',
+                    padding: '10px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
+                    marginTop: '16px', textAlign: 'center'
+                  }}>
+                    {notYetOpen
+                      ? "This RFQ hasn't opened for bidding yet — check back after the start date."
+                      : "This RFQ's submission window has closed. You can no longer submit a quotation."}
+                  </div>
+                )}
+
                 {/* Modal Footer */}
                 <div className="pud-modal-footer">
                   <button
@@ -2349,10 +2682,23 @@ const SupplierAdminDash: React.FC = () => {
                     <button
                       type="submit"
                       className="pud-btn pud-btn-message"
-                      disabled={submittingQuote}
+                      disabled={submittingQuote || !canSubmit}
                       style={{ background: '#2563eb', color: '#ffffff' }}
+                      title={
+                        notYetOpen
+                          ? "This RFQ hasn't opened for bidding yet."
+                          : closed
+                          ? "This RFQ's submission window has closed."
+                          : undefined
+                      }
                     >
-                      {submittingQuote ? "Submitting..." : "Submit Quotation"}
+                      {submittingQuote
+                        ? "Submitting..."
+                        : notYetOpen
+                        ? "Not Yet Open"
+                        : closed
+                        ? "Submission Closed"
+                        : "Submit Quotation"}
                     </button>
                   )}
                 </div>
