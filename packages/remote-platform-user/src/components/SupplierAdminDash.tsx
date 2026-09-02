@@ -857,6 +857,7 @@ const SupplierAdminDash: React.FC = () => {
 
       const payload = {
         supplierRFQId: supplierRFQId as string,
+        supplierId: supplierId as string,
         answers: Object.values(rfqAnswers).map((a) => {
           const question = selectedRfq.questions?.find(q => q.questionId === a.rfqQuestionId);
           const allOptionIds = question?.options?.map(opt => opt.optionId) || [];
@@ -2172,8 +2173,8 @@ const SupplierAdminDash: React.FC = () => {
                 <span className="pud-modal-badge" style={{ background: '#fef3c7', color: '#d97706' }}>
                   <IconAlertCircle /> Confirmation Required
                 </span>
-                <button 
-                  className="pud-modal-close" 
+                <button
+                  className="pud-modal-close"
                   onClick={() => setShowConfirmSubmit(false)}
                 >
                   <IconClose />
@@ -2272,13 +2273,13 @@ const SupplierAdminDash: React.FC = () => {
                           <div>
                             <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
                             <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                               {new Date(selectedRfq.startDate).toLocaleDateString()}
+                              {new Date(selectedRfq.startDate).toLocaleDateString()}
                             </div>
                           </div>
                           <div>
                             <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>End Date</div>
                             <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                               {new Date(selectedRfq.endDate).toLocaleDateString()}
+                              {new Date(selectedRfq.endDate).toLocaleDateString()}
                             </div>
                           </div>
                           <div>
