@@ -7,6 +7,7 @@ import {
   logoutSupplier,
   fetchRFQMasterData,
   fetchRFQById,
+  fetchSupplierQuotationBySupplierId,
   getSupplierProfile,
   submitSupplierQuotation,
   submitRfqAnswers,
@@ -16,7 +17,8 @@ import {
   type RFQMasterDataItem,
   type RFQDetailResponse,
   type SubmitQuotationPayload,
-  type RfqDocumentAssetDto
+  type RfqDocumentAssetDto,
+  type SupplierQuotationByIdItem
 } from "../api/supplierApi";
 import { useLocation } from "react-router-dom";
 import Header from "./Header.tsx";
@@ -412,6 +414,8 @@ const SupplierDashboard: React.FC = () => {
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
   const RFQ_INITIAL_VISIBLE = 3;
 
+  const [ownQuotation, setOwnQuotation] = useState<SupplierQuotationByIdItem | null>(null);
+
   const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
   const [selectedRfq, setSelectedRfq] = useState<RFQDetailResponse | null>(null);
   const [loadingRfqDetail, setLoadingRfqDetail] = useState(false);
@@ -548,23 +552,38 @@ const SupplierDashboard: React.FC = () => {
 
 
   const handleViewRfqDetails = async (rfqId: string) => {
-    setSelectedRfqId(rfqId);
-    setLoadingRfqDetail(true);
-    setRfqDetailError(null);
-    setSelectedRfq(null);
-    try {
-      const data = await fetchRFQById(rfqId);
-      if (data && 'title' in data) {
-        setSelectedRfq(data);
-      } else {
-        setRfqDetailError("Failed to load RFQ details.");
+      setSelectedRfqId(rfqId);
+      setLoadingRfqDetail(true);
+      setRfqDetailError(null);
+      setSelectedRfq(null);
+      setOwnQuotation(null);
+      try {
+        const data = await fetchRFQById(rfqId);
+        if (data && 'title' in data) {
+          setSelectedRfq(data);
+        } else {
+          setRfqDetailError("Failed to load RFQ details.");
+        }
+      } catch (err: any) {
+        setRfqDetailError(err.message || "Failed to load RFQ details.");
+      } finally {
+        setLoadingRfqDetail(false);
       }
-    } catch (err: any) {
 
-      setRfqDetailError(err.message || "Failed to load RFQ details.");
-    } finally {
-      setLoadingRfqDetail(false);
-    }
+      // Independently fetch this supplier's own quotation for this RFQ.
+      // Multiple suppliers can quote on the same RFQ, so rfq-by-id's
+      try {
+        const quotationData = await fetchSupplierQuotationBySupplierId(rfqId);
+        if (quotationData && 'suppliers' in quotationData && Array.isArray(quotationData.suppliers)) {
+          const mine =
+            quotationData.suppliers.find((s) => s.supplierId === supplierId) ||
+            quotationData.suppliers[0] ||
+            null;
+          setOwnQuotation(mine);
+        }
+      } catch {
+        // non-fatal — form will just fall back to defaults
+      }
   };
 
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
@@ -703,6 +722,7 @@ const SupplierDashboard: React.FC = () => {
     setSelectedRfqId(null);
     setSelectedRfq(null);
     setRfqDetailError(null);
+    setOwnQuotation(null);
   };
 
   const [quoteQuotationId, setQuoteQuotationId] = useState<string | null>(null);
@@ -720,51 +740,60 @@ const SupplierDashboard: React.FC = () => {
   const [submitQuoteSuccess, setSubmitQuoteSuccess] = useState(false);
 
   useEffect(() => {
-    if (selectedRfq) {
-      const activeQuote = selectedRfq.supplierQuotation?.[0];
-      if (activeQuote) {
-        setQuoteQuotationId(activeQuote.qutationId || activeQuote.id || null);
-        setQuoteTotalPrice(activeQuote.totalPrice || 0);
-        setQuoteDeliveryCharge(activeQuote.deliveryCharge || 0);
-        setQuoteDeliveryType(activeQuote.deliveryType || "PERCENTAGE");
-        setQuoteDiscount(activeQuote.discount || 0);
-        setQuoteDiscountType(activeQuote.discountType || "PERCENTAGE");
-        setQuoteTax(activeQuote.tax || 0);
-        setQuoteTaxType(activeQuote.taxType || "PERCENTAGE");
-      } else {
-        setQuoteQuotationId(null);
-        setQuoteTotalPrice(0);
-        setQuoteDeliveryCharge(0);
-        setQuoteDeliveryType("PERCENTAGE");
-        setQuoteDiscount(0);
-        setQuoteDiscountType("PERCENTAGE");
-        setQuoteTax(0);
-        setQuoteTaxType("PERCENTAGE");
-      }
+      if (selectedRfq) {
+        const rfqQuote = selectedRfq.supplierQuotation?.[0];
+        const activeQuote = ownQuotation || rfqQuote;
 
-      const prices: { [key: string]: number } = {};
-      selectedRfq.items?.forEach((item, idx) => {
-        const itemQuote = selectedRfq.supplierQuotationItems?.[idx];
-        const key = item.id || item.buyerRFQItemId || `item-${idx}`;
-        prices[key] = itemQuote?.quotedPrice ?? 0;
-      });
-      setQuoteItemPrices(prices);
-      setSubmitQuoteSuccess(false);
-      setSubmitQuoteError(null);
-      const answers: typeof rfqAnswers = {};
-      selectedRfq.questions?.forEach((q) => {
-        answers[q.questionId] = {
-          rfqQuestionId: q.questionId,
-          answer: "",
-          questionOptionId: null,
-          questionOptionIds: [],
-        };
-      });
-      setRfqAnswers(answers);
-      setSubmitAnswersSuccess(false);
-      setSubmitAnswersError(null);
-    }
-  }, [selectedRfq]);
+        if (activeQuote) {
+          setQuoteQuotationId(
+            ownQuotation?.quotationId ||
+            rfqQuote?.qutationId ||
+            rfqQuote?.id ||
+            null
+          );
+          setQuoteTotalPrice(activeQuote.totalPrice || 0);
+          setQuoteDeliveryCharge(activeQuote.deliveryCharge || 0);
+          setQuoteDeliveryType(activeQuote.deliveryType || "PERCENTAGE");
+          setQuoteDiscount(activeQuote.discount || 0);
+          setQuoteDiscountType(rfqQuote?.discountType || "PERCENTAGE");
+          setQuoteTax(activeQuote.tax || 0);
+          setQuoteTaxType(rfqQuote?.taxType || "PERCENTAGE");
+        } else {
+          setQuoteQuotationId(null);
+          setQuoteTotalPrice(0);
+          setQuoteDeliveryCharge(0);
+          setQuoteDeliveryType("PERCENTAGE");
+          setQuoteDiscount(0);
+          setQuoteDiscountType("PERCENTAGE");
+          setQuoteTax(0);
+          setQuoteTaxType("PERCENTAGE");
+        }
+
+
+        const prices: { [key: string]: number } = {};
+        selectedRfq.items?.forEach((item, idx) => {
+          const ownItemQuote = ownQuotation?.supplierQuotationItems?.[idx];
+          const key = item.id || item.buyerRFQItemId || `item-${idx}`;
+          prices[key] = ownItemQuote?.quotedPrice ?? 0;
+        });
+        setQuoteItemPrices(prices);
+
+        setSubmitQuoteSuccess(false);
+        setSubmitQuoteError(null);
+        const answers: typeof rfqAnswers = {};
+        selectedRfq.questions?.forEach((q) => {
+          answers[q.questionId] = {
+            rfqQuestionId: q.questionId,
+            answer: "",
+            questionOptionId: null,
+            questionOptionIds: [],
+          };
+        });
+        setRfqAnswers(answers);
+        setSubmitAnswersSuccess(false);
+        setSubmitAnswersError(null);
+      }
+  }, [selectedRfq, ownQuotation]);
 
   const handleItemPriceChange = (key: string, value: number) => {
     const updatedPrices = { ...quoteItemPrices, [key]: value };
@@ -1054,81 +1083,97 @@ const SupplierDashboard: React.FC = () => {
 
 
   const handleConfirmSubmitQuotation = async () => {
-    if (!selectedRfq) return;
+      if (!selectedRfq) return;
 
-    const { canSubmit: withinWindow } = getRfqSubmissionWindowStatus(selectedRfq);
-    if (!withinWindow) {
-      setShowConfirmSubmit(false);
-      setSubmitQuoteError("This RFQ's submission window has closed. You can no longer submit a quotation.");
-      return;
-    }
-
-    const verificationToken = sessionStorage.getItem("vsx_verification_token");
-    const tokenExpiry = Number(sessionStorage.getItem("vsx_otp_expiry") || 0);
-    if (!verificationToken || !tokenExpiry || Date.now() > tokenExpiry) {
-      sessionStorage.removeItem("vsx_verification_token");
-      sessionStorage.removeItem("vsx_otp_expiry");
-      setShowConfirmSubmit(false);
-      setSubmitQuoteError("Your verification code expired. Please verify again.");
-      setOtpCode("");
-      setOtpError(null);
-      setOtpStage("send");
-      return;
-    }
-
-    setShowConfirmSubmit(false);
-    setSubmittingQuote(true);
-    setSubmitQuoteError(null);
-    setSubmitQuoteSuccess(false);
-
-    try {
-      const supplierRFQId = selectedRfq.items?.[0]?.supplierRFQId || null;
-
-      const payload: SubmitQuotationPayload = {
-        supplierQuotationId: quoteQuotationId,
-        supplierRFQId: supplierRFQId,
-        totalPrice: Number(quoteTotalPrice),
-        deliveryCharge: Number(quoteDeliveryCharge),
-        deliveryType: quoteDeliveryType,
-        discount: Number(quoteDiscount),
-        discountType: quoteDiscountType,
-        tax: Number(quoteTax),
-        taxType: quoteTaxType,
-        temporaryVerificationToken: verificationToken,
-        ...(!selectedRfq.addLotOption ? {
-          items: selectedRfq.items.map((item, idx) => {
-            const key = item.id || item.buyerRFQItemId || `item-${idx}`;
-            const itemQuote = selectedRfq.supplierQuotationItems?.[idx];
-            return {
-              supplierRFQItemId: itemQuote?.supplierRFQItemId || itemQuote?.id || item.supplierRFQItemId || null,
-              buyerRFQItemId: item.id || item.buyerRFQItemId || "",
-              quotedPrice: Number(quoteItemPrices[key] ?? 0),
-            };
-          })
-        } : {})
-      };
-
-      await submitSupplierQuotation(payload);
-      sessionStorage.removeItem("vsx_verification_token");
-      sessionStorage.removeItem("vsx_otp_expiry");
-      setSubmitQuoteSuccess(true);
-
-      const updatedDetails = await fetchRFQById(selectedRfqId!);
-      if (updatedDetails && 'title' in updatedDetails) {
-        setSelectedRfq(updatedDetails);
+      const { canSubmit: withinWindow } = getRfqSubmissionWindowStatus(selectedRfq);
+      if (!withinWindow) {
+        setShowConfirmSubmit(false);
+        setSubmitQuoteError("This RFQ's submission window has closed. You can no longer submit a quotation.");
+        return;
       }
 
-      if (supplierId) {
-        const listData = await fetchRFQMasterData({ supplierId, index: 0, limit: 10 });
-        if (Array.isArray(listData)) {
-          setRfqs(listData);
+      const verificationToken = sessionStorage.getItem("vsx_verification_token");
+      const tokenExpiry = Number(sessionStorage.getItem("vsx_otp_expiry") || 0);
+      if (!verificationToken || !tokenExpiry || Date.now() > tokenExpiry) {
+        sessionStorage.removeItem("vsx_verification_token");
+        sessionStorage.removeItem("vsx_otp_expiry");
+        setShowConfirmSubmit(false);
+        setSubmitQuoteError("Your verification code expired. Please verify again.");
+        setOtpCode("");
+        setOtpError(null);
+        setOtpStage("send");
+        return;
+      }
+
+      setShowConfirmSubmit(false);
+      setSubmittingQuote(true);
+      setSubmitQuoteError(null);
+      setSubmitQuoteSuccess(false);
+
+      try {
+        const supplierRFQId = selectedRfq.items?.[0]?.supplierRFQId || null;
+
+        const payload: SubmitQuotationPayload = {
+          supplierQuotationId: quoteQuotationId,
+          supplierRFQId: supplierRFQId,
+          totalPrice: Number(quoteTotalPrice),
+          deliveryCharge: Number(quoteDeliveryCharge),
+          deliveryType: quoteDeliveryType,
+          discount: Number(quoteDiscount),
+          discountType: quoteDiscountType,
+          tax: Number(quoteTax),
+          taxType: quoteTaxType,
+          temporaryVerificationToken: verificationToken,
+          ...(!selectedRfq.addLotOption ? {
+            items: selectedRfq.items.map((item, idx) => {
+              const key = item.id || item.buyerRFQItemId || `item-${idx}`;
+              const itemQuote = selectedRfq.supplierQuotationItems?.[idx];
+              return {
+                supplierRFQItemId: itemQuote?.supplierRFQItemId || itemQuote?.id || item.supplierRFQItemId || null,
+                buyerRFQItemId: item.id || item.buyerRFQItemId || "",
+                quotedPrice: Number(quoteItemPrices[key] ?? 0),
+              };
+            })
+          } : {})
+        };
+
+        await submitSupplierQuotation(payload);
+        sessionStorage.removeItem("vsx_verification_token");
+        sessionStorage.removeItem("vsx_otp_expiry");
+        setSubmitQuoteSuccess(true);
+
+        const updatedDetails = await fetchRFQById(selectedRfqId!);
+        if (updatedDetails && 'title' in updatedDetails) {
+          setSelectedRfq(updatedDetails);
         }
+
+
+        if (selectedRfqId) {
+          try {
+            const updatedQuotation = await fetchSupplierQuotationBySupplierId(selectedRfqId);
+            if (updatedQuotation && 'suppliers' in updatedQuotation && Array.isArray(updatedQuotation.suppliers)) {
+              const mine =
+                updatedQuotation.suppliers.find((s) => s.supplierId === supplierId) ||
+                updatedQuotation.suppliers[0] ||
+                null;
+              setOwnQuotation(mine);
+            }
+          } catch {
+            // non-fatal — form keeps showing what was just submitted
+          }
+        }
+
+        if (supplierId) {
+          const listData = await fetchRFQMasterData({ supplierId, index: 0, limit: 10 });
+          if (Array.isArray(listData)) {
+            setRfqs(listData);
+          }
+        }
+      } catch (err: any) {
+        setSubmitQuoteError(err.message || "Failed to submit quotation.");
+      } finally {
+        setSubmittingQuote(false);
       }
-    } catch (err: any) {
-      setSubmitQuoteError(err.message || "Failed to submit quotation.");
-    } finally {
-      setSubmittingQuote(false);
-    }
   };
 
   const handleLogout = async () => {
