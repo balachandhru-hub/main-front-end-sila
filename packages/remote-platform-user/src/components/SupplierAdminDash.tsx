@@ -10,6 +10,7 @@ import { useNetworkAdminAuthStore } from "../store/useAuthStore";
 import {
   fetchRFQMasterData,
   fetchRFQById,
+  fetchSupplierQuotationBySupplierId,
   getSupplierProfile,
   submitSupplierQuotation,
   submitRfqAnswers,
@@ -19,7 +20,8 @@ import {
   type RFQMasterDataItem,
   type RFQDetailResponse,
   type SubmitQuotationPayload,
-  type RfqDocumentAssetDto
+  type RfqDocumentAssetDto,
+  type SupplierQuotationByIdItem
 } from "../../../remote-supplier/src/api/supplierApi";
 import { logoutPlatformUser } from "../api/platformApi";
 import { isErrorResponse } from "@vosox/shared-ui";
@@ -418,6 +420,8 @@ const SupplierAdminDash: React.FC = () => {
   const RFQ_INITIAL_VISIBLE = 3;
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  const [ownQuotation, setOwnQuotation] = useState<SupplierQuotationByIdItem | null>(null);
+
   const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
   const [selectedRfq, setSelectedRfq] = useState<RFQDetailResponse | null>(null);
   const [loadingRfqDetail, setLoadingRfqDetail] = useState(false);
@@ -528,6 +532,7 @@ const SupplierAdminDash: React.FC = () => {
     setLoadingRfqDetail(true);
     setRfqDetailError(null);
     setSelectedRfq(null);
+    setOwnQuotation(null);
     try {
       const data = await fetchRFQById(rfqId);
 
@@ -544,6 +549,24 @@ const SupplierAdminDash: React.FC = () => {
       setRfqDetailError(err.message || "Failed to load RFQ details.");
     } finally {
       setLoadingRfqDetail(false);
+    }
+
+    try {
+      const quotationData = await fetchSupplierQuotationBySupplierId(rfqId);
+      if (
+        !isErrorResponse(quotationData) &&
+        quotationData &&
+        'suppliers' in quotationData &&
+        Array.isArray(quotationData.suppliers)
+      ) {
+        const mine =
+          quotationData.suppliers.find((s) => s.supplierId === supplierId) ||
+          quotationData.suppliers[0] ||
+          null;
+        setOwnQuotation(mine);
+      }
+    } catch {
+      // non-fatal — form will just fall back to defaults
     }
   };
 
@@ -661,6 +684,7 @@ const SupplierAdminDash: React.FC = () => {
     setSelectedRfqId(null);
     setSelectedRfq(null);
     setRfqDetailError(null);
+    setOwnQuotation(null);
   };
 
   const [quoteQuotationId, setQuoteQuotationId] = useState<string | null>(null);
@@ -679,16 +703,23 @@ const SupplierAdminDash: React.FC = () => {
 
   useEffect(() => {
     if (selectedRfq) {
-      const activeQuote = selectedRfq.supplierQuotation?.[0];
+      const rfqQuote = selectedRfq.supplierQuotation?.[0];
+      const activeQuote = ownQuotation || rfqQuote;
+
       if (activeQuote) {
-        setQuoteQuotationId(activeQuote.qutationId || activeQuote.id || null);
+        setQuoteQuotationId(
+          ownQuotation?.quotationId ||
+          rfqQuote?.qutationId ||
+          rfqQuote?.id ||
+          null
+        );
         setQuoteTotalPrice(activeQuote.totalPrice || 0);
         setQuoteDeliveryCharge(activeQuote.deliveryCharge || 0);
         setQuoteDeliveryType(activeQuote.deliveryType || "PERCENTAGE");
         setQuoteDiscount(activeQuote.discount || 0);
-        setQuoteDiscountType(activeQuote.discountType || "PERCENTAGE");
+        setQuoteDiscountType(rfqQuote?.discountType || "PERCENTAGE");
         setQuoteTax(activeQuote.tax || 0);
-        setQuoteTaxType(activeQuote.taxType || "PERCENTAGE");
+        setQuoteTaxType(rfqQuote?.taxType || "PERCENTAGE");
       } else {
         setQuoteQuotationId(null);
         setQuoteTotalPrice(0);
@@ -702,9 +733,9 @@ const SupplierAdminDash: React.FC = () => {
 
       const prices: { [key: string]: number } = {};
       selectedRfq.items?.forEach((item, idx) => {
-        const itemQuote = selectedRfq.supplierQuotationItems?.[idx];
+        const ownItemQuote = ownQuotation?.supplierQuotationItems?.[idx];
         const key = item.id || item.buyerRFQItemId || `item-${idx}`;
-        prices[key] = itemQuote?.quotedPrice ?? 0;
+        prices[key] = ownItemQuote?.quotedPrice ?? 0;
       });
       setQuoteItemPrices(prices);
       setSubmitQuoteSuccess(false);
@@ -722,7 +753,7 @@ const SupplierAdminDash: React.FC = () => {
       setSubmitAnswersSuccess(false);
       setSubmitAnswersError(null);
     }
-  }, [selectedRfq]);
+  }, [selectedRfq, ownQuotation]);
 
   const handleItemPriceChange = (key: string, value: number) => {
     const updatedPrices = { ...quoteItemPrices, [key]: value };
@@ -1056,6 +1087,28 @@ const SupplierAdminDash: React.FC = () => {
         setSelectedRfq(updatedDetails);
       } else {
         setSubmitQuoteError(updatedDetails.description || updatedDetails.message || "Failed to refresh RFQ details.");
+      }
+
+      // Refresh our own quotation data too, so the form reflects what the
+      // server actually persisted rather than stale pre-submit values.
+      if (selectedRfqId) {
+        try {
+          const updatedQuotation = await fetchSupplierQuotationBySupplierId(selectedRfqId);
+          if (
+            !isErrorResponse(updatedQuotation) &&
+            updatedQuotation &&
+            'suppliers' in updatedQuotation &&
+            Array.isArray(updatedQuotation.suppliers)
+          ) {
+            const mine =
+              updatedQuotation.suppliers.find((s) => s.supplierId === supplierId) ||
+              updatedQuotation.suppliers[0] ||
+              null;
+            setOwnQuotation(mine);
+          }
+        } catch {
+          // non-fatal — form keeps showing what was just submitted
+        }
       }
 
       if (supplierId) {
