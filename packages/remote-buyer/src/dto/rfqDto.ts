@@ -121,6 +121,7 @@ export interface BuyerSupplierQuotation {
   quotationId: string | null;
   supplierId?: string | null;
   supplierName?: string | null;
+  isLead?: boolean;
 }
 
 export interface BuyerRFQDetailResponse {

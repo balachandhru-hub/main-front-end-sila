@@ -312,6 +312,7 @@ export interface RFQSupplierQuotation {
   status: string;
   discountType?: string;
   taxType?: string;
+  isLead?: boolean;
 }
 
 export interface RFQSupplierQuotationItem {
@@ -452,6 +453,7 @@ export interface SupplierQuotationByIdItem {
   deliveryType: string | null;
   status: string;
   quotationId: string;
+  isLead?: boolean;
   supplierQuotationItems: {
     quotedPrice: number;
     itemQutationId: string;

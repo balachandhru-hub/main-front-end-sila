@@ -803,6 +803,39 @@ export const fetchSupplierCatalog = async (): Promise<SupplierCatalogListItem[] 
   }
 };
 
+export const fetchBuyerAsset = async (
+  assetId: string
+): Promise<SupplierAssetDto | ErrorResponseDto> => {
+  try {
+    try {
+      const response = await supplierInstance.get<SupplierAssetDto>(
+        `/api/v1/buyer/asset/${assetId}`
+      );
+      if (response.data) return response.data;
+    } catch {
+      // fallback to supplier asset endpoint
+    }
+    const response = await supplierInstance.get<SupplierAssetDto>(
+      `/api/v1/supplier/asset/${assetId}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    return {
+      statusCode: error.response?.status || 500,
+      message: error.response?.data?.message || 'Failed to fetch asset',
+      description: error.response?.data?.description || 'No details provided',
+    };
+  }
+};
+
 export const fetchSupplierAsset = async (
   assetId: string
 ): Promise<SupplierAssetDto | ErrorResponseDto> => {

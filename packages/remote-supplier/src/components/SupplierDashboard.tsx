@@ -18,7 +18,8 @@ import {
   type RFQDetailResponse,
   type SubmitQuotationPayload,
   type RfqDocumentAssetDto,
-  type SupplierQuotationByIdItem
+  type SupplierQuotationByIdItem,
+  fetchBuyerAsset
 } from "../api/supplierApi";
 import { useLocation } from "react-router-dom";
 import Header from "./Header.tsx";
@@ -208,6 +209,14 @@ const IconEye = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
     <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+const IconDownload = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
   </svg>
 );
 
@@ -593,6 +602,65 @@ const SupplierDashboard: React.FC = () => {
   const [allRfqsError, setAllRfqsError] = useState<string | null>(null);
   const [allRfqsPage, setAllRfqsPage] = useState(1);
   const [hasNextRfqPage, setHasNextRfqPage] = useState(false);
+
+  const handleDocumentAction = async (doc: any, action: 'preview' | 'download') => {
+    const assetId = doc.id || doc.assetId;
+    if (!assetId) {
+      alert("Document asset ID is missing.");
+      return;
+    }
+
+    try {
+      const data = await fetchBuyerAsset(assetId);
+      if ('statusCode' in data && data.statusCode) {
+        throw new Error(data.message || 'Failed to fetch document.');
+      }
+
+      const fileBytes = (data as any).fileBytes;
+      const fileName = (data as any).fileName || doc.fileName || doc.assetName || "document";
+      const rawType = ((data as any).contentType || (data as any).fileType || doc.fileType || "pdf").toLowerCase();
+
+      let mimeType = "application/pdf";
+      if (rawType.includes("pdf")) mimeType = "application/pdf";
+      else if (rawType.includes("png")) mimeType = "image/png";
+      else if (rawType.includes("jpg") || rawType.includes("jpeg")) mimeType = "image/jpeg";
+      else if (rawType.includes("txt")) mimeType = "text/plain";
+      else if (rawType.includes("doc")) mimeType = "application/msword";
+
+      let url = (data as any).url || (data as any).fileUrl;
+      let createdBlobUrl = "";
+
+      if (fileBytes) {
+        const cleanBase64 = fileBytes.replace(/^data:.*?;base64,/, '');
+        const byteCharacters = atob(cleanBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mimeType });
+        createdBlobUrl = URL.createObjectURL(blob);
+        url = createdBlobUrl;
+      }
+
+      if (!url) {
+        throw new Error("Document content not available.");
+      }
+
+      if (action === 'preview') {
+        window.open(url, '_blank');
+      } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (err: any) {
+      alert(err?.message || "Could not access document.");
+    }
+  };
 
   const getAllRfqsRange = (page: number) => {
     if (page <= 1) {
@@ -1191,17 +1259,43 @@ const SupplierDashboard: React.FC = () => {
     }
   };
 
-  const renderRfqDetailInner = () => (
-    <>
+  const renderRfqDetailInner = () => {
+    const isLeadQuote = Boolean(
+      ownQuotation?.isLead ||
+      (ownQuotation as any)?.isLead === "true" ||
+      selectedRfq?.supplierQuotation?.[0]?.isLead ||
+      (selectedRfq?.supplierQuotation?.[0] as any)?.isLead === "true"
+    );
 
-      {/* Modal Header */}
-      <div className="pud-modal-header">
-        <span className="pud-modal-badge">
-          <IconFile /> RFQ Specification
-        </span>
-        <button className="pud-modal-close" onClick={closeRfqDetail}>
-          <IconClose />
-        </button>
+    return (
+      <>
+
+        {/* Modal Header */}
+        <div className="pud-modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+            <span className="pud-modal-badge">
+              <IconFile /> RFQ Specification
+            </span>
+            {isLeadQuote && (
+              <span
+                className="pud-modal-badge"
+                style={{
+                  background: '#fef3c7',
+                  color: '#b45309',
+                  border: '1px solid #fde68a',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                Leading
+              </span>
+            )}
+          </div>
+          <button className="pud-modal-close" onClick={closeRfqDetail}>
+            <IconClose />
+          </button>
         <h2 className="pud-modal-name">
           {loadingRfqDetail ? "Loading RFQ Details..." : selectedRfq?.title || "RFQ Details"}
         </h2>
@@ -1273,21 +1367,61 @@ const SupplierDashboard: React.FC = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginTop: '8px' }}>
 
                       {selectedRfq.technicalSpecificationDocuments?.map((doc) => (
-                        <div key={doc.id} className="pud-rfq-doc-card">
-                          <span className="pud-rfq-doc-icon"><IconFile /></span>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                            <div className="pud-rfq-doc-type">Tech Spec • {doc.fileType.toUpperCase()}</div>
+                        <div key={doc.id} className="pud-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
+                            <span className="pud-rfq-doc-icon"><IconFile /></span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                              <div className="pud-rfq-doc-type">Tech Spec • {doc.fileType.toUpperCase()}</div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+                            <button
+                              type="button"
+                              title="Preview document"
+                              onClick={() => handleDocumentAction(doc, 'preview')}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                            >
+                              <IconEye />
+                            </button>
+                            <button
+                              type="button"
+                              title="Download document"
+                              onClick={() => handleDocumentAction(doc, 'download')}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                            >
+                              <IconDownload />
+                            </button>
                           </div>
                         </div>
                       ))}
 
                       {selectedRfq.termsConditionDocuments?.map((doc) => (
-                        <div key={doc.id} className="pud-rfq-doc-card">
-                          <span className="pud-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></span>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                            <div className="pud-rfq-doc-type">Terms & Conditions • {doc.fileType.toUpperCase()}</div>
+                        <div key={doc.id} className="pud-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
+                            <span className="pud-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                              <div className="pud-rfq-doc-type">Terms & Conditions • {doc.fileType.toUpperCase()}</div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+                            <button
+                              type="button"
+                              title="Preview document"
+                              onClick={() => handleDocumentAction(doc, 'preview')}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                            >
+                              <IconEye />
+                            </button>
+                            <button
+                              type="button"
+                              title="Download document"
+                              onClick={() => handleDocumentAction(doc, 'download')}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                            >
+                              <IconDownload />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -1495,8 +1629,28 @@ const SupplierDashboard: React.FC = () => {
 
 
               <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-                <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                  <IconSparkles /> Commercial Proposal / Quotation Details
+                <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <IconSparkles /> Commercial Proposal / Quotation Details
+                  </div>
+                  {isLeadQuote && (
+                    <span
+                      style={{
+                        background: '#fef3c7',
+                        color: '#b45309',
+                        border: '1px solid #fde68a',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      Leading
+                    </span>
+                  )}
                 </div>
 
                 {submitQuoteSuccess && (
@@ -1684,6 +1838,7 @@ const SupplierDashboard: React.FC = () => {
 
     </>
   );
+};
 
   const { notYetOpen, closed, canSubmit } = useMemo(
     () => getRfqSubmissionWindowStatus(selectedRfq),

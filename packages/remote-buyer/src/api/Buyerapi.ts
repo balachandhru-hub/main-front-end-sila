@@ -787,6 +787,15 @@ export const fetchBuyerAsset = async (
   assetId: string
 ): Promise<BuyerAssetDto | ErrorResponseDto> => {
   try {
+    try {
+      const response = await axiosInstance.get<BuyerAssetDto>(
+        `/api/v1/buyer/asset/${assetId}`
+      );
+      if (response.data) return response.data;
+    } catch (e) {
+      // fallback to supplier asset endpoint
+    }
+
     const response = await axiosInstance.get<BuyerAssetDto>(
       `/api/v1/supplier/asset/${assetId}`
     );

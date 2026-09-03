@@ -11,6 +11,7 @@ import {
   fetchBuyerRFQs,
   fetchBuyerRFQById,
   fetchBuyerVerificationTemplates,
+  fetchBuyerAsset,
   type VerificationTemplate
 } from "../../../remote-buyer/src/api/Buyerapi";
 import CreateRFQ from "./UserListTable/CreateRFQ";
@@ -185,6 +186,14 @@ const IconEye = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
     <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+const IconDownload = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
   </svg>
 );
 
@@ -609,6 +618,65 @@ const BuyerAdminDash: React.FC = () => {
     }
   };
 
+  const handleDocumentAction = async (doc: any, action: 'preview' | 'download') => {
+    const assetId = doc.id || doc.assetId;
+    if (!assetId) {
+      alert("Document asset ID is missing.");
+      return;
+    }
+
+    try {
+      const data = await fetchBuyerAsset(assetId);
+      if ('statusCode' in data && data.statusCode) {
+        throw new Error(data.message || 'Failed to fetch document.');
+      }
+
+      const fileBytes = (data as any).fileBytes;
+      const fileName = (data as any).fileName || doc.fileName || doc.assetName || "document";
+      const rawType = ((data as any).contentType || (data as any).fileType || doc.fileType || "pdf").toLowerCase();
+
+      let mimeType = "application/pdf";
+      if (rawType.includes("pdf")) mimeType = "application/pdf";
+      else if (rawType.includes("png")) mimeType = "image/png";
+      else if (rawType.includes("jpg") || rawType.includes("jpeg")) mimeType = "image/jpeg";
+      else if (rawType.includes("txt")) mimeType = "text/plain";
+      else if (rawType.includes("doc")) mimeType = "application/msword";
+
+      let url = (data as any).url || (data as any).fileUrl;
+      let createdBlobUrl = "";
+
+      if (fileBytes) {
+        const cleanBase64 = fileBytes.replace(/^data:.*?;base64,/, '');
+        const byteCharacters = atob(cleanBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mimeType });
+        createdBlobUrl = URL.createObjectURL(blob);
+        url = createdBlobUrl;
+      }
+
+      if (!url) {
+        throw new Error("Document content not available.");
+      }
+
+      if (action === 'preview') {
+        window.open(url, '_blank');
+      } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (err: any) {
+      alert(err?.message || "Could not access document.");
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
       <ToastContainer />
@@ -913,22 +981,62 @@ const BuyerAdminDash: React.FC = () => {
                             (fullPageRfq.termsConditionDocuments && fullPageRfq.termsConditionDocuments.length > 0)) && (
                               <div>
                                 <div className="bad-modal-section-title" style={{ marginBottom: '10px' }}>Specifications & Terms Documents</div>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
                                   {fullPageRfq.technicalSpecificationDocuments?.map((doc: any, i: number) => (
-                                    <div key={`tech-${i}`} className="bad-rfq-doc-card">
-                                      <div className="bad-rfq-doc-icon"><IconFile /></div>
-                                      <div style={{ overflow: 'hidden' }}>
-                                        <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                        <div className="bad-rfq-doc-type">Tech Spec Doc</div>
+                                    <div key={`tech-${i}`} className="bad-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
+                                        <div className="bad-rfq-doc-icon"><IconFile /></div>
+                                        <div style={{ overflow: 'hidden' }}>
+                                          <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                                          <div className="bad-rfq-doc-type">Tech Spec Doc</div>
+                                        </div>
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+                                        <button
+                                          type="button"
+                                          title="Preview document"
+                                          onClick={() => handleDocumentAction(doc, 'preview')}
+                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                                        >
+                                          <IconEye />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          title="Download document"
+                                          onClick={() => handleDocumentAction(doc, 'download')}
+                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                                        >
+                                          <IconDownload />
+                                        </button>
                                       </div>
                                     </div>
                                   ))}
                                   {fullPageRfq.termsConditionDocuments?.map((doc: any, i: number) => (
-                                    <div key={`terms-${i}`} className="bad-rfq-doc-card">
-                                      <div className="bad-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></div>
-                                      <div style={{ overflow: 'hidden' }}>
-                                        <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                        <div className="bad-rfq-doc-type">Terms & Conditions</div>
+                                    <div key={`terms-${i}`} className="bad-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
+                                        <div className="bad-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></div>
+                                        <div style={{ overflow: 'hidden' }}>
+                                          <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                                          <div className="bad-rfq-doc-type">Terms & Conditions</div>
+                                        </div>
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+                                        <button
+                                          type="button"
+                                          title="Preview document"
+                                          onClick={() => handleDocumentAction(doc, 'preview')}
+                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                                        >
+                                          <IconEye />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          title="Download document"
+                                          onClick={() => handleDocumentAction(doc, 'download')}
+                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                                        >
+                                          <IconDownload />
+                                        </button>
                                       </div>
                                     </div>
                                   ))}
@@ -958,7 +1066,7 @@ const BuyerAdminDash: React.FC = () => {
                                         transition: 'border-color 0.2s ease'
                                       }}
                                     >
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                                           <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
                                             Quote ID: {quote.quotationId ? `${quote.quotationId.substring(0, 8)}...` : `Quote #${index + 1}`}
@@ -967,19 +1075,37 @@ const BuyerAdminDash: React.FC = () => {
                                             Delivery: {quote.deliveryType || "Standard"}
                                           </span>
                                         </div>
-                                        <span
-                                          className={`bad-status-badge`}
-                                          style={{
-                                            background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
-                                            color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
-                                            padding: '3px 8px',
-                                            borderRadius: '6px',
-                                            fontSize: '11px',
-                                            fontWeight: 600
-                                          }}
-                                        >
-                                          {quote.status || "RECEIVED"}
-                                        </span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                          {quote.isLead && (
+                                            <span
+                                              className={`bad-status-badge`}
+                                              style={{
+                                                background: '#fef3c7',
+                                                color: '#b45309',
+                                                border: '1px solid #fde68a',
+                                                padding: '3px 8px',
+                                                borderRadius: '6px',
+                                                fontSize: '11px',
+                                                fontWeight: 600
+                                              }}
+                                            >
+                                              Leading
+                                            </span>
+                                          )}
+                                          <span
+                                            className={`bad-status-badge`}
+                                            style={{
+                                              background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
+                                              color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
+                                              padding: '3px 8px',
+                                              borderRadius: '6px',
+                                              fontSize: '11px',
+                                              fontWeight: 600
+                                            }}
+                                          >
+                                            {quote.status || "RECEIVED"}
+                                          </span>
+                                        </div>
                                       </div>
 
                                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #f1f5f9', marginBottom: '12px', fontSize: '12px' }}>
