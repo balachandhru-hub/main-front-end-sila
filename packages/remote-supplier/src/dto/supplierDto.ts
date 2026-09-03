@@ -368,6 +368,7 @@ export interface CatalogAssetDto {
   isSingletonAsset: boolean;
 }
 
+
 export interface CatalogDetailDto {
   id?: string;
   catalogName: string;
@@ -434,4 +435,29 @@ export interface OtpActionResponse {
 export interface VerifyOtpPayload {
   email: string;
   otp: string;
+}
+
+// ============================================================================
+// SUPPLIER QUOTATION BY SUPPLIER ID (per-supplier RFQ quotation)
+// ============================================================================
+
+export interface SupplierQuotationByIdItem {
+  supplierRFQId: string;
+  supplierId: string;
+  supplierName: string;
+  totalPrice: number;
+  deliveryCharge: number | null;
+  tax: number | null;
+  discount: number | null;
+  deliveryType: string | null;
+  status: string;
+  quotationId: string;
+  supplierQuotationItems: {
+    quotedPrice: number;
+    itemQutationId: string;
+  }[];
+}
+
+export interface SupplierQuotationBySupplierIdResponse {
+  suppliers: SupplierQuotationByIdItem[];
 }

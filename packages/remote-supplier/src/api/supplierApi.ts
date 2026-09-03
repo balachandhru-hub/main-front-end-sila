@@ -15,10 +15,14 @@ import type {
   CatalogDetailResponse,
   OtpActionResponse,
   VerifyOtpPayload,
+  SupplierQuotationBySupplierIdResponse,
 } from '../dto/supplierDto';
 import type { ErrorResponseDto } from '@vosox/shared-ui';
 import { isErrorResponse } from '@vosox/shared-ui';
-
+export type {
+  SupplierQuotationBySupplierIdResponse,
+  SupplierQuotationByIdItem,
+} from '../dto/supplierDto';
 export interface SupplierAssetDto {
   id: string; 
   assetName?: string;
@@ -415,6 +419,42 @@ export const fetchRFQById = async (rfqId: string): Promise<RFQDetailResponse | E
       statusCode: 500,
       message: 'Unexpected Error',
       description: 'Something went wrong while fetching RFQ details.',
+    };
+  }
+};
+
+export const fetchSupplierQuotationBySupplierId = async (
+  rfqId: string
+): Promise<SupplierQuotationBySupplierIdResponse | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.get<SupplierQuotationBySupplierIdResponse>(
+      '/api/v1/supplier/quotation/by-supplier-id',
+      { params: { rfqId } }
+    );
+    return response.data ?? { suppliers: [] };
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch supplier quotation',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching supplier quotation.',
     };
   }
 };
