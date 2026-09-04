@@ -1260,12 +1260,7 @@ const SupplierDashboard: React.FC = () => {
   };
 
   const renderRfqDetailInner = () => {
-    const isLeadQuote = Boolean(
-      ownQuotation?.isLead ||
-      (ownQuotation as any)?.isLead === "true" ||
-      selectedRfq?.supplierQuotation?.[0]?.isLead ||
-      (selectedRfq?.supplierQuotation?.[0] as any)?.isLead === "true"
-    );
+    const isLeadQuote = (ownQuotation?.isLead === true && ownQuotation?.status === "SUBMITTED");
 
     return (
       <>
