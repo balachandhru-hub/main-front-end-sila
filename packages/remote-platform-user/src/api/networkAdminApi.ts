@@ -106,6 +106,41 @@ export interface UpdateSupplierBankAccountDto {
   isVerified: boolean;
 }
  
+export interface SupplierQuotationItem {
+  supplierQuotationItemId: string;
+  supplierRFQItemId: string;
+  oldVersion: string;
+  oldQuotedPrice: number;
+  latestVersion: string;
+  latestQuotedPrice: number;
+  priceDifference: number;
+  priceChanged: boolean;
+}
+ 
+export interface SupplierQuotationComparisonResponse {
+  supplierQuotationId: string;
+  oldVersion: string;
+  latestVersion: string;
+  oldTotalPrice: number;
+  latestTotalPrice: number;
+  totalPriceDifference: number;
+  oldDiscount: number;
+  latestDiscount: number;
+  discountDifference: number;
+  oldDiscountType: string;
+  latestDiscountType: string;
+  oldTax: number;
+  latestTax: number;
+  taxDifference: number;
+  oldTaxType: string;
+  latestTaxType: string;
+  oldDeliveryCharge: number;
+  latestDeliveryCharge: number;
+  deliveryChargeDifference: number;
+  oldDeliveryType: string;
+  latestDeliveryType: string;
+  items: SupplierQuotationItem[];
+}
 export interface UpdateSupplierDeliveryLocationDto {
   supplierId: string;
   locationName: string;
@@ -876,3 +911,37 @@ export const deleteSupplierDeliveryLocation = async (
   }
 };
  
+export const fetchSupplierQuotationComparison = async (
+  supplierQuotationId: string
+): Promise<SupplierQuotationComparisonResponse | ErrorResponseDto> => {
+  try {
+    const response = await platformInstance.get<SupplierQuotationComparisonResponse>(
+      `/api/v1/supplier/quotation/history-comparison/${supplierQuotationId}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+ 
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch quotation comparison',
+        description: errData.description || 'No details provided',
+      };
+    }
+ 
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching quotation comparison.',
+    };
+  }
+};

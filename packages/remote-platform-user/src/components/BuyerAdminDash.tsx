@@ -16,8 +16,13 @@ import {
 } from "../../../remote-buyer/src/api/Buyerapi";
 import CreateRFQ from "./UserListTable/CreateRFQ";
 import { logoutPlatformUser } from "../api/platformApi";
+import type { SupplierQuotationComparisonResponse } from "../api/networkAdminApi";
+import { fetchSupplierQuotationComparison } from "../api/networkAdminApi";
+import { isErrorResponse } from "@vosox/shared-ui";
 import UserTemplate from "./usertemplate"
 import { ToastContainer } from "@vosox/shared-ui";
+import type { ErrorResponseDto } from "../dto/platformDto";
+import QuotationComparisonCard from "./Quotationcomparisoncard";
 import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
 
 interface StatCard {
@@ -394,6 +399,12 @@ const BuyerAdminDash: React.FC = () => {
     sessionStorage.getItem("vosox_buyer_id")
   );
 
+  // STATE FOR QUOTATION COMPARISON
+  const [selectedQuotationsRfq, setSelectedQuotationsRfq] = useState<any | null>(null);
+  const [quotationComparisonData, setQuotationComparisonData] = useState<SupplierQuotationComparisonResponse[]>([]);
+  const [loadingQuotations, setLoadingQuotations] = useState(false);
+  const [quotationsError, setQuotationsError] = useState<string | null>(null);
+
   useEffect(() => {
     useNetworkAdminAuthStore.getState().initializeFromSession();
   }, []);
@@ -486,7 +497,7 @@ const BuyerAdminDash: React.FC = () => {
   }, [activeNav]);
 
 
-  const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail" | "qsAns">("dashboard");
+  const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail" | "qsAns" | "quotationComparison">("dashboard");
 
   const [allRfqsList, setAllRfqsList] = useState<any[]>([]);
   const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
@@ -593,6 +604,68 @@ const BuyerAdminDash: React.FC = () => {
     setRfqPageView("allRfqs");
     setFullPageRfq(null);
     setFullPageRfqError(null);
+  };
+
+  // HANDLER FOR QUOTATION COMPARISON - FULL PAGE VIEW
+  const handleOpenQuotationComparison = async (rfq: any) => {
+    setSelectedQuotationsRfq(rfq);
+    setRfqPageView("quotationComparison");
+    setLoadingQuotations(true);
+    setQuotationsError(null);
+    setQuotationComparisonData([]);
+
+    try {
+      // First, fetch full RFQ details to get the latest supplierQuotation data
+      let rfqDetails = rfq;
+      
+      if (!rfq.supplierQuotation) {
+        // If rfq doesn't have supplierQuotation, fetch full RFQ details from API
+        rfqDetails = await fetchBuyerRFQById(rfq.rfqId);
+      }
+
+      // Now fetch quotation comparison data for each quotation ID
+      if (rfqDetails.supplierQuotation && rfqDetails.supplierQuotation.length > 0) {
+        const comparisonDataList: SupplierQuotationComparisonResponse[] = [];
+        const errors: string[] = [];
+
+        // Fetch comparison data for each quotation ID
+        for (const quotation of rfqDetails.supplierQuotation) {
+          if (quotation.quotationId) {
+            const result = await fetchSupplierQuotationComparison(quotation.quotationId);
+
+            if (!isErrorResponse(result)) {
+              comparisonDataList.push(result as SupplierQuotationComparisonResponse);
+            } else {
+              const errorData = result as unknown as ErrorResponseDto;
+              errors.push(
+                errorData.message || `Failed to load quotation ${quotation.quotationId}`
+              );
+            }
+          }
+        }
+
+        if (comparisonDataList.length > 0) {
+          setQuotationComparisonData(comparisonDataList);
+        }
+
+        if (errors.length > 0 && comparisonDataList.length === 0) {
+          setQuotationsError(errors.join(", "));
+        }
+      } else {
+        setQuotationsError("No quotations found for this RFQ.");
+      }
+    } catch (error: any) {
+      setQuotationsError(error.message || "Failed to load quotation comparisons.");
+    } finally {
+      setLoadingQuotations(false);
+    }
+  };
+
+  const handleBackFromQuotationComparison = () => {
+    setRfqPageView("rfqDetail");
+    setSelectedQuotationsRfq(null);
+    setQuotationComparisonData([]);
+    setQuotationsError(null);
   };
 
   const handleOpenQsAns = () => {
@@ -888,6 +961,14 @@ const BuyerAdminDash: React.FC = () => {
                       <div className="bad-modal-meta">
                         <span><IconCalendar /> Closes: {new Date(fullPageRfq.endDate).toLocaleDateString()}</span>
                         <span><IconPin /> Delivery: {fullPageRfq.deliveryLocation}</span>
+                        <button
+                          className="bad-btn bad-btn-outline"
+                          onClick={() => handleOpenQuotationComparison(fullPageRfq)}
+                          title="View Supplier Quotations"
+                          style={{ marginLeft: 'auto' }}
+                        >
+                          📊 Bid Comparison
+                        </button>
                       </div>
                     )}
                   </div>
@@ -1160,6 +1241,61 @@ const BuyerAdminDash: React.FC = () => {
                       </button>
                     </div>
                   )}
+                </div>
+              </>
+            ) : rfqPageView === "quotationComparison" ? (
+              <>
+                <div className="bad-modal bad-rfq-fullpage">
+                  <div className="bad-modal-header">
+                    <span className="bad-modal-badge">
+                      <IconSparkles /> Bid Comparison
+                    </span>
+                    <button className="bad-modal-close" onClick={handleBackFromQuotationComparison}>
+                      <IconClose />
+                    </button>
+                    <h2 className="bad-modal-name">
+                      {selectedQuotationsRfq?.title || "RFQ Quotations"}
+                    </h2>
+                    {selectedQuotationsRfq && (
+                      <div className="bad-modal-meta">
+                        <span><IconFile /> {selectedQuotationsRfq.rfqNumber}</span>
+                        <span><IconPin /> {selectedQuotationsRfq.deliveryLocation}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bad-modal-body" style={{ maxHeight: 'calc(100% - 120px)', overflowY: 'auto', padding: '24px' }}>
+                    {loadingQuotations ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+                        <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                          <div className="bad-spinner" style={{ width: '32px', height: '32px' }} />
+                          <span>Loading quotation comparisons...</span>
+                        </div>
+                      </div>
+                    ) : quotationsError && quotationComparisonData.length === 0 ? (
+                      <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
+                        {quotationsError}
+                      </div>
+                    ) : quotationComparisonData.length === 0 ? (
+                      <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                        No quotation data available.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        {quotationComparisonData.map((comparison, index) => (
+                          <QuotationComparisonCard
+                            key={comparison.supplierQuotationId || index}
+                            quotation={comparison}
+                            rfqTitle={selectedQuotationsRfq.title}
+                            rfqNumber={selectedQuotationsRfq.rfqNumber}
+                            supplierName={`Supplier ${index + 1}`}
+                            contactPerson="Contact Person"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </>
             ) : rfqPageView === "qsAns" ? (
@@ -1436,8 +1572,6 @@ const BuyerAdminDash: React.FC = () => {
             </div>
           </div>
         )}
-
-
       </div>
     </div>
   );
