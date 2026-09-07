@@ -954,7 +954,7 @@ const BuyersDashboard: React.FC = () => {
                         <span><IconCalendar /> Closes: {new Date(fullPageRfq.endDate).toLocaleDateString()}</span>
                         <span><IconPin /> Delivery: {fullPageRfq.deliveryLocation}</span>
                         <button
-                          className="pud-btn pud-btn-outline"
+                          className="pud-btn pud-btns-outline"
                           onClick={() => handleOpenQuotationComparison(fullPageRfq)}
                           title="View Supplier Quotations"
                           style={{ marginLeft: 'auto' }}
@@ -1301,18 +1301,11 @@ const BuyersDashboard: React.FC = () => {
                         No quotation data available.
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        {quotationComparisonData.map((comparison, index) => (
-                          <QuotationComparisonCard
-                            key={comparison.supplierQuotationId || index}
-                            quotation={comparison}
-                            rfqTitle={selectedQuotationsRfq.title}
-                            rfqNumber={selectedQuotationsRfq.rfqNumber}
-                            supplierName={`Supplier ${index + 1}`}
-                            contactPerson="Contact Person"
-                          />
-                        ))}
-                      </div>
+                      <QuotationComparisonCard
+                        quotations={quotationComparisonData}
+                        rfqTitle={selectedQuotationsRfq.title}
+                        supplierNames={quotationComparisonData.map((_, index) => `Supplier ${index + 1}`)}
+                      />
                     )}
                   </div>
                 </div>
