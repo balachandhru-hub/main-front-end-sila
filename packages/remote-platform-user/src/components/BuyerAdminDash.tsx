@@ -11,6 +11,7 @@ import {
   fetchBuyerRFQs,
   fetchBuyerRFQById,
   fetchBuyerVerificationTemplates,
+  fetchBuyerAsset,
   type VerificationTemplate
 } from "../../../remote-buyer/src/api/Buyerapi";
 import CreateRFQ from "./UserListTable/CreateRFQ";
@@ -22,6 +23,7 @@ import UserTemplate from "./usertemplate"
 import { ToastContainer } from "@vosox/shared-ui";
 import type { ErrorResponseDto } from "../dto/platformDto";
 import QuotationComparisonCard from "./Quotationcomparisoncard";
+import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -189,6 +191,14 @@ const IconEye = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
     <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+const IconDownload = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
   </svg>
 );
 
@@ -487,7 +497,7 @@ const BuyerAdminDash: React.FC = () => {
   }, [activeNav]);
 
 
-  const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail" | "quotationComparison">("dashboard");
+  const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail" | "qsAns" | "quotationComparison">("dashboard");
 
   const [allRfqsList, setAllRfqsList] = useState<any[]>([]);
   const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
@@ -555,8 +565,8 @@ const BuyerAdminDash: React.FC = () => {
     loadAllRfqsPage(allRfqsPage - 1);
   };
 
-const handleNavClick = (key: string) => {
-  setIsMobileSidebarOpen(false); 
+  const handleNavClick = (key: string) => {
+    setIsMobileSidebarOpen(false);
     if (key === "activeRFQs") {
       handleOpenAllRfqs();
       return;
@@ -658,6 +668,14 @@ const handleNavClick = (key: string) => {
     setQuotationsError(null);
   };
 
+  const handleOpenQsAns = () => {
+    setRfqPageView("qsAns");
+  };
+
+  const handleBackToRfqDetail = () => {
+    setRfqPageView("rfqDetail");
+  };
+
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
@@ -673,40 +691,63 @@ const handleNavClick = (key: string) => {
     }
   };
 
-  const resolveAnswersForQuestion = (
-    rfq: any,
-    question: any,
-    _index: number
-  ): { supplierName: string | null; display: string }[] => {
-    const answerList = rfq?.supplierAnswers?.answers;
-    if (!Array.isArray(answerList) || !question?.id) return [];
-
-    const match = answerList.find((a: any) => a?.rfqQuestionId === question.id);
-    if (!match) return [];
-
-    const resolveOptionLabels = (ids: string[]): string[] => {
-      const optionList = question?.questionOptions;
-      if (!Array.isArray(optionList)) return [];
-      return ids
-        .map((id) => optionList.find((opt: any) => opt?.id === id)?.label)
-        .filter((label: any): label is string => Boolean(label));
-    };
-
-    let display: string | null = null;
-
-    if (match.attachment) {
-      display = match.attachment.fileName || match.answer || "Attached file";
-    } else if (match.answer) {
-      display = match.answer;
-    } else if (Array.isArray(match.questionOptionIds) && match.questionOptionIds.length > 0) {
-      const labels = resolveOptionLabels(match.questionOptionIds);
-      display = labels.length > 0 ? labels.join(", ") : match.questionOptionIds.join(", ");
-    } else if (match.questionOptionId) {
-      const labels = resolveOptionLabels([match.questionOptionId]);
-      display = labels[0] || match.questionOptionId;
+  const handleDocumentAction = async (doc: any, action: 'preview' | 'download') => {
+    const assetId = doc.id || doc.assetId;
+    if (!assetId) {
+      alert("Document asset ID is missing.");
+      return;
     }
 
-    return display ? [{ supplierName: null, display }] : [];
+    try {
+      const data = await fetchBuyerAsset(assetId);
+      if ('statusCode' in data && data.statusCode) {
+        throw new Error(data.message || 'Failed to fetch document.');
+      }
+
+      const fileBytes = (data as any).fileBytes;
+      const fileName = (data as any).fileName || doc.fileName || doc.assetName || "document";
+      const rawType = ((data as any).contentType || (data as any).fileType || doc.fileType || "pdf").toLowerCase();
+
+      let mimeType = "application/pdf";
+      if (rawType.includes("pdf")) mimeType = "application/pdf";
+      else if (rawType.includes("png")) mimeType = "image/png";
+      else if (rawType.includes("jpg") || rawType.includes("jpeg")) mimeType = "image/jpeg";
+      else if (rawType.includes("txt")) mimeType = "text/plain";
+      else if (rawType.includes("doc")) mimeType = "application/msword";
+
+      let url = (data as any).url || (data as any).fileUrl;
+      let createdBlobUrl = "";
+
+      if (fileBytes) {
+        const cleanBase64 = fileBytes.replace(/^data:.*?;base64,/, '');
+        const byteCharacters = atob(cleanBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mimeType });
+        createdBlobUrl = URL.createObjectURL(blob);
+        url = createdBlobUrl;
+      }
+
+      if (!url) {
+        throw new Error("Document content not available.");
+      }
+
+      if (action === 'preview') {
+        window.open(url, '_blank');
+      } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (err: any) {
+      alert(err?.message || "Could not access document.");
+    }
   };
 
   return (
@@ -895,9 +936,21 @@ const handleNavClick = (key: string) => {
               <>
                 <div className="bad-modal bad-rfq-fullpage">
                   <div className="bad-modal-header">
-                    <span className="bad-modal-badge">
-                      <IconFile /> RFQ Specification
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <span className="bad-modal-badge">
+                        <IconFile /> RFQ Specification
+                      </span>
+                      {fullPageRfq && (
+                        <button
+                          type="button"
+                          className="bad-modal-badge"
+                          style={{ border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,0.18)', color: '#ffffff' }}
+                          onClick={handleOpenQsAns}
+                        >
+                          <IconFile /> RFQ Question Answers
+                        </button>
+                      )}
+                    </div>
                     <button className="bad-modal-close" onClick={handleBackToAllRfqs}>
                       <IconClose />
                     </button>
@@ -933,8 +986,8 @@ const handleNavClick = (key: string) => {
                         {fullPageRfqError}
                       </div>
                     ) : fullPageRfq ? (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px' }}>
-                        {/* Left Column: RFQ Specifications & Materials */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '28px', maxWidth: '820px', margin: '0 auto' }}>
+                        {/* RFQ Specifications & Materials */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                           <div>
                             <div className="bad-modal-section-title">Description</div>
@@ -1009,22 +1062,62 @@ const handleNavClick = (key: string) => {
                             (fullPageRfq.termsConditionDocuments && fullPageRfq.termsConditionDocuments.length > 0)) && (
                               <div>
                                 <div className="bad-modal-section-title" style={{ marginBottom: '10px' }}>Specifications & Terms Documents</div>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
                                   {fullPageRfq.technicalSpecificationDocuments?.map((doc: any, i: number) => (
-                                    <div key={`tech-${i}`} className="bad-rfq-doc-card">
-                                      <div className="bad-rfq-doc-icon"><IconFile /></div>
-                                      <div style={{ overflow: 'hidden' }}>
-                                        <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                        <div className="bad-rfq-doc-type">Tech Spec Doc</div>
+                                    <div key={`tech-${i}`} className="bad-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
+                                        <div className="bad-rfq-doc-icon"><IconFile /></div>
+                                        <div style={{ overflow: 'hidden' }}>
+                                          <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                                          <div className="bad-rfq-doc-type">Tech Spec Doc</div>
+                                        </div>
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+                                        <button
+                                          type="button"
+                                          title="Preview document"
+                                          onClick={() => handleDocumentAction(doc, 'preview')}
+                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                                        >
+                                          <IconEye />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          title="Download document"
+                                          onClick={() => handleDocumentAction(doc, 'download')}
+                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                                        >
+                                          <IconDownload />
+                                        </button>
                                       </div>
                                     </div>
                                   ))}
                                   {fullPageRfq.termsConditionDocuments?.map((doc: any, i: number) => (
-                                    <div key={`terms-${i}`} className="bad-rfq-doc-card">
-                                      <div className="bad-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></div>
-                                      <div style={{ overflow: 'hidden' }}>
-                                        <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                        <div className="bad-rfq-doc-type">Terms & Conditions</div>
+                                    <div key={`terms-${i}`} className="bad-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
+                                        <div className="bad-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></div>
+                                        <div style={{ overflow: 'hidden' }}>
+                                          <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                                          <div className="bad-rfq-doc-type">Terms & Conditions</div>
+                                        </div>
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+                                        <button
+                                          type="button"
+                                          title="Preview document"
+                                          onClick={() => handleDocumentAction(doc, 'preview')}
+                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                                        >
+                                          <IconEye />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          title="Download document"
+                                          onClick={() => handleDocumentAction(doc, 'download')}
+                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                                        >
+                                          <IconDownload />
+                                        </button>
                                       </div>
                                     </div>
                                   ))}
@@ -1032,55 +1125,104 @@ const handleNavClick = (key: string) => {
                               </div>
                             )}
 
-                        </div>
-
-                        {/* Right Column: Evaluation Questions & Answers */}
-                        <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                          <div className="bad-modal-section-title">Evaluation Questions & Answers</div>
-
-                          {fullPageRfq.questions && fullPageRfq.questions.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '600px', overflowY: 'auto' }}>
-                              {fullPageRfq.questions.map((q: any, i: number) => {
-                                const answers = resolveAnswersForQuestion(fullPageRfq, q, i);
-                                return (
-                                  <div key={i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
-                                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
-                                        Q{i + 1}: {q.question}
-                                      </span>
-                                      <span style={{ fontSize: '11px', color: '#64748b', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
-                                        {q.questionType} {q.isRequired ? "(Required)" : ""}
-                                      </span>
-                                    </div>
-
-                                    {answers.length > 0 ? (
-                                      <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        {answers.map((ans, ai) => (
-                                          <div key={ai} style={{ background: '#ffffff', border: '1px solid #dbeafe', borderRadius: '6px', padding: '8px 10px' }}>
-                                            {ans.supplierName && (
-                                              <div style={{ fontSize: '10.5px', fontWeight: 600, color: '#2563eb', marginBottom: '3px' }}>
-                                                {ans.supplierName}
-                                              </div>
-                                            )}
-                                            <div style={{ fontSize: '12.5px', color: '#334155' }}>
-                                              {ans.display}
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <div style={{ marginTop: '8px', fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
-                                        No response yet.
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                          {/* Supplier Quotations Received */}
+                          <div>
+                            <div className="bad-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                              <IconSparkles /> Supplier Quotations Received
                             </div>
-                          ) : (
-                            <div style={{ fontSize: '13px', color: '#64748b' }}>No evaluation questions were configured for this RFQ.</div>
-                          )}
+                            {fullPageRfq.supplierQuotation &&
+                              fullPageRfq.supplierQuotation.filter((q: any) => q.quotationId || q.totalPrice !== null).length > 0 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '480px', overflowY: 'auto' }}>
+                                {fullPageRfq.supplierQuotation
+                                  .filter((q: any) => q.quotationId || q.totalPrice !== null)
+                                  .map((quote: any, index: number) => (
+                                    <div
+                                      key={index}
+                                      style={{
+                                        background: '#ffffff',
+                                        border: '1px solid #cbd5e1',
+                                        borderRadius: '10px',
+                                        padding: '16px',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                                        transition: 'border-color 0.2s ease'
+                                      }}
+                                    >
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
+                                            Quote ID: {quote.quotationId ? `${quote.quotationId.substring(0, 8)}...` : `Quote #${index + 1}`}
+                                          </span>
+                                          <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                            Delivery: {quote.deliveryType || "Standard"}
+                                          </span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                          {quote.isLead && (
+                                            <span
+                                              className={`bad-status-badge`}
+                                              style={{
+                                                background: '#fef3c7',
+                                                color: '#b45309',
+                                                border: '1px solid #fde68a',
+                                                padding: '3px 8px',
+                                                borderRadius: '6px',
+                                                fontSize: '11px',
+                                                fontWeight: 600
+                                              }}
+                                            >
+                                              Leading
+                                            </span>
+                                          )}
+                                          <span
+                                            className={`bad-status-badge`}
+                                            style={{
+                                              background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
+                                              color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
+                                              padding: '3px 8px',
+                                              borderRadius: '6px',
+                                              fontSize: '11px',
+                                              fontWeight: 600
+                                            }}
+                                          >
+                                            {quote.status || "RECEIVED"}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #f1f5f9', marginBottom: '12px', fontSize: '12px' }}>
+                                        <div>
+                                          <span style={{ color: '#64748b' }}>Delivery Charge:</span>
+                                          <div style={{ fontWeight: 600, color: '#334155', marginTop: '2px' }}>${quote.deliveryCharge ?? 0}</div>
+                                        </div>
+                                        <div>
+                                          <span style={{ color: '#64748b' }}>Tax:</span>
+                                          <div style={{ fontWeight: 600, color: '#334155', marginTop: '2px' }}>${quote.tax ?? 0}</div>
+                                        </div>
+                                        <div>
+                                          <span style={{ color: '#64748b' }}>Discount:</span>
+                                          <div style={{ fontWeight: 600, color: '#dc2626', marginTop: '2px' }}>-${quote.discount ?? 0}</div>
+                                        </div>
+                                        <div>
+                                          <span style={{ color: '#64748b' }}>Total Quote:</span>
+                                          <div style={{ fontWeight: 700, color: '#16a34a', marginTop: '2px', fontSize: '13px' }}>${quote.totalPrice ?? 0}</div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            ) : (
+                              <div className="bad-rfq-no-quote-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 20px' }}>
+                                <IconMail />
+                                <div style={{ fontWeight: 600, color: '#475569', marginTop: '12px' }}>No Quotations Received Yet</div>
+                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', lineHeight: '1.5', maxWidth: '240px' }}>
+                                  When suppliers submit commercial bids, they will populate here in real-time.
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
                         </div>
+
                       </div>
                     ) : null}
                   </div>
@@ -1156,6 +1298,13 @@ const handleNavClick = (key: string) => {
 
                 </div>
               </>
+            ) : rfqPageView === "qsAns" ? (
+              <AdminQsAns
+                rfq={fullPageRfq}
+                loading={loadingFullPageRfq}
+                error={fullPageRfqError && !fullPageRfq ? fullPageRfqError : null}
+                onBack={handleBackToRfqDetail}
+              />
             ) : (
               <>
                 <h1 className="bad-title">Buyer Admin Command Center</h1>

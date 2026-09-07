@@ -312,6 +312,7 @@ export interface RFQSupplierQuotation {
   status: string;
   discountType?: string;
   taxType?: string;
+  isLead?: boolean;
 }
 
 export interface RFQSupplierQuotationItem {
@@ -346,6 +347,7 @@ export interface SubmitQuotationPayload {
   discountType: string;
   tax: number;
   taxType: string;
+  temporaryVerificationToken?: string;
   items?: {
     supplierRFQItemId?: string | null;
     buyerRFQItemId: string;
@@ -366,6 +368,7 @@ export interface CatalogAssetDto {
   contentType: string;
   isSingletonAsset: boolean;
 }
+
 
 export interface CatalogDetailDto {
   id?: string;
@@ -413,10 +416,50 @@ export interface SubmitRfqAnswerItemDto {
 
 export interface SubmitRfqAnswersPayload {
   supplierRFQId: string;
+  supplierId: string;
   answers: SubmitRfqAnswerItemDto[];
 }
 export interface ErrorResponseDto {
   status_code: number;
   message: string;
   description: string;
+}
+
+export interface OtpActionResponse {
+  success?: boolean;
+  statusCode: number;
+  message: string;
+  description: string;
+  token?: string;
+}
+
+export interface VerifyOtpPayload {
+  email: string;
+  otp: string;
+}
+
+// ============================================================================
+// SUPPLIER QUOTATION BY SUPPLIER ID (per-supplier RFQ quotation)
+// ============================================================================
+
+export interface SupplierQuotationByIdItem {
+  supplierRFQId: string;
+  supplierId: string;
+  supplierName: string;
+  totalPrice: number;
+  deliveryCharge: number | null;
+  tax: number | null;
+  discount: number | null;
+  deliveryType: string | null;
+  status: string;
+  quotationId: string;
+  isLead?: boolean;
+  supplierQuotationItems: {
+    quotedPrice: number;
+    itemQutationId: string;
+  }[];
+}
+
+export interface SupplierQuotationBySupplierIdResponse {
+  suppliers: SupplierQuotationByIdItem[];
 }

@@ -1,11 +1,21 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import "./SupplierDashboard.css";
 import "./Invitations.css";
-import { DEFAULT_VERIFICATION_TEMPLATE_ID } from "../common";
-import { getSupplierProfileByOrgId, getPersonDetailCached, type SupplierProfileResponse } from "../api/supplierApi";
+import {
+    DEFAULT_VERIFICATION_TEMPLATE_ID,
+    INVITATION_STATUS,
+    INVITATION_TABS,
+    INVITATION_STATUS_BACKEND_MAP,
+} from "../common";
+import {
+    getSupplierProfileByOrgId,
+    getPersonDetailCached,
+    type SupplierProfileResponse
+} from "../api/supplierApi";
 import {
     fetchBuyerInvitations,
     fetchSupplierInvitations,
+    fetchInvitationSummary,
     updateSupplierInvitationStatus,
     fetchInvitationAnswers,
     submitVerificationAnswers,
@@ -18,7 +28,7 @@ import {
 import { isErrorResponse, toastService } from "@vosox/shared-ui";
 
 
-type InvitationStatus = "open" | "accepted" | "declined" | "closed";
+type InvitationStatus = "open" | "submitted" | "accepted" | "declined" | "closed";
 
 interface Invitation {
     code: string;
@@ -32,7 +42,7 @@ interface Invitation {
     id?: string;
 }
 
-type TabKey = "all" | "open" | "accepted" | "declined";
+type TabKey = "all" | "open" | "submitted" | "accepted" | "declined";
 
 interface InvitationsProps {
     isAdmin?: boolean;
@@ -127,6 +137,13 @@ const IconFile = () => (
     </svg>
 );
 
+const IconSend = () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13" />
+        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+);
+
 
 const officeFurniture: Invitation = {
     code: "RFQ-1024",
@@ -186,18 +203,14 @@ const mockInvitations: Invitation[] = [
     recycledStationeryDeclined,
 ];
 
-const tabs: { key: TabKey; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "open", label: "Open" },
-    { key: "accepted", label: "Accepted" },
-    { key: "declined", label: "Declined" },
-];
+const tabs = INVITATION_TABS;
 
 
 const mapApiStatus = (status: string): InvitationStatus => {
     const normalized = (status || "").toUpperCase();
     if (normalized === "ACCEPTED" || normalized === "ACCEPT") return "accepted";
     if (normalized === "DECLINED" || normalized === "REJECT" || normalized === "REJECTED") return "declined";
+    if (normalized === "SUBMITTED") return "submitted";
     if (normalized === "CLOSED") return "closed";
     return "open";
 };
@@ -299,6 +312,11 @@ const InvitationCard: React.FC<{
                         <IconClock /> OPEN
                     </span>
                 )}
+                {status === "submitted" && (
+                    <span className="inv-status inv-status-submitted">
+                        <IconSend /> SUBMITTED
+                    </span>
+                )}
                 {status === "accepted" && (
                     <span className="inv-status inv-status-accepted">
                         <IconCheckCircle /> ACCEPTED
@@ -328,7 +346,7 @@ const InvitationCard: React.FC<{
             </div>
 
             <div className="inv-card-footer">
-                {showActions && status === "open" && (
+                {showActions && (status === "open" || status === "submitted") && (
                     <div className="inv-footer-left">
                         <button
                             className="inv-btn inv-btn-accept"
@@ -360,7 +378,7 @@ const InvitationCard: React.FC<{
                         </span>
                     </div>
                 )}
-                {(!showActions && status === "open") || status === "closed" ? <div className="inv-footer-left" /> : null}
+                {(!showActions && (status === "open" || status === "submitted")) || status === "closed" ? <div className="inv-footer-left" /> : null}
 
                 <button
                     className="inv-btn inv-btn-view"
@@ -378,6 +396,19 @@ const InvitationCard: React.FC<{
 const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole }) => {
     const [activeTab, setActiveTab] = useState<TabKey>("all");
     const [searchQuery, setSearchQuery] = useState("");
+    const [appliedSearchQuery, setAppliedSearchQuery] = useState("");
+
+    const PAGE_SIZE = 10;
+    const [currentPage, setCurrentPage] = useState(0);
+    const [hasNextPage, setHasNextPage] = useState(false);
+
+    const [invitationCounts, setInvitationCounts] = useState({
+        all: 0,
+        open: 0,
+        submitted: 0,
+        accepted: 0,
+        declined: 0,
+    });
 
     const [invitations, setInvitations] = useState<Invitation[]>(mockInvitations);
     const [loading, setLoading] = useState(false);
@@ -405,7 +436,11 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
     const [loadingProfile, setLoadingProfile] = useState(false);
     const [profileError, setProfileError] = useState<string | null>(null);
 
-    const loadInvitations = async () => {
+    const loadInvitations = async (
+        page = currentPage,
+        tab: TabKey = activeTab,
+        search: string = appliedSearchQuery
+    ) => {
         if (!isAdmin) {
             setInvitations(mockInvitations);
             return;
@@ -413,48 +448,164 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
 
         setLoading(true);
         setError(null);
+
         try {
             const fetcher = adminRole === "supplier" ? fetchSupplierInvitations : fetchBuyerInvitations;
-            const data = await fetcher({ index: 0, limit: 100 });
+
+            const status = tab === INVITATION_STATUS.ALL
+                ? undefined
+                : INVITATION_STATUS_BACKEND_MAP[tab];
+
+            const trimmedSearch = search.trim();
+
+            const data = await fetcher({
+                index: page * PAGE_SIZE,
+                limit: PAGE_SIZE,
+                ...(status ? { status } : {}),
+                ...(trimmedSearch ? { search: trimmedSearch } : {}),
+            });
 
             if (isErrorResponse(data)) {
                 setError(data.description || data.message || "Failed to load invitations.");
                 setInvitations([]);
+                setHasNextPage(false);
                 return;
             }
 
             setInvitations(data.map(mapApiItemToInvitation));
+            setHasNextPage(data.length === PAGE_SIZE);
         } catch (err: any) {
             setError(err.message || "Failed to load invitations.");
             setInvitations([]);
+            setHasNextPage(false);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        loadInvitations();
+        const loadInitialData = async () => {
+            if (!isAdmin) {
+                setInvitations(mockInvitations);
+                return;
+            }
+
+            setLoading(true);
+            setError(null);
+
+            try {
+                const summary = await fetchInvitationSummary();
+
+                if (isErrorResponse(summary)) {
+                    setError(summary.description || summary.message || "Failed to load invitation summary.");
+                    setInvitations([]);
+                    return;
+                }
+
+                setInvitationCounts({
+                    all: summary.all || 0,
+                    open: summary.pending || 0,
+                    submitted: summary.submitted || 0,
+                    accepted: summary.accepted || 0,
+                    declined: summary.declined || 0,
+                });
+
+                const fetcher = adminRole === "supplier" ? fetchSupplierInvitations : fetchBuyerInvitations;
+
+                const data = await fetcher({
+                    index: 0,
+                    limit: PAGE_SIZE,
+                });
+
+                if (isErrorResponse(data)) {
+                    setError(data.description || data.message || "Failed to load invitations.");
+                    setInvitations([]);
+                    setHasNextPage(false);
+                    return;
+                }
+
+                setInvitations(data.map(mapApiItemToInvitation));
+                setHasNextPage(data.length === PAGE_SIZE);
+                setCurrentPage(0);
+            } catch (err: any) {
+                setError(err.message || "Failed to load invitations.");
+                setInvitations([]);
+                setHasNextPage(false);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadInitialData();
     }, [isAdmin, adminRole]);
 
+    const handleTabChange = (tab: TabKey) => {
+        setActiveTab(tab);
+        setCurrentPage(0);
+        setInvitations([]);
+        loadInvitations(0, tab, appliedSearchQuery);
+    };
+
+    const handleSearch = () => {
+        const search = searchQuery.trim();
+
+        setAppliedSearchQuery(search);
+        setCurrentPage(0);
+        setInvitations([]);
+
+        loadInvitations(0, activeTab, search);
+    };
+
+    const handleClearSearch = () => {
+        setSearchQuery("");
+        setAppliedSearchQuery("");
+        setCurrentPage(0);
+        setInvitations([]);
+
+        loadInvitations(0, activeTab, "");
+    };
+
     const showActions = isAdmin && adminRole === "buyer";
+
+    const refreshInvitationSummary = async () => {
+        try {
+            const summary = await fetchInvitationSummary();
+
+            if (isErrorResponse(summary)) {
+                return;
+            }
+
+            setInvitationCounts({
+                all: summary.all || 0,
+                open: summary.pending || 0,
+                submitted: summary.submitted || 0,
+                accepted: summary.accepted || 0,
+                declined: summary.declined || 0,
+            });
+        } catch {
+        }
+    };
 
     const handleAccept = async (invitation: Invitation) => {
         if (!invitation.id) return;
         setActionLoadingId(invitation.id);
         setActionKind("accept");
         setActionErrors((prev) => ({ ...prev, [invitation.id!]: "" }));
+
         try {
             const result = await updateSupplierInvitationStatus({
                 requestId: invitation.id,
                 status: "accept",
             });
+
             if (isErrorResponse(result)) {
                 setActionErrors((prev) => ({ ...prev, [invitation.id!]: result.description || result.message || "Failed to accept invitation." }));
                 return;
             }
-            setInvitations((prev) =>
-                prev.map((inv) => (inv.id === invitation.id ? { ...inv, status: "accepted" } : inv))
-            );
+
+            await refreshInvitationSummary();
+            setInvitations([]);
+            await loadInvitations(currentPage, activeTab, appliedSearchQuery);
         } catch (err: any) {
             setActionErrors((prev) => ({ ...prev, [invitation.id!]: err.message || "Failed to accept invitation." }));
         } finally {
@@ -466,8 +617,10 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
     const loadDefaultAnswers = async (detail: InvitationAnswersResponse) => {
         setLoadingProfile(true);
         setProfileError(null);
+
         try {
             const person = await getPersonDetailCached();
+
             if (isErrorResponse(person)) {
                 const msg = person.description || person.message || "Failed to identify organization.";
                 setProfileError(msg);
@@ -476,6 +629,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
             }
 
             const result = await getSupplierProfileByOrgId(person.organizationId);
+
             if (isErrorResponse(result)) {
                 const msg = result.description || result.message || "Failed to load supplier profile.";
                 setProfileError(msg);
@@ -486,9 +640,11 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
             setSupplierProfile(result);
 
             const answers: Record<string, string> = {};
+
             detail.questions.forEach((q) => {
                 answers[q.verificationTemplateQuestionId] = getDefaultAnswerForQuestion(q, result);
             });
+
             setDefaultAnswers(answers);
         } catch (err: any) {
             const msg = err.message || "Failed to load supplier profile.";
@@ -522,14 +678,16 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                 toastService.error(msg);
                 return;
             }
+
             setVerificationSuccess(true);
             toastService.success("Verification submitted successfully!");
+
             setTimeout(() => closeDetail(), 1500);
-            } catch (err: any) {
-                const msg = err.message || "Failed to submit.";
-                setVerificationError(msg);
-                toastService.error(msg);
-            } finally {
+        } catch (err: any) {
+            const msg = err.message || "Failed to submit.";
+            setVerificationError(msg);
+            toastService.error(msg);
+        } finally {
             setSubmittingVerification(false);
         }
     };
@@ -537,28 +695,37 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
     const handleDownloadAsset = async (assetId: string) => {
         try {
             const result = await fetchSupplierAsset(assetId);
+
             if (isErrorResponse(result)) {
                 toastService.error(result.description || result.message || "Failed to load file.");
                 return;
             }
+
             const url = result.url || result.fileUrl;
+
             if (url) {
                 window.open(url, "_blank");
                 return;
             }
+
             if (result.fileBytes && result.contentType) {
                 const byteChars = atob(result.fileBytes);
                 const byteNumbers = new Array(byteChars.length);
+
                 for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+
                 const blob = new Blob([new Uint8Array(byteNumbers)], { type: result.contentType });
                 const blobUrl = URL.createObjectURL(blob);
                 const a = document.createElement("a");
+
                 a.href = blobUrl;
                 a.download = result.fileName || result.assetName || "file";
                 a.click();
+
                 URL.revokeObjectURL(blobUrl);
                 return;
             }
+
             toastService.error("File data unavailable.");
         } catch (err: any) {
             toastService.error(err.message || "Failed to load file.");
@@ -567,21 +734,25 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
 
     const handleDecline = async (invitation: Invitation) => {
         if (!invitation.id) return;
+
         setActionLoadingId(invitation.id);
         setActionKind("decline");
         setActionErrors((prev) => ({ ...prev, [invitation.id!]: "" }));
+
         try {
             const result = await updateSupplierInvitationStatus({
                 requestId: invitation.id,
                 status: "reject",
             });
+
             if (isErrorResponse(result)) {
                 setActionErrors((prev) => ({ ...prev, [invitation.id!]: result.description || result.message || "Failed to decline invitation." }));
                 return;
             }
-            setInvitations((prev) =>
-                prev.map((inv) => (inv.id === invitation.id ? { ...inv, status: "declined" } : inv))
-            );
+
+            await refreshInvitationSummary();
+            setInvitations([]);
+            await loadInvitations(currentPage, activeTab, appliedSearchQuery);
         } catch (err: any) {
             setActionErrors((prev) => ({ ...prev, [invitation.id!]: err.message || "Failed to decline invitation." }));
         } finally {
@@ -592,6 +763,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
 
     const handleViewDetails = async (invitation: Invitation) => {
         if (!invitation.id) return;
+
         setDetailInvitation(invitation);
         setViewingDetail(null);
         setDetailError(null);
@@ -599,36 +771,42 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
         setVerificationError(null);
         setVerificationSuccess(false);
         setLoadingDetail(true);
+
         try {
             const result = await fetchInvitationAnswers(invitation.id);
+
             if (isErrorResponse(result)) {
                 setDetailError(result.description || result.message || "Failed to load invitation details.");
                 return;
             }
-        setViewingDetail(result);
 
-        const isDefault = result.templateId?.toLowerCase() === DEFAULT_VERIFICATION_TEMPLATE_ID.toLowerCase();
+            setViewingDetail(result);
 
-        if (isDefault && adminRole === "supplier") {
-            loadDefaultAnswers(result);
-        } else if (!isDefault) {
-            const initialAnswers: { [questionId: string]: VerificationAnswer } = {};
-            result.questions?.forEach((q) => {
-                const kind = getQuestionKind(q.questionType);
-                const savedOptionIds = kind === "checkbox" && q.answer
-                    ? q.answer.split(",").map((s) => s.trim()).filter(Boolean)
-                    : [];
+            const isDefault = result.templateId?.toLowerCase() === DEFAULT_VERIFICATION_TEMPLATE_ID.toLowerCase();
 
-                initialAnswers[q.verificationTemplateQuestionId] = {
-                    textAnswer: q.answer || "",
-                    selectedOptionId: q.verificationTemplateQuestionOptionId || null,
-                    selectedOptionIds: savedOptionIds,
-                    file: null,
-                    fileBase64: "",
-                };
-            });
-            setVerificationAnswers(initialAnswers);
-        }
+            if (isDefault && adminRole === "supplier") {
+                loadDefaultAnswers(result);
+            } else if (!isDefault) {
+                const initialAnswers: { [questionId: string]: VerificationAnswer } = {};
+
+                result.questions?.forEach((q) => {
+                    const kind = getQuestionKind(q.questionType);
+
+                    const savedOptionIds = kind === "checkbox" && q.answer
+                        ? q.answer.split(",").map((s) => s.trim()).filter(Boolean)
+                        : [];
+
+                    initialAnswers[q.verificationTemplateQuestionId] = {
+                        textAnswer: q.answer || "",
+                        selectedOptionId: q.verificationTemplateQuestionOptionId || null,
+                        selectedOptionIds: savedOptionIds,
+                        file: null,
+                        fileBase64: "",
+                    };
+                });
+
+                setVerificationAnswers(initialAnswers);
+            }
         } catch (err: any) {
             setDetailError(err.message || "Failed to load invitation details.");
         } finally {
@@ -675,6 +853,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
         setVerificationAnswers((prev) => {
             const current = prev[questionId]?.selectedOptionIds || [];
             const updated = checked ? [...current, optionId] : current.filter((id) => id !== optionId);
+
             return {
                 ...prev,
                 [questionId]: {
@@ -700,9 +879,11 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
         }
 
         const reader = new FileReader();
+
         reader.onloadend = () => {
             const result = reader.result as string;
             const base64Data = result.split(",")[1] || result;
+
             setVerificationAnswers((prev) => ({
                 ...prev,
                 [questionId]: {
@@ -713,6 +894,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                 },
             }));
         };
+
         reader.readAsDataURL(file);
     };
 
@@ -819,38 +1001,20 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
 
             setVerificationSuccess(true);
             toastService.success(status === "SUBMITTED" ? "Answers submitted successfully!" : "Draft saved successfully!");
+
             setTimeout(() => {
                 closeDetail();
             }, 1500);
-            } catch (err: any) {
-                const msg = err.message || `Failed to ${status === "SUBMITTED" ? "submit" : "save"} answers.`;
-                setVerificationError(msg);
-                toastService.error(msg);
-            } finally {
+        } catch (err: any) {
+            const msg = err.message || `Failed to ${status === "SUBMITTED" ? "submit" : "save"} answers.`;
+            setVerificationError(msg);
+            toastService.error(msg);
+        } finally {
             setSubmittingVerification(false);
         }
     };
 
-    const tabCounts = useMemo(() => {
-        return {
-            all: invitations.length,
-            open: invitations.filter((inv) => inv.status === "open").length,
-            accepted: invitations.filter((inv) => inv.status === "accepted").length,
-            declined: invitations.filter((inv) => inv.status === "declined").length,
-        };
-    }, [invitations]);
-
-    const query = searchQuery.trim().toLowerCase();
-    const filteredInvitations = invitations
-        .filter((inv) => (activeTab === "all" ? true : inv.status === activeTab))
-        .filter((inv) => {
-            if (!query) return true;
-            return (
-                inv.company.toLowerCase().includes(query) ||
-                inv.code.toLowerCase().includes(query) ||
-                (inv.category || "").toLowerCase().includes(query)
-            );
-        });
+    const tabCounts = invitationCounts;
 
     return (
         <>
@@ -863,20 +1027,49 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                         <button
                             key={tab.key}
                             className={`inv-tab${activeTab === tab.key ? " inv-tab-active" : ""}`}
-                            onClick={() => setActiveTab(tab.key)}
+                            onClick={() => handleTabChange(tab.key)}
                         >
                             {tab.label} ({tabCounts[tab.key]})
                         </button>
                     ))}
                 </div>
-                <div className="inv-search">
-                    <IconSearch />
-                    <input
-                        type="text"
-                        placeholder="Search buyer, ID or category..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
+
+                <div className="inv-search-wrapper">
+                    <div className="inv-search">
+                        <IconSearch />
+
+                        <input
+                            type="text"
+                            placeholder="Search buyer, ID or category..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    handleSearch();
+                                }
+                            }}
+                        />
+
+                        {searchQuery.trim() && (
+                            <button
+                                type="button"
+                                className="inv-search-clear"
+                                onClick={handleClearSearch}
+                                title="Clear search"
+                            >
+                                <IconClose />
+                            </button>
+                        )}
+                    </div>
+
+                    <button
+                        type="button"
+                        className="inv-search-btn"
+                        onClick={handleSearch}
+                        disabled={loading || !searchQuery.trim()}
+                    >
+                        Search
+                    </button>
                 </div>
             </div>
 
@@ -889,9 +1082,9 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                 </div>
             ) : error ? (
                 <div className="inv-error-text">{error}</div>
-            ) : filteredInvitations.length > 0 ? (
+            ) : invitations.length > 0 ? (
                 <div className="inv-grid">
-                    {filteredInvitations.map((inv, idx) => (
+                    {invitations.map((inv, idx) => (
                         <InvitationCard
                             key={`${inv.code}-${idx}`}
                             invitation={inv}
@@ -917,6 +1110,42 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                 </div>
             )}
 
+            {isAdmin && !loading && !error && (
+                <div className="inv-pagination">
+                    <button
+                        className="inv-btn inv-btn-view"
+                        onClick={() => {
+                            const previousPage = currentPage - 1;
+
+                            setCurrentPage(previousPage);
+                            setInvitations([]);
+                            loadInvitations(previousPage, activeTab, appliedSearchQuery);
+                        }}
+                        disabled={currentPage === 0}
+                    >
+                        Previous
+                    </button>
+
+                    <span>
+                        Page {currentPage + 1}
+                    </span>
+
+                    <button
+                        className="inv-btn inv-btn-view"
+                        onClick={() => {
+                            const nextPage = currentPage + 1;
+
+                            setCurrentPage(nextPage);
+                            setInvitations([]);
+                            loadInvitations(nextPage, activeTab, appliedSearchQuery);
+                        }}
+                        disabled={!hasNextPage}
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
+
             {detailInvitation && (
                 <div className="inv-modal-overlay" onClick={closeDetail}>
                     <div className="inv-modal inv-modal-verification" onClick={(e) => e.stopPropagation()}>
@@ -924,12 +1153,15 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                             <span className="inv-modal-badge">
                                 <IconFile /> Invitation Details
                             </span>
+
                             <button className="inv-modal-close" onClick={closeDetail}>
                                 <IconClose />
                             </button>
+
                             <h2 className="inv-modal-name">
                                 {loadingDetail ? "Loading..." : viewingDetail?.rfqNumber || detailInvitation.title}
                             </h2>
+
                             {viewingDetail && (
                                 <div className="inv-modal-meta">
                                     <span><IconCalendar /> Due: {new Date(viewingDetail.dueDate).toLocaleString()}</span>
@@ -968,12 +1200,14 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                 {viewingDetail.status}
                                             </div>
                                         </div>
+
                                         <div>
                                             <div className="inv-modal-stat-label">Reference No.</div>
                                             <div className="inv-modal-stat-value">
                                                 {viewingDetail.snid || "—"}
                                             </div>
                                         </div>
+
                                         <div>
                                             <div className="inv-modal-stat-label">Remarks</div>
                                             <div className="inv-modal-stat-value">
@@ -981,12 +1215,16 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                             </div>
                                         </div>
                                     </div>
+
                                     {isDefaultTemplate ? (
                                         <div className="inv-modal-qa-block">
                                             {adminRole === "supplier" && (
                                                 <>
                                                     {loadingProfile && (
-                                                        <div className="inv-loading-inner"><div className="inv-spinner" /><span>Loading your details...</span></div>
+                                                        <div className="inv-loading-inner">
+                                                            <div className="inv-spinner" />
+                                                            <span>Loading your details...</span>
+                                                        </div>
                                                     )}
 
                                                     {profileError && !loadingProfile && (
@@ -1007,6 +1245,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                         <div className="inv-modal-qa-question">
                                                             Q{index + 1}: {question.question}
                                                         </div>
+
                                                         <div className="inv-modal-qa-answer">
                                                             {adminRole === "buyer"
                                                                 ? question.answer || "Not yet submitted"
@@ -1079,8 +1318,6 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                                 />
                                                             )}
 
-
-
                                                             {kind === "radio" && question.options && question.options.length > 0 && (
                                                                 <div className="inv-question-options">
                                                                     {question.options.map((option) => (
@@ -1115,8 +1352,6 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                                 </div>
                                                             )}
 
-
-
                                                             {kind === "file" && (
                                                                 <div className="inv-file-upload">
                                                                     {question.assetId ? (
@@ -1137,6 +1372,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                                                 onChange={(e) => handleFileChange(question.verificationTemplateQuestionId, e.target.files?.[0] || null)}
                                                                                 required={question.isRequired}
                                                                             />
+
                                                                             {answer?.file && (
                                                                                 <div style={{ fontSize: "12px", color: "#64748b", marginTop: "6px" }}>
                                                                                     📄 {answer.file.name}
@@ -1152,7 +1388,6 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                             </div>
                                         </div>
                                     )}
-
                                 </div>
                             ) : null}
                         </div>
@@ -1167,6 +1402,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                     >
                                         {hasConfirmedDetails ? "Accepted ✓" : "Accept"}
                                     </button>
+
                                     <button
                                         className="inv-btn inv-btn-submit-verification"
                                         onClick={handleSubmitDefault}
@@ -1184,6 +1420,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                     >
                                         {submittingVerification ? "Saving..." : "Save as Draft"}
                                     </button>
+
                                     <button
                                         className="inv-btn inv-btn-submit-verification"
                                         onClick={() => handleSubmitAnswers("SUBMITTED")}
