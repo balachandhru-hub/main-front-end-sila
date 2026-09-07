@@ -335,6 +335,7 @@ export interface RFQDetailResponse {
   items: RFQDetailItem[];
   supplierQuotation: RFQSupplierQuotation[];
   supplierQuotationItems: RFQSupplierQuotationItem[];
+  status?: string;
 }
 
 export interface SubmitQuotationPayload {

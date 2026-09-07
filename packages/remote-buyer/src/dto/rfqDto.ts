@@ -144,4 +144,5 @@ export interface BuyerRFQDetailResponse {
   rfqVerificationTemplateId: string | null;
   supplierQuotation: BuyerSupplierQuotation[];
   supplierAnswers?: RfqSupplierAnswersDto | null;
+  status?: string;
 }
