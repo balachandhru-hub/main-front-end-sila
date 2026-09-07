@@ -22,8 +22,8 @@ import { isErrorResponse } from "@vosox/shared-ui";
 import UserTemplate from "./usertemplate"
 import { ToastContainer } from "@vosox/shared-ui";
 import type { ErrorResponseDto } from "../dto/platformDto";
-import QuotationComparisonCard from "./Quotationcomparisoncard";
 import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
+import QuotationComparisonCard from "./QuotationComparisonCard";
 
 interface StatCard {
   icon: React.ReactNode;
