@@ -1,0 +1,323 @@
+.qsans-page {
+    background: #ffffff;
+    border-radius: 0.875rem;
+    width: 100%;
+    width: 100%;
+    overflow: visible;
+    box-shadow: 0 0.25rem 1.25rem rgba(15, 23, 42, 0.08);
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.qsans-header {
+    position: relative;
+    background: linear-gradient(120deg, #3b82f6 0%, #2f6feb 60%, #2563eb 100%);
+    padding: 1.5rem 1.75rem 1.375rem 1.75rem;
+    border-radius: 0.875rem 0.875rem 0 0;
+    color: #ffffff;
+}
+
+.qsans-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    background: #ffffff;
+    color: #2f6feb;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0.4375rem 0.875rem;
+    border-radius: 0.3125rem;
+    padding-bottom: 1rem;
+}
+
+.qsans-close {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: none;
+    background: #ffffff;
+    color: #2f6feb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.qsans-close:hover {
+    background: #eef2ff;
+}
+
+.qsans-title {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin: 0;
+    color: #ffffff;
+    word-break: break-word;
+}
+
+.qsans-body {
+    padding: 1.5rem 1.75rem 0.5rem 1.75rem;
+    overflow-x: hidden;
+}
+
+.qsans-section-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #111827;
+    padding-bottom: 1rem;
+}
+
+.qsans-empty {
+    font-size: 0.8125rem;
+    color: #64748b;
+    padding: 1.5rem 0;
+}
+
+.qsans-error {
+    padding: 1.5rem;
+    text-align: center;
+    color: #ef4444;
+}
+
+.qsans-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 18.75rem;
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+.qsans-spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 0.125rem solid #e2e8f0;
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    animation: qsans-spin 0.8s linear infinite;
+}
+
+@keyframes qsans-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* -------- Suppliers -------- */
+
+.qsans-suppliers {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+    padding-bottom: 1.5rem;
+}
+
+.qsans-supplier-block {
+    border: 0.0625rem solid #e2e8f0;
+    border-radius: 0.75rem;
+    background: #f8fafc;
+    padding: 1.25rem;
+}
+
+.qsans-supplier-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.875rem;
+    border-bottom: 0.0625rem solid #e2e8f0;
+}
+
+.qsans-supplier-avatar {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    background: #2f6feb;
+    color: #ffffff;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.qsans-supplier-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+/* -------- Question / Answer cards -------- */
+
+.qsans-questions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.qsans-qa-card {
+    background: #ffffff;
+    border: 0.0625rem solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.875rem;
+}
+
+.qsans-qa-question-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.625rem;
+    flex-wrap: wrap;
+}
+
+.qsans-qa-question {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.qsans-qa-type {
+    font-size: 0.6875rem;
+    color: #64748b;
+    background: #e2e8f0;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    white-space: nowrap;
+}
+
+.qsans-qa-answer-row {
+    padding-top: 0.625rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.625rem;
+    flex-wrap: wrap;
+    background: #eff6ff;
+    border: 0.0625rem solid #dbeafe;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.625rem;
+}
+
+.qsans-qa-answer {
+    font-size: 0.78125rem;
+    color: #334155;
+    word-break: break-word;
+}
+
+.qsans-qa-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-shrink: 0;
+}
+
+.qsans-qa-empty {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.qsans-asset-error {
+    font-size: 0.6875rem;
+    color: #ef4444;
+}
+
+/* -------- Buttons -------- */
+
+.qsans-btn {
+    border-radius: 0.4375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.25rem 0.625rem;
+    cursor: pointer;
+    border: 0.0625rem solid transparent;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+}
+
+.qsans-btn-outline {
+    background: #ffffff;
+    border-color: #2f6feb;
+    color: #2f6feb;
+}
+
+.qsans-btn-outline:hover {
+    background: #eff6ff;
+}
+
+.qsans-btn-outline:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* -------- Footer -------- */
+
+.qsans-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    padding: 1rem 1.75rem 1.5rem 1.75rem;
+    gap: 0.625rem;
+    border-top: 0.0625rem solid #f1f5f9;
+    padding-top: 0.5rem;
+}
+
+.qsans-footer .qsans-btn {
+    padding: 0.6875rem 1.375rem;
+    font-size: 0.875rem;
+}
+
+/* -------- Attachment viewer -------- */
+
+.qsans-attachment-viewer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 32.5rem;
+}
+
+.qsans-attachment-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.625rem;
+}
+
+.qsans-attachment-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.qsans-attachment-frame {
+    flex: 1;
+    width: 100%;
+    min-height: 30rem;
+    border: 0.0625rem solid #e2e8f0;
+    border-radius: 0.5rem;
+    background: #f8fafc;
+}
+
+@media (max-width: 560px) {
+
+    .qsans-header,
+    .qsans-body,
+    .qsans-footer {
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+    }
+
+    .qsans-qa-answer-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

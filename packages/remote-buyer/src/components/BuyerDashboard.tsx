@@ -4,10 +4,17 @@ import CreateRFQ from "./Create_RFQ.tsx";
 import Product from "./Product.tsx";
 import Models from "./Models.tsx";
 import Header from "./Header";
-import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, downloadBuyerAsset } from "../api/Buyerapi";
+import QsAns from "./Qsans.tsx";
+import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, fetchBuyerAsset } from "../api/Buyerapi";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
+import QuotationComparisonCard from "../../../remote-platform-user/src/components/Quotationcomparisoncard.tsx";
 import { CompanyProfile } from '@vosox/shared-ui';
 import { useAuth } from '../../../host-app/src/AuthContext.tsx';
+import type { SupplierQuotationComparisonResponse } from "../../../remote-platform-user/src/api/networkAdminApi";
+import { fetchSupplierQuotationComparison } from "../../../remote-platform-user/src/api/networkAdminApi";
+import { isErrorResponse } from "@vosox/shared-ui";
+import type { ErrorResponseDto } from "../../../remote-platform-user/src/dto/platformDto";
+
 /* ---------------------------------- Icons ---------------------------------- */
 
 interface StatCard {
@@ -44,7 +51,6 @@ interface MatchCard {
   destinationNote: string;
 }
 
-
 const IconClose = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <line x1="18" y1="6" x2="6" y2="18" />
@@ -59,7 +65,6 @@ const IconMenu = () => (
     <line x1="3" y1="18" x2="21" y2="18" />
   </svg>
 );
-
 
 const IconMail = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -179,6 +184,14 @@ const IconEye = () => (
   </svg>
 );
 
+const IconDownload = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+
 const IconMessageSquare = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -272,7 +285,6 @@ const NavIconBarChart = () => (
     <line x1="6" y1="20" x2="6" y2="16" />
   </svg>
 );
-
 
 /* ---------------------------------- Static data ---------------------------------- */
 
@@ -391,7 +403,6 @@ const mockRfqs = [
   }
 ];
 
-
 /* ---------------------------------- Component ---------------------------------- */
 
 const BuyersDashboard: React.FC = () => {
@@ -410,32 +421,39 @@ const BuyersDashboard: React.FC = () => {
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
- const { auth } = useAuth();
-const [buyerId, setBuyerId] = useState<string | null>(auth?.buyerId ?? null);
+  // STATE FOR QUOTATION COMPARISON
+  const [selectedQuotationsRfq, setSelectedQuotationsRfq] = useState<any | null>(null);
+  const [quotationComparisonData, setQuotationComparisonData] = useState<SupplierQuotationComparisonResponse[]>([]);
+  const [loadingQuotations, setLoadingQuotations] = useState(false);
+  const [quotationsError, setQuotationsError] = useState<string | null>(null);
 
-useEffect(() => {
-  if (auth?.buyerId) {
-    setBuyerId(auth.buyerId);
-  }
-}, [auth?.buyerId]);
+  const { auth } = useAuth();
+  const [buyerId, setBuyerId] = useState<string | null>(auth?.buyerId ?? null);
 
-useEffect(() => {
-  const loadBuyerProfile = async () => {
-    if (!buyerId) {
-      try {
-        const profile = await getBuyerProfile();
-        if (profile?.id) {
-          setBuyerId(profile.id); 
-        } else {
-          setRfqsError("Buyer profile not found. Please complete onboarding.");
-        }
-      } catch (err: any) {
-        setRfqsError("Failed to load buyer profile details.");
-      }
+  useEffect(() => {
+    if (auth?.buyerId) {
+      setBuyerId(auth.buyerId);
     }
-  };
-  loadBuyerProfile();
-}, [buyerId]);
+  }, [auth?.buyerId]);
+
+  useEffect(() => {
+    const loadBuyerProfile = async () => {
+      if (!buyerId) {
+        try {
+          const profile = await getBuyerProfile();
+          if (profile?.id) {
+            setBuyerId(profile.id);
+          } else {
+            setRfqsError("Buyer profile not found. Please complete onboarding.");
+          }
+        } catch (err: any) {
+          setRfqsError("Failed to load buyer profile details.");
+        }
+      }
+    };
+    loadBuyerProfile();
+  }, [buyerId]);
+
   useEffect(() => {
     const loadRfqs = async () => {
       if (!buyerId) return;
@@ -464,7 +482,7 @@ useEffect(() => {
   }, [buyerId]);
 
 
-  const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
+  const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail" | "qsAns" | "quotationComparison">("dashboard");
 
   const [allRfqsList, setAllRfqsList] = useState<any[]>([]);
   const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
@@ -564,10 +582,135 @@ useEffect(() => {
     }
   };
 
+  const handleDocumentAction = async (doc: any, action: 'preview' | 'download') => {
+    const assetId = doc.id || doc.assetId;
+    if (!assetId) {
+      alert("Document asset ID is missing.");
+      return;
+    }
+
+    try {
+      const data = await fetchBuyerAsset(assetId);
+      if ('statusCode' in data && data.statusCode) {
+        throw new Error(data.message || 'Failed to fetch document.');
+      }
+
+      const fileBytes = (data as any).fileBytes;
+      const fileName = (data as any).fileName || doc.fileName || doc.assetName || "document";
+      const rawType = ((data as any).contentType || (data as any).fileType || doc.fileType || "pdf").toLowerCase();
+
+      let mimeType = "application/pdf";
+      if (rawType.includes("pdf")) mimeType = "application/pdf";
+      else if (rawType.includes("png")) mimeType = "image/png";
+      else if (rawType.includes("jpg") || rawType.includes("jpeg")) mimeType = "image/jpeg";
+      else if (rawType.includes("txt")) mimeType = "text/plain";
+      else if (rawType.includes("doc")) mimeType = "application/msword";
+
+      let url = (data as any).url || (data as any).fileUrl;
+      let createdBlobUrl = "";
+
+      if (fileBytes) {
+        const cleanBase64 = fileBytes.replace(/^data:.*?;base64,/, '');
+        const byteCharacters = atob(cleanBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mimeType });
+        createdBlobUrl = URL.createObjectURL(blob);
+        url = createdBlobUrl;
+      }
+
+      if (!url) {
+        throw new Error("Document content not available.");
+      }
+
+      if (action === 'preview') {
+        window.open(url, '_blank');
+      } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (err: any) {
+      alert(err?.message || "Could not access document.");
+    }
+  };
+
   const handleBackToAllRfqs = () => {
     setRfqPageView("allRfqs");
     setFullPageRfq(null);
     setFullPageRfqError(null);
+  };
+
+  // HANDLER FOR QUOTATION COMPARISON
+  const handleOpenQuotationComparison = async (rfq: any) => {
+    setSelectedQuotationsRfq(rfq);
+    setRfqPageView("quotationComparison");
+    setLoadingQuotations(true);
+    setQuotationsError(null);
+    setQuotationComparisonData([]);
+
+    try {
+      let rfqDetails = rfq;
+      
+      if (!rfq.supplierQuotation) {
+        rfqDetails = await fetchBuyerRFQById(rfq.rfqId);
+      }
+
+      if (rfqDetails.supplierQuotation && rfqDetails.supplierQuotation.length > 0) {
+        const comparisonDataList: SupplierQuotationComparisonResponse[] = [];
+        const errors: string[] = [];
+
+        for (const quotation of rfqDetails.supplierQuotation) {
+          if (quotation.quotationId) {
+            const result = await fetchSupplierQuotationComparison(quotation.quotationId);
+
+            if (!isErrorResponse(result)) {
+              comparisonDataList.push(result as SupplierQuotationComparisonResponse);
+            } else {
+              const errorData = result as unknown as ErrorResponseDto;
+              errors.push(
+                errorData.message || `Failed to load quotation ${quotation.quotationId}`
+              );
+            }
+          }
+        }
+
+        if (comparisonDataList.length > 0) {
+          setQuotationComparisonData(comparisonDataList);
+        }
+
+        if (errors.length > 0 && comparisonDataList.length === 0) {
+          setQuotationsError(errors.join(", "));
+        }
+      } else {
+        setQuotationsError("No quotations found for this RFQ.");
+      }
+    } catch (error: any) {
+      setQuotationsError(error.message || "Failed to load quotation comparisons.");
+    } finally {
+      setLoadingQuotations(false);
+    }
+  };
+
+  const handleBackFromQuotationComparison = () => {
+    setRfqPageView("rfqDetail");
+    setSelectedQuotationsRfq(null);
+    setQuotationComparisonData([]);
+    setQuotationsError(null);
+  };
+
+  const handleOpenQsAns = () => {
+    setRfqPageView("qsAns");
+  };
+
+  const handleBackToRfqDetail = () => {
+    setRfqPageView("rfqDetail");
   };
 
   const handleLogout = async () => {
@@ -584,126 +727,6 @@ useEffect(() => {
       setLoggingOut(false);
     }
   };
-
-  const resolveAnswersForQuestion = (
-    rfq: any,
-    question: any
-  ): { supplierId: string | null; display: string; attachment: any | null }[] => {
-    const supplierAnswerSets = rfq?.supplierAnswers?.supplierAnswers;
-    const questionId = question?.id ?? question?.rfqQuestionId;
-    if (!Array.isArray(supplierAnswerSets) || !questionId) return [];
-
-    const results: { supplierId: string | null; display: string; attachment: any | null }[] = [];
-
-    supplierAnswerSets.forEach((supplierAnswerSet: any) => {
-      const answerList = Array.isArray(supplierAnswerSet?.answers) ? supplierAnswerSet.answers : [];
-      const match = answerList.find((a: any) => a?.rfqQuestionId === questionId);
-      if (!match) return;
-
-      const display = (match.answer && match.answer.trim() !== "")
-        ? match.answer
-        : (match.attachment?.fileName || "");
-      if (!display) return;
-
-      results.push({
-        supplierId: supplierAnswerSet?.supplierId || null,
-        display,
-        attachment: match.attachment || null,
-      });
-    });
-
-    return results;
-  };
-
-  const [downloadingAssetId, setDownloadingAssetId] = useState<string | null>(null);
-  const [downloadAssetError, setDownloadAssetError] = useState<string | null>(null);
-
-  const handleDownloadAnswerAttachment = async (attachment: any) => {
-    if (!attachment?.id || downloadingAssetId) return;
-    setDownloadingAssetId(attachment.id);
-    setDownloadAssetError(null);
-    try {
-      const asset = await downloadBuyerAsset(attachment.id);
-      if ('statusCode' in asset) {
-        throw new Error(asset.message || 'Failed to download document');
-      }
-      const byteCharacters = atob(asset.fileBytes);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: asset.contentType || "application/octet-stream" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = asset.fileName || attachment.fileName || "download";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      setDownloadAssetError(err.message || "Failed to download the document.");
-    } finally {
-      setDownloadingAssetId(null);
-    }
-  };
-  const [viewingAttachment, setViewingAttachment] = useState<{ fileName: string; url: string; contentType: string } | null>(null);
-  const [viewingAssetId, setViewingAssetId] = useState<string | null>(null);
-  const [viewAssetError, setViewAssetError] = useState<string | null>(null);
-
-  const handleViewAnswerAttachment = async (attachment: any) => {
-    if (!attachment?.id || viewingAssetId) return;
-    setViewingAssetId(attachment.id);
-    setViewAssetError(null);
-    try {
-      const asset = await downloadBuyerAsset(attachment.id);
-      if ('statusCode' in asset) {
-        throw new Error(asset.message || 'Failed to download document');
-      }
-      const byteCharacters = atob(asset.fileBytes);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const resolvedFileName = asset.fileName || attachment.fileName || "Document";
-      const extension = resolvedFileName.split(".").pop()?.toLowerCase() || "";
-      const extensionMimeMap: Record<string, string> = {
-        pdf: "application/pdf",
-        png: "image/png",
-        jpg: "image/jpeg",
-        jpeg: "image/jpeg",
-        gif: "image/gif",
-        webp: "image/webp",
-        svg: "image/svg+xml",
-        txt: "text/plain",
-      };
-      const viewContentType =
-        extensionMimeMap[extension] ||
-        (asset.contentType && asset.contentType !== "application/octet-stream" ? asset.contentType : "application/pdf");
-
-      const blob = new Blob([byteArray], { type: viewContentType });
-      const url = window.URL.createObjectURL(blob);
-      setViewingAttachment({
-        fileName: resolvedFileName,
-        url,
-        contentType: viewContentType,
-      });
-    } catch (err: any) {
-      setViewAssetError(err.message || "Failed to load the document.");
-    } finally {
-      setViewingAssetId(null);
-    }
-  };
-
-  const closeAttachmentViewer = () => {
-    if (viewingAttachment?.url) {
-      window.URL.revokeObjectURL(viewingAttachment.url);
-    }
-    setViewingAttachment(null);
-  };
-
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
@@ -805,41 +828,41 @@ useEffect(() => {
                   <div>
                     <div className="pud-rfq-table-container">
                       <table className="pud-rfq-items-table pud-allrfqs-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '48px' }}>S.No</th>
-                          <th>RFQ Number</th>
-                          <th>Title</th>
-                          <th>Organization</th>
-                          <th>Delivery Location</th>
-                          <th>Closing Date</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allRfqsList.map((rfq: any, idx: number) => (
-                          <tr key={rfq.rfqId || idx}>
-                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
-                            <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
-                            <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
-                            <td>{rfq.organizationName}</td>
-                            <td>{rfq.deliveryLocation}</td>
-                            <td>
-                              {rfq.endDate
-                                ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                                : "—"}
-                            </td>
-                            <td>
-                              <button
-                                className="pud-btn pud-btn-outline"
-                                onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                              >
-                                View RFQ Details
-                              </button>
-                            </td>
+                        <thead>
+                          <tr>
+                            <th style={{ width: '48px' }}>S.No</th>
+                            <th>RFQ Number</th>
+                            <th>Title</th>
+                            <th>Organization</th>
+                            <th>Delivery Location</th>
+                            <th>Closing Date</th>
+                            <th>Action</th>
                           </tr>
-                        ))}
-                      </tbody>
+                        </thead>
+                        <tbody>
+                          {allRfqsList.map((rfq: any, idx: number) => (
+                            <tr key={rfq.rfqId || idx}>
+                              <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
+                              <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
+                              <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                              <td>{rfq.organizationName}</td>
+                              <td>{rfq.deliveryLocation}</td>
+                              <td>
+                                {rfq.endDate
+                                  ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                  : "—"}
+                              </td>
+                              <td>
+                                <button
+                                  className="pud-btn pud-btn-outline"
+                                  onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                                >
+                                  View RFQ Details
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
                       </table>
                     </div>
 
@@ -873,10 +896,22 @@ useEffect(() => {
               <>
                 <div className="pud-modal pud-rfq-fullpage">
                   <div className="pud-modal-header">
-                    <span className="pud-modal-badge">
-                      <IconFile /> RFQ Specification
-                    </span>
-                    <button className="pud-modal-close" onClick={() => (viewingAttachment ? closeAttachmentViewer() : handleBackToAllRfqs())}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <span className="pud-modal-badge">
+                        <IconFile /> RFQ Specification
+                      </span>
+                      {fullPageRfq && (
+                        <button
+                          type="button"
+                          className="pud-modal-badge"
+                          style={{ border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,0.18)', color: '#ffffff' }}
+                          onClick={handleOpenQsAns}
+                        >
+                          <IconFile /> RFQ Question Answers
+                        </button>
+                      )}
+                    </div>
+                    <button className="pud-modal-close" onClick={handleBackToAllRfqs}>
                       <IconClose />
                     </button>
                     <h2 className="pud-modal-name">
@@ -886,34 +921,20 @@ useEffect(() => {
                       <div className="pud-modal-meta">
                         <span><IconCalendar /> Closes: {new Date(fullPageRfq.endDate).toLocaleDateString()}</span>
                         <span><IconPin /> Delivery: {fullPageRfq.deliveryLocation}</span>
+                        <button
+                          className="pud-btn pud-btn-outline"
+                          onClick={() => handleOpenQuotationComparison(fullPageRfq)}
+                          title="View Supplier Quotations"
+                          style={{ marginLeft: 'auto' }}
+                        >
+                          📊 Bid Comparison
+                        </button>
                       </div>
                     )}
                   </div>
 
                   <div className="pud-modal-body">
-                    {viewingAttachment ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '520px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                          <button
-                            type="button"
-                            className="pud-btn pud-btn-outline"
-                            style={{ padding: '5px 12px', fontSize: '12px' }}
-                            onClick={closeAttachmentViewer}
-                          >
-                            ← Back
-                          </button>
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
-                            {viewingAttachment.fileName}
-                          </span>
-                          <span style={{ width: '70px' }} />
-                        </div>
-                        <iframe
-                          src={viewingAttachment.url}
-                          title={viewingAttachment.fileName}
-                          style={{ flex: 1, width: '100%', minHeight: '480px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}
-                        />
-                      </div>
-                    ) : loadingFullPageRfq ? (
+                    {loadingFullPageRfq ? (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
                         <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                           <div className="pud-spinner" style={{ width: '32px', height: '32px' }} />
@@ -925,8 +946,7 @@ useEffect(() => {
                         {fullPageRfqError}
                       </div>
                     ) : fullPageRfq ? (
-                      <div className="pud-rfq-detail-grid">
-                        {/* Left Column: RFQ Specifications & Materials */}
+                      <div className="pud-rfq-detail-grid pud-rfq-detail-grid-single">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
                           <div>
                             <div className="pud-modal-section-title">Description</div>
@@ -936,17 +956,17 @@ useEffect(() => {
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px 18px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
                               <div>
-  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
-  <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-    {new Date(fullPageRfq.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-  </div>
-</div>
-<div>
-  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>End Date</div>
-  <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-    {new Date(fullPageRfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-  </div>
-</div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
+                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                                  {new Date(fullPageRfq.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                </div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>End Date</div>
+                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                                  {new Date(fullPageRfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                </div>
+                              </div>
                               <div>
                                 <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Add Lot Option</div>
                                 <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
@@ -956,7 +976,6 @@ useEffect(() => {
                             </div>
                           </div>
 
-                          {/* Items table */}
                           {fullPageRfq.items && fullPageRfq.items.length > 0 && (
                             <div>
                               <div className="pud-modal-section-title" style={{ marginBottom: '10px' }}>Required Materials & Services</div>
@@ -982,7 +1001,7 @@ useEffect(() => {
                                         </td>
                                         <td>
                                           <div>
-                                            {item.materialCode || "N/A"}  
+                                            {item.materialCode || "N/A"}
                                           </div>
                                         </td>
                                         <td>
@@ -1000,22 +1019,62 @@ useEffect(() => {
                             (fullPageRfq.termsConditionDocuments && fullPageRfq.termsConditionDocuments.length > 0)) && (
                               <div>
                                 <div className="pud-modal-section-title" style={{ marginBottom: '10px' }}>Specifications & Terms Documents</div>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
                                   {fullPageRfq.technicalSpecificationDocuments?.map((doc: any, i: number) => (
-                                    <div key={`tech-${i}`} className="pud-rfq-doc-card">
-                                      <div className="pud-rfq-doc-icon"><IconFile /></div>
-                                      <div style={{ overflow: 'hidden' }}>
-                                        <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                        <div className="pud-rfq-doc-type">Tech Spec Doc</div>
+                                    <div key={`tech-${i}`} className="pud-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
+                                        <div className="pud-rfq-doc-icon"><IconFile /></div>
+                                        <div style={{ overflow: 'hidden' }}>
+                                          <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                                          <div className="pud-rfq-doc-type">Tech Spec Doc</div>
+                                        </div>
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+                                        <button
+                                          type="button"
+                                          title="Preview document"
+                                          onClick={() => handleDocumentAction(doc, 'preview')}
+                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                                        >
+                                          <IconEye />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          title="Download document"
+                                          onClick={() => handleDocumentAction(doc, 'download')}
+                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                                        >
+                                          <IconDownload />
+                                        </button>
                                       </div>
                                     </div>
                                   ))}
                                   {fullPageRfq.termsConditionDocuments?.map((doc: any, i: number) => (
-                                    <div key={`terms-${i}`} className="pud-rfq-doc-card">
-                                      <div className="pud-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></div>
-                                      <div style={{ overflow: 'hidden' }}>
-                                        <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                        <div className="pud-rfq-doc-type">Terms & Conditions</div>
+                                    <div key={`terms-${i}`} className="pud-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
+                                        <div className="pud-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></div>
+                                        <div style={{ overflow: 'hidden' }}>
+                                          <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                                          <div className="pud-rfq-doc-type">Terms & Conditions</div>
+                                        </div>
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+                                        <button
+                                          type="button"
+                                          title="Preview document"
+                                          onClick={() => handleDocumentAction(doc, 'preview')}
+                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                                        >
+                                          <IconEye />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          title="Download document"
+                                          onClick={() => handleDocumentAction(doc, 'download')}
+                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                                        >
+                                          <IconDownload />
+                                        </button>
                                       </div>
                                     </div>
                                   ))}
@@ -1053,19 +1112,37 @@ useEffect(() => {
                                             Delivery: {quote.deliveryType || "Standard"}
                                           </span>
                                         </div>
-                                        <span
-                                          className={`pud-status-badge`}
-                                          style={{
-                                            background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
-                                            color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
-                                            padding: '3px 8px',
-                                            borderRadius: '6px',
-                                            fontSize: '11px',
-                                            fontWeight: 600
-                                          }}
-                                        >
-                                          {quote.status || "RECEIVED"}
-                                        </span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                          {quote.isLead && (
+                                            <span
+                                              className={`pud-status-badge`}
+                                              style={{
+                                                background: '#fef3c7',
+                                                color: '#b45309',
+                                                border: '1px solid #fde68a',
+                                                padding: '3px 8px',
+                                                borderRadius: '6px',
+                                                fontSize: '11px',
+                                                fontWeight: 600
+                                              }}
+                                            >
+                                              Leading
+                                            </span>
+                                          )}
+                                          <span
+                                            className={`pud-status-badge`}
+                                            style={{
+                                              background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
+                                              color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
+                                              padding: '3px 8px',
+                                              borderRadius: '6px',
+                                              fontSize: '11px',
+                                              fontWeight: 600
+                                            }}
+                                          >
+                                            {quote.status || "RECEIVED"}
+                                          </span>
+                                        </div>
                                       </div>
 
                                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #f1f5f9', marginBottom: '12px', fontSize: '12px' }}>
@@ -1101,76 +1178,6 @@ useEffect(() => {
                           </div>
 
                         </div>
-                        {/* Right Column: Evaluation Questions & Answers */}
-                        <div className="pud-rfq-detail-right">
-                          <div className="pud-modal-section-title">Evaluation Questions & Answers</div>
-
-                          {fullPageRfq.questions && fullPageRfq.questions.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '600px', overflowY: 'auto' }}>
-                              {fullPageRfq.questions.map((q: any, i: number) => {
-                                const answers = resolveAnswersForQuestion(fullPageRfq, q);
-                                return (
-                                  <div key={i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
-                                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
-                                        Q{i + 1}: {q.question}
-                                      </span>
-                                      <span style={{ fontSize: '11px', color: '#64748b', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
-                                        {q.questionType} {q.isRequired ? "(Required)" : ""}
-                                      </span>
-                                    </div>
-
-                                    {answers.length > 0 ? (
-                                      <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        {answers.map((ans, ai) => (
-                                          <div key={ai} style={{ background: '#ffffff', border: '1px solid #dbeafe', borderRadius: '6px', padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-                                            <div style={{ fontSize: '12.5px', color: '#334155' }}>
-                                              {ans.display}
-                                            </div>
-                                            {ans.attachment && (
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                                <button
-                                                  type="button"
-                                                  className="pud-btn pud-btn-outline"
-                                                  style={{ padding: '4px 10px', fontSize: '11.5px' }}
-                                                  disabled={viewingAssetId === ans.attachment.id}
-                                                  onClick={() => handleViewAnswerAttachment(ans.attachment)}
-                                                >
-                                                  {viewingAssetId === ans.attachment.id ? "Loading..." : "View"}
-                                                </button>
-                                                <button
-                                                  type="button"
-                                                  className="pud-btn pud-btn-outline"
-                                                  style={{ padding: '4px 10px', fontSize: '11.5px' }}
-                                                  disabled={downloadingAssetId === ans.attachment.id}
-                                                  onClick={() => handleDownloadAnswerAttachment(ans.attachment)}
-                                                >
-                                                  {downloadingAssetId === ans.attachment.id ? "Downloading..." : "Download"}
-                                                </button>
-                                              </div>
-                                            )}
-                                          </div>
-                                        ))}
-                                        {downloadAssetError && (
-                                          <div style={{ fontSize: '11px', color: '#ef4444' }}>{downloadAssetError}</div>
-                                        )}
-                                        {viewAssetError && (
-                                          <div style={{ fontSize: '11px', color: '#ef4444' }}>{viewAssetError}</div>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <div style={{ marginTop: '8px', fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
-                                        No response yet.
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <div style={{ fontSize: '13px', color: '#64748b' }}>No evaluation questions were configured for this RFQ.</div>
-                          )}
-                        </div>
                       </div>
                     ) : null}
                   </div>
@@ -1179,20 +1186,79 @@ useEffect(() => {
                     <div className="pud-modal-footer">
                       <button
                         className="pud-btn pud-btn-outline"
-                        onClick={() => (viewingAttachment ? closeAttachmentViewer() : handleBackToAllRfqs())}
+                        onClick={handleBackToAllRfqs}
                         style={{ marginRight: '10px' }}
                       >
-                        {viewingAttachment ? "Back" : "Close"}
+                        Close
                       </button>
-                      {!viewingAttachment && (
-                        <button className="pud-btn pud-btn-message" style={{ background: '#2563eb', color: '#ffffff' }}>
-                          Evaluate Quotations
-                        </button>
-                      )}
+                      <button className="pud-btn pud-btn-message" style={{ background: '#2563eb', color: '#ffffff' }}>
+                        Evaluate Quotations
+                      </button>
                     </div>
                   )}
                 </div>
               </>
+            ) : rfqPageView === "quotationComparison" ? (
+              <>
+                <div className="pud-modal pud-rfq-fullpage">
+                  <div className="pud-modal-header">
+                    <span className="pud-modal-badge">
+                      <IconSparkles /> Bid Comparison
+                    </span>
+                    <button className="pud-modal-close" onClick={handleBackFromQuotationComparison}>
+                      <IconClose />
+                    </button>
+                    <h2 className="pud-modal-name">
+                      {selectedQuotationsRfq?.title || "RFQ Quotations"}
+                    </h2>
+                    {selectedQuotationsRfq && (
+                      <div className="pud-modal-meta">
+                        <span><IconFile /> {selectedQuotationsRfq.rfqNumber}</span>
+                        <span><IconPin /> {selectedQuotationsRfq.deliveryLocation}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pud-modal-body" style={{ maxHeight: 'calc(100% - 120px)', overflowY: 'auto', padding: '24px' }}>
+                    {loadingQuotations ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+                        <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                          <div className="pud-spinner" style={{ width: '32px', height: '32px' }} />
+                          <span>Loading quotation comparisons...</span>
+                        </div>
+                      </div>
+                    ) : quotationsError && quotationComparisonData.length === 0 ? (
+                      <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
+                        {quotationsError}
+                      </div>
+                    ) : quotationComparisonData.length === 0 ? (
+                      <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                        No quotation data available.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        {quotationComparisonData.map((comparison, index) => (
+                          <QuotationComparisonCard
+                            key={comparison.supplierQuotationId || index}
+                            quotation={comparison}
+                            rfqTitle={selectedQuotationsRfq.title}
+                            rfqNumber={selectedQuotationsRfq.rfqNumber}
+                            supplierName={`Supplier ${index + 1}`}
+                            contactPerson="Contact Person"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : rfqPageView === "qsAns" ? (
+              <QsAns
+                rfq={fullPageRfq}
+                loading={loadingFullPageRfq}
+                error={fullPageRfqError && !fullPageRfq ? fullPageRfqError : null}
+                onBack={handleBackToRfqDetail}
+              />
             ) : activeNav === "companyProfile" ? (
               <CompanyProfile
                 mode="network-admin"

@@ -7,6 +7,7 @@ import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../ap
 import type { CreateRFQPayload, RfqDocumentAssetDto, RfqItemDto, RfqQuestionDto, VerifiedSupplierDto, SupplierVerificationType } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
 import type { CountryDto, UnitDto, CurrencyDto } from "../api/masterdataApi";
+import ItemMasterModal from "./ItemMasterModal";
 
 
 const HARDCODED_RFQ_VERIFICATION_TEMPLATE_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
@@ -582,11 +583,8 @@ const getUnitsSafe = async (
     const [endDateTime, setEndDateTime] = useState("");
     const [deliveryTargetDate, setDeliveryTargetDate] = useState("");
 
-    const [techSpecFile, setTechSpecFile] = useState<string | null>(null);
-    const [termsFile, setTermsFile] = useState<string | null>(null);
-
-    const [techSpecFileObj, setTechSpecFileObj] = useState<File | null>(null);
-    const [termsFileObj, setTermsFileObj] = useState<File | null>(null);
+    const [techSpecFiles, setTechSpecFiles] = useState<File[]>([]);
+    const [termsFiles, setTermsFiles] = useState<File[]>([]);
 
     const techSpecInputRef = useRef<HTMLInputElement>(null);
     const termsInputRef = useRef<HTMLInputElement>(null);
@@ -651,7 +649,7 @@ if (Array.isArray(data)) {
     const [supplierSearchQuery, setSupplierSearchQuery] = useState("");
     const [registrationTemplate, setRegistrationTemplate] = useState("");
     const [registrationTemplateId, setRegistrationTemplateId] = useState("");
-    const supplierRegistrationLink = "https://supplier.company.com/register";
+    // const supplierRegistrationLink = "https://supplier.company.com/register";
 
     const [templateOptions, setTemplateOptions] = useState<VerificationTemplate[]>([]);
     const [templatePageIndex, setTemplatePageIndex] = useState(0);
@@ -709,6 +707,7 @@ if (Array.isArray(data)) {
     const [viewTemplateLoading, setViewTemplateLoading] = useState(false);
     const [viewTemplateError, setViewTemplateError] = useState<string | null>(null);
     const [viewTemplateData, setViewTemplateData] = useState<VerificationTemplate | null>(null);
+    const [isItemMasterModalOpen, setIsItemMasterModalOpen] = useState(false);
 
     const handleViewTemplate = async () => {
         if (!registrationTemplateId) return;
@@ -880,17 +879,17 @@ if (Array.isArray(data)) {
         setCustomFields((prev) => prev.filter((f) => f.id !== id));
     };
 
-    const handleFileChosen = (
-        e: React.ChangeEvent<HTMLInputElement>,
-        setFile: React.Dispatch<React.SetStateAction<string | null>>,
-        setFileObj: React.Dispatch<React.SetStateAction<File | null>>
+    const handleFilesChosen = (
+        files: FileList | File[] | null,
+        setFilesState: React.Dispatch<React.SetStateAction<File[]>>
     ) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setFile(file.name.length > 12 ? `${file.name.slice(0, 10)}...` : file.name);
-            setFileObj(file);
-        }
-        e.target.value = "";
+        if (!files || files.length === 0) return;
+        const fileArray = Array.from(files);
+        setFilesState((prev) => {
+            const existingNames = new Set(prev.map((f) => f.name));
+            const filteredNew = fileArray.filter((f) => !existingNames.has(f.name));
+            return [...prev, ...filteredNew];
+        });
     };
 
     const handleNext = () => {
@@ -940,13 +939,13 @@ if (Array.isArray(data)) {
         setIsSubmittingRFQ(true);
 
         try {
-            const technicalSpecificationDocuments: RfqDocumentAssetDto[] = techSpecFileObj
-                ? [await buildDocumentAsset(techSpecFileObj, buyerProfileId, "TechnicalSpecification")]
-                : [];
+            const technicalSpecificationDocuments: RfqDocumentAssetDto[] = await Promise.all(
+                techSpecFiles.map((file) => buildDocumentAsset(file, buyerProfileId, "TechnicalSpecification"))
+            );
 
-            const termsConditionDocuments: RfqDocumentAssetDto[] = termsFileObj
-                ? [await buildDocumentAsset(termsFileObj, buyerProfileId, "TermsAndConditions")]
-                : [];
+            const termsConditionDocuments: RfqDocumentAssetDto[] = await Promise.all(
+                termsFiles.map((file) => buildDocumentAsset(file, buyerProfileId, "TermsAndConditions"))
+            );
 
             const questionTypeLegacyMap: Record<string, string> = {
                 INPUT: "Text",
@@ -1341,56 +1340,88 @@ if (Array.isArray(data)) {
                     <div className="bd-row-2">
                         <div className="bd-field">
                             <label className="bd-label">Attachments (Technical Specifications)</label>
-                            <div className="bd-dropzone" onClick={() => techSpecInputRef.current?.click()}>
+                            <div
+                                className="bd-dropzone"
+                                onClick={() => techSpecInputRef.current?.click()}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    handleFilesChosen(e.dataTransfer.files, setTechSpecFiles);
+                                }}
+                            >
                                 Click to select file or drag and drop here
                             </div>
                             <input
                                 ref={techSpecInputRef}
                                 type="file"
+                                multiple
                                 className="bd-hidden-file-input"
-                                onChange={(e) => handleFileChosen(e, setTechSpecFile, setTechSpecFileObj)}
+                                onChange={(e) => {
+                                    handleFilesChosen(e.target.files, setTechSpecFiles);
+                                    e.target.value = "";
+                                }}
                             />
-                            {techSpecFile && (
-                                <span className="bd-chip">
-                                    {techSpecFile}
-                                    <button
-                                        className="bd-chip-remove"
-                                        onClick={() => {
-                                            setTechSpecFile(null);
-                                            setTechSpecFileObj(null);
-                                        }}
-                                        type="button"
-                                    >
-                                        ×
-                                    </button>
-                                </span>
+                            {techSpecFiles.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                                    {techSpecFiles.map((file, idx) => (
+                                        <span key={idx} className="bd-chip">
+                                            {file.name.length > 18 ? `${file.name.slice(0, 15)}...` : file.name}
+                                            <button
+                                                className="bd-chip-remove"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setTechSpecFiles((prev) => prev.filter((_, i) => i !== idx));
+                                                }}
+                                                type="button"
+                                            >
+                                                ×
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
                             )}
                         </div>
                         <div className="bd-field">
                             <label className="bd-label">Terms &amp; Conditions</label>
-                            <div className="bd-dropzone" onClick={() => termsInputRef.current?.click()}>
+                            <div
+                                className="bd-dropzone"
+                                onClick={() => termsInputRef.current?.click()}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    handleFilesChosen(e.dataTransfer.files, setTermsFiles);
+                                }}
+                            >
                                 Click to select file or drag and drop here
                             </div>
                             <input
                                 ref={termsInputRef}
                                 type="file"
+                                multiple
                                 className="bd-hidden-file-input"
-                                onChange={(e) => handleFileChosen(e, setTermsFile, setTermsFileObj)}
+                                onChange={(e) => {
+                                    handleFilesChosen(e.target.files, setTermsFiles);
+                                    e.target.value = "";
+                                }}
                             />
-                            {termsFile && (
-                                <span className="bd-chip">
-                                    {termsFile}
-                                    <button
-                                        className="bd-chip-remove"
-                                        onClick={() => {
-                                            setTermsFile(null);
-                                            setTermsFileObj(null);
-                                        }}
-                                        type="button"
-                                    >
-                                        ×
-                                    </button>
-                                </span>
+                            {termsFiles.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                                    {termsFiles.map((file, idx) => (
+                                        <span key={idx} className="bd-chip">
+                                            {file.name.length > 18 ? `${file.name.slice(0, 15)}...` : file.name}
+                                            <button
+                                                className="bd-chip-remove"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setTermsFiles((prev) => prev.filter((_, i) => i !== idx));
+                                                }}
+                                                type="button"
+                                            >
+                                                ×
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
                             )}
                         </div>
                     </div>
@@ -1669,9 +1700,18 @@ if (Array.isArray(data)) {
                                     })}
                                 </select>
                             </div>
-                            <button className="bd-btn-add" onClick={handleAddLineItem} type="button">
-                                <IconPlus /> Add
-                            </button>
+                            <div className="bd-item-button-section">
+                                <button className="bd-btn-add" onClick={handleAddLineItem} type="button">
+                                    <IconPlus /> Add
+                                </button>
+                                <button
+                                    type="button"
+                                    className="bd-btn-add"
+                                    onClick={() => setIsItemMasterModalOpen(true)}
+                                >
+                                    + Add Item Master
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -1883,10 +1923,10 @@ if (Array.isArray(data)) {
                                             <IconEye /> View Template
                                         </button>
                                     </div>
-                                    <label className="bd-label bd-reg-link-label">Supplier Registration Link</label>
-                                    <input className="bd-input bd-reg-link-box" type="text" readOnly value={supplierRegistrationLink} />
+                                    {/* <label className="bd-label bd-reg-link-label">Supplier Registration Link</label>
+                                    <input className="bd-input bd-reg-link-box" type="text" readOnly value={supplierRegistrationLink} /> */}
                                 </div>
-                                <div className="bd-onboarding-right">
+                                {/* <div className="bd-onboarding-right">
                                     <div className="bd-metrics-title">Pipeline Metrics</div>
                                     <div className="bd-metrics-grid">
                                         <div className="bd-metric-card bd-metric-card-green">
@@ -1901,8 +1941,8 @@ if (Array.isArray(data)) {
                                     <p className="bd-metrics-note">
                                         Unverified suppliers will be redirected to complete the selected form before bidding.
                                     </p>
-                                </div>
-                            </div>
+                                </div> */}
+                            </div>  
                         </div>
                     )}
 
@@ -2039,6 +2079,12 @@ if (Array.isArray(data)) {
                     </div>
                 </div>
             )}
+
+            <ItemMasterModal
+                isOpen={isItemMasterModalOpen}
+                onClose={() => setIsItemMasterModalOpen(false)}
+                buyerId={buyerProfileId}
+            />
         </div>
     );
 };

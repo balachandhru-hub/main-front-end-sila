@@ -1,20 +1,25 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import "./SupplierDashboard.css";
 import Catalog from "./Catalog.tsx";
 import { CompanyProfile } from '@vosox/shared-ui';
-import Invitations from "./Invitations.tsx";
+// import Invitations from "./Invitations.tsx";
 import {
   logoutSupplier,
   fetchRFQMasterData,
   fetchRFQById,
+  fetchSupplierQuotationBySupplierId,
   getSupplierProfile,
   submitSupplierQuotation,
   submitRfqAnswers,
   fetchMetadataReferenceList,
+  sendOtp,
+  verifyOtp,
   type RFQMasterDataItem,
   type RFQDetailResponse,
   type SubmitQuotationPayload,
-  type RfqDocumentAssetDto
+  type RfqDocumentAssetDto,
+  type SupplierQuotationByIdItem,
+  fetchBuyerAsset
 } from "../api/supplierApi";
 import { useLocation } from "react-router-dom";
 import Header from "./Header.tsx";
@@ -52,7 +57,6 @@ interface MatchCard {
   categoryNote: string;
   destinationNote: string;
 }
-
 
 const IconMail = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -106,12 +110,12 @@ const NavIconHome = () => (
   </svg>
 );
 
-const NavIconMail = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="4" width="20" height="16" rx="2" />
-    <path d="m22 6-10 7L2 6" />
-  </svg>
-);
+// const NavIconMail = () => (
+//   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <rect x="2" y="4" width="20" height="16" rx="2" />
+//     <path d="m22 6-10 7L2 6" />
+//   </svg>
+// );
 
 const NavIconFile = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -120,12 +124,12 @@ const NavIconFile = () => (
   </svg>
 );
 
-const NavIconUser = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="8" r="4" />
-    <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
-  </svg>
-);
+// const NavIconUser = () => (
+//   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <circle cx="12" cy="8" r="4" />
+//     <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
+//   </svg>
+// );
 
 const NavIconBag = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -208,6 +212,14 @@ const IconEye = () => (
   </svg>
 );
 
+const IconDownload = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+
 const IconMessageSquare = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -287,9 +299,9 @@ const IconAlertCircle = () => (
 
 const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
-  { key: "invitations", icon: <NavIconMail />, label: "Invitations" },
+  // { key: "invitations", icon: <NavIconMail />, label: "Invitations" },
   { key: "rfqs", icon: <NavIconFile />, label: "RFQs" },
-  { key: "quotations", icon: <NavIconUser />, label: "Quotations" },
+  // { key: "quotations", icon: <NavIconUser />, label: "Quotations" },
   { key: "purchaseOrders", icon: <NavIconBag />, label: "Purchase Orders" },
   { key: "contracts", icon: <NavIconContract />, label: "Contracts" },
   { key: "invoices", icon: <NavIconInvoice />, label: "Invoices" },
@@ -300,7 +312,7 @@ const navItems: { key: string; icon: React.ReactNode; label: string; badge?: num
 ];
 
 const statCards: StatCard[] = [
-  { icon: <IconMail />, label: "INVITATIONS", value: 2, linkText: "Pending review >", colorClass: "pud-stat-icon-blue" },
+  // { icon: <IconMail />, label: "INVITATIONS", value: 2, linkText: "Pending review >", colorClass: "pud-stat-icon-blue" },
   { icon: <IconFile />, label: "ACTIVE RFQS", value: 2, linkText: "Bids open >", colorClass: "pud-stat-icon-indigo" },
   { icon: <IconTrend />, label: "BIDS SUBMITTED", value: 3, linkText: "Track outcomes", colorClass: "pud-stat-icon-green" },
   { icon: <IconBag />, label: "PURCHASE ORDER", value: 4, linkText: "Accept orders >", colorClass: "pud-stat-icon-purple" },
@@ -393,24 +405,25 @@ const SupplierDashboard: React.FC = () => {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
- const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
-  // ✅ NEW STATE: Confirmation Modal for Submit Quotation
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
 
   const { auth } = useAuth();
-const [supplierId, setSupplierId] = useState<string | null>(auth?.supplierId ?? null);
+  const [supplierId, setSupplierId] = useState<string | null>(auth?.supplierId ?? null);
 
-useEffect(() => {
-  if (auth?.supplierId) {
-    setSupplierId(auth.supplierId);
-  }
-}, [auth?.supplierId]);
+  useEffect(() => {
+    if (auth?.supplierId) {
+      setSupplierId(auth.supplierId);
+    }
+  }, [auth?.supplierId]);
   const [rfqs, setRfqs] = useState<RFQMasterDataItem[]>([]);
   const [loadingRfqs, setLoadingRfqs] = useState(true);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
   const RFQ_INITIAL_VISIBLE = 3;
+
+  const [ownQuotation, setOwnQuotation] = useState<SupplierQuotationByIdItem | null>(null);
 
   const [selectedRfqId, setSelectedRfqId] = useState<string | null>(null);
   const [selectedRfq, setSelectedRfq] = useState<RFQDetailResponse | null>(null);
@@ -428,29 +441,85 @@ useEffect(() => {
       contentType?: string;
     };
   }>({});
+
+  const [otpStage, setOtpStage] = useState<"none" | "send" | "verify">("none");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
+  const [otpRemaining, setOtpRemaining] = useState(600);
+  const supplierEmailRef = useRef<string | null>(null);
+
+  const OTP_WINDOW_MS = 10 * 60 * 1000;
+
+  const formatOtpTimer = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, "0");
+    const s = (secs % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
+  const parseAsUtcMs = (dateStr?: string | null): number | null => {
+    if (!dateStr) return null;
+    const hasTz = /Z$|[+-]\d{2}:\d{2}$/.test(dateStr);
+    const ms = Date.parse(hasTz ? dateStr : `${dateStr}Z`);
+    return Number.isNaN(ms) ? null : ms;
+  };
+
+  const getRfqSubmissionWindowStatus = (rfq: RFQDetailResponse | null) => {
+    if (!rfq) return { notYetOpen: false, closed: false, canSubmit: false };
+    const startMs = parseAsUtcMs(rfq.startDate);
+    const endMs = parseAsUtcMs(rfq.endDate);
+    const nowMs = Date.now();
+
+    const notYetOpen = startMs !== null && nowMs < startMs;
+    const closed = endMs !== null && nowMs > endMs;
+
+    return { notYetOpen, closed, canSubmit: !notYetOpen && !closed };
+  };
+
+  useEffect(() => {
+    if (otpStage !== "verify" || !otpExpiresAt) return;
+    const tick = () => {
+      const left = Math.max(0, Math.round((otpExpiresAt - Date.now()) / 1000));
+      setOtpRemaining(left);
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [otpStage, otpExpiresAt]);
+
   const [submittingAnswers, setSubmittingAnswers] = useState(false);
   const [submitAnswersError, setSubmitAnswersError] = useState<string | null>(null);
   const [submitAnswersSuccess, setSubmitAnswersSuccess] = useState(false);
 
- useEffect(() => {
-  const loadSupplierProfile = async () => {
-    if (!supplierId) {
-      try {
-        const profile = await getSupplierProfile();
-        if (profile && 'id' in profile && profile.id) {
-          setSupplierId(profile.id);   
-        } else {
-          setRfqsError("Supplier profile not found. Please complete onboarding.");
+  const [rfqWindowTick, setRfqWindowTick] = useState(0);
+
+  useEffect(() => {
+    if (!selectedRfq) return;
+    const t = setInterval(() => setRfqWindowTick((n) => n + 1), 30000); // recheck every 30s
+    return () => clearInterval(t);
+  }, [selectedRfq]);
+
+  useEffect(() => {
+    const loadSupplierProfile = async () => {
+      if (!supplierId) {
+        try {
+          const profile = await getSupplierProfile();
+          if (profile && 'id' in profile && profile.id) {
+            setSupplierId(profile.id);
+          } else {
+            setRfqsError("Supplier profile not found. Please complete onboarding.");
+            setLoadingRfqs(false);
+          }
+        } catch (err: any) {
+          setRfqsError("Failed to load supplier profile details.");
           setLoadingRfqs(false);
         }
-      } catch (err: any) {
-        setRfqsError("Failed to load supplier profile details.");
-        setLoadingRfqs(false);
       }
-    }
-  };
-  loadSupplierProfile();
-}, [supplierId]);
+    };
+    loadSupplierProfile();
+  }, [supplierId]);
 
   useEffect(() => {
     const loadRfqs = async () => {
@@ -492,23 +561,38 @@ useEffect(() => {
 
 
   const handleViewRfqDetails = async (rfqId: string) => {
-    setSelectedRfqId(rfqId);
-    setLoadingRfqDetail(true);
-    setRfqDetailError(null);
-    setSelectedRfq(null);
-    try {
-      const data = await fetchRFQById(rfqId);
-      if (data && 'title' in data) {
-        setSelectedRfq(data);
-      } else {
-        setRfqDetailError("Failed to load RFQ details.");
+      setSelectedRfqId(rfqId);
+      setLoadingRfqDetail(true);
+      setRfqDetailError(null);
+      setSelectedRfq(null);
+      setOwnQuotation(null);
+      try {
+        const data = await fetchRFQById(rfqId);
+        if (data && 'title' in data) {
+          setSelectedRfq(data);
+        } else {
+          setRfqDetailError("Failed to load RFQ details.");
+        }
+      } catch (err: any) {
+        setRfqDetailError(err.message || "Failed to load RFQ details.");
+      } finally {
+        setLoadingRfqDetail(false);
       }
-    } catch (err: any) {
 
-      setRfqDetailError(err.message || "Failed to load RFQ details.");
-    } finally {
-      setLoadingRfqDetail(false);
-    }
+      // Independently fetch this supplier's own quotation for this RFQ.
+      // Multiple suppliers can quote on the same RFQ, so rfq-by-id's
+      try {
+        const quotationData = await fetchSupplierQuotationBySupplierId(rfqId);
+        if (quotationData && 'suppliers' in quotationData && Array.isArray(quotationData.suppliers)) {
+          const mine =
+            quotationData.suppliers.find((s) => s.supplierId === supplierId) ||
+            quotationData.suppliers[0] ||
+            null;
+          setOwnQuotation(mine);
+        }
+      } catch {
+        // non-fatal — form will just fall back to defaults
+      }
   };
 
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
@@ -518,6 +602,65 @@ useEffect(() => {
   const [allRfqsError, setAllRfqsError] = useState<string | null>(null);
   const [allRfqsPage, setAllRfqsPage] = useState(1);
   const [hasNextRfqPage, setHasNextRfqPage] = useState(false);
+
+  const handleDocumentAction = async (doc: any, action: 'preview' | 'download') => {
+    const assetId = doc.id || doc.assetId;
+    if (!assetId) {
+      alert("Document asset ID is missing.");
+      return;
+    }
+
+    try {
+      const data = await fetchBuyerAsset(assetId);
+      if ('statusCode' in data && data.statusCode) {
+        throw new Error(data.message || 'Failed to fetch document.');
+      }
+
+      const fileBytes = (data as any).fileBytes;
+      const fileName = (data as any).fileName || doc.fileName || doc.assetName || "document";
+      const rawType = ((data as any).contentType || (data as any).fileType || doc.fileType || "pdf").toLowerCase();
+
+      let mimeType = "application/pdf";
+      if (rawType.includes("pdf")) mimeType = "application/pdf";
+      else if (rawType.includes("png")) mimeType = "image/png";
+      else if (rawType.includes("jpg") || rawType.includes("jpeg")) mimeType = "image/jpeg";
+      else if (rawType.includes("txt")) mimeType = "text/plain";
+      else if (rawType.includes("doc")) mimeType = "application/msword";
+
+      let url = (data as any).url || (data as any).fileUrl;
+      let createdBlobUrl = "";
+
+      if (fileBytes) {
+        const cleanBase64 = fileBytes.replace(/^data:.*?;base64,/, '');
+        const byteCharacters = atob(cleanBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mimeType });
+        createdBlobUrl = URL.createObjectURL(blob);
+        url = createdBlobUrl;
+      }
+
+      if (!url) {
+        throw new Error("Document content not available.");
+      }
+
+      if (action === 'preview') {
+        window.open(url, '_blank');
+      } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (err: any) {
+      alert(err?.message || "Could not access document.");
+    }
+  };
 
   const getAllRfqsRange = (page: number) => {
     if (page <= 1) {
@@ -623,7 +766,7 @@ useEffect(() => {
   };
 
   const handleNavClick = (key: string) => {
-    setIsMobileSidebarOpen(false); 
+    setIsMobileSidebarOpen(false);
     if (key === "rfqs") {
       handleOpenAllRfqs();
       return;
@@ -647,6 +790,7 @@ useEffect(() => {
     setSelectedRfqId(null);
     setSelectedRfq(null);
     setRfqDetailError(null);
+    setOwnQuotation(null);
   };
 
   const [quoteQuotationId, setQuoteQuotationId] = useState<string | null>(null);
@@ -664,51 +808,60 @@ useEffect(() => {
   const [submitQuoteSuccess, setSubmitQuoteSuccess] = useState(false);
 
   useEffect(() => {
-    if (selectedRfq) {
-      const activeQuote = selectedRfq.supplierQuotation?.[0];
-      if (activeQuote) {
-        setQuoteQuotationId(activeQuote.qutationId || activeQuote.id || null);
-        setQuoteTotalPrice(activeQuote.totalPrice || 0);
-        setQuoteDeliveryCharge(activeQuote.deliveryCharge || 0);
-        setQuoteDeliveryType(activeQuote.deliveryType || "PERCENTAGE");
-        setQuoteDiscount(activeQuote.discount || 0);
-        setQuoteDiscountType(activeQuote.discountType || "PERCENTAGE");
-        setQuoteTax(activeQuote.tax || 0);
-        setQuoteTaxType(activeQuote.taxType || "PERCENTAGE");
-      } else {
-        setQuoteQuotationId(null);
-        setQuoteTotalPrice(0);
-        setQuoteDeliveryCharge(0);
-        setQuoteDeliveryType("PERCENTAGE");
-        setQuoteDiscount(0);
-        setQuoteDiscountType("PERCENTAGE");
-        setQuoteTax(0);
-        setQuoteTaxType("PERCENTAGE");
-      }
+      if (selectedRfq) {
+        const rfqQuote = selectedRfq.supplierQuotation?.[0];
+        const activeQuote = ownQuotation || rfqQuote;
 
-      const prices: { [key: string]: number } = {};
-      selectedRfq.items?.forEach((item, idx) => {
-        const itemQuote = selectedRfq.supplierQuotationItems?.[idx];
-        const key = item.id || item.buyerRFQItemId || `item-${idx}`;
-        prices[key] = itemQuote?.quotedPrice ?? 0;
-      });
-      setQuoteItemPrices(prices);
-      setSubmitQuoteSuccess(false);
-      setSubmitQuoteError(null);
-      const answers: typeof rfqAnswers = {};
-      selectedRfq.questions?.forEach((q) => {
-        answers[q.questionId] = {
-          rfqQuestionId: q.questionId,
-          answer: "",
-          questionOptionId: null,
-          questionOptionIds: [],
-        };
-      });
-      setRfqAnswers(answers);
-      setSubmitAnswersSuccess(false);
-      setSubmitAnswersError(null);
-    }
-  }, [selectedRfq]);
+        if (activeQuote) {
+          setQuoteQuotationId(
+            ownQuotation?.quotationId ||
+            rfqQuote?.qutationId ||
+            rfqQuote?.id ||
+            null
+          );
+          setQuoteTotalPrice(activeQuote.totalPrice || 0);
+          setQuoteDeliveryCharge(activeQuote.deliveryCharge || 0);
+          setQuoteDeliveryType(activeQuote.deliveryType || "PERCENTAGE");
+          setQuoteDiscount(activeQuote.discount || 0);
+          setQuoteDiscountType(rfqQuote?.discountType || "PERCENTAGE");
+          setQuoteTax(activeQuote.tax || 0);
+          setQuoteTaxType(rfqQuote?.taxType || "PERCENTAGE");
+        } else {
+          setQuoteQuotationId(null);
+          setQuoteTotalPrice(0);
+          setQuoteDeliveryCharge(0);
+          setQuoteDeliveryType("PERCENTAGE");
+          setQuoteDiscount(0);
+          setQuoteDiscountType("PERCENTAGE");
+          setQuoteTax(0);
+          setQuoteTaxType("PERCENTAGE");
+        }
+
+
+        const prices: { [key: string]: number } = {};
+        selectedRfq.items?.forEach((item, idx) => {
+          const ownItemQuote = ownQuotation?.supplierQuotationItems?.[idx];
+          const key = item.id || item.buyerRFQItemId || `item-${idx}`;
+          prices[key] = ownItemQuote?.quotedPrice ?? 0;
+        });
+        setQuoteItemPrices(prices);
+
+        setSubmitQuoteSuccess(false);
+        setSubmitQuoteError(null);
+        const answers: typeof rfqAnswers = {};
+        selectedRfq.questions?.forEach((q) => {
+          answers[q.questionId] = {
+            rfqQuestionId: q.questionId,
+            answer: "",
+            questionOptionId: null,
+            questionOptionIds: [],
+          };
+        });
+        setRfqAnswers(answers);
+        setSubmitAnswersSuccess(false);
+        setSubmitAnswersError(null);
+      }
+  }, [selectedRfq, ownQuotation]);
 
   const handleItemPriceChange = (key: string, value: number) => {
     const updatedPrices = { ...quoteItemPrices, [key]: value };
@@ -835,6 +988,7 @@ useEffect(() => {
       const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
       const payload = {
         supplierRFQId: supplierRFQId as string,
+        supplierId: supplierId as string,
         answers: Object.values(rfqAnswers).map((a) => {
           const question = selectedRfq.questions?.find(q => q.questionId === a.rfqQuestionId);
 
@@ -902,72 +1056,192 @@ useEffect(() => {
     }
   };
 
-  // ✅ UPDATED: Handle submit button click - shows confirmation modal
   const handleSubmitQuotationClick = (e: React.FormEvent) => {
     e.preventDefault();
-    setShowConfirmSubmit(true);
+    setOtpError(null);
+
+    const { canSubmit: withinWindow } = getRfqSubmissionWindowStatus(selectedRfq);
+    if (!withinWindow) {
+      setSubmitQuoteError("This RFQ is outside its active submission window and can no longer accept quotations.");
+      return;
+    }
+
+    const storedExpiry = Number(sessionStorage.getItem("vsx_otp_expiry") || 0);
+    const alreadyVerified = sessionStorage.getItem("vsx_verification_token");
+
+    if (alreadyVerified && storedExpiry && Date.now() < storedExpiry) {
+      setShowConfirmSubmit(true);
+      return;
+    }
+
+    if (storedExpiry && Date.now() < storedExpiry) {
+      setOtpCode("");
+      setOtpExpiresAt(storedExpiry);
+      setOtpRemaining(Math.max(0, Math.round((storedExpiry - Date.now()) / 1000)));
+      setOtpStage("verify");
+      return;
+    }
+
+    sessionStorage.removeItem("vsx_verification_token");
+    sessionStorage.removeItem("vsx_otp_expiry");
+    setOtpCode("");
+    setOtpStage("send");
   };
 
-  // ✅ NEW: Actual submission logic (called after user confirms)
-  const handleConfirmSubmitQuotation = async () => {
-    if (!selectedRfq) return;
-
-    setShowConfirmSubmit(false);
-    setSubmittingQuote(true);
-    setSubmitQuoteError(null);
-    setSubmitQuoteSuccess(false);
-
+  const handleSendOtp = async () => {
+    setOtpError(null);
+    setSendingOtp(true);
     try {
-      const supplierRFQId = selectedRfq.items?.[0]?.supplierRFQId || null;
+      if (!supplierEmailRef.current) {
+        const profile = await getSupplierProfile();
+        if (profile && "businessProfile" in profile) {
+          supplierEmailRef.current = (profile as any).businessProfile?.email || null;
+        }
+      }
+      const res = await sendOtp();
+      if (res && "statusCode" in res && (res as any).statusCode >= 400) {
+        setOtpError((res as any).message || "Couldn't send the code, try again.");
+        return;
+      }
+      const expiry = Date.now() + OTP_WINDOW_MS;
+      sessionStorage.setItem("vsx_otp_expiry", String(expiry));
+      sessionStorage.removeItem("vsx_verification_token");
+      setOtpExpiresAt(expiry);
+      setOtpRemaining(600);
+      setOtpCode("");
+      setOtpStage("verify");
+    } catch (err: any) {
+      setOtpError(err?.message || "Couldn't send the code, try again.");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
 
-      const payload: SubmitQuotationPayload = {
-        supplierQuotationId: quoteQuotationId,
-        supplierRFQId: supplierRFQId,
-        totalPrice: Number(quoteTotalPrice),
-        deliveryCharge: Number(quoteDeliveryCharge),
-        deliveryType: quoteDeliveryType,
-        discount: Number(quoteDiscount),
-        discountType: quoteDiscountType,
-        tax: Number(quoteTax),
-        taxType: quoteTaxType,
-        ...(!selectedRfq.addLotOption ? {
-          items: selectedRfq.items.map((item, idx) => {
-            const key = item.id || item.buyerRFQItemId || `item-${idx}`;
-            const itemQuote = selectedRfq.supplierQuotationItems?.[idx];
-            return {
-              supplierRFQItemId: itemQuote?.supplierRFQItemId || itemQuote?.id || item.supplierRFQItemId || null,
-              buyerRFQItemId: item.id || item.buyerRFQItemId || "",
-              quotedPrice: Number(quoteItemPrices[key] ?? 0),
-            };
-          })
-        } : {})
-      };
+  const handleVerifyOtp = async () => {
+    if (!otpCode.trim()) {
+      setOtpError("Enter the code we emailed you.");
+      return;
+    }
+    if (otpRemaining <= 0) {
+      setOtpError("Code expired. Please resend the OTP.");
+      return;
+    }
+    setVerifyingOtp(true);
+    setOtpError(null);
+    try {
+      const res = await verifyOtp({ email: supplierEmailRef.current || "", otp: otpCode.trim() });
+      if (!res || (res as any).success === false || ("statusCode" in res && (res as any).statusCode >= 400)) {
+        setOtpError((res as any)?.message || "That code didn't match, try again.");
+        return;
+      }
+      const token = (res as any).token;
+      if (!token) {
+        setOtpError("Verification failed, please retry.");
+        return;
+      }
+      sessionStorage.setItem("vsx_verification_token", token);
+      setOtpStage("none");
+      setShowConfirmSubmit(true);
+    } catch (err: any) {
+      setOtpError(err?.message || "That code didn't match, try again.");
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
 
-      await submitSupplierQuotation(payload);
-      setSubmitQuoteSuccess(true);
 
-      const updatedDetails = await fetchRFQById(selectedRfqId!);
-      if (updatedDetails && 'title' in updatedDetails) {
-        setSelectedRfq(updatedDetails);
+  const handleConfirmSubmitQuotation = async () => {
+      if (!selectedRfq) return;
+
+      const { canSubmit: withinWindow } = getRfqSubmissionWindowStatus(selectedRfq);
+      if (!withinWindow) {
+        setShowConfirmSubmit(false);
+        setSubmitQuoteError("This RFQ's submission window has closed. You can no longer submit a quotation.");
+        return;
       }
 
-      if (supplierId) {
-        const listData = await fetchRFQMasterData({
-          supplierId,
-          index: 0,
-          limit: 10,
-        });
-        if (Array.isArray(listData)) {
-          setRfqs(listData);
+      const verificationToken = sessionStorage.getItem("vsx_verification_token");
+      const tokenExpiry = Number(sessionStorage.getItem("vsx_otp_expiry") || 0);
+      if (!verificationToken || !tokenExpiry || Date.now() > tokenExpiry) {
+        sessionStorage.removeItem("vsx_verification_token");
+        sessionStorage.removeItem("vsx_otp_expiry");
+        setShowConfirmSubmit(false);
+        setSubmitQuoteError("Your verification code expired. Please verify again.");
+        setOtpCode("");
+        setOtpError(null);
+        setOtpStage("send");
+        return;
+      }
+
+      setShowConfirmSubmit(false);
+      setSubmittingQuote(true);
+      setSubmitQuoteError(null);
+      setSubmitQuoteSuccess(false);
+
+      try {
+        const supplierRFQId = selectedRfq.items?.[0]?.supplierRFQId || null;
+
+        const payload: SubmitQuotationPayload = {
+          supplierQuotationId: quoteQuotationId,
+          supplierRFQId: supplierRFQId,
+          totalPrice: Number(quoteTotalPrice),
+          deliveryCharge: Number(quoteDeliveryCharge),
+          deliveryType: quoteDeliveryType,
+          discount: Number(quoteDiscount),
+          discountType: quoteDiscountType,
+          tax: Number(quoteTax),
+          taxType: quoteTaxType,
+          temporaryVerificationToken: verificationToken,
+          ...(!selectedRfq.addLotOption ? {
+            items: selectedRfq.items.map((item, idx) => {
+              const key = item.id || item.buyerRFQItemId || `item-${idx}`;
+              const itemQuote = selectedRfq.supplierQuotationItems?.[idx];
+              return {
+                supplierRFQItemId: itemQuote?.supplierRFQItemId || itemQuote?.id || item.supplierRFQItemId || null,
+                buyerRFQItemId: item.id || item.buyerRFQItemId || "",
+                quotedPrice: Number(quoteItemPrices[key] ?? 0),
+              };
+            })
+          } : {})
+        };
+
+        await submitSupplierQuotation(payload);
+        sessionStorage.removeItem("vsx_verification_token");
+        sessionStorage.removeItem("vsx_otp_expiry");
+        setSubmitQuoteSuccess(true);
+
+        const updatedDetails = await fetchRFQById(selectedRfqId!);
+        if (updatedDetails && 'title' in updatedDetails) {
+          setSelectedRfq(updatedDetails);
         }
 
-      }
-    } catch (err: any) {
 
-      setSubmitQuoteError(err.message || "Failed to submit quotation.");
-    } finally {
-      setSubmittingQuote(false);
-    }
+        if (selectedRfqId) {
+          try {
+            const updatedQuotation = await fetchSupplierQuotationBySupplierId(selectedRfqId);
+            if (updatedQuotation && 'suppliers' in updatedQuotation && Array.isArray(updatedQuotation.suppliers)) {
+              const mine =
+                updatedQuotation.suppliers.find((s) => s.supplierId === supplierId) ||
+                updatedQuotation.suppliers[0] ||
+                null;
+              setOwnQuotation(mine);
+            }
+          } catch {
+            // non-fatal — form keeps showing what was just submitted
+          }
+        }
+
+        if (supplierId) {
+          const listData = await fetchRFQMasterData({ supplierId, index: 0, limit: 10 });
+          if (Array.isArray(listData)) {
+            setRfqs(listData);
+          }
+        }
+      } catch (err: any) {
+        setSubmitQuoteError(err.message || "Failed to submit quotation.");
+      } finally {
+        setSubmittingQuote(false);
+      }
   };
 
   const handleLogout = async () => {
@@ -985,17 +1259,38 @@ useEffect(() => {
     }
   };
 
-  const renderRfqDetailInner = () => (
-    <>
+  const renderRfqDetailInner = () => {
+    const isLeadQuote = (ownQuotation?.isLead === true && ownQuotation?.status === "SUBMITTED");
 
-      {/* Modal Header */}
-      <div className="pud-modal-header">
-        <span className="pud-modal-badge">
-          <IconFile /> RFQ Specification
-        </span>
-        <button className="pud-modal-close" onClick={closeRfqDetail}>
-          <IconClose />
-        </button>
+    return (
+      <>
+
+        {/* Modal Header */}
+        <div className="pud-modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+            <span className="pud-modal-badge">
+              <IconFile /> RFQ Specification
+            </span>
+            {isLeadQuote && (
+              <span
+                className="pud-modal-badge"
+                style={{
+                  background: '#fef3c7',
+                  color: '#b45309',
+                  border: '1px solid #fde68a',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                Leading
+              </span>
+            )}
+          </div>
+          <button className="pud-modal-close" onClick={closeRfqDetail}>
+            <IconClose />
+          </button>
         <h2 className="pud-modal-name">
           {loadingRfqDetail ? "Loading RFQ Details..." : selectedRfq?.title || "RFQ Details"}
         </h2>
@@ -1067,21 +1362,61 @@ useEffect(() => {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginTop: '8px' }}>
 
                       {selectedRfq.technicalSpecificationDocuments?.map((doc) => (
-                        <div key={doc.id} className="pud-rfq-doc-card">
-                          <span className="pud-rfq-doc-icon"><IconFile /></span>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                            <div className="pud-rfq-doc-type">Tech Spec • {doc.fileType.toUpperCase()}</div>
+                        <div key={doc.id} className="pud-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
+                            <span className="pud-rfq-doc-icon"><IconFile /></span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                              <div className="pud-rfq-doc-type">Tech Spec • {doc.fileType.toUpperCase()}</div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+                            <button
+                              type="button"
+                              title="Preview document"
+                              onClick={() => handleDocumentAction(doc, 'preview')}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                            >
+                              <IconEye />
+                            </button>
+                            <button
+                              type="button"
+                              title="Download document"
+                              onClick={() => handleDocumentAction(doc, 'download')}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                            >
+                              <IconDownload />
+                            </button>
                           </div>
                         </div>
                       ))}
 
                       {selectedRfq.termsConditionDocuments?.map((doc) => (
-                        <div key={doc.id} className="pud-rfq-doc-card">
-                          <span className="pud-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></span>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                            <div className="pud-rfq-doc-type">Terms & Conditions • {doc.fileType.toUpperCase()}</div>
+                        <div key={doc.id} className="pud-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
+                            <span className="pud-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+                              <div className="pud-rfq-doc-type">Terms & Conditions • {doc.fileType.toUpperCase()}</div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+                            <button
+                              type="button"
+                              title="Preview document"
+                              onClick={() => handleDocumentAction(doc, 'preview')}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                            >
+                              <IconEye />
+                            </button>
+                            <button
+                              type="button"
+                              title="Download document"
+                              onClick={() => handleDocumentAction(doc, 'download')}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+                            >
+                              <IconDownload />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -1289,8 +1624,28 @@ useEffect(() => {
 
 
               <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-                <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                  <IconSparkles /> Commercial Proposal / Quotation Details
+                <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <IconSparkles /> Commercial Proposal / Quotation Details
+                  </div>
+                  {isLeadQuote && (
+                    <span
+                      style={{
+                        background: '#fef3c7',
+                        color: '#b45309',
+                        border: '1px solid #fde68a',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      Leading
+                    </span>
+                  )}
                 </div>
 
                 {submitQuoteSuccess && (
@@ -1428,6 +1783,17 @@ useEffect(() => {
             </div>
           )}
         </div>
+        {selectedRfq && !canSubmit && (
+          <div style={{
+            background: '#fef3c7', border: '1px solid #fde68a', color: '#92400e',
+            padding: '10px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
+            marginTop: '16px', textAlign: 'center'
+          }}>
+            {notYetOpen
+              ? "This RFQ hasn't opened for bidding yet — check back after the start date."
+              : "This RFQ's submission window has closed. You can no longer submit a quotation."}
+          </div>
+        )}
 
         {/* Modal Footer */}
         <div className="pud-modal-footer">
@@ -1443,10 +1809,23 @@ useEffect(() => {
             <button
               type="submit"
               className="pud-btn pud-btn-message"
-              disabled={submittingQuote}
+              disabled={submittingQuote || !canSubmit}
               style={{ background: '#2563eb', color: '#ffffff' }}
+              title={
+                notYetOpen
+                  ? "This RFQ hasn't opened for bidding yet."
+                  : closed
+                    ? "This RFQ's submission window has closed."
+                    : undefined
+              }
             >
-              {submittingQuote ? "Submitting..." : "Submit Quotation"}
+              {submittingQuote
+                ? "Submitting..."
+                : notYetOpen
+                  ? "Not Yet Open"
+                  : closed
+                    ? "Submission Closed"
+                    : "Submit Quotation"}
             </button>
           )}
         </div>
@@ -1454,7 +1833,12 @@ useEffect(() => {
 
     </>
   );
+};
 
+  const { notYetOpen, closed, canSubmit } = useMemo(
+    () => getRfqSubmissionWindowStatus(selectedRfq),
+    [selectedRfq, rfqWindowTick],
+  );
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9' }}>
       <Header />
@@ -1481,6 +1865,7 @@ useEffect(() => {
 
         <aside className="pud-sidebar">
           <nav className="pud-nav">
+
             {navItems.map((item) => (
               <div
                 key={item.key}
@@ -1492,6 +1877,7 @@ useEffect(() => {
                 {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
               </div>
             ))}
+
 
             <Catalog
               onShowCatalogList={() => setActiveNav("catalogList")}
@@ -1646,10 +2032,10 @@ useEffect(() => {
                   }
                   return null;
                 }}
-              />
-            ) : activeNav === "invitations" ? (
-              <Invitations />
-            ) : (
+              />) : (
+              // ) : activeNav === "invitations" ? (
+              //   <Invitations />
+              // ) : (
               <>
                 <h1 className="pud-title">Supplier Operations Command</h1>
                 <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
@@ -1900,6 +2286,7 @@ useEffect(() => {
                     <div className="pud-modal-info-value">Scale: {selectedProfile.employees}</div>
                   </div>
                 </div>
+
               </div>
 
               <div className="pud-modal-footer">
@@ -1917,6 +2304,129 @@ useEffect(() => {
           </div>
         )}
 
+        {otpStage === "send" && (
+          <div className="pud-modal-overlay" onClick={() => setOtpStage("none")} style={{ zIndex: 9999 }}>
+            <div className="pud-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', zIndex: 10000 }}>
+              <div className="pud-modal-header" style={{ paddingBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
+                <span className="pud-modal-badge">
+                  <IconMail /> Verify It's You
+                </span>
+                <button className="pud-modal-close" onClick={() => setOtpStage("none")}>
+                  <IconClose />
+                </button>
+              </div>
+
+              <div className="pud-modal-body" style={{ textAlign: 'center', paddingTop: '24px', paddingBottom: '24px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b', marginBottom: '12px' }}>
+                  Confirm Your Quotation
+                </h3>
+                <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '0', lineHeight: '1.5' }}>
+                  For security, we'll send a one-time code to your registered email before this quotation goes to the buyer.
+                </p>
+                {otpError && (
+                  <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '14px' }}>{otpError}</div>
+                )}
+              </div>
+
+              <div className="pud-modal-footer" style={{ borderTop: '1px solid #e2e8f0', gap: '10px' }}>
+                <button type="button" className="pud-btn pud-btn-outline" onClick={() => setOtpStage("none")} style={{ flex: 1 }}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="pud-btn pud-btn-message"
+                  onClick={handleSendOtp}
+                  disabled={sendingOtp}
+                  style={{ flex: 1, background: '#2563eb', color: '#ffffff' }}
+                >
+                  {sendingOtp ? "Sending..." : "Send OTP"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {otpStage === "verify" && (
+          <div className="pud-modal-overlay" onClick={() => setOtpStage("none")} style={{ zIndex: 9999 }}>
+            <div className="pud-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', zIndex: 10000 }}>
+              <div className="pud-modal-header" style={{ paddingBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
+                <span className="pud-modal-badge">
+                  <IconMail /> Enter Verification Code
+                </span>
+                <button className="pud-modal-close" onClick={() => setOtpStage("none")}>
+                  <IconClose />
+                </button>
+              </div>
+
+              <div className="pud-modal-body" style={{ paddingTop: '20px', paddingBottom: '8px' }}>
+                <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px', textAlign: 'center' }}>
+                  We've sent a 6-digit code to your email. It expires in{" "}
+                  <strong style={{ color: otpRemaining <= 30 ? '#ef4444' : '#1e293b' }}>
+                    {formatOtpTimer(otpRemaining)}
+                  </strong>.
+                </p>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  className="pud-rfq-item-input"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="Enter OTP"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    fontSize: '18px',
+                    letterSpacing: '4px',
+                    textAlign: 'center',
+                    fontWeight: 700,
+                    color: '#0f172a'
+                  }}
+                />
+                {otpRemaining <= 0 ? (
+                  <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '10px', textAlign: 'center' }}>
+                    Code expired. Please resend the OTP.
+                  </div>
+                ) : otpError ? (
+                  <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '10px', textAlign: 'center' }}>{otpError}</div>
+                ) : null}
+                <div style={{ textAlign: 'center', marginTop: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={sendingOtp || otpRemaining > 0}
+                    style={{
+                      background: 'none', border: 'none', padding: 0,
+                      color: otpRemaining > 0 ? '#94a3b8' : '#2563eb',
+                      fontSize: '13px',
+                      cursor: otpRemaining > 0 ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    Resend OTP
+                  </button>
+                </div>
+              </div>
+
+              <div className="pud-modal-footer" style={{ borderTop: '1px solid #e2e8f0', gap: '10px' }}>
+                <button type="button" className="pud-btn pud-btn-outline" onClick={() => setOtpStage("none")} style={{ flex: 1 }}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="pud-btn pud-btn-message"
+                  onClick={handleVerifyOtp}
+                  disabled={verifyingOtp || otpRemaining <= 0}
+                  style={{ flex: 1, background: '#2563eb', color: '#ffffff' }}
+                >
+                  {verifyingOtp ? "Verifying..." : "Verify OTP"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showConfirmSubmit && (
           <div className="pud-modal-overlay" onClick={() => setShowConfirmSubmit(false)} style={{ zIndex: 9999 }}>
             <div className="pud-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', zIndex: 10000 }}>
@@ -1924,8 +2434,8 @@ useEffect(() => {
                 <span className="pud-modal-badge" style={{ background: '#fef3c7', color: '#d97706' }}>
                   <IconAlertCircle /> Confirmation Required
                 </span>
-                <button 
-                  className="pud-modal-close" 
+                <button
+                  className="pud-modal-close"
                   onClick={() => setShowConfirmSubmit(false)}
                 >
                   <IconClose />
