@@ -684,6 +684,12 @@
     color: #111827;
 }
 
+.bd-supplier-sn-id {
+    font-size: 0.84375rem;
+    font-weight: 400;
+    color: #111827;
+}
+
 .bd-supplier-email {
     font-size: 0.75rem;
     color: #2f6feb;
