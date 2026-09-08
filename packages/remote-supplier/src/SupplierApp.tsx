@@ -8,7 +8,7 @@ const SupplierApp: React.FC = () => {
     <Routes>
       <Route path="dashboard" element={<SupplierDashboard />} />
       <Route path="profile" element={<SupplierProfilePage />} />
-      <Route path="*" element={<Navigate to="dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/supplier/dashboard" replace />} />
     </Routes>
   );
 };
