@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from "react";
+  import React, { useState, useEffect } from "react";
 import "./BuyerDashBoard.css";
 import CreateRFQ from "./Create_RFQ.tsx";
 import Product from "./Product.tsx";
 import Models from "./Models.tsx";
 import Header from "./Header";
 import QsAns from "./Qsans.tsx";
-import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, fetchBuyerAsset } from "../api/Buyerapi";
+import QuotationSummaryTable from "./QuotationSummaryTable.tsx";
+import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, fetchBuyerAsset, updateRfqStatus } from "../api/Buyerapi";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
 import QuotationComparisonCard from "../../../remote-platform-user/src/components/QuotationComparisonCard.tsx";
-import { CompanyProfile } from '@vosox/shared-ui';
+import { CompanyProfile, toastService } from '@vosox/shared-ui';
 import { useAuth } from '../../../host-app/src/AuthContext.tsx';
 import type { SupplierQuotationComparisonResponse } from "../../../remote-platform-user/src/api/networkAdminApi";
 import { fetchSupplierQuotationComparison } from "../../../remote-platform-user/src/api/networkAdminApi";
@@ -202,6 +203,21 @@ const IconSend = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m22 2-7 20-4-9-9-4Z" />
     <path d="M22 2 11 13" />
+  </svg>
+);
+
+const IconBidCompare = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="20" x2="12" y2="10" />
+    <line x1="18" y1="20" x2="18" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="16" />
+  </svg>
+);
+
+const IconFreezeLock = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
   </svg>
 );
 
@@ -493,8 +509,10 @@ const BuyersDashboard: React.FC = () => {
   const RFQ_PAGE_SIZE = 10;
 
   const [fullPageRfq, setFullPageRfq] = useState<any | null>(null);
+  const [fullPageRfqId, setFullPageRfqId] = useState<string | null>(null);
   const [loadingFullPageRfq, setLoadingFullPageRfq] = useState(false);
   const [fullPageRfqError, setFullPageRfqError] = useState<string | null>(null);
+  const [freezingBid, setFreezingBid] = useState(false);
 
   const handleOpenAllRfqs = async () => {
     setActiveNav("activeRFQs");
@@ -565,6 +583,7 @@ const BuyersDashboard: React.FC = () => {
 
   const handleViewRfqDetailsFullPage = async (rfqId: string) => {
     setRfqPageView("rfqDetail");
+    setFullPageRfqId(rfqId);
     setLoadingFullPageRfq(true);
     setFullPageRfqError(null);
     try {
@@ -644,7 +663,23 @@ const BuyersDashboard: React.FC = () => {
   const handleBackToAllRfqs = () => {
     setRfqPageView("allRfqs");
     setFullPageRfq(null);
+    setFullPageRfqId(null);
     setFullPageRfqError(null);
+  };
+
+  const handleFreezeBid = async () => {
+    if (!fullPageRfqId || freezingBid || fullPageRfq?.status === "Freezing") return;
+    setFreezingBid(true);
+    try {
+      await updateRfqStatus({ rfqId: fullPageRfqId, status: "Freezing" });
+      const updated = await fetchBuyerRFQById(fullPageRfqId);
+      setFullPageRfq(updated);
+      toastService.success("Bid frozen. Suppliers can no longer submit quotations for this RFQ.");
+    } catch (err: any) {
+      toastService.error(err?.message || "Failed to freeze the bid.");
+    } finally {
+      setFreezingBid(false);
+    }
   };
 
   // HANDLER FOR QUOTATION COMPARISON
@@ -712,6 +747,40 @@ const BuyersDashboard: React.FC = () => {
   const handleBackToRfqDetail = () => {
     setRfqPageView("rfqDetail");
   };
+
+  // const renderQuoteStatusBadges = (quote: any) => (
+  //   <>
+  //     {quote.isLead && (
+  //       <span
+  //         className="pud-status-badge"
+  //         style={{
+  //           background: '#fef3c7',
+  //           color: '#b45309',
+  //           border: '1px solid #fde68a',
+  //           padding: '3px 8px',
+  //           borderRadius: '6px',
+  //           fontSize: '11px',
+  //           fontWeight: 600
+  //         }}
+  //       >
+  //         Leading
+  //       </span>
+  //     )}
+  //     <span
+  //       className="pud-status-badge"
+  //       style={{
+  //         background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
+  //         color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
+  //         padding: '3px 8px',
+  //         borderRadius: '6px',
+  //         fontSize: '11px',
+  //         fontWeight: 600
+  //       }}
+  //     >
+  //       {quote.status || "RECEIVED"}
+  //     </span>
+  //   </>
+  // );
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -921,14 +990,25 @@ const BuyersDashboard: React.FC = () => {
                       <div className="pud-modal-meta">
                         <span><IconCalendar /> Closes: {new Date(fullPageRfq.endDate).toLocaleDateString()}</span>
                         <span><IconPin /> Delivery: {fullPageRfq.deliveryLocation}</span>
-                        <button
-                          className="pud-btn pud-btn-outline"
-                          onClick={() => handleOpenQuotationComparison(fullPageRfq)}
-                          title="View Supplier Quotations"
-                          style={{ marginLeft: 'auto' }}
-                        >
-                          📊 Bid Comparison
-                        </button>
+                        <div className="pud-rfq-header-actions">
+                          <button
+                            className="pud-btn pud-btn-outline"
+                            onClick={() => handleOpenQuotationComparison(fullPageRfq)}
+                            title="View Supplier Quotations"
+                          >
+                            <IconBidCompare /> Bid Comparison
+                          </button>
+                          <button
+                            type="button"
+                            className="pud-btn pud-btn-freeze"
+                            onClick={handleFreezeBid}
+                            disabled={freezingBid || fullPageRfq.status === "Freezing"}
+                            title={fullPageRfq.status === "Freezing" ? "This RFQ's bid has already been frozen" : "Freeze the bid to stop accepting new quotations"}
+                          >
+                            <IconFreezeLock />
+                            {freezingBid ? "Freezing..." : fullPageRfq.status === "Freezing" ? "Bid Frozen" : "Freeze Bid"}
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -947,7 +1027,7 @@ const BuyersDashboard: React.FC = () => {
                       </div>
                     ) : fullPageRfq ? (
                       <div className="pud-rfq-detail-grid pud-rfq-detail-grid-single">
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
+                        <div className="active-rfq-content-wrapper">
                           <div>
                             <div className="pud-modal-section-title">Description</div>
                             <p className="pud-modal-desc" style={{ whiteSpace: 'pre-wrap', fontSize: '13.5px', color: '#334155', lineHeight: '1.6' }}>
@@ -976,44 +1056,7 @@ const BuyersDashboard: React.FC = () => {
                             </div>
                           </div>
 
-                          {fullPageRfq.items && fullPageRfq.items.length > 0 && (
-                            <div>
-                              <div className="pud-modal-section-title" style={{ marginBottom: '10px' }}>Required Materials & Services</div>
-                              <div className="pud-rfq-table-container" style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                                <table className="pud-rfq-items-table">
-                                  <thead>
-                                    <tr>
-                                      <th>Material Info</th>
-                                      <th>Code</th>
-                                      <th>Qty</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {fullPageRfq.items.map((item: any, idx: number) => (
-                                      <tr key={idx}>
-                                        <td>
-                                          <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
-                                          {item.costCenter && (
-                                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                              Cost Center: {item.costCenter}
-                                            </div>
-                                          )}
-                                        </td>
-                                        <td>
-                                          <div>
-                                            {item.materialCode || "N/A"}
-                                          </div>
-                                        </td>
-                                        <td>
-                                          {item.quantity} <span>{item.uom}</span>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          )}
+                          <QuotationSummaryTable rfq={fullPageRfq} />
 
                           {((fullPageRfq.technicalSpecificationDocuments && fullPageRfq.technicalSpecificationDocuments.length > 0) ||
                             (fullPageRfq.termsConditionDocuments && fullPageRfq.termsConditionDocuments.length > 0)) && (
@@ -1082,6 +1125,7 @@ const BuyersDashboard: React.FC = () => {
                               </div>
                             )}
 
+                          {/* {fullPageRfq.addLotOption && (
                           <div>
                             <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                               <IconSparkles /> Supplier Quotations Received
@@ -1113,35 +1157,7 @@ const BuyersDashboard: React.FC = () => {
                                           </span>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                          {quote.isLead && (
-                                            <span
-                                              className={`pud-status-badge`}
-                                              style={{
-                                                background: '#fef3c7',
-                                                color: '#b45309',
-                                                border: '1px solid #fde68a',
-                                                padding: '3px 8px',
-                                                borderRadius: '6px',
-                                                fontSize: '11px',
-                                                fontWeight: 600
-                                              }}
-                                            >
-                                              Leading
-                                            </span>
-                                          )}
-                                          <span
-                                            className={`pud-status-badge`}
-                                            style={{
-                                              background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
-                                              color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
-                                              padding: '3px 8px',
-                                              borderRadius: '6px',
-                                              fontSize: '11px',
-                                              fontWeight: 600
-                                            }}
-                                          >
-                                            {quote.status || "RECEIVED"}
-                                          </span>
+                                          {renderQuoteStatusBadges(quote)}
                                         </div>
                                       </div>
 
@@ -1176,6 +1192,7 @@ const BuyersDashboard: React.FC = () => {
                               </div>
                             )}
                           </div>
+                          )} */}
 
                         </div>
                       </div>
@@ -1236,18 +1253,11 @@ const BuyersDashboard: React.FC = () => {
                         No quotation data available.
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        {quotationComparisonData.map((comparison, index) => (
-                          <QuotationComparisonCard
-                            key={comparison.supplierQuotationId || index}
-                            quotation={comparison}
-                            rfqTitle={selectedQuotationsRfq.title}
-                            rfqNumber={selectedQuotationsRfq.rfqNumber}
-                            supplierName={`Supplier ${index + 1}`}
-                            contactPerson="Contact Person"
-                          />
-                        ))}
-                      </div>
+                      <QuotationComparisonCard
+                        quotations={quotationComparisonData}
+                        rfqTitle={selectedQuotationsRfq.title}
+                        supplierNames={quotationComparisonData.map((_, index) => `Supplier ${index + 1}`)}
+                      />
                     )}
                   </div>
                 </div>

@@ -356,6 +356,25 @@ const matchCards: MatchCard[] = [
   },
 ];
 
+const VERIFICATION_TOKEN_COOKIE = "vsx_verification_token";
+// Backend validity window for the OTP verification token. Bump this single
+// constant if the backend increases it (e.g. to 45 minutes) — nothing else
+// in the flow needs to change.
+const VERIFICATION_TOKEN_TTL_SECONDS = 30 * 60;
+
+const getCookie = (name: string): string | null => {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+};
+
+const setCookie = (name: string, value: string, maxAgeSeconds: number) => {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSeconds}; SameSite=Lax`;
+};
+
+const deleteCookie = (name: string) => {
+  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
+};
+
 const SupplierAdminDash: React.FC = () => {
   const [activeNav, setActiveNav] = useState<string>("dashboard");
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
@@ -389,15 +408,16 @@ const SupplierAdminDash: React.FC = () => {
   };
 
   const getRfqSubmissionWindowStatus = (rfq: RFQDetailResponse | null) => {
-    if (!rfq) return { notYetOpen: false, closed: false, canSubmit: false };
+    if (!rfq) return { notYetOpen: false, closed: false, frozen: false, canSubmit: false };
     const startMs = parseAsUtcMs(rfq.startDate);
     const endMs = parseAsUtcMs(rfq.endDate);
     const nowMs = Date.now();
 
     const notYetOpen = startMs !== null && nowMs < startMs;
     const closed = endMs !== null && nowMs > endMs;
+    const frozen = rfq.status === "Freezing";
 
-    return { notYetOpen, closed, canSubmit: !notYetOpen && !closed };
+    return { notYetOpen, closed, frozen, canSubmit: !notYetOpen && !closed && !frozen };
   };
 
 
@@ -458,7 +478,7 @@ const SupplierAdminDash: React.FC = () => {
     return () => clearInterval(t);
   }, [selectedRfq]);
 
-  const { notYetOpen, closed, canSubmit } = useMemo(
+  const { notYetOpen, closed, frozen, canSubmit } = useMemo(
     () => getRfqSubmissionWindowStatus(selectedRfq),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [selectedRfq, rfqWindowTick],
@@ -649,7 +669,7 @@ const SupplierAdminDash: React.FC = () => {
   const RFQ_PAGE_SIZE = 10;
   const getRfqPageRange = (page: number) => {
     const index = (page - 1) * RFQ_PAGE_SIZE;
-    const limit = index + 10;
+    const limit = RFQ_PAGE_SIZE;
     return { index, limit };
   };
 
@@ -1004,23 +1024,13 @@ const SupplierAdminDash: React.FC = () => {
       return;
     }
 
-    const storedExpiry = Number(sessionStorage.getItem("vsx_otp_expiry") || 0);
-    const alreadyVerified = sessionStorage.getItem("vsx_verification_token");
+    const verificationToken = getCookie(VERIFICATION_TOKEN_COOKIE);
 
-    if (alreadyVerified && storedExpiry && Date.now() < storedExpiry) {
+    if (verificationToken) {
       setShowConfirmSubmit(true);
       return;
     }
 
-    if (storedExpiry && Date.now() < storedExpiry) {
-      setOtpCode("");
-      setOtpExpiresAt(storedExpiry);
-      setOtpRemaining(Math.max(0, Math.round((storedExpiry - Date.now()) / 1000)));
-      setOtpStage("verify");
-      return;
-    }
-
-    sessionStorage.removeItem("vsx_verification_token");
     sessionStorage.removeItem("vsx_otp_expiry");
     setOtpCode("");
     setOtpStage("send");
@@ -1038,12 +1048,20 @@ const SupplierAdminDash: React.FC = () => {
       }
       const res = await sendOtp();
       if (res && "statusCode" in res && (res as any).statusCode >= 400) {
-        setOtpError((res as any).message || "Couldn't send the code, try again.");
-        return;
+        const message = (res as any).message || "";
+        const description = (res as any).description || "";
+        const otpAlreadySent = /already.*sent/i.test(message) || /already.*sent/i.test(description);
+        if (!otpAlreadySent) {
+          setOtpError(message || "Couldn't send the code, try again.");
+          return;
+        }
+        // Backend already has a live OTP for this supplier — let them verify the one they have
+        // instead of dead-ending on this error. If it's since expired server-side, verifyOtp
+        // will reject it and the supplier can hit Resend once our local countdown runs out.
       }
       const expiry = Date.now() + OTP_WINDOW_MS;
       sessionStorage.setItem("vsx_otp_expiry", String(expiry));
-      sessionStorage.removeItem("vsx_verification_token");
+      deleteCookie(VERIFICATION_TOKEN_COOKIE);
       setOtpExpiresAt(expiry);
       setOtpRemaining(600);
       setOtpCode("");
@@ -1077,7 +1095,7 @@ const SupplierAdminDash: React.FC = () => {
         setOtpError("Verification failed, please retry.");
         return;
       }
-      sessionStorage.setItem("vsx_verification_token", token);
+      setCookie(VERIFICATION_TOKEN_COOKIE, token, VERIFICATION_TOKEN_TTL_SECONDS);
       setOtpStage("none");
       setShowConfirmSubmit(true);
     } catch (err: any) {
@@ -1098,13 +1116,9 @@ const SupplierAdminDash: React.FC = () => {
       return;
     }
 
-    const verificationToken = sessionStorage.getItem("vsx_verification_token");
-    const tokenExpiry = Number(sessionStorage.getItem("vsx_otp_expiry") || 0);
-    if (!verificationToken || !tokenExpiry || Date.now() > tokenExpiry) {
-      sessionStorage.removeItem("vsx_verification_token");
-      sessionStorage.removeItem("vsx_otp_expiry");
+    const verificationToken = getCookie(VERIFICATION_TOKEN_COOKIE);
+    if (!verificationToken) {
       setShowConfirmSubmit(false);
-      setSubmitQuoteError("Your verification code expired. Please verify again.");
       setOtpCode("");
       setOtpError(null);
       setOtpStage("send");
@@ -1134,8 +1148,13 @@ const SupplierAdminDash: React.FC = () => {
           items: selectedRfq.items.map((item, idx) => {
             const key = item.id || item.buyerRFQItemId || `item-${idx}`;
             const itemQuote = selectedRfq.supplierQuotationItems?.[idx];
+            // supplierQuotationItems can hold an empty draft-quotation stub whose IDs are
+            // the all-zero placeholder GUID — that string is still "truthy" in JS, so it
+            // must be filtered out explicitly rather than relying on `||` alone.
+            const validId = (id?: string | null) =>
+              id && id !== "00000000-0000-0000-0000-000000000000" ? id : null;
             return {
-              supplierRFQItemId: itemQuote?.supplierRFQItemId || itemQuote?.id || item.supplierRFQItemId || null,
+              supplierRFQItemId: validId(item.supplierRFQItemId) || validId(itemQuote?.supplierRFQItemId) || validId(itemQuote?.id) || null,
               buyerRFQItemId: item.id || item.buyerRFQItemId || "",
               quotedPrice: Number(quoteItemPrices[key] ?? 0),
             };
@@ -1143,8 +1162,21 @@ const SupplierAdminDash: React.FC = () => {
         } : {})
       };
 
-      await submitSupplierQuotation(payload);
-      sessionStorage.removeItem("vsx_verification_token");
+      const result = await submitSupplierQuotation(payload);
+      if (result && "statusCode" in result && (result as any).statusCode >= 400) {
+        const statusCode = (result as any).statusCode;
+        const message = (result as any).message || "";
+        const isTokenExpired = statusCode === 400 && /expired/i.test(message);
+        if (isTokenExpired) {
+          deleteCookie(VERIFICATION_TOKEN_COOKIE);
+          setOtpCode("");
+          setOtpError("Your verification has expired, please verify again.");
+          setOtpStage("send");
+          return;
+        }
+        setSubmitQuoteError(message || "Failed to submit quotation.");
+        return;
+      }
       sessionStorage.removeItem("vsx_otp_expiry");
       setSubmitQuoteSuccess(true);
 
@@ -1207,6 +1239,7 @@ const SupplierAdminDash: React.FC = () => {
       setLogoutError(error?.message || "Logout request failed, clearing session locally.");
     } finally {
       sessionStorage.clear();
+      deleteCookie(VERIFICATION_TOKEN_COOKIE);
       window.dispatchEvent(new CustomEvent("session:expired"));
       setLoggingOut(false);
     }
@@ -1738,6 +1771,8 @@ const SupplierAdminDash: React.FC = () => {
           }}>
             {notYetOpen
               ? "This RFQ hasn't opened for bidding yet — check back after the start date."
+              : frozen
+              ? "The buyer has frozen this RFQ's bid. You can no longer submit a quotation."
               : "This RFQ's submission window has closed. You can no longer submit a quotation."}
           </div>
         )}
@@ -1761,6 +1796,8 @@ const SupplierAdminDash: React.FC = () => {
               title={
                 notYetOpen
                   ? "This RFQ hasn't opened for bidding yet."
+                  : frozen
+                  ? "The buyer has frozen this RFQ's bid."
                   : closed
                   ? "This RFQ's submission window has closed."
                   : undefined
@@ -1770,6 +1807,8 @@ const SupplierAdminDash: React.FC = () => {
                 ? "Submitting..."
                 : notYetOpen
                 ? "Not Yet Open"
+                : frozen
+                ? "Bid Frozen"
                 : closed
                 ? "Submission Closed"
                 : "Submit Quotation"}

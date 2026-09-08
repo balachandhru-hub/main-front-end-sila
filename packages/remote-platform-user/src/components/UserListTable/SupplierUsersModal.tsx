@@ -1,0 +1,179 @@
+import React, { useEffect, useState } from "react";
+import { toastService } from "@vosox/shared-ui";
+import { getOrganizationUsersForRfq } from "../../api/networkAdminApi";
+import type { User } from "../../types";
+import "./SupplierUsersModal.css";
+
+interface SupplierUsersModalProps {
+    isOpen: boolean;
+    supplierName: string;
+    organizationId?: string;
+    initialSelectedUserIds: string[];
+    onClose: () => void;
+    onSave: (userIds: string[]) => void;
+}
+
+const SupplierUsersModal: React.FC<SupplierUsersModalProps> = ({
+    isOpen,
+    supplierName,
+    organizationId,
+    initialSelectedUserIds,
+    onClose,
+    onSave,
+}) => {
+    const [users, setUsers] = useState<User[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        setSelectedIds(new Set(initialSelectedUserIds));
+
+        if (!organizationId) {
+            setUsers([]);
+            setError("This supplier does not have an organization on file.");
+            return;
+        }
+
+        let cancelled = false;
+        setLoading(true);
+        setError(null);
+
+        getOrganizationUsersForRfq(organizationId)
+            .then((data) => {
+                if (cancelled) return;
+                setUsers(data);
+            })
+            .catch((err: any) => {
+                if (cancelled) return;
+                setError(err?.message || "Failed to load supplier users.");
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, organizationId]);
+
+    if (!isOpen) {
+        return null;
+    }
+
+    const handleClose = () => {
+        onClose();
+    };
+
+    const toggleUser = (userId: string) => {
+        setSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(userId)) {
+                next.delete(userId);
+            } else {
+                next.add(userId);
+            }
+            return next;
+        });
+    };
+
+    const handleSave = () => {
+        onSave(Array.from(selectedIds));
+        toastService.success("Supplier users updated.");
+        onClose();
+    };
+
+    return (
+        <div
+            className="supplier-users-modal-overlay"
+            onClick={handleClose}
+        >
+            <div
+                className="supplier-users-modal"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="supplier-users-modal-header">
+                    <div>
+                        <h2 className="supplier-users-modal-title">
+                            Select Users
+                        </h2>
+
+                        <p className="supplier-users-modal-subtitle">
+                            Choose which users at {supplierName} should receive this RFQ.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        className="supplier-users-modal-close"
+                        onClick={handleClose}
+                        aria-label="Close"
+                    >
+                        ×
+                    </button>
+                </div>
+
+                <div className="supplier-users-modal-body">
+                    {loading && (
+                        <div className="supplier-users-modal-state">Loading users...</div>
+                    )}
+
+                    {!loading && error && (
+                        <div className="supplier-users-modal-state supplier-users-modal-error">{error}</div>
+                    )}
+
+                    {!loading && !error && users.length === 0 && (
+                        <div className="supplier-users-modal-state">
+                            No users found for this organization.
+                        </div>
+                    )}
+
+                    {!loading && !error && users.length > 0 && (
+                        <ul className="supplier-users-list">
+                            {users.map((user) => (
+                                <li key={user.id} className="supplier-users-list-item">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.has(user.id)}
+                                            onChange={() => toggleUser(user.id)}
+                                        />
+                                        <span className="supplier-users-list-name">{user.name}</span>
+                                        <span className="supplier-users-list-email">{user.email}</span>
+                                        {user.userRole && (
+                                            <span className="supplier-users-list-role">{user.userRole}</span>
+                                        )}
+                                    </label>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+
+                <div className="supplier-users-modal-footer">
+                    <button
+                        type="button"
+                        className="supplier-users-cancel-btn"
+                        onClick={handleClose}
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        className="supplier-users-save-btn"
+                        onClick={handleSave}
+                        disabled={loading || !!error}
+                    >
+                        Save Selection
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default SupplierUsersModal;
