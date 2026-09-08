@@ -28,6 +28,7 @@ import type {
 } from './dto/networkAdminDto';
 import BuyerAdminProfilePage from './pages/BuyerAdminProfilePage';
 import SupplierAdminProfilePage from './pages/SupplierAdminProfilePage';
+import RoleProtectedRoute from './components/RoleProtectedRoute';
 
 const NETWORK_ADMIN_ROLES: NetworkAdminRole[] = ['BUYER_NETWORK_ADMIN', 'SUPPLIER_NETWORK_ADMIN'];
 
@@ -369,7 +370,7 @@ const PlatformUserApp: React.FC = () => {
 
   if (isLoading || (isNetworkAdmin && checkingProfile)) return null;
 
-  const defaultRoute = isNetworkAdmin ? 'network-admin' : 'dashboard';
+  const defaultRoute = isNetworkAdmin ? '/platform-user/network-admin' : '/platform-user/dashboard';
 
   return (
     <>
@@ -430,10 +431,38 @@ const PlatformUserApp: React.FC = () => {
       />
       <Route path="templates" element={<PlatformUserTemplates />} />
 
-      <Route path="buyer-admin" element={<BuyerAdminDash />} />
-      <Route path="buyer-admin/profile" element={<BuyerAdminProfilePage />} />
-      <Route path="supplier-admin" element={<SupplierAdminDash />} />
-      <Route path="supplier-admin/profile" element={<SupplierAdminProfilePage />} />
+      <Route
+        path="buyer-admin"
+        element={
+          <RoleProtectedRoute allowedRoles={['BUYER_ADMINISTRATOR']}>
+            <BuyerAdminDash />
+          </RoleProtectedRoute>
+        }
+      />
+      <Route
+        path="buyer-admin/profile"
+        element={
+          <RoleProtectedRoute allowedRoles={['BUYER_ADMINISTRATOR']}>
+            <BuyerAdminProfilePage />
+          </RoleProtectedRoute>
+        }
+      />
+      <Route
+        path="supplier-admin"
+        element={
+          <RoleProtectedRoute allowedRoles={['SUPPLIER_ADMINISTRATOR']}>
+            <SupplierAdminDash />
+          </RoleProtectedRoute>
+        }
+      />
+      <Route
+        path="supplier-admin/profile"
+        element={
+          <RoleProtectedRoute allowedRoles={['SUPPLIER_ADMINISTRATOR']}>
+            <SupplierAdminProfilePage />
+          </RoleProtectedRoute>
+        }
+      />
 
       <Route path="itemmaster" element={<ItemMaster />} />
       <Route path="*" element={<Navigate to={defaultRoute} replace />} />
