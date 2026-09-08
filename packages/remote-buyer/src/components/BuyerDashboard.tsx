@@ -11,10 +11,6 @@ import UserTemplate from "../../../remote-platform-user/src/components/usertempl
 import QuotationComparisonCard from "../../../remote-platform-user/src/components/QuotationComparisonCard.tsx";
 import { CompanyProfile, toastService } from '@vosox/shared-ui';
 import { useAuth } from '../../../host-app/src/AuthContext.tsx';
-import type { SupplierQuotationComparisonResponse } from "../../../remote-platform-user/src/api/networkAdminApi";
-import { fetchSupplierQuotationComparison } from "../../../remote-platform-user/src/api/networkAdminApi";
-import { isErrorResponse } from "@vosox/shared-ui";
-import type { ErrorResponseDto } from "../../../remote-platform-user/src/dto/platformDto";
 
 /* ---------------------------------- Icons ---------------------------------- */
 
@@ -439,9 +435,6 @@ const BuyersDashboard: React.FC = () => {
 
   // STATE FOR QUOTATION COMPARISON
   const [selectedQuotationsRfq, setSelectedQuotationsRfq] = useState<any | null>(null);
-  const [quotationComparisonData, setQuotationComparisonData] = useState<SupplierQuotationComparisonResponse[]>([]);
-  const [loadingQuotations, setLoadingQuotations] = useState(false);
-  const [quotationsError, setQuotationsError] = useState<string | null>(null);
 
   const { auth } = useAuth();
   const [buyerId, setBuyerId] = useState<string | null>(auth?.buyerId ?? null);
@@ -588,7 +581,7 @@ const BuyersDashboard: React.FC = () => {
     setFullPageRfqError(null);
     try {
       const details = await fetchBuyerRFQById(rfqId);
-      setFullPageRfq(details);
+      setFullPageRfq({ ...details, rfqId });
     } catch (err: any) {
       setFullPageRfqError(err.message || "Failed to fetch details.");
       const found =
@@ -673,7 +666,7 @@ const BuyersDashboard: React.FC = () => {
     try {
       await updateRfqStatus({ rfqId: fullPageRfqId, status: "Freezing" });
       const updated = await fetchBuyerRFQById(fullPageRfqId);
-      setFullPageRfq(updated);
+      setFullPageRfq({ ...updated, rfqId: fullPageRfqId });
       toastService.success("Bid frozen. Suppliers can no longer submit quotations for this RFQ.");
     } catch (err: any) {
       toastService.error(err?.message || "Failed to freeze the bid.");
@@ -683,61 +676,14 @@ const BuyersDashboard: React.FC = () => {
   };
 
   // HANDLER FOR QUOTATION COMPARISON
-  const handleOpenQuotationComparison = async (rfq: any) => {
+  const handleOpenQuotationComparison = (rfq: any) => {
     setSelectedQuotationsRfq(rfq);
     setRfqPageView("quotationComparison");
-    setLoadingQuotations(true);
-    setQuotationsError(null);
-    setQuotationComparisonData([]);
-
-    try {
-      let rfqDetails = rfq;
-      
-      if (!rfq.supplierQuotation) {
-        rfqDetails = await fetchBuyerRFQById(rfq.rfqId);
-      }
-
-      if (rfqDetails.supplierQuotation && rfqDetails.supplierQuotation.length > 0) {
-        const comparisonDataList: SupplierQuotationComparisonResponse[] = [];
-        const errors: string[] = [];
-
-        for (const quotation of rfqDetails.supplierQuotation) {
-          if (quotation.quotationId) {
-            const result = await fetchSupplierQuotationComparison(quotation.quotationId);
-
-            if (!isErrorResponse(result)) {
-              comparisonDataList.push(result as SupplierQuotationComparisonResponse);
-            } else {
-              const errorData = result as unknown as ErrorResponseDto;
-              errors.push(
-                errorData.message || `Failed to load quotation ${quotation.quotationId}`
-              );
-            }
-          }
-        }
-
-        if (comparisonDataList.length > 0) {
-          setQuotationComparisonData(comparisonDataList);
-        }
-
-        if (errors.length > 0 && comparisonDataList.length === 0) {
-          setQuotationsError(errors.join(", "));
-        }
-      } else {
-        setQuotationsError("No quotations found for this RFQ.");
-      }
-    } catch (error: any) {
-      setQuotationsError(error.message || "Failed to load quotation comparisons.");
-    } finally {
-      setLoadingQuotations(false);
-    }
   };
 
   const handleBackFromQuotationComparison = () => {
     setRfqPageView("rfqDetail");
     setSelectedQuotationsRfq(null);
-    setQuotationComparisonData([]);
-    setQuotationsError(null);
   };
 
   const handleOpenQsAns = () => {
@@ -1237,28 +1183,10 @@ const BuyersDashboard: React.FC = () => {
                   </div>
 
                   <div className="pud-modal-body" style={{ maxHeight: 'calc(100% - 120px)', overflowY: 'auto', padding: '24px' }}>
-                    {loadingQuotations ? (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
-                        <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                          <div className="pud-spinner" style={{ width: '32px', height: '32px' }} />
-                          <span>Loading quotation comparisons...</span>
-                        </div>
-                      </div>
-                    ) : quotationsError && quotationComparisonData.length === 0 ? (
-                      <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
-                        {quotationsError}
-                      </div>
-                    ) : quotationComparisonData.length === 0 ? (
-                      <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
-                        No quotation data available.
-                      </div>
-                    ) : (
-                      <QuotationComparisonCard
-                        quotations={quotationComparisonData}
-                        rfqTitle={selectedQuotationsRfq.title}
-                        supplierNames={quotationComparisonData.map((_, index) => `Supplier ${index + 1}`)}
-                      />
-                    )}
+                    <QuotationComparisonCard
+                      rfqId={selectedQuotationsRfq?.rfqId}
+                      rfqTitle={selectedQuotationsRfq?.title}
+                    />
                   </div>
                 </div>
               </>

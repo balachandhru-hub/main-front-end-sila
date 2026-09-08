@@ -4,6 +4,7 @@ import type {
   SupplierDto,
   PaginationParamsDto,
   AssetDownloadResponseDto,
+  ErrorResponseDto,
 } from '../dto/platformDto';
 import { invalidatePersonDetailCache } from './networkAdminApi';
 export interface CreateDepartmentRequestDto {
@@ -31,6 +32,68 @@ export interface CostCenterListItemDto {
   id: string;
   departmentId: string;
   costCenter: string;
+}
+
+/* ---------------------------------- Bid Comparison DTOs ---------------------------------- */
+
+export type BidValueType = 'AMOUNT' | 'PERCENTAGE';
+
+export interface BidQuotationItemDto {
+  supplierQuotationItemId: string;
+  supplierRFQItemId: string;
+  buyerRFQItemId: string;
+  version: string;
+  quotedPrice: number;
+  quotedAmount: number;
+  subTotal: number;
+  lineNumber: number;
+  deliveryCharge: number | null;
+  tax: number | null;
+  discount: number | null;
+  deliveryType: BidValueType | null;
+  discountType: BidValueType | null;
+  taxType: BidValueType | null;
+}
+
+export interface BidQuotationVersionDto {
+  supplierRFQId: string;
+  quotationId: string;
+  version: string;
+  totalPrice: number;
+  deliveryCharge: number;
+  tax: number;
+  discount: number;
+  deliveryType: BidValueType;
+  discountType: BidValueType;
+  taxType: BidValueType;
+  status: string;
+  items: BidQuotationItemDto[];
+}
+
+export interface BidSupplierQuotationDto {
+  supplierId: string;
+  supplierName: string;
+  firstVersion: BidQuotationVersionDto;
+  latestVersion: BidQuotationVersionDto;
+}
+
+export interface BidRfqItemDto {
+  id: string;
+  description: string;
+  quantity: number;
+  uom: string;
+  materialCode: string;
+  materialGroup: string;
+  costCenter: string;
+  lineNumber: number;
+}
+
+export interface BidComparisonResponseDto {
+  rfqId: string;
+  rfqNumber: string;
+  addLotOption: boolean;
+  suppliers: BidSupplierQuotationDto[];
+  rfqItems: BidRfqItemDto[];
 }
 
 export type {
@@ -283,5 +346,48 @@ export const getBuyerProfileByOrgId = async (organizationId: string): Promise<Bu
       return postResponse.data;
     }
     throw error;
+  }
+};
+
+export const isBidComparisonError = (
+  data: BidComparisonResponseDto | ErrorResponseDto
+): data is ErrorResponseDto => !!data && 'status_code' in data;
+
+export const getBidComparisonData = async (
+  rfqId: string
+): Promise<BidComparisonResponseDto | ErrorResponseDto> => {
+  try {
+    const response = await platformInstance.get<BidComparisonResponseDto>('/api/v1/buyer/bid-compare', {
+      params: { rfqId },
+    });
+    return {
+      ...response.data,
+      suppliers: response.data?.suppliers || [],
+      rfqItems: response.data?.rfqItems || [],
+    };
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        status_code: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        status_code: errData.status_code || errData.statusCode || error.response.status || 500,
+        message: errData.message || 'Failed to fetch bid comparison data',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      status_code: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching bid comparison data.',
+    };
   }
 };
