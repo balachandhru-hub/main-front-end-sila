@@ -200,6 +200,42 @@ export const getOrganizationUsers = async (organizationId: string): Promise<User
   }
 };
 
+// Used for selecting which organization users an RFQ should be sent to (e.g. supplier
+// user selection during Create RFQ). Distinct endpoint from getOrganizationUsers above,
+// which is used for general organization user management and must not be repointed here.
+export const getOrganizationUsersForRfq = async (organizationId: string): Promise<User[]> => {
+  try {
+    const response = await platformInstance.get<OrganizationUserDto[]>(
+      '/api/v1/identity/organization-user-rfq',
+      {
+        params: { organizationId },
+      }
+    );
+
+    const users = response.data || [];
+
+    return users.map((dto) => ({
+      id: dto.userId,
+      personId: dto.personId,
+      email: dto.email,
+      name: dto.name,
+      userName: dto.userName,
+      userRole: dto.roleName as any,
+      roleId: dto.roleId,
+      createdAt: new Date().toISOString().split('T')[0],
+      status: 'active' as const,
+      organizationId,
+    }));
+  } catch (error: any) {
+    const errorMsg =
+      error.response?.data?.message ||
+      error.response?.data?.description ||
+      error.message ||
+      'Failed to fetch users';
+    throw new Error(errorMsg);
+  }
+};
+
 
 export const getCountries = async (
   index: number = 0,
