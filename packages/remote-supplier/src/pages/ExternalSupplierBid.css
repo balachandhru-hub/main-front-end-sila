@@ -1,0 +1,499 @@
+.ebid-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f4f6f9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #1f2937;
+}
+
+.ebid-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: clamp(0.75rem, 2vw, 1rem) clamp(1rem, 4vw, 2.5rem);
+  background: #ffffff;
+  border-bottom: 0.0625rem solid #e6e8ec;
+}
+
+.ebid-header-logo {
+  height: 2.25rem;
+  width: auto;
+  object-fit: contain;
+}
+
+.ebid-header-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.ebid-main {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2vw, 1.25rem);
+  padding: clamp(1rem, 3vw, 2rem) clamp(1rem, 4vw, 2.5rem) clamp(2rem, 6vw, 4rem);
+}
+
+.ebid-main-centered {
+  align-items: center;
+  justify-content: center;
+}
+
+.ebid-form {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2vw, 1.25rem);
+}
+
+.ebid-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: #ffffff;
+  border: 0.0625rem solid #e6e8ec;
+  border-radius: 0.75rem;
+  padding: clamp(1.125rem, 2.5vw, 1.5rem);
+  box-shadow: 0 0.0625rem 0.125rem rgba(15, 23, 42, 0.04);
+}
+
+.ebid-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ebid-rfq-title {
+  font-size: clamp(1.15rem, 1.6vw, 1.5rem);
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ebid-badge {
+  flex-shrink: 0;
+  background: #eff6ff;
+  color: #2f6feb;
+  border: 0.0625rem solid #dbeafe;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999rem;
+  white-space: nowrap;
+}
+
+.ebid-rfq-desc {
+  max-width: 70ch;
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.ebid-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 1rem;
+  background: #f8fafc;
+  border: 0.0625rem solid #e2e8f0;
+  border-radius: 0.625rem;
+  padding: 1rem;
+}
+
+.ebid-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ebid-meta-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.ebid-meta-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.ebid-info-notice {
+  background: #eff6ff;
+  border: 0.0625rem solid #dbeafe;
+  color: #1d4ed8;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.ebid-section-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ebid-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.ebid-docs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ebid-doc-chip {
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.375rem 0.625rem;
+  border-radius: 0.375rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.ebid-doc-chip-type {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.ebid-item-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.ebid-item-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.ebid-item-attachments .ebid-doc-chip {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.ebid-table-wrap {
+  overflow-x: auto;
+}
+
+.ebid-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.ebid-items-table th {
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.5rem 0.625rem;
+  border-bottom: 0.0625rem solid #e2e8f0;
+}
+
+.ebid-items-table td {
+  padding: 0.75rem 0.625rem;
+  border-bottom: 0.0625rem solid #f1f5f9;
+  vertical-align: top;
+}
+
+.ebid-col-price {
+  width: 8.5rem;
+}
+
+.ebid-item-desc {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.ebid-item-sub {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.ebid-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ebid-question {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  background: #f8fafc;
+  border: 0.0625rem solid #e2e8f0;
+  border-radius: 0.625rem;
+  padding: 1rem;
+}
+
+.ebid-question-text {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.ebid-question-num {
+  color: #2f6feb;
+  flex-shrink: 0;
+}
+
+.ebid-required-mark {
+  color: #ef4444;
+}
+
+.ebid-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ebid-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #334155;
+  cursor: pointer;
+}
+
+.ebid-commercial-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 1rem;
+}
+
+.ebid-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.ebid-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.ebid-field-total {
+  grid-column: 1 / -1;
+  border-top: 0.0625rem solid #e2e8f0;
+  padding-top: 1rem;
+}
+
+.ebid-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 0.0625rem solid #cbd5e1;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  color: #0f172a;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.ebid-input:focus {
+  outline: none;
+  border-color: #2f6feb;
+  box-shadow: 0 0 0 0.1875rem rgba(47, 111, 235, 0.12);
+}
+
+.ebid-input-total {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #16a34a;
+  max-width: 12rem;
+}
+
+.ebid-window-notice {
+  background: #fef3c7;
+  border: 0.0625rem solid #fde68a;
+  color: #92400e;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.ebid-error-banner {
+  background: #fee2e2;
+  border: 0.0625rem solid #fca5a5;
+  color: #b91c1c;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.ebid-submit-bar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ebid-submit-btn {
+  background: #2f6feb;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.ebid-submit-btn:hover:not(:disabled) {
+  background: #2559c4;
+}
+
+.ebid-submit-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ebid-btn-outline {
+  background: transparent;
+  color: #475569;
+  border: 0.0625rem solid #cbd5e1;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ebid-status-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  max-width: 30rem;
+  width: 100%;
+  text-align: center;
+  background: #ffffff;
+  border: 0.0625rem solid #e6e8ec;
+  border-radius: 0.75rem;
+  padding: clamp(1.75rem, 4vw, 2.5rem) clamp(1.25rem, 4vw, 2rem);
+  box-shadow: 0 0.0625rem 0.125rem rgba(15, 23, 42, 0.04);
+}
+
+.ebid-status-icon {
+  font-size: 2.5rem;
+}
+
+.ebid-status-icon-error {
+  color: #dc2626;
+}
+
+.ebid-status-icon-success {
+  color: #16a34a;
+}
+
+.ebid-status-card h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ebid-status-card p {
+  font-size: 0.9rem;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.ebid-register-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  border-top: 0.0625rem solid #e2e8f0;
+  padding-top: 1.25rem;
+}
+
+.ebid-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.ebid-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  background: #ffffff;
+  border-radius: 0.75rem;
+  padding: 1.75rem;
+  max-width: 24rem;
+  width: 100%;
+  box-shadow: 0 0.625rem 1.875rem rgba(15, 23, 42, 0.2);
+}
+
+.ebid-modal h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ebid-modal p {
+  font-size: 0.875rem;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.ebid-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+}
+
+@media (max-width: 40em) {
+  .ebid-rfq-title {
+    font-size: 1.15rem;
+  }
+
+  .ebid-submit-bar {
+    justify-content: stretch;
+  }
+
+  .ebid-submit-btn {
+    width: 100%;
+  }
+
+  .ebid-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .ebid-modal-actions button {
+    width: 100%;
+  }
+}

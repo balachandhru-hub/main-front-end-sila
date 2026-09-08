@@ -11,6 +11,7 @@ export default defineConfig({
       filename: 'remoteEntry.js',
       exposes: {
         './SupplierApp': './src/SupplierApp.tsx',
+        './ExternalSupplierBid': './src/pages/ExternalSupplierBid.tsx',
       },
       shared: [
         'react',
