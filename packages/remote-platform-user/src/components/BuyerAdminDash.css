@@ -1271,3 +1271,11 @@
 .bad-allrfqs-table tbody tr:hover td {
     background: #f8fafc;
 }
+
+.bad-allrfqs-table .bad-code-badge {
+    font-weight: 400;
+    font-size: 0.71875rem;
+    padding: 0.1875rem 0.5rem;
+    border-radius: 0.3125rem;
+    line-height: normal;
+}
