@@ -460,12 +460,8 @@ const SupplierAdminDash: React.FC = () => {
 
   const { notYetOpen, closed, canSubmit } = useMemo(
     () => getRfqSubmissionWindowStatus(selectedRfq),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [selectedRfq, rfqWindowTick],
   );
-  // supplierId comes straight from sessionStorage (set during login) — no
-  // profile-fetch call here, since getSupplierProfile() is a supplier-role
-  // scoped endpoint and 401/403s when called from the network-admin session.
   useEffect(() => {
     if (!supplierId) {
       setRfqsError("Supplier ID not found in session.");
@@ -473,7 +469,6 @@ const SupplierAdminDash: React.FC = () => {
     }
   }, [supplierId]);
 
-  // Fetch Recent Sourcing Opportunities
   useEffect(() => {
     const loadSupplierProfile = async () => {
       if (!supplierId) {
@@ -575,7 +570,6 @@ const SupplierAdminDash: React.FC = () => {
         setOwnQuotation(mine);
       }
     } catch {
-      // non-fatal — form will just fall back to defaults
     }
   };
 
@@ -821,18 +815,15 @@ const SupplierAdminDash: React.FC = () => {
       setQuoteItemPrices(prices);
       if (!selectedRfq.addLotOption) {
         const lineItems: { [supplierRFQItemId: string]: QuoteLineItem } = {};
-        selectedRfq.items?.forEach((item, idx) => {
+        selectedRfq.items?.forEach((item) => {
           const itemKey = item.supplierRFQItemId;
           if (!itemKey) return;
-          // The backend doesn't always populate supplierRFQItemId reliably on these
-          // arrays (it can come back as a placeholder GUID), so fall back to
-          // matching by position — the items are returned in the same order.
-          const matchedOwnItem =
-            ownQuotation?.supplierQuotationItems?.find((qi) => qi.supplierRFQItemId === itemKey) ||
-            ownQuotation?.supplierQuotationItems?.[idx];
-          const matchedRfqItem =
-            selectedRfq.supplierQuotationItems?.find((qi) => qi.supplierRFQItemId === itemKey) ||
-            selectedRfq.supplierQuotationItems?.[idx];
+          const matchedOwnItem = ownQuotation?.supplierQuotationItems?.find(
+            (qi) => qi.supplierRFQItemId === itemKey
+          );
+          const matchedRfqItem = selectedRfq.supplierQuotationItems?.find(
+            (qi) => qi.supplierRFQItemId === itemKey
+          );
           const source = matchedOwnItem || matchedRfqItem;
           lineItems[itemKey] = {
             deliveryCharge: source?.deliveryCharge ?? 0,
@@ -1155,7 +1146,6 @@ const SupplierAdminDash: React.FC = () => {
     }
   };
 
-  // ✅ NEW: Actual submission logic (called after user confirms)
   const handleConfirmSubmitQuotation = async () => {
     if (!selectedRfq) return;
 
@@ -1234,15 +1224,12 @@ const SupplierAdminDash: React.FC = () => {
 
       const updatedDetails = await fetchRFQById(selectedRfqId!);
 
-      // ✅ ADD ERROR CHECK HERE
       if (!isErrorResponse(updatedDetails)) {
         setSelectedRfq(updatedDetails);
       } else {
         setSubmitQuoteError(updatedDetails.description || updatedDetails.message || "Failed to refresh RFQ details.");
       }
 
-      // Refresh our own quotation data too, so the form reflects what the
-      // server actually persisted rather than stale pre-submit values.
       if (selectedRfqId) {
         try {
           const updatedQuotation = await fetchSupplierQuotationBySupplierId(selectedRfqId);
@@ -1259,7 +1246,6 @@ const SupplierAdminDash: React.FC = () => {
             setOwnQuotation(mine);
           }
         } catch {
-          // non-fatal — form keeps showing what was just submitted
         }
       }
 
@@ -1773,8 +1759,6 @@ const SupplierAdminDash: React.FC = () => {
                 )}
 
 
-                {/* Quotation Pricing & Details Form — only shown for non-lot-wise RFQs; lot-wise
-                    commercial terms are edited per-material under Required Materials & Services */}
                 {selectedRfq.addLotOption && (
                   <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
                     <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
@@ -1914,7 +1898,6 @@ const SupplierAdminDash: React.FC = () => {
                         </select>
                       </div>
 
-                      {/* Total Price (Auto calculated but editable) */}
                       <div style={{ gridColumn: 'span 2', borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                           <span style={{ fontSize: '13px', color: '#1e293b', fontWeight: 700 }}>Total Price Quote</span>

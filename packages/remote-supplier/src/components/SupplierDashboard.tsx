@@ -861,18 +861,15 @@ const SupplierDashboard: React.FC = () => {
 
       if (!selectedRfq.addLotOption) {
         const lineItems: { [supplierRFQItemId: string]: QuoteLineItem } = {};
-        selectedRfq.items?.forEach((item, idx) => {
+        selectedRfq.items?.forEach((item) => {
           const itemKey = item.supplierRFQItemId;
           if (!itemKey) return;
-          // The backend doesn't always populate supplierRFQItemId reliably on these
-          // arrays (it can come back as a placeholder GUID), so fall back to
-          // matching by position — the items are returned in the same order.
-          const matchedOwnItem =
-            ownQuotation?.supplierQuotationItems?.find((qi) => qi.supplierRFQItemId === itemKey) ||
-            ownQuotation?.supplierQuotationItems?.[idx];
-          const matchedRfqItem =
-            selectedRfq.supplierQuotationItems?.find((qi) => qi.supplierRFQItemId === itemKey) ||
-            selectedRfq.supplierQuotationItems?.[idx];
+          const matchedOwnItem = ownQuotation?.supplierQuotationItems?.find(
+            (qi) => qi.supplierRFQItemId === itemKey
+          );
+          const matchedRfqItem = selectedRfq.supplierQuotationItems?.find(
+            (qi) => qi.supplierRFQItemId === itemKey
+          );
           const source = matchedOwnItem || matchedRfqItem;
           lineItems[itemKey] = {
             deliveryCharge: source?.deliveryCharge ?? 0,
