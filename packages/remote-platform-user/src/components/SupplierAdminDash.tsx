@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import "./SupplierAdminDash.css";
 import "../../../remote-supplier/src/components/SupplierDashboard.css"
-import Header from "./Header";
+import Header, { type HeaderNavItem } from "./Header";
 import UserAdmin from "../UserAdmin";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import Catalog from "../../../remote-supplier/src/components/Catalog";
@@ -33,7 +33,9 @@ interface StatCard {
   label: string;
   value: number;
   linkText: string;
-  colorClass: string;
+  cardClass: string;
+  iconClass: string;
+  urgencyBadge?: string;
 }
 
 interface POItem {
@@ -250,6 +252,20 @@ const IconAlertCircle = () => (
   </svg>
 );
 
+const NavIconCatalog = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+  </svg>
+);
+
+const navItems: HeaderNavItem[] = [
+  { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
+  { key: "userList", icon: <NavIconUsers />, label: "User List" },
+  { key: "rfqs", icon: <NavIconFile />, label: "RFQs" },
+  { key: "catalogList", icon: <NavIconCatalog />, label: "Catalog" },
+  { key: "invitations", icon: <IconMail />, label: "Invitations" },
+];
+
 const navItemsBeforeCatalog: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
@@ -261,12 +277,12 @@ const navItemsAfterCatalog: { key: string; icon: React.ReactNode; label: string;
 ];
 
 const statCards: StatCard[] = [
-  { icon: <IconMail />, label: "INVITATIONS", value: 2, linkText: "Pending review >", colorClass: "sad-stat-icon-blue" },
-  { icon: <IconFile />, label: "ACTIVE RFQS", value: 2, linkText: "Bids open >", colorClass: "sad-stat-icon-indigo" },
-  { icon: <IconTrend />, label: "BIDS SUBMITTED", value: 3, linkText: "Track outcomes", colorClass: "sad-stat-icon-green" },
-  { icon: <IconBag />, label: "PURCHASE ORDER", value: 4, linkText: "Accept orders >", colorClass: "sad-stat-icon-purple" },
-  { icon: <IconInvoice />, label: "DUE INVOICES", value: 2, linkText: "Invoice list >", colorClass: "sad-stat-icon-orange" },
-  { icon: <IconBell />, label: "NOTIFICATIONS", value: 3, linkText: "Inquiries & Alerts >", colorClass: "sad-stat-icon-teal" },
+  { icon: <IconMail />, label: "INVITATIONS", value: 2, linkText: "Pending review >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
+  { icon: <IconFile />, label: "ACTIVE RFQS", value: 2, linkText: "Bids open >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
+  { icon: <IconTrend />, label: "BIDS SUBMITTED", value: 3, linkText: "Track outcomes", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
+  { icon: <IconBag />, label: "PURCHASE ORDER", value: 4, linkText: "Accept orders >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
+  { icon: <IconInvoice />, label: "DUE INVOICES", value: 2, linkText: "Invoice list >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "Needs action" },
+  { icon: <IconBell />, label: "NOTIFICATIONS", value: 3, linkText: "Inquiries & Alerts >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "New alerts" },
 ];
 
 const poItems: POItem[] = [
@@ -1816,8 +1832,8 @@ const SupplierAdminDash: React.FC = () => {
 
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#ffffff", paddingTop: "5.25rem" }}>
-      <Header />
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#edeff0", paddingTop: "5.25rem" }}>
+      <Header navItems={navItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout} />
 
       <div
         className={`sad-shell${isMobileSidebarOpen ? " sad-sidebar-open-mobile" : ""}`}
@@ -2012,31 +2028,30 @@ const SupplierAdminDash: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <h1 className="sad-title">Supplier Admin Command Center</h1>
-                  <p className="sad-subtitle">Manage suppliers, track sourcing activities, and oversee operations.</p>
-
-                  <div className="sad-status-banner">
-                    <span className="sad-status-dot" />
+                  <div className="pud-dashboard-header">
                     <div>
-                      <div className="sad-status-title">Active Supplier Administration Portal (100%)</div>
-                      <div className="sad-status-subtext">
-                        You have administrative access to manage supplier operations and user accounts.
-                      </div>
+                      <h1 className="pud-title">Supplier Admin Command Center</h1>
+                      <p className="pud-subtitle">Manage suppliers, track sourcing activities, and oversee operations.</p>
                     </div>
                   </div>
 
-                  <div className="sad-stats-grid">
+                  <div className="pud-stats-grid">
                     {statCards.map((stat) => (
-                      <div className="sad-stat-card" key={stat.label}>
-                        <div className={`sad-stat-icon ${stat.colorClass}`}>{stat.icon}</div>
-                        <div className="sad-stat-label">{stat.label}</div>
-                        <div className="sad-stat-value">{stat.value}</div>
-                        <div className="sad-stat-link">{stat.linkText}</div>
+                      <div className={`pud-stat-card ${stat.cardClass}`} key={stat.label}>
+                        <div className="pud-stat-top">
+                          <div className={`pud-stat-icon ${stat.iconClass}`}>{stat.icon}</div>
+                          {stat.urgencyBadge && (
+                            <span className="pud-urgency-badge">⚡ {stat.urgencyBadge}</span>
+                          )}
+                        </div>
+                        <div className="pud-stat-label">{stat.label}</div>
+                        <div className="pud-stat-value">{stat.value}</div>
+                        <div className="pud-stat-link">{stat.linkText}</div>
                       </div>
                     ))}
                   </div>
 
-                  <div className="sad-panels">
+                  <div className="pud-panels">
                     <section className="pud-panel">
                       <div className="pud-panel-header">
                         <div>
@@ -2070,67 +2085,82 @@ const SupplierAdminDash: React.FC = () => {
                           </div>
                         </div>
                       ) : rfqs.length === 0 ? (
-                        <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
-                          <div style={{ color: '#64748b', fontSize: '14px', textAlign: 'center' }}>
-                            No recent sourcing opportunities found.
+                        <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px', padding: '24px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
+                            <div style={{
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '12px',
+                              background: '#f1f5f9',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#64748b'
+                            }}>
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.3-4.3"/>
+                              </svg>
+                            </div>
+                            <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
+                              No matching RFQs right now
+                            </div>
                           </div>
                         </div>
                       ) : (
                         <div className="pud-panel-list">
                           {rfqs.slice(0, visibleRfqCount).map((rfq) => (
-                            <div className="pud-rfq-row" key={rfq.rfqId}>
-                              <div className="pud-rfq-info">
-                                <div className="pud-rfq-meta">
-                                  <span className="pud-code-badge">{rfq.rfqNumber}</span>
-                                  <span className="pud-dot-sep">•</span>
-                                  <span className="pud-company">{rfq.organizationName}</span>
-                                </div>
-                                <div className="pud-rfq-title">{rfq.title}</div>
-                                <div className="pud-rfq-details">
-                                  <span>
-                                    <IconCalendar /> Closes: {new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                                  </span>
-                                  <span>
-                                    <IconPin /> Deliv: {rfq.deliveryLocation}
-                                  </span>
-                                </div>
+                            <div
+                              className="pud-rfq-card-item"
+                              key={rfq.rfqId}
+                              onClick={() => handleViewRfqDetails(rfq.rfqId)}
+                              role="button"
+                              tabIndex={0}
+                            >
+                              <div className="pud-rfq-meta">
+                                <span className="pud-code-badge">{rfq.rfqNumber}</span>
+                                <span className="pud-dot-sep">•</span>
+                                <span className="pud-company">{rfq.organizationName}</span>
                               </div>
-                              <button
-                                className="pud-btn pud-btn-outline"
-                                onClick={() => handleViewRfqDetails(rfq.rfqId)}
-                              >
-                                View RFQ Details
-                              </button>
+                              <div className="pud-rfq-title pud-rfq-link-title">{rfq.title}</div>
+                              <div className="pud-rfq-details">
+                                <span>
+                                  <IconCalendar /> Closes: {rfq.endDate ? new Date(rfq.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Open'}
+                                </span>
+                                <span>
+                                  <IconPin /> Deliv: {rfq.deliveryLocation}
+                                </span>
+                              </div>
                             </div>
                           ))}
                         </div>
                       )}
                     </section>
 
-                    <section className="sad-panel">
-                      <div className="sad-panel-header">
+                    <section className="pud-panel">
+                      <div className="pud-panel-header">
                         <div>
-                          <div className="sad-panel-title">Recent Purchase Orders</div>
-                          <div className="sad-panel-subtitle">Supplier orders requiring attention</div>
+                          <div className="pud-panel-title">Recent Purchase Orders</div>
+                          <div className="pud-panel-subtitle">Supplier orders requiring attention</div>
                         </div>
-                        <a className="sad-panel-link" href="#">View All →</a>
+                        <a className="pud-panel-link" href="#" onClick={(e) => e.preventDefault()}>View All →</a>
                       </div>
-                      <div className="sad-panel-list">
+                      <div className="pud-panel-list">
                         {poItems.map((po) => (
-                          <div className="sad-po-row" key={po.code}>
-                            <div className="sad-po-info">
-                              <div className="sad-po-meta">
-                                <span className="sad-po-code">{po.code}</span>
-                                <span className={`sad-status-badge sad-status-badge-${po.status.toLowerCase()}`}>
+                          <div className="pud-po-row" key={po.code}>
+                            <div className="pud-po-info">
+                              <div className="pud-po-meta">
+                                <span className="pud-po-code">{po.code}</span>
+                                <span className={`pud-status-badge pud-status-badge-${po.status.toLowerCase()}`}>
                                   {po.status}
                                 </span>
                               </div>
-                              <div className="sad-po-company">{po.company}</div>
-                              <div className="sad-po-date"><IconCalendar /> Order Date: {po.orderDate}</div>
+                              <div className="pud-po-company">{po.company}</div>
+                              <div className="pud-po-date"><IconCalendar /> Order Date: {po.orderDate}</div>
                             </div>
-                            <div className="sad-po-right">
-                              <div className="sad-po-amount">{po.amount}</div>
-                              <a className="sad-po-process" href="#">Process →</a>
+                            <div className="pud-po-right">
+                              <div className="pud-po-amount">{po.amount}</div>
+                              <a className="pud-po-process" href="#" onClick={(e) => e.preventDefault()}>Process →</a>
                             </div>
                           </div>
                         ))}

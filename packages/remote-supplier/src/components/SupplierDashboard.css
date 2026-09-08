@@ -1,7 +1,7 @@
 .pud-shell {
   display: flex;
   min-height: 100vh;
-  background: #f4f6f9;
+  background: #edeff0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #1f2937;
 }
@@ -143,7 +143,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: #f8fafc;
+  background: #edeff0;
 }
 
 .pud-header {
@@ -214,10 +214,10 @@
 
 .pud-content {
   width: 100%;
-  padding: 0.5rem 0.5rem;
+  padding: 1.5rem 2.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1.25rem;
 }
 
 h1.pud-title,
@@ -226,7 +226,7 @@ h1.pud-title,
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   font-size: 24px !important;
   font-weight: 700 !important;
-  color: #0f172a !important;
+  color: #424649 !important;
   letter-spacing: -0.01em !important;
   margin: 0 0 0.25rem 0 !important;
 }
@@ -289,7 +289,7 @@ h1.pud-title,
 .pud-stat-card {
   position: relative;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   border-radius: 0.75rem;
   padding: 0.75rem 0.875rem;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03);
@@ -307,7 +307,7 @@ h1.pud-title,
 /* Neutral Default Cards */
 .pud-stat-card-neutral {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
 }
 
 .pud-stat-icon-neutral {
@@ -406,7 +406,7 @@ h1.pud-title,
 
 .pud-panel {
   background: #ffffff;
-  border: 0.0625rem solid #e6e8ec;
+  border: 1px solid #cbd5e1;
   border-radius: 0.625rem;
   padding: 0.75rem 0.875rem;
   min-width: 0;
@@ -439,7 +439,7 @@ h1.pud-title,
 
 .pud-panel-link {
   font-size: 0.8125rem;
-  color: #2f6feb;
+  color: #1775d2;
   font-weight: 450;
   text-decoration: none;
   white-space: nowrap;
@@ -495,7 +495,7 @@ h1.pud-title,
 
 .pud-code-badge {
   background: #eff6ff;
-  color: #1d4ed8;
+  color: #1775d2;
   border: 1px solid #bfdbfe;
   font-weight: 700;
   font-size: 0.71875rem;
@@ -511,14 +511,14 @@ h1.pud-title,
 
 .pud-company {
   color: #475569;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.78125rem;
 }
 
 .pud-rfq-title {
-  font-size: 0.9375rem;
-  font-weight: 700;
-  color: #0f172a;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e293b;
   margin: 0.15rem 0;
   white-space: nowrap;
   overflow: hidden;
@@ -527,7 +527,7 @@ h1.pud-title,
 }
 
 .pud-rfq-card-item:hover .pud-rfq-title {
-  color: #1d4ed8;
+  color: #1775d2;
 }
 
 .pud-rfq-details {
@@ -603,8 +603,8 @@ h1.pud-title,
 
 .pud-po-company {
   font-size: 0.875rem;
-  font-weight: 700;
-  color: #0f172a;
+  font-weight: 600;
+  color: #1e293b;
   margin-bottom: 0.15rem;
 }
 
