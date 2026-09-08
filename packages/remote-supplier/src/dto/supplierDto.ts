@@ -322,6 +322,14 @@ export interface RFQSupplierQuotationItem {
   supplierRFQItemId?: string;
   buyerRFQItemId?: string;
   quotedPrice: number;
+  deliveryCharge?: number;
+  deliveryType?: string;
+  discount?: number;
+  discountType?: string;
+  tax?: number;
+  taxType?: string;
+  subTotal?: number;
+  quotedAmount?: number;
 }
 
 export interface RFQDetailResponse {
