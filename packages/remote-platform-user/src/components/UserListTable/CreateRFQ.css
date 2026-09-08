@@ -684,6 +684,11 @@
     padding-left: 34px;
 }
 
+.bd-suppliers-table thead th {
+    height: 45px;
+    box-sizing: border-box;
+}
+
 .bd-checkbox-cell {
     width: 44px;
     height: 45px;
@@ -719,6 +724,12 @@
 }
 
 .bd-supplier-name {
+    font-size: 13.5px;
+    font-weight: 400;
+    color: #111827;
+}
+
+.bd-supplier-sn-id {
     font-size: 13.5px;
     font-weight: 400;
     color: #111827;

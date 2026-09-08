@@ -1,13 +1,15 @@
 import React, { useRef, useState, useEffect } from "react";
 import "./Create.RFQ.css";
-import { toastService } from "@vosox/shared-ui";
+import { Button, toastService } from "@vosox/shared-ui";
 import { getBuyerProfile, getAllDepartments, getAllCostCenters, getAllItemMasters, createRFQ, getVerifiedSuppliers, getUnspscSegments, getUnspscFamilies, fetchBuyerVerificationTemplates, fetchBuyerVerificationTemplateById } from "../api/Buyerapi";
 import type { VerificationTemplate } from "../api/Buyerapi";
 import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../api/masterdataApi";
-import type { CreateRFQPayload, RfqDocumentAssetDto, RfqItemDto, RfqQuestionDto, VerifiedSupplierDto, SupplierVerificationType } from "../dto/rfqDto";
+import type { CreateRFQPayload, ExternalSupplierDto, RfqDocumentAssetDto, RfqItemDto, RfqQuestionDto, SupplierInviteDto, VerifiedSupplierDto, SupplierVerificationType } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
 import type { CountryDto, UnitDto, CurrencyDto } from "../api/masterdataApi";
 import ItemMasterModal from "./ItemMasterModal";
+import SupplierUsersModal from "../../../remote-platform-user/src/components/UserListTable/SupplierUsersModal";
+import ExternalSupplierModal, { type ExternalSupplierFormValues } from "../../../remote-platform-user/src/components/UserListTable/ExternalSupplierModal";
 
 
 const HARDCODED_RFQ_VERIFICATION_TEMPLATE_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
@@ -645,6 +647,9 @@ if (Array.isArray(data)) {
     const [suppliersLoading, setSuppliersLoading] = useState(false);
     const [suppliersError, setSuppliersError] = useState<string | null>(null);
     const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
+    const [externalSuppliers, setExternalSuppliers] = useState<ExternalSupplierDto[]>([]);
+    const [supplierSelectedUserIds, setSupplierSelectedUserIds] = useState<Record<string, string[]>>({});
+    const [activeSupplierForUsers, setActiveSupplierForUsers] = useState<VerifiedSupplierDto | null>(null);
     const [supplierTypeFilter, setSupplierTypeFilter] = useState<"ALL" | SupplierVerificationType>("ALL");
     const [supplierSearchQuery, setSupplierSearchQuery] = useState("");
     const [registrationTemplate, setRegistrationTemplate] = useState("");
@@ -708,6 +713,7 @@ if (Array.isArray(data)) {
     const [viewTemplateError, setViewTemplateError] = useState<string | null>(null);
     const [viewTemplateData, setViewTemplateData] = useState<VerificationTemplate | null>(null);
     const [isItemMasterModalOpen, setIsItemMasterModalOpen] = useState(false);
+    const [isExternalSupplierModalOpen, setIsExternalSupplierModalOpen] = useState(false);
 
     const handleViewTemplate = async () => {
         if (!registrationTemplateId) return;
@@ -926,6 +932,19 @@ if (Array.isArray(data)) {
         setSelectedSupplierIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
     };
 
+    const handleAddExternalSupplier = (supplier: ExternalSupplierFormValues) => {
+        setExternalSuppliers((prev) => [...prev, supplier]);
+        toastService.success("External supplier added.");
+    };
+
+    const handleRemoveExternalSupplier = (index: number) => {
+        setExternalSuppliers((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSaveSupplierUsers = (supplierId: string, userIds: string[]) => {
+        setSupplierSelectedUserIds((prev) => ({ ...prev, [supplierId]: userIds }));
+    };
+
     const selectedSuppliers = suppliers.filter((s) => selectedSupplierIds.includes(s.supplierId));
     const verifiedSelectedCount = selectedSuppliers.filter((s) => s.isVerified).length;
     const unverifiedSelectedCount = selectedSuppliers.length - verifiedSelectedCount;
@@ -933,7 +952,7 @@ if (Array.isArray(data)) {
     const targetCategory = familyTitle || segmentTitle || "Not set";
 
     const handleSubmitRFQ = async () => {
-        if (selectedSupplierIds.length === 0) return;
+        if (selectedSupplierIds.length === 0 && externalSuppliers.length === 0) return;
 
         setSubmitError(null);
         setIsSubmittingRFQ(true);
@@ -971,6 +990,11 @@ if (Array.isArray(data)) {
                 attachments: [],
             }));
 
+            const supplierInvites: SupplierInviteDto[] = selectedSuppliers.map((s) => ({
+                supplierId: s.supplierId,
+                userIds: supplierSelectedUserIds[s.supplierId] || [],
+            }));
+
             const payload: CreateRFQPayload = {
                 title: rfqTitle,
                 description,
@@ -988,6 +1012,8 @@ if (Array.isArray(data)) {
                 questions,
                 items,
                 supplierIds: selectedSupplierIds,
+                supplierInvites,
+                externalSuppliers,
                 rfqVerificationTemplateId: registrationTemplateId || HARDCODED_RFQ_VERIFICATION_TEMPLATE_ID,
             };
 
@@ -1799,6 +1825,12 @@ if (Array.isArray(data)) {
                                     onChange={(e) => setSupplierSearchQuery(e.target.value)}
                                 />
                             </div>
+                            <Button
+                                type="button"
+                                onClick={() => setIsExternalSupplierModalOpen(true)}
+                            >
+                                Add External Supplier
+                            </Button>
                         </div>
                     </div>
 
@@ -1818,6 +1850,7 @@ if (Array.isArray(data)) {
                                     <th>Email</th>
                                     <th>Verification Status</th>
                                     <th>Pipeline Actions On Submit</th>
+                                    <th>Users</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1861,18 +1894,45 @@ if (Array.isArray(data)) {
                                                 </span>
                                             )}
                                         </td>
+                                        <td>
+                                            <Button
+                                                type="button"
+                                                disabled={!selectedSupplierIds.includes(s.supplierId)}
+                                                title={
+                                                    selectedSupplierIds.includes(s.supplierId)
+                                                        ? undefined
+                                                        : "Select this supplier first"
+                                                }
+                                                onClick={() => setActiveSupplierForUsers(s)}
+                                                style={{
+                                                    width: "140px",
+                                                    whiteSpace: "nowrap",
+                                                    ...(!selectedSupplierIds.includes(s.supplierId) && {
+                                                        background: "#e2e8f0",
+                                                        color: "#94a3b8",
+                                                        border: "1px solid #e2e8f0",
+                                                        boxShadow: "none",
+                                                        cursor: "not-allowed",
+                                                    }),
+                                                }}
+                                            >
+                                                {(supplierSelectedUserIds[s.supplierId]?.length ?? 0) > 0
+                                                    ? `${supplierSelectedUserIds[s.supplierId].length} Selected`
+                                                    : "Select Users"}
+                                            </Button>
+                                        </td>
                                     </tr>
                                 ))}
                                 {!suppliersLoading && suppliers.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="bd-table-empty">
+                                        <td colSpan={6} className="bd-table-empty">
                                             {suppliersError ? "Could not load suppliers." : "No suppliers match your search."}
                                         </td>
                                     </tr>
                                 )}
                                 {suppliersLoading && (
                                     <tr>
-                                        <td colSpan={5} className="bd-table-empty">
+                                        <td colSpan={6} className="bd-table-empty">
                                             Loading suppliers...
                                         </td>
                                     </tr>
@@ -1880,6 +1940,49 @@ if (Array.isArray(data)) {
                             </tbody>
                         </table>
                     </div>
+
+                    {externalSuppliers.length > 0 && (
+                        <div className="bd-table-card" style={{ marginTop: 16 }}>
+                            <table className="bd-table bd-suppliers-table">
+                                <thead>
+                                    <tr>
+                                        <th>External Supplier Name</th>
+                                        <th>Email</th>
+                                        <th>Contact Number</th>
+                                        <th>Address</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {externalSuppliers.map((s, idx) => (
+                                        <tr key={`${s.email}-${idx}`}>
+                                            <td>
+                                                <div className="bd-supplier-name">{s.supplierName}</div>
+                                            </td>
+                                            <td>
+                                                <span className="bd-supplier-email">{s.email}</span>
+                                            </td>
+                                            <td>
+                                                <div className="bd-supplier-sn-id">{s.phoneNumber}</div>
+                                            </td>
+                                            <td>
+                                                <div className="bd-supplier-sn-id">{s.address}</div>
+                                            </td>
+                                            <td>
+                                                <button
+                                                    type="button"
+                                                    className="bd-btn-back"
+                                                    onClick={() => handleRemoveExternalSupplier(idx)}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
 
                     {hasUnverifiedSelected && (
                         <div className="bd-onboarding-box">
@@ -1960,7 +2063,7 @@ if (Array.isArray(data)) {
                             className="bd-btn-submit"
                             onClick={handleSubmitRFQ}
                             type="button"
-                            disabled={selectedSupplierIds.length === 0 || isSubmittingRFQ}
+                            disabled={(selectedSupplierIds.length === 0 && externalSuppliers.length === 0) || isSubmittingRFQ}
                         >
                             <IconSend /> {isSubmittingRFQ ? "Submitting..." : "Submit RFQ"}
                         </button>
@@ -2005,7 +2108,18 @@ if (Array.isArray(data)) {
                                         </td>
                                     </tr>
                                 ))}
-                                {selectedSuppliers.length === 0 && (
+                                {externalSuppliers.map((s, idx) => (
+                                    <tr key={`external-${s.email}-${idx}`}>
+                                        <td>{s.supplierName}</td>
+                                        <td>{s.email}</td>
+                                        <td>
+                                            <span className="bd-delivery-pill bd-delivery-pill-orange">
+                                                <span className="bd-dot" /> Invitation Sent
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {selectedSuppliers.length === 0 && externalSuppliers.length === 0 && (
                                     <tr>
                                         <td colSpan={3} className="bd-table-empty">
                                             No suppliers were selected.
@@ -2084,6 +2198,29 @@ if (Array.isArray(data)) {
                 isOpen={isItemMasterModalOpen}
                 onClose={() => setIsItemMasterModalOpen(false)}
                 buyerId={buyerProfileId}
+            />
+
+            <SupplierUsersModal
+                isOpen={!!activeSupplierForUsers}
+                supplierName={activeSupplierForUsers?.supplierName || ""}
+                organizationId={activeSupplierForUsers?.organizationId}
+                initialSelectedUserIds={
+                    activeSupplierForUsers
+                        ? supplierSelectedUserIds[activeSupplierForUsers.supplierId] || []
+                        : []
+                }
+                onClose={() => setActiveSupplierForUsers(null)}
+                onSave={(userIds) => {
+                    if (activeSupplierForUsers) {
+                        handleSaveSupplierUsers(activeSupplierForUsers.supplierId, userIds);
+                    }
+                }}
+            />
+
+            <ExternalSupplierModal
+                isOpen={isExternalSupplierModalOpen}
+                onClose={() => setIsExternalSupplierModalOpen(false)}
+                onAdd={handleAddExternalSupplier}
             />
         </div>
     );

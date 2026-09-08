@@ -970,7 +970,7 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                 </div>
             )}
 
-            {showCatalogListModal && fullViewContainer && createPortal(
+            {(showCatalogListModal || !!fullViewContainer) && fullViewContainer && createPortal(
                 <>
                     <div className="pud-catalog-fullview-header">
                         <div>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import "./Catalog.css";
 import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
@@ -291,6 +291,16 @@ const Catalog: React.FC<CatalogProps> = ({
             setLoadingCatalogList(false);
         }
     };
+
+    useEffect(() => {
+        loadCatalogList();
+    }, []);
+
+    useEffect(() => {
+        if (fullViewContainer) {
+            loadCatalogList();
+        }
+    }, [fullViewContainer]);
 
     // ✅ UPDATED: Handler to fetch catalog details from API
     const openCatalogDetail = async (catalogId: string) => {
@@ -1289,7 +1299,7 @@ const Catalog: React.FC<CatalogProps> = ({
             )}
 
             {/* Catalog List Portal */}
-            {showCatalogListModal && fullViewContainer && createPortal(
+            {(showCatalogListModal || !!fullViewContainer) && fullViewContainer && createPortal(
                 <>
                     {selectedCatalogItem ? (
                         showPunchOutFullPage ? (
