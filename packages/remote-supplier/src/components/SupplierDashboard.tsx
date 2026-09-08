@@ -24,12 +24,15 @@ import {
 import { useLocation } from "react-router-dom";
 import Header from "./Header.tsx";
 import { useAuth } from '../../../host-app/src/AuthContext.tsx';
+import EAuctionWidget from "./EAuctionWidget.tsx";
 interface StatCard {
   icon: React.ReactNode;
   label: string;
   value: number;
   linkText: string;
-  colorClass: string;
+  cardClass: string;
+  iconClass: string;
+  urgencyBadge?: string;
 }
 
 interface POItem {
@@ -131,42 +134,28 @@ const NavIconFile = () => (
 //   </svg>
 // );
 
-const NavIconBag = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-    <path d="M3 6h18" />
-    <path d="M16 10a4 4 0 0 1-8 0" />
-  </svg>
-);
+// const NavIconContract = () => (
+//   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <path d="M8 2h8l4 4v16H4V2z" />
+//     <path d="M8 2v4H4" />
+//   </svg>
+// );
 
-const NavIconContract = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M8 2h8l4 4v16H4V2z" />
-    <path d="M8 2v4H4" />
-  </svg>
-);
+// const NavIconInvoice = () => (
+//   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <rect x="3" y="3" width="7" height="7" rx="1" />
+//     <rect x="14" y="3" width="7" height="7" rx="1" />
+//     <rect x="3" y="14" width="7" height="7" rx="1" />
+//     <rect x="14" y="14" width="7" height="7" rx="1" />
+//   </svg>
+// );
 
-const NavIconInvoice = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="7" height="7" rx="1" />
-    <rect x="14" y="3" width="7" height="7" rx="1" />
-    <rect x="3" y="14" width="7" height="7" rx="1" />
-    <rect x="14" y="14" width="7" height="7" rx="1" />
-  </svg>
-);
-
-const NavIconPayment = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="5" width="20" height="14" rx="2" />
-    <path d="M2 10h20" />
-  </svg>
-);
-
-const NavIconMessage = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-  </svg>
-);
+// const NavIconPayment = () => (
+//   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <rect x="2" y="5" width="20" height="14" rx="2" />
+//     <path d="M2 10h20" />
+//   </svg>
+// );
 
 const NavIconBuilding = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -175,12 +164,6 @@ const NavIconBuilding = () => (
   </svg>
 );
 
-const NavIconSettings = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="3" />
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-  </svg>
-);
 
 const LogoutIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -297,27 +280,25 @@ const IconAlertCircle = () => (
 );
 
 
+const NavIconCatalog = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+  </svg>
+);
+
 const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
-  // { key: "invitations", icon: <NavIconMail />, label: "Invitations" },
   { key: "rfqs", icon: <NavIconFile />, label: "RFQs" },
-  // { key: "quotations", icon: <NavIconUser />, label: "Quotations" },
-  { key: "purchaseOrders", icon: <NavIconBag />, label: "Purchase Orders" },
-  { key: "contracts", icon: <NavIconContract />, label: "Contracts" },
-  { key: "invoices", icon: <NavIconInvoice />, label: "Invoices" },
-  { key: "payments", icon: <NavIconPayment />, label: "Payments" },
-  { key: "messages", icon: <NavIconMessage />, label: "Messages" },
-  { key: "companyProfile", icon: <NavIconBuilding />, label: "Company Profile" },
-  { key: "settings", icon: <NavIconSettings />, label: "Settings" },
+  { key: "catalogList", icon: <NavIconCatalog />, label: "Catalog" },
 ];
 
 const statCards: StatCard[] = [
-  // { icon: <IconMail />, label: "INVITATIONS", value: 2, linkText: "Pending review >", colorClass: "pud-stat-icon-blue" },
-  { icon: <IconFile />, label: "ACTIVE RFQS", value: 2, linkText: "Bids open >", colorClass: "pud-stat-icon-indigo" },
-  { icon: <IconTrend />, label: "BIDS SUBMITTED", value: 3, linkText: "Track outcomes", colorClass: "pud-stat-icon-green" },
-  { icon: <IconBag />, label: "PURCHASE ORDER", value: 4, linkText: "Accept orders >", colorClass: "pud-stat-icon-purple" },
-  { icon: <IconInvoice />, label: "DUE INVOICES", value: 2, linkText: "Invoice list >", colorClass: "pud-stat-icon-orange" },
-  { icon: <IconBell />, label: "NOTIFICATIONS", value: 3, linkText: "Inquiries & Alerts >", colorClass: "pud-stat-icon-teal" },
+  // { icon: <IconMail />, label: "INVITATIONS", value: 2, linkText: "Pending review >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
+  { icon: <IconFile />, label: "ACTIVE RFQS", value: 2, linkText: "Bids open >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
+  { icon: <IconTrend />, label: "BIDS SUBMITTED", value: 3, linkText: "Track outcomes", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
+  { icon: <IconBag />, label: "PURCHASE ORDER", value: 4, linkText: "Accept orders >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
+  { icon: <IconInvoice />, label: "DUE INVOICES", value: 2, linkText: "Invoice list >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "Needs action" },
+  { icon: <IconBell />, label: "NOTIFICATIONS", value: 3, linkText: "Inquiries & Alerts >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "New alerts" },
 ];
 
 const poItems: POItem[] = [
@@ -1874,8 +1855,8 @@ const SupplierDashboard: React.FC = () => {
     [selectedRfq, rfqWindowTick],
   );
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9' }}>
-      <Header />
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9', paddingTop: '5.25rem' }}>
+      <Header navItems={navItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout} />
 
       <div
         className={`pud-shell${isMobileSidebarOpen ? " pud-sidebar-open-mobile" : ""}`}
@@ -1951,17 +1932,35 @@ const SupplierDashboard: React.FC = () => {
             {activeNav === "catalogList" ? (
               <div ref={setCatalogViewContainer} />
             ) : rfqPageView === "allRfqs" ? (
-              <>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
-                  <div>
-                    <h1 className="pud-title">All RFQs</h1>
-                    <p className="pud-subtitle" style={{ marginBottom: 0 }}>
-                      Sourcing opportunities matched to your industry categories.
-                    </p>
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.03)' }}>
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={handleBackToDashboard}
+                      title="Back to Dashboard"
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        padding: 0,
+                        margin: 0,
+                        cursor: 'pointer',
+                        color: '#0f172a',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        outline: 'none',
+                      }}
+                    >
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <h1 className="pud-title" style={{ margin: 0 }}>All RFQs</h1>
                   </div>
-                  <button className="pud-btn pud-btn-outline" onClick={handleBackToDashboard}>
-                    ← Back to Dashboard
-                  </button>
+                  <p className="pud-subtitle" style={{ margin: 0, marginTop: '4px' }}>
+                    Sourcing opportunities matched to your industry categories.
+                  </p>
                 </div>
 
                 {loadingAllRfqs ? (
@@ -1989,12 +1988,15 @@ const SupplierDashboard: React.FC = () => {
                             <th>Organization</th>
                             <th>Delivery Location</th>
                             <th>Closing Date</th>
-                            <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
                           {allRfqsList.map((rfq: any, idx: number) => (
-                            <tr key={rfq.rfqId || idx}>
+                            <tr
+                              key={rfq.rfqId || idx}
+                              onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                              style={{ cursor: 'pointer' }}
+                            >
                               <td style={{ color: '#94a3b8', fontWeight: 600 }}>
                                 {(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}
                               </td>
@@ -2006,14 +2008,6 @@ const SupplierDashboard: React.FC = () => {
                                 {rfq.endDate
                                   ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
                                   : "—"}
-                              </td>
-                              <td>
-                                <button
-                                  className="pud-btn pud-btn-outline"
-                                  onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                                >
-                                  View RFQ Details
-                                </button>
                               </td>
                             </tr>
                           ))}
@@ -2048,7 +2042,7 @@ const SupplierDashboard: React.FC = () => {
                     </div>
                   </>
                 )}
-              </>
+              </div>
             ) : rfqPageView === "rfqDetail" ? (
               <>
                 <div className="pud-rfq-fullpage">
@@ -2071,23 +2065,22 @@ const SupplierDashboard: React.FC = () => {
               //   <Invitations />
               // ) : (
               <>
-                <h1 className="pud-title">Supplier Operations Command</h1>
-                <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
-
-                <div className="pud-status-banner">
-                  <span className="pud-status-dot" />
+                <div className="pud-dashboard-header">
                   <div>
-                    <div className="pud-status-title">Active Approved Supplier Portal Status (100%)</div>
-                    <div className="pud-status-subtext">
-                      Your credentials, certification audit records, and bank routes are verified for secure bidding.
-                    </div>
+                    <h1 className="pud-title">Supplier Operations Command</h1>
+                    <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
                   </div>
                 </div>
 
                 <div className="pud-stats-grid">
                   {statCards.map((stat) => (
-                    <div className="pud-stat-card" key={stat.label}>
-                      <div className={`pud-stat-icon ${stat.colorClass}`}>{stat.icon}</div>
+                    <div className={`pud-stat-card ${stat.cardClass}`} key={stat.label}>
+                      <div className="pud-stat-top">
+                        <div className={`pud-stat-icon ${stat.iconClass}`}>{stat.icon}</div>
+                        {stat.urgencyBadge && (
+                          <span className="pud-urgency-badge">⚡ {stat.urgencyBadge}</span>
+                        )}
+                      </div>
                       <div className="pud-stat-label">{stat.label}</div>
                       <div className="pud-stat-value">{stat.value}</div>
                       <div className="pud-stat-link">{stat.linkText}</div>
@@ -2129,37 +2122,52 @@ const SupplierDashboard: React.FC = () => {
                         </div>
                       </div>
                     ) : rfqs.length === 0 ? (
-                      <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
-                        <div style={{ color: '#64748b', fontSize: '14px', textAlign: 'center' }}>
-                          No recent sourcing opportunities found.
+                      <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px', padding: '24px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
+                          <div style={{
+                            width: '42px',
+                            height: '42px',
+                            borderRadius: '12px',
+                            background: '#f1f5f9',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#64748b'
+                          }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="11" cy="11" r="8"/>
+                              <path d="m21 21-4.3-4.3"/>
+                            </svg>
+                          </div>
+                          <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
+                            No matching RFQs right now
+                          </div>
                         </div>
                       </div>
                     ) : (
                       <div className="pud-panel-list">
                         {rfqs.slice(0, visibleRfqCount).map((rfq) => (
-                          <div className="pud-rfq-row" key={rfq.rfqId}>
-                            <div className="pud-rfq-info">
-                              <div className="pud-rfq-meta">
-                                <span className="pud-code-badge">{rfq.rfqNumber}</span>
-                                <span className="pud-dot-sep">•</span>
-                                <span className="pud-company">{rfq.organizationName}</span>
-                              </div>
-                              <div className="pud-rfq-title">{rfq.title}</div>
-                              <div className="pud-rfq-details">
-                                <span>
-                                  <IconCalendar /> Closes: {new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                                </span>
-                                <span>
-                                  <IconPin /> Deliv: {rfq.deliveryLocation}
-                                </span>
-                              </div>
+                          <div
+                            className="pud-rfq-card-item"
+                            key={rfq.rfqId}
+                            onClick={() => handleViewRfqDetails(rfq.rfqId)}
+                            role="button"
+                            tabIndex={0}
+                          >
+                            <div className="pud-rfq-meta">
+                              <span className="pud-code-badge">{rfq.rfqNumber}</span>
+                              <span className="pud-dot-sep">•</span>
+                              <span className="pud-company">{rfq.organizationName}</span>
                             </div>
-                            <button
-                              className="pud-btn pud-btn-outline"
-                              onClick={() => handleViewRfqDetails(rfq.rfqId)}
-                            >
-                              View RFQ Details
-                            </button>
+                            <div className="pud-rfq-title pud-rfq-link-title">{rfq.title}</div>
+                            <div className="pud-rfq-details">
+                              <span>
+                                <IconCalendar /> Closes: {rfq.endDate ? new Date(rfq.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Open'}
+                              </span>
+                              <span>
+                                <IconPin /> Deliv: {rfq.deliveryLocation}
+                              </span>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -2172,7 +2180,7 @@ const SupplierDashboard: React.FC = () => {
                         <div className="pud-panel-title">Recent Purchase Orders</div>
                         <div className="pud-panel-subtitle">New orders requiring attention</div>
                       </div>
-                      <a className="pud-panel-link" href="#">View All →</a>
+                      <a className="pud-panel-link" href="#" onClick={(e) => e.preventDefault()}>View All →</a>
                     </div>
                     <div className="pud-panel-list">
                       {poItems.map((po) => (
@@ -2189,7 +2197,7 @@ const SupplierDashboard: React.FC = () => {
                           </div>
                           <div className="pud-po-right">
                             <div className="pud-po-amount">{po.amount}</div>
-                            <a className="pud-po-process" href="#">Process →</a>
+                            <a className="pud-po-process" href="#" onClick={(e) => e.preventDefault()}>Process →</a>
                           </div>
                         </div>
                       ))}
@@ -2516,6 +2524,7 @@ const SupplierDashboard: React.FC = () => {
           </div>
         )}
       </div>
+      <EAuctionWidget />
     </div>
   );
 };

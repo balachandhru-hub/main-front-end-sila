@@ -144,13 +144,6 @@ const NavIconBuilding = () => (
   </svg>
 );
 
-const NavIconSettings = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="3" />
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-  </svg>
-);
-
 const NavIconTemplate = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -280,18 +273,13 @@ const NavIconFilePlus = () => (
   </svg>
 );
 
-const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
-  { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
-  { key: "invitations", icon: <IconMail />, label: "Invitations" },
-  { key: "activeRFQs", icon: <IconFile />, label: "Active RFQs" },
+const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number }[] = [
+  { key: "dashboard", icon: <NavIconHome />, label: "Dashboard", section: "MAIN" },
+  { key: "invitations", icon: <IconMail />, label: "Invitations", section: "SOURCING & ORDERS" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
-  { key: "product", icon: <NavIconFileCheck />, label: "Product" },
+  { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog", section: "DIRECTORY & CATALOG" },
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
-  { key: "template", icon: <NavIconTemplate />, label: "Template" },
-  { key: "purchaseOrders", icon: <IconBag />, label: "Purchase Orders" },
-  { key: "messages", icon: <IconMessageSquare />, label: "Messages" },
-  { key: "companyProfile", icon: <NavIconBuilding />, label: "Company Profile" },
-  { key: "settings", icon: <NavIconSettings />, label: "Settings" },
+  { key: "template", icon: <NavIconTemplate />, label: "Templates" },
 ];
 
 const statCards: StatCard[] = [
@@ -821,9 +809,9 @@ const BuyerAdminDash: React.FC = () => {
   // );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9", paddingTop: "5.25rem" }}>
       <ToastContainer />
-      <Header />
+      <Header navItems={navItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout} />
       <div
         className={`bad-shell${isMobileSidebarOpen ? " bad-sidebar-open-mobile" : ""}`}
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
@@ -846,15 +834,19 @@ const BuyerAdminDash: React.FC = () => {
         <aside className="bad-sidebar">
           <nav className="bad-nav" >
             {navItems.map((item) => (
-              <div
-                key={item.key}
-                className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
-                onClick={() => handleNavClick(item.key)}
-              >
-                <span className="bad-nav-icon">{item.icon}</span>
-                <span className="bad-nav-label">{item.label}</span>
-                {item.badge && <span className="bad-nav-badge">{item.badge}</span>}
-              </div>
+              <React.Fragment key={item.key}>
+                {item.section && (
+                  <div className="bad-nav-section-title">{item.section}</div>
+                )}
+                <div
+                  className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
+                  onClick={() => handleNavClick(item.key)}
+                >
+                  <span className="bad-nav-icon">{item.icon}</span>
+                  <span className="bad-nav-label">{item.label}</span>
+                  {item.badge && <span className="bad-nav-badge">{item.badge}</span>}
+                </div>
+              </React.Fragment>
             ))}
             <div
               className="bad-nav-item bad-nav-item-logout"
@@ -1314,18 +1306,8 @@ const BuyerAdminDash: React.FC = () => {
               />
             ) : (
               <>
-                <h1 className="bad-title">Buyer Admin Command Center</h1>
+                <h1 className="bad-title" style={{ fontSize: '20px', fontWeight: 500 }}>Buyer Admin Command Center</h1>
                 <p className="bad-subtitle">Manage buyers, track procurement activities, and oversee operations.</p>
-
-                <div className="bad-status-banner">
-                  <span className="bad-status-dot" />
-                  <div>
-                    <div className="bad-status-title">Active Buyer Administration Portal (100%)</div>
-                    <div className="bad-status-subtext">
-                      You have administrative access to manage buyer operations and user accounts.
-                    </div>
-                  </div>
-                </div>
 
                 <div className="bad-stats-grid">
                   {statCards.map((stat) => (
@@ -1380,29 +1362,29 @@ const BuyerAdminDash: React.FC = () => {
                     ) : (
                       <div className="bad-panel-list">
                         {rfqs.slice(0, visibleRfqCount).map((rfq) => (
-                          <div className="bad-rfq-row" key={rfq.rfqId}>
-                            <div className="bad-rfq-info">
-                              <div className="bad-rfq-meta">
-                                <span className="bad-code-badge">{rfq.rfqNumber}</span>
-                                <span className="bad-dot-sep">•</span>
-                                <span className="bad-company">{rfq.organizationName}</span>
-                              </div>
-                              <div className="bad-rfq-title">{rfq.title}</div>
-                              <div className="bad-rfq-details">
-                                <span>
-                                  <IconCalendar /> Closes: {new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                                </span>
-                                <span>
-                                  <IconPin /> Deliv: {rfq.deliveryLocation}
-                                </span>
-                              </div>
+                          <div
+                            className="bad-rfq-card-item"
+                            key={rfq.rfqId}
+                            onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                            role="button"
+                            tabIndex={0}
+                          >
+                            <div className="bad-rfq-meta">
+                              <span className="bad-code-badge">{rfq.rfqNumber}</span>
+                              <span className="bad-dot-sep">•</span>
+                              <span className="bad-company">{rfq.organizationName}</span>
                             </div>
-                            <button
-                              className="bad-btn bad-btn-outline"
-                              onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                            >
-                              View RFQ Details
-                            </button>
+
+                            <div className="bad-rfq-title bad-rfq-link-title">{rfq.title}</div>
+
+                            <div className="bad-rfq-details">
+                              <span>
+                                <IconCalendar /> Closes: {rfq.endDate ? new Date(rfq.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Open'}
+                              </span>
+                              <span>
+                                <IconPin /> Deliv: {rfq.deliveryLocation}
+                              </span>
+                            </div>
                           </div>
                         ))}
                       </div>
