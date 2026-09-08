@@ -10,6 +10,7 @@ import { Loader } from '@vosox/shared-ui';
 const BuyerApp = React.lazy(() => import('remoteBuyer/BuyerApp'));
 const SupplierApp = React.lazy(() => import('remoteSupplier/SupplierApp'));
 const PlatformUserApp = React.lazy(() => import('remotePlatformUser/PlatformUserApp'));
+const ExternalSupplierBid = React.lazy(() => import('remoteSupplier/ExternalSupplierBid'));
 
 const Protected: React.FC<{
   children: React.ReactNode;
@@ -65,6 +66,7 @@ const Shell = () => {
 
   const isAuthPage = location.pathname === '/';
   const isRegistration = location.pathname.includes('/registration');
+  const isExternalBid = location.pathname.startsWith('/external-supplier/');
 
   const getRedirectUrl = () => {
     if (userRole === 'buyer-admin') {
@@ -82,7 +84,7 @@ const Shell = () => {
 
   return (
     <div className="app-container">
-      <main className={`main-content ${!isLoggedIn || isAuthPage || isRegistration ? 'no-padding' : ''}`}>
+      <main className={`main-content ${!isLoggedIn || isAuthPage || isRegistration || isExternalBid ? 'no-padding' : ''}`}>
         <React.Suspense fallback={
           <Loader
             fullScreen={true}
@@ -115,6 +117,9 @@ const Shell = () => {
 
             <Route path="/supplier-registration" element={<SupplierRegistration />} />
             <Route path="/buyer-registration" element={<BuyersRegistration />} />
+
+            {/* External Supplier Bid — unauthenticated, reached via a direct invitation link */}
+            <Route path="/external-supplier/bid/:rfqId/:sessionToken" element={<ExternalSupplierBid />} />
 
             {/* Buyer Remote Routes */}
             <Route
