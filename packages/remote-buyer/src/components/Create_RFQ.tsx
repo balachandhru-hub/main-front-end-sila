@@ -1,13 +1,15 @@
 import React, { useRef, useState, useEffect } from "react";
 import "./Create.RFQ.css";
-import { toastService } from "@vosox/shared-ui";
+import { Button, toastService, DateTimePicker } from "@vosox/shared-ui";
 import { getBuyerProfile, getAllDepartments, getAllCostCenters, getAllItemMasters, createRFQ, getVerifiedSuppliers, getUnspscSegments, getUnspscFamilies, fetchBuyerVerificationTemplates, fetchBuyerVerificationTemplateById } from "../api/Buyerapi";
 import type { VerificationTemplate } from "../api/Buyerapi";
 import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../api/masterdataApi";
-import type { CreateRFQPayload, RfqDocumentAssetDto, RfqItemDto, RfqQuestionDto, VerifiedSupplierDto, SupplierVerificationType } from "../dto/rfqDto";
+import type { CreateRFQPayload, ExternalSupplierDto, RfqDocumentAssetDto, RfqItemDto, RfqQuestionDto, SupplierInviteDto, VerifiedSupplierDto, SupplierVerificationType } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
 import type { CountryDto, UnitDto, CurrencyDto } from "../api/masterdataApi";
 import ItemMasterModal from "./ItemMasterModal";
+import SupplierUsersModal from "../../../remote-platform-user/src/components/UserListTable/SupplierUsersModal";
+import ExternalSupplierModal, { type ExternalSupplierFormValues } from "../../../remote-platform-user/src/components/UserListTable/ExternalSupplierModal";
 
 
 const HARDCODED_RFQ_VERIFICATION_TEMPLATE_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
@@ -32,13 +34,6 @@ interface CustomField {
     options: string[];
 }
 
-
-const IconCalendar = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="4" width="18" height="18" rx="2" />
-        <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-);
 
 const IconTrash = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -198,6 +193,16 @@ const formatLabel = (value: string | undefined | null): string => {
         .join(" ");
 };
 
+
+const getNowDateTimeLocalString = (): string => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    return `${y}-${m}-${d}T${hh}:${mm}`;
+};
 
 const getMaterialCodeDescription = (m: any): string => {
     if (!m || typeof m === "string") return "";
@@ -645,6 +650,9 @@ if (Array.isArray(data)) {
     const [suppliersLoading, setSuppliersLoading] = useState(false);
     const [suppliersError, setSuppliersError] = useState<string | null>(null);
     const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
+    const [externalSuppliers, setExternalSuppliers] = useState<ExternalSupplierDto[]>([]);
+    const [supplierSelectedUserIds, setSupplierSelectedUserIds] = useState<Record<string, string[]>>({});
+    const [activeSupplierForUsers, setActiveSupplierForUsers] = useState<VerifiedSupplierDto | null>(null);
     const [supplierTypeFilter, setSupplierTypeFilter] = useState<"ALL" | SupplierVerificationType>("ALL");
     const [supplierSearchQuery, setSupplierSearchQuery] = useState("");
     const [registrationTemplate, setRegistrationTemplate] = useState("");
@@ -708,6 +716,7 @@ if (Array.isArray(data)) {
     const [viewTemplateError, setViewTemplateError] = useState<string | null>(null);
     const [viewTemplateData, setViewTemplateData] = useState<VerificationTemplate | null>(null);
     const [isItemMasterModalOpen, setIsItemMasterModalOpen] = useState(false);
+    const [isExternalSupplierModalOpen, setIsExternalSupplierModalOpen] = useState(false);
 
     const handleViewTemplate = async () => {
         if (!registrationTemplateId) return;
@@ -793,24 +802,14 @@ if (Array.isArray(data)) {
         if (!value) return "";
         const date = new Date(value);
         if (isNaN(date.getTime())) return value;
-        const d = String(date.getUTCDate()).padStart(2, "0");
-        const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-        const y = date.getUTCFullYear();
-        let hh = date.getUTCHours();
-        const mm = String(date.getUTCMinutes()).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const y = date.getFullYear();
+        let hh = date.getHours();
+        const mm = String(date.getMinutes()).padStart(2, "0");
         const suffix = hh >= 12 ? "PM" : "AM";
         hh = hh % 12 || 12;
-        return `${d}/${m}/${y} ~ ${String(hh).padStart(2, "0")}:${mm} ${suffix} UTC`;
-    };
-
-    const formatDateLabel = (value: string) => {
-        if (!value) return "";
-        const date = new Date(`${value}T00:00:00Z`);
-        if (isNaN(date.getTime())) return value;
-        const d = String(date.getUTCDate()).padStart(2, "0");
-        const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-        const y = date.getUTCFullYear();
-        return `${d}/${m}/${y} UTC`;
+        return `${d}/${m}/${y} ~ ${String(hh).padStart(2, "0")}:${mm} ${suffix}`;
     };
 
     const handleAddLineItem = () => {
@@ -900,10 +899,17 @@ if (Array.isArray(data)) {
             if (!description.trim()) newErrors.description = "Please enter description";
             if (!currency) newErrors.currency = "Please select Currency";
             if (!region) newErrors.region = "Please select Region";
-            if (!deliveryLocation.trim()) newErrors.deliveryLocation = "Please enter delivery location";
-            if (!startDateTime) newErrors.startDateTime = "Please select Start Date & Time";
-            if (!endDateTime) newErrors.endDateTime = "Please select End Date & Time";
-            if (!deliveryTargetDate) newErrors.deliveryTargetDate = "Please select Delivery Target Date";
+            if (!startDateTime) {
+                newErrors.startDateTime = "Start Date & Time is required.";
+            } else if (startDateTime < getNowDateTimeLocalString()) {
+                newErrors.startDateTime = "Start Date & Time cannot be in the past.";
+            }
+            if (endDateTime && startDateTime && endDateTime < startDateTime) {
+                newErrors.endDateTime = "End Date cannot be before Start Date.";
+            }
+            if (deliveryTargetDate && startDateTime && deliveryTargetDate < startDateTime) {
+                newErrors.deliveryTargetDate = "Delivery Target Date cannot be before Start Date.";
+            }
             if (!lineItems || lineItems.length === 0) newErrors.lineItems = "Please add at least one line item";
 
             if (Object.keys(newErrors).length > 0) {
@@ -926,6 +932,19 @@ if (Array.isArray(data)) {
         setSelectedSupplierIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
     };
 
+    const handleAddExternalSupplier = (supplier: ExternalSupplierFormValues) => {
+        setExternalSuppliers((prev) => [...prev, supplier]);
+        toastService.success("External supplier added.");
+    };
+
+    const handleRemoveExternalSupplier = (index: number) => {
+        setExternalSuppliers((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSaveSupplierUsers = (supplierId: string, userIds: string[]) => {
+        setSupplierSelectedUserIds((prev) => ({ ...prev, [supplierId]: userIds }));
+    };
+
     const selectedSuppliers = suppliers.filter((s) => selectedSupplierIds.includes(s.supplierId));
     const verifiedSelectedCount = selectedSuppliers.filter((s) => s.isVerified).length;
     const unverifiedSelectedCount = selectedSuppliers.length - verifiedSelectedCount;
@@ -933,7 +952,7 @@ if (Array.isArray(data)) {
     const targetCategory = familyTitle || segmentTitle || "Not set";
 
     const handleSubmitRFQ = async () => {
-        if (selectedSupplierIds.length === 0) return;
+        if (selectedSupplierIds.length === 0 && externalSuppliers.length === 0) return;
 
         setSubmitError(null);
         setIsSubmittingRFQ(true);
@@ -971,6 +990,11 @@ if (Array.isArray(data)) {
                 attachments: [],
             }));
 
+            const supplierInvites: SupplierInviteDto[] = selectedSuppliers.map((s) => ({
+                supplierId: s.supplierId,
+                userIds: supplierSelectedUserIds[s.supplierId] || [],
+            }));
+
             const payload: CreateRFQPayload = {
                 title: rfqTitle,
                 description,
@@ -979,8 +1003,8 @@ if (Array.isArray(data)) {
                 currency,
                 deliveryLocation,
                 startDate: new Date(startDateTime).toISOString(),
-                endDate: new Date(endDateTime).toISOString(),
-                deliveryTargetDate: new Date(deliveryTargetDate).toISOString(),
+                endDate: endDateTime ? new Date(endDateTime).toISOString() : "",
+                deliveryTargetDate: deliveryTargetDate ? new Date(deliveryTargetDate).toISOString() : "",
                 budget: Number(totalBudget) || 0,
                 addLotOption: lotOption,
                 technicalSpecificationDocuments,
@@ -988,6 +1012,8 @@ if (Array.isArray(data)) {
                 questions,
                 items,
                 supplierIds: selectedSupplierIds,
+                supplierInvites,
+                externalSuppliers,
                 rfqVerificationTemplateId: registrationTemplateId || HARDCODED_RFQ_VERIFICATION_TEMPLATE_ID,
             };
 
@@ -1230,7 +1256,7 @@ if (Array.isArray(data)) {
                             {errors.region && <div className="bd-error-text">{errors.region}</div>}
                         </div>
                         <div className="bd-field">
-                            <label className="bd-label">Delivery Location*</label>
+                            <label className="bd-label">Delivery Location</label>
                             <input
                                 className={`bd-input ${errors.deliveryLocation ? "bd-input-error" : ""}`}
                                 style={errors.deliveryLocation ? { borderColor: "#ef4444" } : undefined}
@@ -1247,93 +1273,69 @@ if (Array.isArray(data)) {
                     <div className="bd-row-2">
                         <div className="bd-field">
                             <label className="bd-label">Start Date &amp; Time (UTC)*</label>
-                            <div className="bd-input-icon-wrap">
-                                <input
-                                            className={`bd-input bd-input-with-icon ${errors.startDateTime ? "bd-input-error" : ""}`}
-                                            style={errors.startDateTime ? { borderColor: "#ef4444" } : undefined}
-                                    type="text"
-                                    readOnly
-                                    value={formatDateTimeLabel(startDateTime)}
-                                    onClick={() =>
-                                        (document.getElementById("bd-start-datetime") as HTMLInputElement)?.showPicker?.()
+                            <DateTimePicker
+                                mode="datetime"
+                                value={startDateTime}
+                                min={getNowDateTimeLocalString()}
+                                error={!!errors.startDateTime}
+                                displayValue={formatDateTimeLabel(startDateTime)}
+                                onChange={(newStart) => {
+                                    setStartDateTime(newStart);
+                                    setErrors((p) => { const np = { ...p }; delete np.startDateTime; return np; });
+                                    if (endDateTime && newStart && endDateTime < newStart) {
+                                        setEndDateTime("");
+                                        setErrors((p) => { const np = { ...p }; delete np.endDateTime; return np; });
                                     }
-                                />
-                                <input
-                                    id="bd-start-datetime"
-                                    type="datetime-local"
-                                    className="bd-hidden-date-input"
-                                    value={startDateTime}
-                                    onChange={(e) => {
-                                        setStartDateTime(e.target.value);
-                                        setErrors((p) => { const np = { ...p }; delete np.startDateTime; return np; });
-                                    }}
-                                />
-                                <span className="bd-input-icon">
-                                    <IconCalendar />
-                                </span>
-                            </div>
-                                {errors.startDateTime && <div className="bd-error-text">{errors.startDateTime}</div>}
+                                    if (deliveryTargetDate && newStart && deliveryTargetDate < newStart) {
+                                        setDeliveryTargetDate("");
+                                        setErrors((p) => { const np = { ...p }; delete np.deliveryTargetDate; return np; });
+                                    }
+                                }}
+                            />
+                            {errors.startDateTime && <div className="bd-error-text">{errors.startDateTime}</div>}
                         </div>
                         <div className="bd-field">
-                            <label className="bd-label">End Date &amp; Time (UTC)*</label>
-                            <div className="bd-input-icon-wrap">
-                                <input
-                                    className={`bd-input bd-input-with-icon ${errors.endDateTime ? "bd-input-error" : ""}`}
-                                    style={errors.endDateTime ? { borderColor: "#ef4444" } : undefined}
-                                    type="text"
-                                    readOnly
-                                    value={formatDateTimeLabel(endDateTime)}
-                                    onClick={() =>
-                                        (document.getElementById("bd-end-datetime") as HTMLInputElement)?.showPicker?.()
-                                    }
-                                />
-                                <input
-                                    id="bd-end-datetime"
-                                    type="datetime-local"
-                                    className="bd-hidden-date-input"
-                                    value={endDateTime}
-                                    onChange={(e) => {
-                                        setEndDateTime(e.target.value);
+                            <label className="bd-label">End Date &amp; Time (UTC)</label>
+                            <DateTimePicker
+                                mode="datetime"
+                                value={endDateTime}
+                                min={startDateTime || undefined}
+                                disabled={!startDateTime}
+                                error={!!errors.endDateTime}
+                                displayValue={formatDateTimeLabel(endDateTime)}
+                                onChange={(newEnd) => {
+                                    setEndDateTime(newEnd);
+                                    if (newEnd && startDateTime && newEnd < startDateTime) {
+                                        setErrors((p) => ({ ...p, endDateTime: "End Date cannot be before Start Date." }));
+                                    } else {
                                         setErrors((p) => { const np = { ...p }; delete np.endDateTime; return np; });
-                                    }}
-                                />
-                                <span className="bd-input-icon">
-                                    <IconCalendar />
-                                </span>
-                            </div>
-                                {errors.endDateTime && <div className="bd-error-text">{errors.endDateTime}</div>}
+                                    }
+                                }}
+                            />
+                            {errors.endDateTime && <div className="bd-error-text">{errors.endDateTime}</div>}
                         </div>
                     </div>
 
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Delivery Target Date (UTC)*</label>
-                            <div className="bd-input-icon-wrap">
-                                <input
-                                        className={`bd-input bd-input-with-icon ${errors.deliveryTargetDate ? "bd-input-error" : ""}`}
-                                        style={errors.deliveryTargetDate ? { borderColor: "#ef4444" } : undefined}
-                                    type="text"
-                                    readOnly
-                                    value={formatDateLabel(deliveryTargetDate)}
-                                    onClick={() =>
-                                        (document.getElementById("bd-target-date") as HTMLInputElement)?.showPicker?.()
-                                    }
-                                />
-                                <input
-                                    id="bd-target-date"
-                                    type="date"
-                                    className="bd-hidden-date-input"
-                                    value={deliveryTargetDate}
-                                    onChange={(e) => {
-                                        setDeliveryTargetDate(e.target.value);
+                            <label className="bd-label">Delivery Target Date (UTC)</label>
+                            <DateTimePicker
+                                mode="datetime"
+                                value={deliveryTargetDate}
+                                min={startDateTime || undefined}
+                                disabled={!startDateTime}
+                                error={!!errors.deliveryTargetDate}
+                                displayValue={formatDateTimeLabel(deliveryTargetDate)}
+                                onChange={(newTarget) => {
+                                    setDeliveryTargetDate(newTarget);
+                                    if (newTarget && startDateTime && newTarget < startDateTime) {
+                                        setErrors((p) => ({ ...p, deliveryTargetDate: "Delivery Target Date cannot be before Start Date." }));
+                                    } else {
                                         setErrors((p) => { const np = { ...p }; delete np.deliveryTargetDate; return np; });
-                                    }}
-                                />
-                                <span className="bd-input-icon">
-                                    <IconCalendar />
-                                </span>
-                            </div>
-                                {errors.deliveryTargetDate && <div className="bd-error-text">{errors.deliveryTargetDate}</div>}
+                                    }
+                                }}
+                            />
+                            {errors.deliveryTargetDate && <div className="bd-error-text">{errors.deliveryTargetDate}</div>}
                         </div>
                     </div>
 
@@ -1799,6 +1801,12 @@ if (Array.isArray(data)) {
                                     onChange={(e) => setSupplierSearchQuery(e.target.value)}
                                 />
                             </div>
+                            <Button
+                                type="button"
+                                onClick={() => setIsExternalSupplierModalOpen(true)}
+                            >
+                                Add External Supplier
+                            </Button>
                         </div>
                     </div>
 
@@ -1818,6 +1826,7 @@ if (Array.isArray(data)) {
                                     <th>Email</th>
                                     <th>Verification Status</th>
                                     <th>Pipeline Actions On Submit</th>
+                                    <th>Users</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1861,18 +1870,45 @@ if (Array.isArray(data)) {
                                                 </span>
                                             )}
                                         </td>
+                                        <td>
+                                            <Button
+                                                type="button"
+                                                disabled={!selectedSupplierIds.includes(s.supplierId)}
+                                                title={
+                                                    selectedSupplierIds.includes(s.supplierId)
+                                                        ? undefined
+                                                        : "Select this supplier first"
+                                                }
+                                                onClick={() => setActiveSupplierForUsers(s)}
+                                                style={{
+                                                    width: "140px",
+                                                    whiteSpace: "nowrap",
+                                                    ...(!selectedSupplierIds.includes(s.supplierId) && {
+                                                        background: "#e2e8f0",
+                                                        color: "#94a3b8",
+                                                        border: "1px solid #e2e8f0",
+                                                        boxShadow: "none",
+                                                        cursor: "not-allowed",
+                                                    }),
+                                                }}
+                                            >
+                                                {(supplierSelectedUserIds[s.supplierId]?.length ?? 0) > 0
+                                                    ? `${supplierSelectedUserIds[s.supplierId].length} Selected`
+                                                    : "Select Users"}
+                                            </Button>
+                                        </td>
                                     </tr>
                                 ))}
                                 {!suppliersLoading && suppliers.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="bd-table-empty">
+                                        <td colSpan={6} className="bd-table-empty">
                                             {suppliersError ? "Could not load suppliers." : "No suppliers match your search."}
                                         </td>
                                     </tr>
                                 )}
                                 {suppliersLoading && (
                                     <tr>
-                                        <td colSpan={5} className="bd-table-empty">
+                                        <td colSpan={6} className="bd-table-empty">
                                             Loading suppliers...
                                         </td>
                                     </tr>
@@ -1880,6 +1916,49 @@ if (Array.isArray(data)) {
                             </tbody>
                         </table>
                     </div>
+
+                    {externalSuppliers.length > 0 && (
+                        <div className="bd-table-card" style={{ marginTop: 16 }}>
+                            <table className="bd-table bd-suppliers-table">
+                                <thead>
+                                    <tr>
+                                        <th>External Supplier Name</th>
+                                        <th>Email</th>
+                                        <th>Contact Number</th>
+                                        <th>Address</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {externalSuppliers.map((s, idx) => (
+                                        <tr key={`${s.email}-${idx}`}>
+                                            <td>
+                                                <div className="bd-supplier-name">{s.supplierName}</div>
+                                            </td>
+                                            <td>
+                                                <span className="bd-supplier-email">{s.email}</span>
+                                            </td>
+                                            <td>
+                                                <div className="bd-supplier-sn-id">{s.phoneNumber}</div>
+                                            </td>
+                                            <td>
+                                                <div className="bd-supplier-sn-id">{s.address}</div>
+                                            </td>
+                                            <td>
+                                                <button
+                                                    type="button"
+                                                    className="bd-btn-back"
+                                                    onClick={() => handleRemoveExternalSupplier(idx)}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
 
                     {hasUnverifiedSelected && (
                         <div className="bd-onboarding-box">
@@ -1960,7 +2039,7 @@ if (Array.isArray(data)) {
                             className="bd-btn-submit"
                             onClick={handleSubmitRFQ}
                             type="button"
-                            disabled={selectedSupplierIds.length === 0 || isSubmittingRFQ}
+                            disabled={(selectedSupplierIds.length === 0 && externalSuppliers.length === 0) || isSubmittingRFQ}
                         >
                             <IconSend /> {isSubmittingRFQ ? "Submitting..." : "Submit RFQ"}
                         </button>
@@ -2005,7 +2084,18 @@ if (Array.isArray(data)) {
                                         </td>
                                     </tr>
                                 ))}
-                                {selectedSuppliers.length === 0 && (
+                                {externalSuppliers.map((s, idx) => (
+                                    <tr key={`external-${s.email}-${idx}`}>
+                                        <td>{s.supplierName}</td>
+                                        <td>{s.email}</td>
+                                        <td>
+                                            <span className="bd-delivery-pill bd-delivery-pill-orange">
+                                                <span className="bd-dot" /> Invitation Sent
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {selectedSuppliers.length === 0 && externalSuppliers.length === 0 && (
                                     <tr>
                                         <td colSpan={3} className="bd-table-empty">
                                             No suppliers were selected.
@@ -2084,6 +2174,29 @@ if (Array.isArray(data)) {
                 isOpen={isItemMasterModalOpen}
                 onClose={() => setIsItemMasterModalOpen(false)}
                 buyerId={buyerProfileId}
+            />
+
+            <SupplierUsersModal
+                isOpen={!!activeSupplierForUsers}
+                supplierName={activeSupplierForUsers?.supplierName || ""}
+                organizationId={activeSupplierForUsers?.organizationId}
+                initialSelectedUserIds={
+                    activeSupplierForUsers
+                        ? supplierSelectedUserIds[activeSupplierForUsers.supplierId] || []
+                        : []
+                }
+                onClose={() => setActiveSupplierForUsers(null)}
+                onSave={(userIds) => {
+                    if (activeSupplierForUsers) {
+                        handleSaveSupplierUsers(activeSupplierForUsers.supplierId, userIds);
+                    }
+                }}
+            />
+
+            <ExternalSupplierModal
+                isOpen={isExternalSupplierModalOpen}
+                onClose={() => setIsExternalSupplierModalOpen(false)}
+                onAdd={handleAddExternalSupplier}
             />
         </div>
     );

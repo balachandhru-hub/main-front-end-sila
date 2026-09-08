@@ -113,6 +113,15 @@
     box-shadow: 0 0 0 0.1875rem rgba(47, 111, 235, 0.12);
 }
 
+.bd-input:disabled,
+.bd-select:disabled,
+.bd-textarea:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #f3f4f6;
+    color: #9ca3af;
+}
+
 .bd-select {
     appearance: none;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
@@ -679,6 +688,12 @@
 }
 
 .bd-supplier-name {
+    font-size: 0.84375rem;
+    font-weight: 400;
+    color: #111827;
+}
+
+.bd-supplier-sn-id {
     font-size: 0.84375rem;
     font-weight: 400;
     color: #111827;

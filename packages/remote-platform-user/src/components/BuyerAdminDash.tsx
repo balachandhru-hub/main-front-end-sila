@@ -12,17 +12,16 @@ import {
   fetchBuyerRFQById,
   fetchBuyerVerificationTemplates,
   fetchBuyerAsset,
+  updateRfqStatus,
   type VerificationTemplate
 } from "../../../remote-buyer/src/api/Buyerapi";
 import CreateRFQ from "./UserListTable/CreateRFQ";
 import { logoutPlatformUser } from "../api/platformApi";
-import type { SupplierQuotationComparisonResponse } from "../api/networkAdminApi";
-import { fetchSupplierQuotationComparison } from "../api/networkAdminApi";
-import { isErrorResponse } from "@vosox/shared-ui";
+import { toastService } from "@vosox/shared-ui";
 import UserTemplate from "./usertemplate"
 import { ToastContainer } from "@vosox/shared-ui";
-import type { ErrorResponseDto } from "../dto/platformDto";
 import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
+import QuotationSummaryTable from "../../../remote-buyer/src/components/QuotationSummaryTable";
 import QuotationComparisonCard from "./QuotationComparisonCard";
 
 interface StatCard {
@@ -142,13 +141,6 @@ const NavIconBuilding = () => (
   </svg>
 );
 
-const NavIconSettings = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="3" />
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-  </svg>
-);
-
 const NavIconTemplate = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -215,6 +207,21 @@ const IconSend = () => (
   </svg>
 );
 
+const IconBidCompare = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="20" x2="12" y2="10" />
+    <line x1="18" y1="20" x2="18" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="16" />
+  </svg>
+);
+
+const IconFreezeLock = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
 const IconSparkles = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
@@ -263,18 +270,13 @@ const NavIconFilePlus = () => (
   </svg>
 );
 
-const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
-  { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
-  { key: "invitations", icon: <IconMail />, label: "Invitations" },
-  { key: "activeRFQs", icon: <IconFile />, label: "Active RFQs" },
+const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number }[] = [
+  { key: "dashboard", icon: <NavIconHome />, label: "Dashboard", section: "MAIN" },
+  { key: "invitations", icon: <IconMail />, label: "Invitations", section: "SOURCING & ORDERS" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
-  { key: "product", icon: <NavIconFileCheck />, label: "Product" },
+  { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog", section: "DIRECTORY & CATALOG" },
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
-  { key: "template", icon: <NavIconTemplate />, label: "Template" },
-  { key: "purchaseOrders", icon: <IconBag />, label: "Purchase Orders" },
-  { key: "messages", icon: <IconMessageSquare />, label: "Messages" },
-  { key: "companyProfile", icon: <NavIconBuilding />, label: "Company Profile" },
-  { key: "settings", icon: <NavIconSettings />, label: "Settings" },
+  { key: "template", icon: <NavIconTemplate />, label: "Templates" },
 ];
 
 const statCards: StatCard[] = [
@@ -401,9 +403,6 @@ const BuyerAdminDash: React.FC = () => {
 
   // STATE FOR QUOTATION COMPARISON
   const [selectedQuotationsRfq, setSelectedQuotationsRfq] = useState<any | null>(null);
-  const [quotationComparisonData, setQuotationComparisonData] = useState<SupplierQuotationComparisonResponse[]>([]);
-  const [loadingQuotations, setLoadingQuotations] = useState(false);
-  const [quotationsError, setQuotationsError] = useState<string | null>(null);
 
   useEffect(() => {
     useNetworkAdminAuthStore.getState().initializeFromSession();
@@ -508,8 +507,10 @@ const BuyerAdminDash: React.FC = () => {
   const RFQ_PAGE_SIZE = 10;
 
   const [fullPageRfq, setFullPageRfq] = useState<any | null>(null);
+  const [fullPageRfqId, setFullPageRfqId] = useState<string | null>(null);
   const [loadingFullPageRfq, setLoadingFullPageRfq] = useState(false);
   const [fullPageRfqError, setFullPageRfqError] = useState<string | null>(null);
+  const [freezingBid, setFreezingBid] = useState(false);
 
   const handleOpenAllRfqs = async () => {
     setActiveNav("activeRFQs");
@@ -582,12 +583,13 @@ const BuyerAdminDash: React.FC = () => {
 
   const handleViewRfqDetailsFullPage = async (rfqId: string) => {
     setRfqPageView("rfqDetail");
+    setFullPageRfqId(rfqId);
     setLoadingFullPageRfq(true);
     setFullPageRfqError(null);
 
     try {
       const details = await fetchBuyerRFQById(rfqId);
-      setFullPageRfq(details);
+      setFullPageRfq({ ...details, rfqId });
     } catch (err: any) {
       setFullPageRfqError(err.message || "Failed to fetch details.");
       const found =
@@ -603,69 +605,34 @@ const BuyerAdminDash: React.FC = () => {
   const handleBackToAllRfqs = () => {
     setRfqPageView("allRfqs");
     setFullPageRfq(null);
+    setFullPageRfqId(null);
     setFullPageRfqError(null);
   };
 
+  const handleFreezeBid = async () => {
+    if (!fullPageRfqId || freezingBid || fullPageRfq?.status === "Freezing") return;
+    setFreezingBid(true);
+    try {
+      await updateRfqStatus({ rfqId: fullPageRfqId, status: "Freezing" });
+      const updated = await fetchBuyerRFQById(fullPageRfqId);
+      setFullPageRfq({ ...updated, rfqId: fullPageRfqId });
+      toastService.success("Bid frozen. Suppliers can no longer submit quotations for this RFQ.");
+    } catch (err: any) {
+      toastService.error(err?.message || "Failed to freeze the bid.");
+    } finally {
+      setFreezingBid(false);
+    }
+  };
+
   // HANDLER FOR QUOTATION COMPARISON - FULL PAGE VIEW
-  const handleOpenQuotationComparison = async (rfq: any) => {
+  const handleOpenQuotationComparison = (rfq: any) => {
     setSelectedQuotationsRfq(rfq);
     setRfqPageView("quotationComparison");
-    setLoadingQuotations(true);
-    setQuotationsError(null);
-    setQuotationComparisonData([]);
-
-    try {
-      // First, fetch full RFQ details to get the latest supplierQuotation data
-      let rfqDetails = rfq;
-      
-      if (!rfq.supplierQuotation) {
-        // If rfq doesn't have supplierQuotation, fetch full RFQ details from API
-        rfqDetails = await fetchBuyerRFQById(rfq.rfqId);
-      }
-
-      // Now fetch quotation comparison data for each quotation ID
-      if (rfqDetails.supplierQuotation && rfqDetails.supplierQuotation.length > 0) {
-        const comparisonDataList: SupplierQuotationComparisonResponse[] = [];
-        const errors: string[] = [];
-
-        // Fetch comparison data for each quotation ID
-        for (const quotation of rfqDetails.supplierQuotation) {
-          if (quotation.quotationId) {
-            const result = await fetchSupplierQuotationComparison(quotation.quotationId);
-
-            if (!isErrorResponse(result)) {
-              comparisonDataList.push(result as SupplierQuotationComparisonResponse);
-            } else {
-              const errorData = result as unknown as ErrorResponseDto;
-              errors.push(
-                errorData.message || `Failed to load quotation ${quotation.quotationId}`
-              );
-            }
-          }
-        }
-
-        if (comparisonDataList.length > 0) {
-          setQuotationComparisonData(comparisonDataList);
-        }
-
-        if (errors.length > 0 && comparisonDataList.length === 0) {
-          setQuotationsError(errors.join(", "));
-        }
-      } else {
-        setQuotationsError("No quotations found for this RFQ.");
-      }
-    } catch (error: any) {
-      setQuotationsError(error.message || "Failed to load quotation comparisons.");
-    } finally {
-      setLoadingQuotations(false);
-    }
   };
 
   const handleBackFromQuotationComparison = () => {
     setRfqPageView("rfqDetail");
     setSelectedQuotationsRfq(null);
-    setQuotationComparisonData([]);
-    setQuotationsError(null);
   };
 
   const handleOpenQsAns = () => {
@@ -750,10 +717,44 @@ const BuyerAdminDash: React.FC = () => {
     }
   };
 
+  // const renderQuoteStatusBadges = (quote: any) => (
+  //   <>
+  //     {quote.isLead && (
+  //       <span
+  //         className="bad-status-badge"
+  //         style={{
+  //           background: '#fef3c7',
+  //           color: '#b45309',
+  //           border: '1px solid #fde68a',
+  //           padding: '3px 8px',
+  //           borderRadius: '6px',
+  //           fontSize: '11px',
+  //           fontWeight: 600
+  //         }}
+  //       >
+  //         Leading
+  //       </span>
+  //     )}
+  //     <span
+  //       className="bad-status-badge"
+  //       style={{
+  //         background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
+  //         color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
+  //         padding: '3px 8px',
+  //         borderRadius: '6px',
+  //         fontSize: '11px',
+  //         fontWeight: 600
+  //       }}
+  //     >
+  //       {quote.status || "RECEIVED"}
+  //     </span>
+  //   </>
+  // );
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#edeff0", paddingTop: "5.25rem" }}>
       <ToastContainer />
-      <Header />
+      <Header navItems={navItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout} />
       <div
         className={`bad-shell${isMobileSidebarOpen ? " bad-sidebar-open-mobile" : ""}`}
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
@@ -776,15 +777,19 @@ const BuyerAdminDash: React.FC = () => {
         <aside className="bad-sidebar">
           <nav className="bad-nav" >
             {navItems.map((item) => (
-              <div
-                key={item.key}
-                className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
-                onClick={() => handleNavClick(item.key)}
-              >
-                <span className="bad-nav-icon">{item.icon}</span>
-                <span className="bad-nav-label">{item.label}</span>
-                {item.badge && <span className="bad-nav-badge">{item.badge}</span>}
-              </div>
+              <React.Fragment key={item.key}>
+                {item.section && (
+                  <div className="bad-nav-section-title">{item.section}</div>
+                )}
+                <div
+                  className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
+                  onClick={() => handleNavClick(item.key)}
+                >
+                  <span className="bad-nav-icon">{item.icon}</span>
+                  <span className="bad-nav-label">{item.label}</span>
+                  {item.badge && <span className="bad-nav-badge">{item.badge}</span>}
+                </div>
+              </React.Fragment>
             ))}
             <div
               className="bad-nav-item bad-nav-item-logout"
@@ -961,14 +966,25 @@ const BuyerAdminDash: React.FC = () => {
                       <div className="bad-modal-meta">
                         <span><IconCalendar /> Closes: {new Date(fullPageRfq.endDate).toLocaleDateString()}</span>
                         <span><IconPin /> Delivery: {fullPageRfq.deliveryLocation}</span>
-                        <button
-                          className="bad-btn bad-btn-outline"
-                          onClick={() => handleOpenQuotationComparison(fullPageRfq)}
-                          title="View Supplier Quotations"
-                          style={{ marginLeft: 'auto' }}
-                        >
-                          📊 Bid Comparison
-                        </button>
+                        <div className="bad-rfq-header-actions">
+                          <button
+                            className="bad-btn bad-btn-outline"
+                            onClick={() => handleOpenQuotationComparison(fullPageRfq)}
+                            title="View Supplier Quotations"
+                          >
+                            <IconBidCompare /> Bid Comparison
+                          </button>
+                          <button
+                            type="button"
+                            className="bad-btn bad-btn-freeze"
+                            onClick={handleFreezeBid}
+                            disabled={freezingBid || fullPageRfq.status === "Freezing"}
+                            title={fullPageRfq.status === "Freezing" ? "This RFQ's bid has already been frozen" : "Freeze the bid to stop accepting new quotations"}
+                          >
+                            <IconFreezeLock />
+                            {freezingBid ? "Freezing..." : fullPageRfq.status === "Freezing" ? "Bid Frozen" : "Freeze Bid"}
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -986,9 +1002,7 @@ const BuyerAdminDash: React.FC = () => {
                         {fullPageRfqError}
                       </div>
                     ) : fullPageRfq ? (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '28px', maxWidth: '820px', margin: '0 auto' }}>
-                        {/* RFQ Specifications & Materials */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      <div className="bad-active-rfq-content-wrapper">
                           <div>
                             <div className="bad-modal-section-title">Description</div>
                             <p className="bad-modal-desc" style={{ whiteSpace: 'pre-wrap', fontSize: '13.5px', color: '#334155', lineHeight: '1.6' }}>
@@ -1018,44 +1032,7 @@ const BuyerAdminDash: React.FC = () => {
                           </div>
 
                           {/* Items table */}
-                          {fullPageRfq.items && fullPageRfq.items.length > 0 && (
-                            <div>
-                              <div className="bad-modal-section-title" style={{ marginBottom: '10px' }}>Required Materials & Services</div>
-                              <div className="bad-rfq-table-container" style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                                <table className="bad-rfq-items-table">
-                                  <thead>
-                                    <tr>
-                                      <th>Material Info</th>
-                                      <th>Code</th>
-                                      <th>Qty</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {fullPageRfq.items.map((item: any, idx: number) => (
-                                      <tr key={idx}>
-                                        <td>
-                                          <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
-                                          {item.costCenter && (
-                                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                              Cost Center: {item.costCenter}
-                                            </div>
-                                          )}
-                                        </td>
-                                        <td>
-                                          <div>
-                                            {item.materialCode || "N/A"}
-                                          </div>
-                                        </td>
-                                        <td>
-                                          {item.quantity} <span>{item.uom}</span>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          )}
+                          <QuotationSummaryTable rfq={fullPageRfq} />
 
                           {/* Attached Documents */}
                           {((fullPageRfq.technicalSpecificationDocuments && fullPageRfq.technicalSpecificationDocuments.length > 0) ||
@@ -1125,7 +1102,8 @@ const BuyerAdminDash: React.FC = () => {
                               </div>
                             )}
 
-                          {/* Supplier Quotations Received */}
+                          {/* Supplier Quotations Received
+                          {fullPageRfq.addLotOption && (
                           <div>
                             <div className="bad-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                               <IconSparkles /> Supplier Quotations Received
@@ -1157,35 +1135,7 @@ const BuyerAdminDash: React.FC = () => {
                                           </span>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                          {quote.isLead && (
-                                            <span
-                                              className={`bad-status-badge`}
-                                              style={{
-                                                background: '#fef3c7',
-                                                color: '#b45309',
-                                                border: '1px solid #fde68a',
-                                                padding: '3px 8px',
-                                                borderRadius: '6px',
-                                                fontSize: '11px',
-                                                fontWeight: 600
-                                              }}
-                                            >
-                                              Leading
-                                            </span>
-                                          )}
-                                          <span
-                                            className={`bad-status-badge`}
-                                            style={{
-                                              background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
-                                              color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
-                                              padding: '3px 8px',
-                                              borderRadius: '6px',
-                                              fontSize: '11px',
-                                              fontWeight: 600
-                                            }}
-                                          >
-                                            {quote.status || "RECEIVED"}
-                                          </span>
+                                          {renderQuoteStatusBadges(quote)}
                                         </div>
                                       </div>
 
@@ -1220,8 +1170,7 @@ const BuyerAdminDash: React.FC = () => {
                               </div>
                             )}
                           </div>
-
-                        </div>
+                          )} */}
 
                       </div>
                     ) : null}
@@ -1265,35 +1214,10 @@ const BuyerAdminDash: React.FC = () => {
                   </div>
 
                   <div className="bad-modal-body" style={{ maxHeight: 'calc(100% - 120px)', overflowY: 'auto', padding: '24px' }}>
-                    {loadingQuotations ? (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
-                        <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                          <div className="bad-spinner" style={{ width: '32px', height: '32px' }} />
-                          <span>Loading quotation comparisons...</span>
-                        </div>
-                      </div>
-                    ) : quotationsError && quotationComparisonData.length === 0 ? (
-                      <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
-                        {quotationsError}
-                      </div>
-                    ) : quotationComparisonData.length === 0 ? (
-                      <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
-                        No quotation data available.
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        {quotationComparisonData.map((comparison, index) => (
-                          <QuotationComparisonCard
-                            key={comparison.supplierQuotationId || index}
-                            quotation={comparison}
-                            rfqTitle={selectedQuotationsRfq.title}
-                            rfqNumber={selectedQuotationsRfq.rfqNumber}
-                            supplierName={`Supplier ${index + 1}`}
-                            contactPerson="Contact Person"
-                          />
-                        ))}
-                      </div>
-                    )}
+                    <QuotationComparisonCard
+                      rfqId={selectedQuotationsRfq?.rfqId}
+                      rfqTitle={selectedQuotationsRfq?.title}
+                    />
                   </div>
 
                 </div>
@@ -1307,18 +1231,8 @@ const BuyerAdminDash: React.FC = () => {
               />
             ) : (
               <>
-                <h1 className="bad-title">Buyer Admin Command Center</h1>
+                <h1 className="bad-title" style={{ fontSize: '20px', fontWeight: 500 }}>Buyer Admin Command Center</h1>
                 <p className="bad-subtitle">Manage buyers, track procurement activities, and oversee operations.</p>
-
-                <div className="bad-status-banner">
-                  <span className="bad-status-dot" />
-                  <div>
-                    <div className="bad-status-title">Active Buyer Administration Portal (100%)</div>
-                    <div className="bad-status-subtext">
-                      You have administrative access to manage buyer operations and user accounts.
-                    </div>
-                  </div>
-                </div>
 
                 <div className="bad-stats-grid">
                   {statCards.map((stat) => (
@@ -1373,29 +1287,29 @@ const BuyerAdminDash: React.FC = () => {
                     ) : (
                       <div className="bad-panel-list">
                         {rfqs.slice(0, visibleRfqCount).map((rfq) => (
-                          <div className="bad-rfq-row" key={rfq.rfqId}>
-                            <div className="bad-rfq-info">
-                              <div className="bad-rfq-meta">
-                                <span className="bad-code-badge">{rfq.rfqNumber}</span>
-                                <span className="bad-dot-sep">•</span>
-                                <span className="bad-company">{rfq.organizationName}</span>
-                              </div>
-                              <div className="bad-rfq-title">{rfq.title}</div>
-                              <div className="bad-rfq-details">
-                                <span>
-                                  <IconCalendar /> Closes: {new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                                </span>
-                                <span>
-                                  <IconPin /> Deliv: {rfq.deliveryLocation}
-                                </span>
-                              </div>
+                          <div
+                            className="bad-rfq-card-item"
+                            key={rfq.rfqId}
+                            onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                            role="button"
+                            tabIndex={0}
+                          >
+                            <div className="bad-rfq-meta">
+                              <span className="bad-code-badge">{rfq.rfqNumber}</span>
+                              <span className="bad-dot-sep">•</span>
+                              <span className="bad-company">{rfq.organizationName}</span>
                             </div>
-                            <button
-                              className="bad-btn bad-btn-outline"
-                              onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                            >
-                              View RFQ Details
-                            </button>
+
+                            <div className="bad-rfq-title bad-rfq-link-title">{rfq.title}</div>
+
+                            <div className="bad-rfq-details">
+                              <span>
+                                <IconCalendar /> Closes: {rfq.endDate ? new Date(rfq.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Open'}
+                              </span>
+                              <span>
+                                <IconPin /> Deliv: {rfq.deliveryLocation}
+                              </span>
+                            </div>
                           </div>
                         ))}
                       </div>

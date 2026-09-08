@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { User, UserRole } from '../types';
+import { ROLE_ID_MAPPING } from '../constants/roleMapping';
 
 export interface AuthState {
   currentUser: User | null;
@@ -73,16 +74,10 @@ export const useNetworkAdminAuthStore = create<AuthState>((set) => ({
 }));
 
 
-function mapRoleIdToUserRole(roleId: string): UserRole | null {
-  const roleMap: Record<string, UserRole> = {
-    '61eb9b97-1fca-4beb-beb8-dc4b379cfa3a': 'BUYER_NETWORK_ADMIN',
-    '22067509-af24-48f8-a7e9-416a0b6a439b': 'SUPPLIER_NETWORK_ADMIN',
-    'c95f5a1b-4aec-4647-9328-895a58193ec4': 'BUYER_ADMINISTRATOR',
-    '735bb267-fec0-489f-8249-d3d65b3857ea': 'SUPPLIER_ADMINISTRATOR',
-    '5a72f81e-a2c5-4f4a-bd55-6376c3c9ed73': 'BUYER_USER',
-    '937aab61-b505-4e1c-a5a3-cd63e29c6db9': 'SUPPLIER_USER',
-    '113d8ead-40c2-425a-bc60-5989e6cdabca': 'PLATFORM_ADMINISTRATOR',
-  };
+const ROLE_ID_TO_USER_ROLE: Record<string, UserRole> = Object.fromEntries(
+  Object.entries(ROLE_ID_MAPPING).map(([role, id]) => [id, role as UserRole])
+);
 
-  return roleMap[roleId] || null;
+function mapRoleIdToUserRole(roleId: string): UserRole | null {
+  return ROLE_ID_TO_USER_ROLE[roleId] || null;
 }
