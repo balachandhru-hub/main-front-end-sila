@@ -10,6 +10,11 @@ declare module 'remoteSupplier/SupplierApp' {
   export default SupplierApp;
 }
 
+declare module 'remoteSupplier/ExternalSupplierBid' {
+  const ExternalSupplierBid: React.ComponentType;
+  export default ExternalSupplierBid;
+}
+
 declare module 'remotePlatformUser/PlatformUserApp' {
   const PlatformUserApp: React.ComponentType;
   export default PlatformUserApp;
