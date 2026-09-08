@@ -24,6 +24,7 @@ import UserTemplate from "./usertemplate"
 import { ToastContainer } from "@vosox/shared-ui";
 import type { ErrorResponseDto } from "../dto/platformDto";
 import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
+import QuotationSummaryTable from "../../../remote-buyer/src/components/QuotationSummaryTable";
 import QuotationComparisonCard from "./QuotationComparisonCard";
 
 interface StatCard {
@@ -785,6 +786,40 @@ const BuyerAdminDash: React.FC = () => {
     }
   };
 
+  // const renderQuoteStatusBadges = (quote: any) => (
+  //   <>
+  //     {quote.isLead && (
+  //       <span
+  //         className="bad-status-badge"
+  //         style={{
+  //           background: '#fef3c7',
+  //           color: '#b45309',
+  //           border: '1px solid #fde68a',
+  //           padding: '3px 8px',
+  //           borderRadius: '6px',
+  //           fontSize: '11px',
+  //           fontWeight: 600
+  //         }}
+  //       >
+  //         Leading
+  //       </span>
+  //     )}
+  //     <span
+  //       className="bad-status-badge"
+  //       style={{
+  //         background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
+  //         color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
+  //         padding: '3px 8px',
+  //         borderRadius: '6px',
+  //         fontSize: '11px',
+  //         fontWeight: 600
+  //       }}
+  //     >
+  //       {quote.status || "RECEIVED"}
+  //     </span>
+  //   </>
+  // );
+
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
       <ToastContainer />
@@ -1032,9 +1067,7 @@ const BuyerAdminDash: React.FC = () => {
                         {fullPageRfqError}
                       </div>
                     ) : fullPageRfq ? (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '28px', maxWidth: '820px', margin: '0 auto' }}>
-                        {/* RFQ Specifications & Materials */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      <div className="bad-active-rfq-content-wrapper">
                           <div>
                             <div className="bad-modal-section-title">Description</div>
                             <p className="bad-modal-desc" style={{ whiteSpace: 'pre-wrap', fontSize: '13.5px', color: '#334155', lineHeight: '1.6' }}>
@@ -1064,44 +1097,7 @@ const BuyerAdminDash: React.FC = () => {
                           </div>
 
                           {/* Items table */}
-                          {fullPageRfq.items && fullPageRfq.items.length > 0 && (
-                            <div>
-                              <div className="bad-modal-section-title" style={{ marginBottom: '10px' }}>Required Materials & Services</div>
-                              <div className="bad-rfq-table-container" style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                                <table className="bad-rfq-items-table">
-                                  <thead>
-                                    <tr>
-                                      <th>Material Info</th>
-                                      <th>Code</th>
-                                      <th>Qty</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {fullPageRfq.items.map((item: any, idx: number) => (
-                                      <tr key={idx}>
-                                        <td>
-                                          <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
-                                          {item.costCenter && (
-                                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                              Cost Center: {item.costCenter}
-                                            </div>
-                                          )}
-                                        </td>
-                                        <td>
-                                          <div>
-                                            {item.materialCode || "N/A"}
-                                          </div>
-                                        </td>
-                                        <td>
-                                          {item.quantity} <span>{item.uom}</span>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          )}
+                          <QuotationSummaryTable rfq={fullPageRfq} />
 
                           {/* Attached Documents */}
                           {((fullPageRfq.technicalSpecificationDocuments && fullPageRfq.technicalSpecificationDocuments.length > 0) ||
@@ -1171,7 +1167,8 @@ const BuyerAdminDash: React.FC = () => {
                               </div>
                             )}
 
-                          {/* Supplier Quotations Received */}
+                          {/* Supplier Quotations Received
+                          {fullPageRfq.addLotOption && (
                           <div>
                             <div className="bad-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                               <IconSparkles /> Supplier Quotations Received
@@ -1203,35 +1200,7 @@ const BuyerAdminDash: React.FC = () => {
                                           </span>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                          {quote.isLead && (
-                                            <span
-                                              className={`bad-status-badge`}
-                                              style={{
-                                                background: '#fef3c7',
-                                                color: '#b45309',
-                                                border: '1px solid #fde68a',
-                                                padding: '3px 8px',
-                                                borderRadius: '6px',
-                                                fontSize: '11px',
-                                                fontWeight: 600
-                                              }}
-                                            >
-                                              Leading
-                                            </span>
-                                          )}
-                                          <span
-                                            className={`bad-status-badge`}
-                                            style={{
-                                              background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
-                                              color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
-                                              padding: '3px 8px',
-                                              borderRadius: '6px',
-                                              fontSize: '11px',
-                                              fontWeight: 600
-                                            }}
-                                          >
-                                            {quote.status || "RECEIVED"}
-                                          </span>
+                                          {renderQuoteStatusBadges(quote)}
                                         </div>
                                       </div>
 
@@ -1266,8 +1235,7 @@ const BuyerAdminDash: React.FC = () => {
                               </div>
                             )}
                           </div>
-
-                        </div>
+                          )} */}
 
                       </div>
                     ) : null}
@@ -1327,18 +1295,11 @@ const BuyerAdminDash: React.FC = () => {
                         No quotation data available.
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        {quotationComparisonData.map((comparison, index) => (
-                          <QuotationComparisonCard
-                            key={comparison.supplierQuotationId || index}
-                            quotation={comparison}
-                            rfqTitle={selectedQuotationsRfq.title}
-                            rfqNumber={selectedQuotationsRfq.rfqNumber}
-                            supplierName={`Supplier ${index + 1}`}
-                            contactPerson="Contact Person"
-                          />
-                        ))}
-                      </div>
+                      <QuotationComparisonCard
+                        quotations={quotationComparisonData}
+                        rfqTitle={selectedQuotationsRfq.title}
+                        supplierNames={quotationComparisonData.map((_, index) => `Supplier ${index + 1}`)}
+                      />
                     )}
                   </div>
 

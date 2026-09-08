@@ -3,11 +3,9 @@ import "./QuotationComparisonCard.css";
 import type { SupplierQuotationComparisonResponse } from "../api/networkAdminApi";
 
 interface QuotationComparisonCardProps {
-  quotation: SupplierQuotationComparisonResponse;
+  quotations: SupplierQuotationComparisonResponse[];
+  supplierNames: string[];
   rfqTitle?: string;
-  rfqNumber?: string;
-  supplierName?: string;
-  contactPerson?: string;
 }
 
 const IconDownload = () => (
@@ -18,32 +16,57 @@ const IconDownload = () => (
   </svg>
 );
 
+const formatCurrency = (value: number | undefined | null) => {
+  if (value === undefined || value === null || Number.isNaN(value)) return "—";
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+const calcGrandTotal = (
+  subtotal: number,
+  tax: number,
+  delivery: number | undefined,
+  discount: number
+) => subtotal + tax + (delivery || 0) - discount;
+
 const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({
-  quotation,
-  supplierName = "Supplier Name",
+  quotations,
+  supplierNames,
+  rfqTitle,
 }) => {
   const handleDownloadExcel = () => {
     // Placeholder for Excel download functionality
     console.log("Download Excel clicked");
   };
 
-  // Helper function to format currency
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
+  const getSupplierName = (index: number) => supplierNames[index] || `Supplier ${index + 1}`;
+
+  if (!quotations || quotations.length === 0) {
+    return (
+      <div className="qcc-container">
+        <div className="qcc-header-section">
+          <div className="qcc-header-top">
+            <div className="qcc-header-info">
+              {rfqTitle && <div className="qcc-company-name">{rfqTitle}</div>}
+            </div>
+          </div>
+        </div>
+        <div className="qcc-empty-state">No quotation data available.</div>
+      </div>
+    );
+  }
+
+  const rowCount = Math.max(0, ...quotations.map((q) => q.items?.length ?? 0));
+  const supplierValueColumnCount = quotations.length * 2;
 
   return (
     <div className="qcc-container">
-      {/* Header Section */}
       <div className="qcc-header-section">
         <div className="qcc-header-top">
           <div className="qcc-header-info">
-            <div>
-              <div className="qcc-company-name">{supplierName}</div>
-            </div>
+            {rfqTitle && <div className="qcc-company-name">{rfqTitle}</div>}
           </div>
           <button className="qcc-btn qcc-btn-download" onClick={handleDownloadExcel}>
             <IconDownload /> Download Excel
@@ -51,115 +74,114 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({
         </div>
       </div>
 
-      {/* Details Section - Vertical Layout */}
-      <div className="qcc-details-section">
-        <div className="qcc-details-vertical">
-          <div className="qcc-detail-row-vertical">
-            <span className="qcc-detail-label">Bidder</span>
-            <span className="qcc-detail-value">{supplierName}</span>
-          </div>
-          <div className="qcc-detail-row-vertical">
-            <span className="qcc-detail-label">Currency</span>
-            <span className="qcc-detail-value">INR</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Comparison Table */}
       <div className="qcc-table-wrapper">
         <table className="qcc-comparison-table">
           <thead>
             <tr>
-              <th className="qcc-col-sno">S. No.</th>
-              <th className="qcc-col-description">Description</th>
-              <th className="qcc-col-qty">Qty</th>
-              <th colSpan={2} className="qcc-col-quoted">
-                Quoted (R0)
-              </th>
-              <th colSpan={2} className="qcc-col-negotiated">
-                Negotiated (R1)
-              </th>
+              <th scope="row" colSpan={3} className="qcc-row-label">Bidder</th>
+              {quotations.map((q, index) => (
+                <td key={q.supplierQuotationId || index} colSpan={2} className="qcc-spanned-cell qcc-bidder-name">
+                  {getSupplierName(index)}
+                </td>
+              ))}
             </tr>
-            <tr className="qcc-subheader">
-              <th colSpan={3}></th>
-              <th className="qcc-col-rate">Rate</th>
-              <th className="qcc-col-amount">Amount</th>
-              <th className="qcc-col-rate">Rate</th>
-              <th className="qcc-col-amount">Amount</th>
+
+            <tr>
+              <th scope="row" colSpan={3} className="qcc-row-label">Currency</th>
+              {quotations.map((q, index) => (
+                <td key={q.supplierQuotationId || index} colSpan={2} className="qcc-spanned-cell">
+                  INR
+                </td>
+              ))}
+            </tr>
+
+            <tr>
+              <th scope="col" className="qcc-col-sno qcc-fixed-col">S. No.</th>
+              <th scope="col" className="qcc-col-description qcc-fixed-col">Description</th>
+              <th scope="col" className="qcc-col-qty qcc-fixed-col">Qty</th>
+              {quotations.map((q, index) => (
+                <React.Fragment key={q.supplierQuotationId || index}>
+                  <th scope="col" className="qcc-col-quoted">Quoted</th>
+                  <th scope="col" className="qcc-col-negotiated">Negotiated</th>
+                </React.Fragment>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {quotation.items && quotation.items.length > 0 ? (
-              quotation.items.map((item, index) => (
-                <tr key={item.supplierQuotationItemId}>
-                  <td className="qcc-col-sno">{index + 1}</td>
-                  <td className="qcc-col-description">Line item - {index + 1}</td>
-                  <td className="qcc-col-qty">—</td>
-                  <td className="qcc-col-rate">{formatCurrency(item.oldQuotedPrice)}</td>
-                  <td className="qcc-col-amount">{formatCurrency(item.oldQuotedPrice)}</td>
-                  <td className="qcc-col-rate">{formatCurrency(item.latestQuotedPrice)}</td>
-                  <td className="qcc-col-amount">{formatCurrency(item.latestQuotedPrice)}</td>
+          
+            {rowCount > 0 ? (
+              Array.from({ length: rowCount }).map((_, rowIndex) => (
+                <tr key={rowIndex} className={rowIndex % 2 === 1 ? "qcc-row-striped" : undefined}>
+                  <td className="qcc-col-sno qcc-fixed-col">{rowIndex + 1}</td>
+                  <td className="qcc-col-description qcc-fixed-col">Line item - {rowIndex + 1}</td>
+                  <td className="qcc-col-qty qcc-fixed-col">—</td>
+                  {quotations.map((q, supplierIndex) => {
+                    const item = q.items?.[rowIndex];
+                    return (
+                      <React.Fragment key={q.supplierQuotationId || supplierIndex}>
+                        <td className="qcc-col-quoted">{item ? formatCurrency(item.oldQuotedPrice) : "—"}</td>
+                        <td className="qcc-col-negotiated">{item ? formatCurrency(item.latestQuotedPrice) : "—"}</td>
+                      </React.Fragment>
+                    );
+                  })}
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="qcc-no-data">
+                <td colSpan={3 + supplierValueColumnCount} className="qcc-no-data">
                   No line items found.
                 </td>
               </tr>
             )}
-          </tbody>
-        </table>
-      </div>
 
-      {/* Totals Section */}
-      <div className="qcc-totals-wrapper">
-        <div className="qcc-bidder-header">{supplierName}</div>
-
-        <table className="qcc-totals-table">
-          <tbody>
-            <tr>
-              <td className="qcc-totals-label">Total Subtotal</td>
-              <td className="qcc-totals-value">{formatCurrency(quotation.oldTotalPrice)}</td>
-              <td className="qcc-totals-value">{formatCurrency(quotation.latestTotalPrice)}</td>
+            <tr className="qcc-totals-row">
+              <th scope="row" colSpan={3} className="qcc-row-label">Subtotal</th>
+              {quotations.map((q, index) => (
+                <React.Fragment key={q.supplierQuotationId || index}>
+                  <td className="qcc-col-quoted">{formatCurrency(q.oldTotalPrice)}</td>
+                  <td className="qcc-col-negotiated">{formatCurrency(q.latestTotalPrice)}</td>
+                </React.Fragment>
+              ))}
             </tr>
-            <tr>
-              <td className="qcc-totals-label">Total Tax Amount</td>
-              <td className="qcc-totals-value">{formatCurrency(quotation.oldTax)}</td>
-              <td className="qcc-totals-value">{formatCurrency(quotation.latestTax)}</td>
+            <tr className="qcc-totals-row">
+              <th scope="row" colSpan={3} className="qcc-row-label">Tax</th>
+              {quotations.map((q, index) => (
+                <React.Fragment key={q.supplierQuotationId || index}>
+                  <td className="qcc-col-quoted">{formatCurrency(q.oldTax)}</td>
+                  <td className="qcc-col-negotiated">{formatCurrency(q.latestTax)}</td>
+                </React.Fragment>
+              ))}
             </tr>
-            <tr>
-              <td className="qcc-totals-label">Total Delivery Charge</td>
-              <td className="qcc-totals-value">{formatCurrency(quotation.oldDeliveryCharge || 0)}</td>
-              <td className="qcc-totals-value">{formatCurrency(quotation.latestDeliveryCharge || 0)}</td>
+            <tr className="qcc-totals-row">
+              <th scope="row" colSpan={3} className="qcc-row-label">Delivery</th>
+              {quotations.map((q, index) => (
+                <React.Fragment key={q.supplierQuotationId || index}>
+                  <td className="qcc-col-quoted">{formatCurrency(q.oldDeliveryCharge || 0)}</td>
+                  <td className="qcc-col-negotiated">{formatCurrency(q.latestDeliveryCharge || 0)}</td>
+                </React.Fragment>
+              ))}
             </tr>
-            <tr>
-              <td className="qcc-totals-label">Total Discount</td>
-              <td className="qcc-totals-value qcc-discount">
-                -{formatCurrency(quotation.oldDiscount)}
-              </td>
-              <td className="qcc-totals-value qcc-discount">
-                -{formatCurrency(quotation.latestDiscount)}
-              </td>
+            <tr className="qcc-totals-row">
+              <th scope="row" colSpan={3} className="qcc-row-label">Discount</th>
+              {quotations.map((q, index) => (
+                <React.Fragment key={q.supplierQuotationId || index}>
+                  <td className="qcc-col-quoted qcc-discount">-{formatCurrency(q.oldDiscount)}</td>
+                  <td className="qcc-col-negotiated qcc-discount">-{formatCurrency(q.latestDiscount)}</td>
+                </React.Fragment>
+              ))}
             </tr>
             <tr className="qcc-grand-total-row">
-              <td className="qcc-totals-label">Grand Total</td>
-              <td className="qcc-totals-value qcc-grand-total">
-                {formatCurrency(
-                  quotation.oldTotalPrice +
-                    quotation.oldTax +
-                    (quotation.oldDeliveryCharge || 0) -
-                    quotation.oldDiscount
-                )}
-              </td>
-              <td className="qcc-totals-value qcc-grand-total">
-                {formatCurrency(
-                  quotation.latestTotalPrice +
-                    quotation.latestTax +
-                    (quotation.latestDeliveryCharge || 0) -
-                    quotation.latestDiscount
-                )}
-              </td>
+              <th scope="row" colSpan={3} className="qcc-row-label">Grand Total</th>
+              {quotations.map((q, index) => (
+                <React.Fragment key={q.supplierQuotationId || index}>
+                  <td className="qcc-col-quoted qcc-grand-total">
+                    {formatCurrency(calcGrandTotal(q.oldTotalPrice, q.oldTax, q.oldDeliveryCharge, q.oldDiscount))}
+                  </td>
+                  <td className="qcc-col-negotiated qcc-grand-total">
+                    {formatCurrency(calcGrandTotal(q.latestTotalPrice, q.latestTax, q.latestDeliveryCharge, q.latestDiscount))}
+                  </td>
+                </React.Fragment>
+              ))}
             </tr>
           </tbody>
         </table>

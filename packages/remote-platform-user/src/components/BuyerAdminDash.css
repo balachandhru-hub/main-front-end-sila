@@ -927,8 +927,11 @@
 
 .bad-modal-footer {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
-    padding: 0 1.75rem 1.5rem 1.75rem;
+    padding: 1.25rem 1.75rem 1.5rem 1.75rem;
+    gap: 0.625rem;
+    border-top: 0.0625rem solid #eef0f3;
 }
 
 .bad-modal-footer-btn {
@@ -1170,8 +1173,27 @@
     margin-top: 0.0625rem;
 }
 
+.bad-active-rfq-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+    width: 100%;
+    max-width: 75rem;
+    margin: 0 auto;
+    padding: 0 1.25rem;
+    box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+    .bad-active-rfq-content-wrapper {
+        padding: 0 1rem;
+    }
+}
+
 .bad-rfq-table-container {
     width: 100%;
+    max-width: 100%;
     overflow-x: auto;
     border: 0.0625rem solid #e2e8f0;
     border-radius: 0.5rem;
@@ -1191,15 +1213,26 @@
     font-weight: 600;
     color: #475569;
     border-bottom: 0.0625rem solid #e2e8f0;
+    border-right: 0.0625rem solid #e2e8f0;
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
 
+.bad-rfq-items-table th:last-child {
+    border-right: none;
+}
+
 .bad-rfq-items-table td {
     padding: 0.75rem 0.875rem;
     border-bottom: 0.0625rem solid #e2e8f0;
+    border-right: 0.0625rem solid #e2e8f0;
     vertical-align: top;
+    overflow-wrap: break-word;
+}
+
+.bad-rfq-items-table td:last-child {
+    border-right: none;
 }
 
 .bad-rfq-items-table tbody tr:last-child td {
