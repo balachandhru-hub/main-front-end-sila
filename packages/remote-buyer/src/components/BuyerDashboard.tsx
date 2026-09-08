@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+  import React, { useState, useEffect } from "react";
 import "./BuyerDashBoard.css";
 import CreateRFQ from "./Create_RFQ.tsx";
 import Product from "./Product.tsx";
 import Models from "./Models.tsx";
 import Header from "./Header";
 import QsAns from "./Qsans.tsx";
+import QuotationSummaryTable from "./QuotationSummaryTable.tsx";
 import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, fetchBuyerAsset } from "../api/Buyerapi";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
 import QuotationComparisonCard from "../../../remote-platform-user/src/components/QuotationComparisonCard.tsx";
@@ -713,6 +714,40 @@ const BuyersDashboard: React.FC = () => {
     setRfqPageView("rfqDetail");
   };
 
+  // const renderQuoteStatusBadges = (quote: any) => (
+  //   <>
+  //     {quote.isLead && (
+  //       <span
+  //         className="pud-status-badge"
+  //         style={{
+  //           background: '#fef3c7',
+  //           color: '#b45309',
+  //           border: '1px solid #fde68a',
+  //           padding: '3px 8px',
+  //           borderRadius: '6px',
+  //           fontSize: '11px',
+  //           fontWeight: 600
+  //         }}
+  //       >
+  //         Leading
+  //       </span>
+  //     )}
+  //     <span
+  //       className="pud-status-badge"
+  //       style={{
+  //         background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
+  //         color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
+  //         padding: '3px 8px',
+  //         borderRadius: '6px',
+  //         fontSize: '11px',
+  //         fontWeight: 600
+  //       }}
+  //     >
+  //       {quote.status || "RECEIVED"}
+  //     </span>
+  //   </>
+  // );
+
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
@@ -947,7 +982,7 @@ const BuyersDashboard: React.FC = () => {
                       </div>
                     ) : fullPageRfq ? (
                       <div className="pud-rfq-detail-grid pud-rfq-detail-grid-single">
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', minWidth: 0 }}>
+                        <div className="active-rfq-content-wrapper">
                           <div>
                             <div className="pud-modal-section-title">Description</div>
                             <p className="pud-modal-desc" style={{ whiteSpace: 'pre-wrap', fontSize: '13.5px', color: '#334155', lineHeight: '1.6' }}>
@@ -976,44 +1011,7 @@ const BuyersDashboard: React.FC = () => {
                             </div>
                           </div>
 
-                          {fullPageRfq.items && fullPageRfq.items.length > 0 && (
-                            <div>
-                              <div className="pud-modal-section-title" style={{ marginBottom: '10px' }}>Required Materials & Services</div>
-                              <div className="pud-rfq-table-container" style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                                <table className="pud-rfq-items-table">
-                                  <thead>
-                                    <tr>
-                                      <th>Material Info</th>
-                                      <th>Code</th>
-                                      <th>Qty</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {fullPageRfq.items.map((item: any, idx: number) => (
-                                      <tr key={idx}>
-                                        <td>
-                                          <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
-                                          {item.costCenter && (
-                                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                              Cost Center: {item.costCenter}
-                                            </div>
-                                          )}
-                                        </td>
-                                        <td>
-                                          <div>
-                                            {item.materialCode || "N/A"}
-                                          </div>
-                                        </td>
-                                        <td>
-                                          {item.quantity} <span>{item.uom}</span>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          )}
+                          <QuotationSummaryTable rfq={fullPageRfq} />
 
                           {((fullPageRfq.technicalSpecificationDocuments && fullPageRfq.technicalSpecificationDocuments.length > 0) ||
                             (fullPageRfq.termsConditionDocuments && fullPageRfq.termsConditionDocuments.length > 0)) && (
@@ -1082,6 +1080,7 @@ const BuyersDashboard: React.FC = () => {
                               </div>
                             )}
 
+                          {/* {fullPageRfq.addLotOption && (
                           <div>
                             <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                               <IconSparkles /> Supplier Quotations Received
@@ -1113,35 +1112,7 @@ const BuyersDashboard: React.FC = () => {
                                           </span>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                          {quote.isLead && (
-                                            <span
-                                              className={`pud-status-badge`}
-                                              style={{
-                                                background: '#fef3c7',
-                                                color: '#b45309',
-                                                border: '1px solid #fde68a',
-                                                padding: '3px 8px',
-                                                borderRadius: '6px',
-                                                fontSize: '11px',
-                                                fontWeight: 600
-                                              }}
-                                            >
-                                              Leading
-                                            </span>
-                                          )}
-                                          <span
-                                            className={`pud-status-badge`}
-                                            style={{
-                                              background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
-                                              color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
-                                              padding: '3px 8px',
-                                              borderRadius: '6px',
-                                              fontSize: '11px',
-                                              fontWeight: 600
-                                            }}
-                                          >
-                                            {quote.status || "RECEIVED"}
-                                          </span>
+                                          {renderQuoteStatusBadges(quote)}
                                         </div>
                                       </div>
 
@@ -1176,6 +1147,7 @@ const BuyersDashboard: React.FC = () => {
                               </div>
                             )}
                           </div>
+                          )} */}
 
                         </div>
                       </div>
