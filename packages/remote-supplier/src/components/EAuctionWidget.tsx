@@ -123,10 +123,10 @@ export const EAuctionWidget: React.FC = () => {
       const rawList = Array.isArray(res)
         ? res
         : (res as any)?.data && Array.isArray((res as any).data)
-        ? (res as any).data
-        : (res as any)?.rfqs && Array.isArray((res as any).rfqs)
-        ? (res as any).rfqs
-        : [];
+          ? (res as any).data
+          : (res as any)?.rfqs && Array.isArray((res as any).rfqs)
+            ? (res as any).rfqs
+            : [];
 
       if (rawList.length > 0) {
         const mapped: LiveAuctionItem[] = rawList.map((item: any, idx: number) => {
@@ -465,29 +465,29 @@ export const EAuctionWidget: React.FC = () => {
           ? []
           : selectedRfqDetails.addLotOption
             ? selectedRfqDetails.items.map((item, idx) => {
-                const key = item.id || item.buyerRFQItemId || `item-${idx}`;
-                const itemQuote = selectedRfqDetails.supplierQuotationItems?.[idx];
-                return {
-                  supplierRFQItemId: item.supplierRFQItemId || itemQuote?.supplierRFQItemId || item.id || null,
-                  buyerRFQItemId: item.buyerRFQItemId || item.id || "",
-                  quotedPrice: Number(itemPrices[key] ?? 0),
-                };
-              })
+              const key = item.id || item.buyerRFQItemId || `item-${idx}`;
+              const itemQuote = selectedRfqDetails.supplierQuotationItems?.[idx];
+              return {
+                supplierRFQItemId: item.supplierRFQItemId || itemQuote?.supplierRFQItemId || item.id || null,
+                buyerRFQItemId: item.buyerRFQItemId || item.id || "",
+                quotedPrice: Number(itemPrices[key] ?? 0),
+              };
+            })
             : selectedRfqDetails.items.map((item) => {
-                const itemKey = item.supplierRFQItemId;
-                const line = itemKey ? quoteLineItems[itemKey] : undefined;
-                return {
-                  supplierRFQItemId: itemKey || null,
-                  buyerRFQItemId: item.id || item.buyerRFQItemId || "",
-                  quotedPrice: Number(line?.quotedPrice ?? 0),
-                  deliveryCharge: Number(line?.deliveryCharge ?? 0),
-                  deliveryType: line?.deliveryType || "PERCENTAGE",
-                  discount: Number(line?.discount ?? 0),
-                  discountType: line?.discountType || "PERCENTAGE",
-                  tax: Number(line?.tax ?? 0),
-                  taxType: line?.taxType || "PERCENTAGE",
-                } as any;
-              })
+              const itemKey = item.supplierRFQItemId;
+              const line = itemKey ? quoteLineItems[itemKey] : undefined;
+              return {
+                supplierRFQItemId: itemKey || null,
+                buyerRFQItemId: item.id || item.buyerRFQItemId || "",
+                quotedPrice: Number(line?.quotedPrice ?? 0),
+                deliveryCharge: Number(line?.deliveryCharge ?? 0),
+                deliveryType: line?.deliveryType || "PERCENTAGE",
+                discount: Number(line?.discount ?? 0),
+                discountType: line?.discountType || "PERCENTAGE",
+                tax: Number(line?.tax ?? 0),
+                taxType: line?.taxType || "PERCENTAGE",
+              } as any;
+            })
       };
 
       const res = await submitSupplierQuotation(payload);
@@ -1055,7 +1055,6 @@ export const EAuctionWidget: React.FC = () => {
                         <div className="eauction-line-item-total-bar">
                           <div className="eauction-total-quote-label">Total Price Quote</div>
                           <div className="eauction-total-quote-value-box">
-                            <span style={{ fontSize: '1rem', fontWeight: 800, color: '#047857' }}>$</span>
                             <input
                               type="number"
                               value={totalPriceQuote}
@@ -1087,121 +1086,121 @@ export const EAuctionWidget: React.FC = () => {
 
                   {/* Right Column: Supplier Live Bidding Submission Panel (Single Lot Bidding only) */}
                   {selectedRfqDetails?.addLotOption !== false && (
-                  <div className="eauction-panel-light" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div className="eauction-panel-title-text">SUBMIT COMPETITIVE BID</div>
+                    <div className="eauction-panel-light" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div className="eauction-panel-title-text">SUBMIT COMPETITIVE BID</div>
 
-                    {submitBidError && (
-                      <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', padding: '0.625rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 600 }}>
-                        {submitBidError}
+                      {submitBidError && (
+                        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', padding: '0.625rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                          {submitBidError}
+                        </div>
+                      )}
+
+                      {bidSubmittedMessage && (
+                        <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', padding: '0.625rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                          {bidSubmittedMessage}
+                        </div>
+                      )}
+
+                      {/* Quotation Details Form */}
+                      <div className="eauction-supplier-bid-box">
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                          <div>
+                            <label className="eauction-bid-field-label">Delivery Charge</label>
+                            <input
+                              type="number"
+                              className="eauction-bid-field-input"
+                              value={deliveryCharge}
+                              onChange={(e) => setDeliveryCharge(e.target.value)}
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div>
+                            <label className="eauction-bid-field-label">Delivery Type</label>
+                            <select
+                              className="eauction-bid-field-input"
+                              value={deliveryType}
+                              onChange={(e) => setDeliveryType(e.target.value)}
+                            >
+                              <option value="PERCENTAGE">PERCENTAGE</option>
+                              <option value="AMOUNT">AMOUNT</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="eauction-bid-field-label">Discount</label>
+                            <input
+                              type="number"
+                              className="eauction-bid-field-input"
+                              value={discount}
+                              onChange={(e) => setDiscount(e.target.value)}
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div>
+                            <label className="eauction-bid-field-label">Discount Type</label>
+                            <select
+                              className="eauction-bid-field-input"
+                              value={discountType}
+                              onChange={(e) => setDiscountType(e.target.value)}
+                            >
+                              <option value="PERCENTAGE">PERCENTAGE</option>
+                              <option value="AMOUNT">AMOUNT</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="eauction-bid-field-label">Tax</label>
+                            <input
+                              type="number"
+                              className="eauction-bid-field-input"
+                              value={tax}
+                              onChange={(e) => setTax(e.target.value)}
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div>
+                            <label className="eauction-bid-field-label">Tax Type</label>
+                            <select
+                              className="eauction-bid-field-input"
+                              value={taxType}
+                              onChange={(e) => setTaxType(e.target.value)}
+                            >
+                              <option value="PERCENTAGE">PERCENTAGE</option>
+                              <option value="AMOUNT">AMOUNT</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="eauction-total-quote-row">
+                          <div className="eauction-total-quote-label">Total Price Quote</div>
+                          <div className="eauction-total-quote-value-box">
+                            <span style={{ fontSize: '1rem', fontWeight: 800, color: '#047857' }}>$</span>
+                            <input
+                              type="number"
+                              value={totalPriceQuote}
+                              onChange={(e) => setTotalPriceQuote(e.target.value)}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                outline: 'none',
+                                fontSize: '1.125rem',
+                                fontWeight: 800,
+                                color: '#047857',
+                                textAlign: 'right',
+                                width: '110px',
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <button
+                          className="eauction-btn-submit-bid"
+                          onClick={handleSubmitLiveBid}
+                          disabled={submittingBid}
+                          style={{ opacity: submittingBid ? 0.7 : 1 }}
+                        >
+                          {submittingBid ? "Submitting Live Bid..." : "⚡ SUBMIT LIVE BID"}
+                        </button>
                       </div>
-                    )}
-
-                    {bidSubmittedMessage && (
-                      <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', padding: '0.625rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 600 }}>
-                        {bidSubmittedMessage}
-                      </div>
-                    )}
-
-                    {/* Quotation Details Form */}
-                    <div className="eauction-supplier-bid-box">
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-                        <div>
-                          <label className="eauction-bid-field-label">Delivery Charge</label>
-                          <input
-                            type="number"
-                            className="eauction-bid-field-input"
-                            value={deliveryCharge}
-                            onChange={(e) => setDeliveryCharge(e.target.value)}
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <div>
-                          <label className="eauction-bid-field-label">Delivery Type</label>
-                          <select
-                            className="eauction-bid-field-input"
-                            value={deliveryType}
-                            onChange={(e) => setDeliveryType(e.target.value)}
-                          >
-                            <option value="PERCENTAGE">PERCENTAGE</option>
-                            <option value="AMOUNT">AMOUNT</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="eauction-bid-field-label">Discount</label>
-                          <input
-                            type="number"
-                            className="eauction-bid-field-input"
-                            value={discount}
-                            onChange={(e) => setDiscount(e.target.value)}
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <div>
-                          <label className="eauction-bid-field-label">Discount Type</label>
-                          <select
-                            className="eauction-bid-field-input"
-                            value={discountType}
-                            onChange={(e) => setDiscountType(e.target.value)}
-                          >
-                            <option value="PERCENTAGE">PERCENTAGE</option>
-                            <option value="AMOUNT">AMOUNT</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="eauction-bid-field-label">Tax</label>
-                          <input
-                            type="number"
-                            className="eauction-bid-field-input"
-                            value={tax}
-                            onChange={(e) => setTax(e.target.value)}
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <div>
-                          <label className="eauction-bid-field-label">Tax Type</label>
-                          <select
-                            className="eauction-bid-field-input"
-                            value={taxType}
-                            onChange={(e) => setTaxType(e.target.value)}
-                          >
-                            <option value="PERCENTAGE">PERCENTAGE</option>
-                            <option value="AMOUNT">AMOUNT</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="eauction-total-quote-row">
-                        <div className="eauction-total-quote-label">Total Price Quote</div>
-                        <div className="eauction-total-quote-value-box">
-                          <span style={{ fontSize: '1rem', fontWeight: 800, color: '#047857' }}>$</span>
-                          <input
-                            type="number"
-                            value={totalPriceQuote}
-                            onChange={(e) => setTotalPriceQuote(e.target.value)}
-                            style={{
-                              border: 'none',
-                              background: 'transparent',
-                              outline: 'none',
-                              fontSize: '1.125rem',
-                              fontWeight: 800,
-                              color: '#047857',
-                              textAlign: 'right',
-                              width: '110px',
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      <button
-                        className="eauction-btn-submit-bid"
-                        onClick={handleSubmitLiveBid}
-                        disabled={submittingBid}
-                        style={{ opacity: submittingBid ? 0.7 : 1 }}
-                      >
-                        {submittingBid ? "Submitting Live Bid..." : "⚡ SUBMIT LIVE BID"}
-                      </button>
                     </div>
-                  </div>
                   )}
                 </div>
               </div>
