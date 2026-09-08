@@ -45,6 +45,7 @@ export interface QuotationSummarySupplierQuotation {
   totalPrice?: number | null;
   isLead?: boolean;
   status?: string | null;
+  currency?: string | null;
   supplierQuotationItems?: QuotationSummaryQuotationItem[] | null;
 }
 
@@ -72,22 +73,30 @@ const getSupplierQuotationItem = (
   );
 };
 
-const formatMoney = (value: number | null | undefined): string =>
-  value === null || value === undefined ? "—" : `$${value}`;
+const formatMoney = (value: number | null | undefined, currencyCode?: string | null): string =>
+  value === null || value === undefined ? "—" : currencyCode ? `${value} ${currencyCode}` : `${value}`;
 
 const formatLineNumber = (value: number | null | undefined): string =>
   value === null || value === undefined ? "—" : `${value}`;
 
 // Tax/Discount/Delivery Charge can each be quoted either as a percentage or a flat
 // amount (see taxType/discountType/deliveryType). Render accordingly.
-const formatTypedValue = (value: number | null | undefined, type: string | null | undefined): string => {
+const formatTypedValue = (
+  value: number | null | undefined,
+  type: string | null | undefined,
+  currencyCode?: string | null
+): string => {
   if (value === null || value === undefined) return "—";
-  return type === "PERCENTAGE" ? `${value}%` : `$${value}`;
+  return type === "PERCENTAGE" ? `${value}%` : currencyCode ? `${value} ${currencyCode}` : `${value}`;
 };
 
-const formatTypedDiscount = (value: number | null | undefined, type: string | null | undefined): string => {
+const formatTypedDiscount = (
+  value: number | null | undefined,
+  type: string | null | undefined,
+  currencyCode?: string | null
+): string => {
   if (value === null || value === undefined) return "—";
-  return type === "PERCENTAGE" ? `-${value}%` : `-$${value}`;
+  return type === "PERCENTAGE" ? `-${value}%` : currencyCode ? `-${value} ${currencyCode}` : `-${value}`;
 };
 
 /* ---------------------------------- Component ---------------------------------- */
@@ -231,8 +240,8 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
                       const matchedItem = getSupplierQuotationItem(quote, item);
                       return (
                         <React.Fragment key={quote.quotationId || sIdx}>
-                          <td className="qst-rate-cell">{formatMoney(matchedItem?.quotedPrice)}</td>
-                          <td className="qst-amount-cell">{formatMoney(matchedItem?.quotedAmount)}</td>
+                          <td className="qst-rate-cell">{formatMoney(matchedItem?.quotedPrice, quote.currency)}</td>
+                          <td className="qst-amount-cell">{formatMoney(matchedItem?.quotedAmount, quote.currency)}</td>
                           {showLLColumn && (
                             <td className="qst-ll-cell">{formatLineNumber(matchedItem?.lineNumber)}</td>
                           )}
@@ -251,13 +260,13 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
                           <td key={quote.quotationId || sIdx} colSpan={supplierGroupColSpan} className="qst-expanded-detail-cell">
                             <div className="qst-expanded-detail-grid">
                               <span>Tax:</span>
-                              <span>{formatTypedValue(matchedItem?.tax, matchedItem?.taxType)}</span>
+                              <span>{formatTypedValue(matchedItem?.tax, matchedItem?.taxType, quote.currency)}</span>
                               <span>Discount:</span>
-                              <span style={{ color: '#dc2626' }}>{formatTypedDiscount(matchedItem?.discount, matchedItem?.discountType)}</span>
+                              <span style={{ color: '#dc2626' }}>{formatTypedDiscount(matchedItem?.discount, matchedItem?.discountType, quote.currency)}</span>
                               <span>Delivery Charge:</span>
-                              <span>{formatTypedValue(matchedItem?.deliveryCharge, matchedItem?.deliveryType)}</span>
+                              <span>{formatTypedValue(matchedItem?.deliveryCharge, matchedItem?.deliveryType, quote.currency)}</span>
                               <span>Subtotal:</span>
-                              <span>{formatMoney(matchedItem?.subTotal)}</span>
+                              <span>{formatMoney(matchedItem?.subTotal, quote.currency)}</span>
                             </div>
                           </td>
                         );
@@ -278,7 +287,7 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
                 <td></td>
                 {quotedSuppliers.map((quote, sIdx) => (
                   <td key={quote.quotationId || sIdx} colSpan={supplierGroupColSpan}>
-                    Total Quote: ${quote.totalPrice ?? 0}
+                    Total Quote: {formatMoney(quote.totalPrice ?? 0, quote.currency)}
                   </td>
                 ))}
               </tr>
