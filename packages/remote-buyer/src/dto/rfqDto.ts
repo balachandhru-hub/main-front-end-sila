@@ -27,6 +27,7 @@ export interface RfqQuestionDto {
 }
 
 export interface RfqItemDto {
+  id?: string;
   description: string;
   quantity: number;
   uom: string;
@@ -36,6 +37,18 @@ export interface RfqItemDto {
   attachments: RfqDocumentAssetDto[];
 }
 
+export interface ExternalSupplierDto {
+  supplierName: string;
+  email: string;
+  phoneNumber: string;
+  address: string;
+}
+
+export interface SupplierInviteDto {
+  supplierId: string;
+  userIds: string[];
+}
+
 export interface CreateRFQPayload {
   title: string;
   description: string;
@@ -43,9 +56,9 @@ export interface CreateRFQPayload {
   region: string;
   currency: string;
   deliveryLocation: string;
-  startDate: string; 
-  endDate: string; 
-  deliveryTargetDate: string; 
+  startDate: string;
+  endDate: string;
+  deliveryTargetDate: string;
   budget: number;
   addLotOption: boolean;
   technicalSpecificationDocuments: RfqDocumentAssetDto[];
@@ -53,6 +66,8 @@ export interface CreateRFQPayload {
   questions: RfqQuestionDto[];
   items: RfqItemDto[];
   supplierIds: string[];
+  supplierInvites?: SupplierInviteDto[];
+  externalSuppliers?: ExternalSupplierDto[];
   rfqVerificationTemplateId: string | null;
 }
 
@@ -88,6 +103,7 @@ export interface VerifiedSupplierDto {
   snid: string;
   email: string;
   isVerified: boolean;
+  organizationId?: string;
 }
 
 export interface BuyerSupplierQuotationItem {
@@ -95,6 +111,8 @@ export interface BuyerSupplierQuotationItem {
   supplierRFQItemId?: string;
   buyerRFQItemId?: string;
   quotedPrice: number;
+  tax?: number | null;
+  discount?: number | null;
 }
 
 export interface RfqAnswerDto {
