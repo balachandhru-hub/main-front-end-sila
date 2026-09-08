@@ -152,6 +152,12 @@ const NavIconFile = () => (
   </svg>
 );
 
+const NavIconCatalog = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+  </svg>
+);
+
 const LogoutIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -258,6 +264,13 @@ const navItemsBeforeCatalog: { key: string; icon: React.ReactNode; label: string
 
 const navItemsAfterCatalog: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "invitations", icon: <IconMail />, label: "Invitations" },
+];
+
+const headerNavItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
+  { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
+  { key: "userList", icon: <NavIconUsers />, label: "User List" },
+  { key: "rfqs", icon: <NavIconFile />, label: "RFQs" },
+  { key: "catalogList", icon: <NavIconCatalog />, label: "Catalog" },
 ];
 
 const statCards: StatCard[] = [
@@ -2006,7 +2019,12 @@ const SupplierAdminDash: React.FC = () => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#ffffff", paddingTop: "5.25rem" }}>
-      <Header />
+      <Header
+        navItems={headerNavItems}
+        activeNav={activeNav}
+        onNavClick={handleNavClick}
+        onLogout={handleLogout}
+      />
 
       <div
         className={`sad-shell${isMobileSidebarOpen ? " sad-sidebar-open-mobile" : ""}`}
