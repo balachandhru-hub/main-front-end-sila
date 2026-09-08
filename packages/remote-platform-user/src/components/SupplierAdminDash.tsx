@@ -271,6 +271,7 @@ const headerNavItems: { key: string; icon: React.ReactNode; label: string; badge
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
   { key: "rfqs", icon: <NavIconFile />, label: "RFQs" },
   { key: "catalogList", icon: <NavIconCatalog />, label: "Catalog" },
+  { key: "invitations", icon: <IconMail />, label: "Invitations" },
 ];
 
 const statCards: StatCard[] = [
