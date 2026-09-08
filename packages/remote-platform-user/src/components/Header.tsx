@@ -20,6 +20,18 @@ const IconLock = () => (
   </svg>
 );
 
+const IconBuilding = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+    <path d="M6 12H4a2 2 0 0 0-2 2v8" />
+    <path d="M18 9h2a2 2 0 0 1 2 2v11" />
+    <path d="M10 6h4" />
+    <path d="M10 10h4" />
+    <path d="M10 14h4" />
+    <path d="M10 18h4" />
+  </svg>
+);
+
 const IconHelpCircle = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="12" cy="12" r="10" />
@@ -27,7 +39,29 @@ const IconHelpCircle = () => (
   </svg>
 );
 
-const Header: React.FC = () => {
+const IconLogOut = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
+
+export interface HeaderNavItem {
+  key: string;
+  icon?: React.ReactNode;
+  label: string;
+  badge?: number;
+}
+
+export interface HeaderProps {
+  navItems?: HeaderNavItem[];
+  activeNav?: string;
+  onNavClick?: (key: string) => void;
+  onLogout?: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogout }) => {
   const navigate = useNavigate();
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const hasLoadedRef = useRef(false);
@@ -73,6 +107,24 @@ const Header: React.FC = () => {
 
   const handleAvatarClick = () => setIsDropdownOpen((prev) => !prev);
 
+  const handleCompanyProfile = () => {
+    setIsDropdownOpen(false);
+    if (onNavClick) {
+      onNavClick("companyProfile");
+    } else {
+      const role = currentUser?.userRole;
+      if (role === 'BUYER_ADMINISTRATOR') {
+        navigate('/platform-user/buyer-admin/profile');
+      } else if (role === 'SUPPLIER_ADMINISTRATOR') {
+        navigate('/platform-user/supplier-admin/profile');
+      } else if (role === 'BUYER_NETWORK_ADMIN' || role === 'SUPPLIER_NETWORK_ADMIN') {
+        navigate('/platform-user/network-admin/profile');
+      } else {
+        navigate('/platform-user/dashboard');
+      }
+    }
+  };
+
   const handleEditProfile = () => {
     setIsDropdownOpen(false);
     const role = currentUser?.userRole;
@@ -96,40 +148,77 @@ const Header: React.FC = () => {
     setIsDropdownOpen(false);
   };
 
+  const handleLogoutClick = () => {
+    setIsDropdownOpen(false);
+    if (onLogout) {
+      onLogout();
+    } else {
+      sessionStorage.clear();
+      localStorage.clear();
+      window.dispatchEvent(new CustomEvent("session:expired"));
+    }
+  };
+
   return (
     <header className="vsx-header">
-      <img src={sila_logo} alt="SILA" className="vsx-header-logo" />
+      <div className="vsx-header-brand">
+        <img src={sila_logo} alt="SILA" className="vsx-header-logo" />
+      </div>
+
+      {navItems && navItems.length > 0 && (
+        <nav className="vsx-header-nav">
+          {navItems.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              className={`vsx-header-nav-item${activeNav === item.key ? " vsx-header-nav-item-active" : ""}`}
+              onClick={() => onNavClick && onNavClick(item.key)}
+            >
+              <span className="vsx-header-nav-label">{item.label}</span>
+              {item.badge ? <span className="vsx-header-nav-badge">{item.badge}</span> : null}
+            </button>
+          ))}
+        </nav>
+      )}
 
       <div className="vsx-header-spacer" />
 
-      <div className="vsx-header-right">
-        <div className="vsx-header-account">
-          <span className="vsx-header-account-name" title={orgName}>{orgName}</span>
-          <span className="vsx-header-account-email" title={orgEmail}>{orgEmail}</span>
-        </div>
-
-        <div style={{ position: 'relative' }}>
-          <div className="vsx-header-avatar" onClick={handleAvatarClick} role="button" tabIndex={0}>
-            {firstLetter}
+      <div className="vsx-header-right" style={{ position: 'relative' }}>
+        <div className="vsx-header-user-card" onClick={handleAvatarClick} role="button" tabIndex={0}>
+          <div className="vsx-header-account">
+            <span className="vsx-header-account-name" title={orgName}>{orgName || 'Admin Portal'}</span>
+            <span className="vsx-header-account-email" title={orgEmail}>{orgEmail || 'System Administrator'}</span>
           </div>
-
-          {isDropdownOpen && (
-            <div ref={dropdownRef} className="vsx-profile-dropdown">
-              <button className="vsx-dropdown-item" onClick={handleEditProfile}>
-                <IconEdit />
-                <span>Edit Profile</span>
-              </button>
-              <button className="vsx-dropdown-item" onClick={handleResetPassword}>
-                <IconLock />
-                <span>Reset Password</span>
-              </button>
-              <button className="vsx-dropdown-item" onClick={handleSupport}>
-                <IconHelpCircle />
-                <span>Support</span>
-              </button>
-            </div>
-          )}
+          <div className="vsx-header-avatar">
+            {firstLetter || 'A'}
+          </div>
         </div>
+
+        {isDropdownOpen && (
+          <div ref={dropdownRef} className="vsx-profile-dropdown">
+            <button className="vsx-dropdown-item" onClick={handleCompanyProfile}>
+              <IconBuilding />
+              <span>Company Profile</span>
+            </button>
+            <button className="vsx-dropdown-item" onClick={handleEditProfile}>
+              <IconEdit />
+              <span>Edit Profile</span>
+            </button>
+            <button className="vsx-dropdown-item" onClick={handleResetPassword}>
+              <IconLock />
+              <span>Reset Password</span>
+            </button>
+            <button className="vsx-dropdown-item" onClick={handleSupport}>
+              <IconHelpCircle />
+              <span>Support</span>
+            </button>
+            <div className="vsx-dropdown-divider" />
+            <button className="vsx-dropdown-item vsx-dropdown-item-danger" onClick={handleLogoutClick}>
+              <IconLogOut />
+              <span>Log Out</span>
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

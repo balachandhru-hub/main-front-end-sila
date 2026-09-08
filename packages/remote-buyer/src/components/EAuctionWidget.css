@@ -1,0 +1,567 @@
+/* ==========================================================================
+   SAP Ariba Live e-Auction Sourcing Cockpit Theme & Styles
+   ========================================================================== */
+
+.eauction-floating-bar {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9990;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Trigger Button (SAP Ariba Green Accent Pill) */
+.eauction-trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background: #ffffff;
+  color: #0f172a;
+  border: 2px solid #10b981;
+  border-radius: 9999px;
+  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.eauction-trigger-btn:hover {
+  background: #0057b8;
+  color: #ffffff;
+  border-color: #00428c;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px -4px rgba(0, 87, 184, 0.35), 0 10px 15px -5px rgba(0, 0, 0, 0.15);
+}
+
+.eauction-pulse-dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: eauction-pulse 1.8s infinite;
+}
+
+@keyframes eauction-pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.eauction-badge-count {
+  background: #10b981;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  line-height: 1.2;
+}
+
+/* Hover Preview Card (SAP Ariba Light Fiori Popover) */
+.eauction-preview-popover {
+  position: absolute;
+  bottom: calc(100% + 0.75rem);
+  right: 0;
+  width: 22rem;
+  background: #ffffff;
+  color: #0f172a;
+  border: 2px solid #10b981;
+  border-radius: 0.875rem;
+  padding: 1.125rem;
+  box-shadow: 0 20px 30px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+  animation: eauction-slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+
+@keyframes eauction-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.eauction-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.625rem;
+  margin-bottom: 0.75rem;
+}
+
+.eauction-preview-title {
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: #0057b8;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.eauction-live-status {
+  font-size: 0.71875rem;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.375rem;
+  font-weight: 700;
+}
+
+.eauction-preview-item {
+  background: #f8fafc;
+  border-radius: 0.625rem;
+  padding: 0.75rem;
+  margin-bottom: 0.625rem;
+  border-left: 3px solid #10b981;
+  border-top: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.eauction-preview-item-title {
+  font-size: 0.84375rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eauction-preview-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.eauction-bid-price {
+  color: #047857;
+  font-weight: 700;
+}
+
+.eauction-timer {
+  color: #d97706;
+  font-weight: 700;
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.eauction-enter-btn {
+  width: 100%;
+  padding: 0.625rem;
+  background: #0057b8;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: background 0.2s ease;
+  margin-top: 0.5rem;
+}
+
+.eauction-enter-btn:hover {
+  background: #00428c;
+}
+
+/* ==========================================================================
+   Full SAP Ariba e-Auction Cockpit Modal View (SAP Fiori Horizon Light Theme)
+   ========================================================================== */
+
+.eauction-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: eauction-fade-in 0.2s ease;
+}
+
+@keyframes eauction-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.eauction-portal-container {
+  width: 100%;
+  max-width: 1400px;
+  height: 92vh;
+  max-height: 920px;
+  background: #f8fafc;
+  color: #0f172a;
+  border-radius: 0.875rem;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* SAP Ariba Top Navigation Header Bar */
+.eauction-portal-header {
+  height: 3.75rem;
+  background: #0057b8; /* Signature SAP Ariba Blue Header */
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.eauction-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.eauction-logo-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  background: #ffffff;
+  color: #0057b8;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 1.25rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.eauction-portal-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.eauction-project-banner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 0.375rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.eauction-project-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+
+.eauction-portal-close {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.eauction-portal-close:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+/* Layout Main Body */
+.eauction-portal-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Left Sidebar (SAP Fiori Filter Panel) */
+.eauction-left-sidebar {
+  width: 16rem;
+  background: #ffffff;
+  border-right: 1px solid #cbd5e1;
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.eauction-section-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.eauction-sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.eauction-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-weight: 500;
+}
+
+.eauction-sidebar-item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.eauction-sidebar-item.active {
+  background: #eff6ff;
+  color: #0057b8;
+  font-weight: 700;
+  border-left: 3px solid #0057b8;
+}
+
+.eauction-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.eauction-filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: #334155;
+  cursor: pointer;
+}
+
+/* Central Workspace Area */
+.eauction-main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 1.25rem;
+  gap: 1.25rem;
+  background: #f8fafc;
+}
+
+/* SAP Fiori Light Panel Card */
+.eauction-panel-light {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.625rem;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.eauction-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.875rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.eauction-panel-title-text {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: 0.01em;
+}
+
+/* SAP Ariba Bids Table */
+.eauction-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.eauction-table th {
+  text-align: left;
+  padding: 0.625rem 0.75rem;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.75rem;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.eauction-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #0f172a;
+  vertical-align: middle;
+}
+
+.eauction-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 0.25rem;
+  font-weight: 800;
+  font-size: 0.8125rem;
+}
+
+.rank-1 { background: #047857; color: #ffffff; }
+.rank-2 { background: #d97706; color: #ffffff; }
+.rank-3 { background: #64748b; color: #ffffff; }
+.rank-4 { background: #475569; color: #ffffff; }
+
+.eauction-action-btn {
+  padding: 0.35rem 0.75rem;
+  background: #eff6ff;
+  color: #0057b8;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.eauction-action-btn:hover {
+  background: #0057b8;
+  color: #ffffff;
+}
+
+/* Live Leaderboard Bids Overlay Card */
+.eauction-bids-overlay-card {
+  position: relative;
+  background: #f8fafc;
+  border: 1.5px solid #10b981;
+  border-radius: 0.625rem;
+  padding: 0.875rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.eauction-bids-title {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #047857;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.625rem;
+}
+
+/* Bottom Split Layout */
+.eauction-grid-split {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.25rem;
+}
+
+/* Chat & Discussion */
+.eauction-chat-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.eauction-chat-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  background: #f1f5f9;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  font-size: 0.8125rem;
+}
+
+.eauction-chat-avatar {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.71875rem;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.avatar-red { background: #ef4444; }
+.avatar-gold { background: #f59e0b; }
+.avatar-teal { background: #0d9488; }
+.avatar-blue { background: #0057b8; }
+
+/* Awarding Panel */
+.eauction-award-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.eauction-btn-confirm {
+  width: 100%;
+  padding: 0.625rem;
+  background: #047857;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.eauction-btn-confirm:hover {
+  background: #065f46;
+}
