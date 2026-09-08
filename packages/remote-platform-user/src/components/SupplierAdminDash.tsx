@@ -773,6 +773,8 @@ const SupplierAdminDash: React.FC = () => {
     tax: number;
     taxType: string;
     quotedPrice: number;
+    subTotal: number;
+    quotedAmount: number;
   }
   const [quoteLineItems, setQuoteLineItems] = useState<{ [supplierRFQItemId: string]: QuoteLineItem }>({});
 
@@ -819,15 +821,18 @@ const SupplierAdminDash: React.FC = () => {
       setQuoteItemPrices(prices);
       if (!selectedRfq.addLotOption) {
         const lineItems: { [supplierRFQItemId: string]: QuoteLineItem } = {};
-        selectedRfq.items?.forEach((item) => {
+        selectedRfq.items?.forEach((item, idx) => {
           const itemKey = item.supplierRFQItemId;
           if (!itemKey) return;
-          const matchedOwnItem = ownQuotation?.supplierQuotationItems?.find(
-            (qi) => qi.supplierRFQItemId === itemKey
-          );
-          const matchedRfqItem = selectedRfq.supplierQuotationItems?.find(
-            (qi) => qi.supplierRFQItemId === itemKey
-          );
+          // The backend doesn't always populate supplierRFQItemId reliably on these
+          // arrays (it can come back as a placeholder GUID), so fall back to
+          // matching by position — the items are returned in the same order.
+          const matchedOwnItem =
+            ownQuotation?.supplierQuotationItems?.find((qi) => qi.supplierRFQItemId === itemKey) ||
+            ownQuotation?.supplierQuotationItems?.[idx];
+          const matchedRfqItem =
+            selectedRfq.supplierQuotationItems?.find((qi) => qi.supplierRFQItemId === itemKey) ||
+            selectedRfq.supplierQuotationItems?.[idx];
           const source = matchedOwnItem || matchedRfqItem;
           lineItems[itemKey] = {
             deliveryCharge: source?.deliveryCharge ?? 0,
@@ -837,6 +842,8 @@ const SupplierAdminDash: React.FC = () => {
             tax: source?.tax ?? 0,
             taxType: source?.taxType || "PERCENTAGE",
             quotedPrice: source?.quotedPrice ?? 0,
+            subTotal: source?.subTotal ?? 0,
+            quotedAmount: source?.quotedAmount ?? 0,
           };
         });
         setQuoteLineItems(lineItems);
@@ -861,12 +868,6 @@ const SupplierAdminDash: React.FC = () => {
     }
   }, [selectedRfq, ownQuotation]);
 
-  const handleItemPriceChange = (key: string, value: number) => {
-    const updatedPrices = { ...quoteItemPrices, [key]: value };
-    setQuoteItemPrices(updatedPrices);
-  };
-
-
   const handleLineItemFieldChange = (
     supplierRFQItemId: string,
     field: keyof QuoteLineItem,
@@ -881,6 +882,8 @@ const SupplierAdminDash: React.FC = () => {
         tax: 0,
         taxType: "PERCENTAGE",
         quotedPrice: 0,
+        subTotal: 0,
+        quotedAmount: 0,
       };
       const isNumericField = field === "deliveryCharge" || field === "discount" || field === "tax" || field === "quotedPrice";
       return {
@@ -1470,13 +1473,10 @@ const SupplierAdminDash: React.FC = () => {
                             <th>Material Info</th>
                             <th>Code</th>
                             <th style={{ textAlign: 'left' }}>Qty Required</th>
-                            <th style={{ textAlign: 'left', width: '130px' }}>Your Unit Quote</th>
                           </tr>
                         </thead>
                         <tbody>
                           {selectedRfq.items?.map((item, idx) => {
-                            const key = item.id || item.buyerRFQItemId || `item-${idx}`;
-                            const price = quoteItemPrices[key] ?? 0;
                             return (
                               <tr key={idx}>
                                 <td>
@@ -1489,27 +1489,6 @@ const SupplierAdminDash: React.FC = () => {
                                 </td>
                                 <td style={{ textAlign: 'left', fontWeight: 600, color: '#0f172a' }}>
                                   {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
-                                </td>
-                                <td>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    className="pud-rfq-item-input"
-                                    value={price || ""}
-                                    onChange={(e) => handleItemPriceChange(key, parseFloat(e.target.value) || 0)}
-                                    placeholder="0.00"
-                                    style={{
-                                      width: '110px',
-                                      padding: '6px 10px',
-                                      border: '1px solid #cbd5e1',
-                                      borderRadius: '6px',
-                                      fontSize: '13px',
-                                      fontWeight: 600,
-                                      color: '#0f172a'
-                                    }}
-                                    required
-                                  />
                                 </td>
                               </tr>
                             );
@@ -1532,7 +1511,9 @@ const SupplierAdminDash: React.FC = () => {
                               <th style={{ textAlign: 'left' }}>Discount Type</th>
                               <th style={{ textAlign: 'left' }}>Tax</th>
                               <th style={{ textAlign: 'left' }}>Tax Type</th>
-                              <th style={{ textAlign: 'left', width: '130px' }}>Quoted Price</th>
+                              <th style={{ textAlign: 'left', width: '110px' }}>Quoted Price</th>
+                              <th style={{ textAlign: 'left', width: '110px' }}>Sub Total</th>
+                              <th style={{ textAlign: 'left', width: '110px' }}>Quoted Amount</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1546,6 +1527,8 @@ const SupplierAdminDash: React.FC = () => {
                                 tax: 0,
                                 taxType: "PERCENTAGE",
                                 quotedPrice: 0,
+                                subTotal: 0,
+                                quotedAmount: 0,
                               };
                               return (
                                 <tr key={itemKey}>
@@ -1639,6 +1622,12 @@ const SupplierAdminDash: React.FC = () => {
                                       required
                                     />
                                   </td>
+                                  <td style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px' }}>
+                                    {line.subTotal.toFixed(2)}
+                                  </td>
+                                  <td style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px' }}>
+                                    {line.quotedAmount.toFixed(2)}
+                                  </td>
                                 </tr>
                               );
                             })}
@@ -1646,19 +1635,11 @@ const SupplierAdminDash: React.FC = () => {
                         </table>
                       </div>
 
-                      {/* Total shown outside the per-material table */}
                       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '16px 20px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '16px' }}>
                         <span style={{ fontSize: '13px', color: '#1e293b', fontWeight: 700 }}>Total Price Quote</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          className="pud-rfq-form-input"
-                          value={quoteTotalPrice}
-                          onChange={(e) => handleOtherFieldChange("totalPrice", e.target.value)}
-                          placeholder="0.00"
-                          style={{ width: '180px', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '16px', fontWeight: 700, color: '#16a34a', textAlign: 'right' }}
-                          required
-                        />
+                        <span style={{ fontSize: '16px', fontWeight: 700, color: '#16a34a' }}>
+                          {Number(quoteTotalPrice).toFixed(2)}
+                        </span>
                       </div>
                     </>
                   )}

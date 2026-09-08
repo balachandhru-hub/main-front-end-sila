@@ -326,6 +326,8 @@ export interface RFQSupplierQuotationItem {
   discountType?: string;
   tax?: number;
   taxType?: string;
+  subTotal?: number;
+  quotedAmount?: number;
 }
 
 export interface RFQDetailResponse {
@@ -462,14 +464,18 @@ export interface SupplierQuotationByIdItem {
   isLead?: boolean;
   supplierQuotationItems: {
     quotedPrice: number;
-    itemQutationId: string;
+    itemQuotationId?: string;
     supplierRFQItemId?: string;
+    buyerRFQItemId?: string;
     deliveryCharge?: number;
     deliveryType?: string;
     discount?: number;
     discountType?: string;
     tax?: number;
     taxType?: string;
+    subTotal?: number;
+    quotedAmount?: number;
+    lineNumber?: number;
   }[];
 }
 
