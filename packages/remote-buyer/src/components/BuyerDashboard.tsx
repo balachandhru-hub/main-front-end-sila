@@ -6,10 +6,10 @@ import Models from "./Models.tsx";
 import Header from "./Header";
 import QsAns from "./Qsans.tsx";
 import QuotationSummaryTable from "./QuotationSummaryTable.tsx";
-import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, fetchBuyerAsset } from "../api/Buyerapi";
+import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, fetchBuyerAsset, updateRfqStatus } from "../api/Buyerapi";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
 import QuotationComparisonCard from "../../../remote-platform-user/src/components/QuotationComparisonCard.tsx";
-import { CompanyProfile } from '@vosox/shared-ui';
+import { CompanyProfile, toastService } from '@vosox/shared-ui';
 import { useAuth } from '../../../host-app/src/AuthContext.tsx';
 import type { SupplierQuotationComparisonResponse } from "../../../remote-platform-user/src/api/networkAdminApi";
 import { fetchSupplierQuotationComparison } from "../../../remote-platform-user/src/api/networkAdminApi";
@@ -203,6 +203,21 @@ const IconSend = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m22 2-7 20-4-9-9-4Z" />
     <path d="M22 2 11 13" />
+  </svg>
+);
+
+const IconBidCompare = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="20" x2="12" y2="10" />
+    <line x1="18" y1="20" x2="18" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="16" />
+  </svg>
+);
+
+const IconFreezeLock = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
   </svg>
 );
 
@@ -494,8 +509,10 @@ const BuyersDashboard: React.FC = () => {
   const RFQ_PAGE_SIZE = 10;
 
   const [fullPageRfq, setFullPageRfq] = useState<any | null>(null);
+  const [fullPageRfqId, setFullPageRfqId] = useState<string | null>(null);
   const [loadingFullPageRfq, setLoadingFullPageRfq] = useState(false);
   const [fullPageRfqError, setFullPageRfqError] = useState<string | null>(null);
+  const [freezingBid, setFreezingBid] = useState(false);
 
   const handleOpenAllRfqs = async () => {
     setActiveNav("activeRFQs");
@@ -566,6 +583,7 @@ const BuyersDashboard: React.FC = () => {
 
   const handleViewRfqDetailsFullPage = async (rfqId: string) => {
     setRfqPageView("rfqDetail");
+    setFullPageRfqId(rfqId);
     setLoadingFullPageRfq(true);
     setFullPageRfqError(null);
     try {
@@ -645,7 +663,23 @@ const BuyersDashboard: React.FC = () => {
   const handleBackToAllRfqs = () => {
     setRfqPageView("allRfqs");
     setFullPageRfq(null);
+    setFullPageRfqId(null);
     setFullPageRfqError(null);
+  };
+
+  const handleFreezeBid = async () => {
+    if (!fullPageRfqId || freezingBid || fullPageRfq?.status === "Freezing") return;
+    setFreezingBid(true);
+    try {
+      await updateRfqStatus({ rfqId: fullPageRfqId, status: "Freezing" });
+      const updated = await fetchBuyerRFQById(fullPageRfqId);
+      setFullPageRfq(updated);
+      toastService.success("Bid frozen. Suppliers can no longer submit quotations for this RFQ.");
+    } catch (err: any) {
+      toastService.error(err?.message || "Failed to freeze the bid.");
+    } finally {
+      setFreezingBid(false);
+    }
   };
 
   // HANDLER FOR QUOTATION COMPARISON
@@ -956,14 +990,25 @@ const BuyersDashboard: React.FC = () => {
                       <div className="pud-modal-meta">
                         <span><IconCalendar /> Closes: {new Date(fullPageRfq.endDate).toLocaleDateString()}</span>
                         <span><IconPin /> Delivery: {fullPageRfq.deliveryLocation}</span>
-                        <button
-                          className="pud-btn pud-btns-outline"
-                          onClick={() => handleOpenQuotationComparison(fullPageRfq)}
-                          title="View Supplier Quotations"
-                          style={{ marginLeft: 'auto' }}
-                        >
-                          📊 Bid Comparison
-                        </button>
+                        <div className="pud-rfq-header-actions">
+                          <button
+                            className="pud-btn pud-btn-outline"
+                            onClick={() => handleOpenQuotationComparison(fullPageRfq)}
+                            title="View Supplier Quotations"
+                          >
+                            <IconBidCompare /> Bid Comparison
+                          </button>
+                          <button
+                            type="button"
+                            className="pud-btn pud-btn-freeze"
+                            onClick={handleFreezeBid}
+                            disabled={freezingBid || fullPageRfq.status === "Freezing"}
+                            title={fullPageRfq.status === "Freezing" ? "This RFQ's bid has already been frozen" : "Freeze the bid to stop accepting new quotations"}
+                          >
+                            <IconFreezeLock />
+                            {freezingBid ? "Freezing..." : fullPageRfq.status === "Freezing" ? "Bid Frozen" : "Freeze Bid"}
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

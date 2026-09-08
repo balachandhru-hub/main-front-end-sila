@@ -577,6 +577,24 @@ export const fetchBuyerRFQById = async (rfqId: string): Promise<BuyerRFQDetailRe
   }
 };
 
+export interface UpdateRfqStatusPayload {
+  rfqId: string;
+  status: string;
+}
+
+export const updateRfqStatus = async (payload: UpdateRfqStatusPayload): Promise<any> => {
+  try {
+    const response = await axiosInstance.put('/api/v1/buyer/rfq-status', payload);
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to update RFQ status (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
 export const fetchBuyerCatalog = async (payload: {
   segment?: number;
   family?: number;
