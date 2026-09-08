@@ -1,0 +1,242 @@
+.vosox-dtp-container {
+    position: relative;
+    width: 100%;
+}
+
+.vosox-dtp-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid #d7dbe1;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: #1f2937;
+    background: #ffffff;
+    font-family: inherit;
+    box-sizing: border-box;
+    cursor: pointer;
+    user-select: none;
+}
+
+.vosox-dtp-trigger-error {
+    border-color: #ef4444;
+}
+
+.vosox-dtp-trigger-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #f3f4f6;
+    color: #9ca3af;
+}
+
+.vosox-dtp-trigger-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vosox-dtp-placeholder {
+    color: #9ca3af;
+}
+
+.vosox-dtp-icon {
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+.vosox-dtp-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 50;
+    background: #ffffff;
+    border: 1px solid #e6e8ec;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+    padding: 14px;
+    display: inline-flex;
+    flex-direction: column;
+    width: max-content;
+    max-width: 94vw;
+}
+
+.vosox-dtp-body {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.vosox-dtp-calendar {
+    width: 224px;
+    flex-shrink: 0;
+}
+
+.vosox-dtp-cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.vosox-dtp-cal-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.vosox-dtp-nav-btn {
+    border: none;
+    background: #f3f4f6;
+    color: #374151;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vosox-dtp-nav-btn:hover {
+    background: #e5e7eb;
+}
+
+.vosox-dtp-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 4px;
+}
+
+.vosox-dtp-weekdays span {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-align: center;
+}
+
+.vosox-dtp-days-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.vosox-dtp-day-cell {
+    border: none;
+    background: transparent;
+    color: #1f2937;
+    font-size: 12px;
+    padding: 6px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+}
+
+.vosox-dtp-day-blank {
+    cursor: default;
+}
+
+.vosox-dtp-day-cell:not(:disabled):hover {
+    background: #eef2ff;
+}
+
+.vosox-dtp-day-selected {
+    background: #2f6feb;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.vosox-dtp-day-cell:disabled {
+    color: #d1d5db;
+    cursor: not-allowed;
+}
+
+.vosox-dtp-time {
+    display: flex;
+    gap: 10px;
+    border-left: 1px solid #eef0f3;
+    padding-left: 14px;
+}
+
+.vosox-dtp-time-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 52px;
+}
+
+.vosox-dtp-time-col-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: #9ca3af;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.vosox-dtp-time-col-list {
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+}
+
+.vosox-dtp-time-cell {
+    border: none;
+    background: transparent;
+    color: #1f2937;
+    font-size: 12px;
+    padding: 6px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+}
+
+.vosox-dtp-time-cell:not(:disabled):hover {
+    background: #eef2ff;
+}
+
+.vosox-dtp-time-selected {
+    background: #2f6feb;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.vosox-dtp-time-cell:disabled {
+    color: #d1d5db;
+    cursor: not-allowed;
+}
+
+.vosox-dtp-footer {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid #eef0f3;
+    padding-top: 10px;
+    margin-top: 12px;
+}
+
+.vosox-dtp-done-btn {
+    border: none;
+    background: #2f6feb;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.vosox-dtp-done-btn:hover {
+    background: #2559c7;
+}
