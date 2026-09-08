@@ -253,6 +253,8 @@ export interface RFQMasterDataItem {
   deliveryLocation: string;
   organizationName: string;
   rfqId: string;
+  supplierRFQId?: string;
+  status?: string | null;
 }
 
 export interface RFQDetailDocument {
@@ -455,9 +457,22 @@ export interface SupplierQuotationByIdItem {
   status: string;
   quotationId: string;
   isLead?: boolean;
+  currency?: string;
   supplierQuotationItems: {
     quotedPrice: number;
-    itemQutationId: string;
+    supplierRFQItemId?: string;
+    buyerRFQItemId?: string;
+    itemQuotationId?: string;
+    itemQutationId?: string;
+    deliveryCharge?: number | null;
+    deliveryType?: string | null;
+    discount?: number | null;
+    discountType?: string | null;
+    tax?: number | null;
+    taxType?: string | null;
+    quotedAmount?: number;
+    subTotal?: number;
+    lineNumber?: number;
   }[];
 }
 

@@ -18,13 +18,7 @@ import type { ErrorResponseDto } from "../../../remote-platform-user/src/dto/pla
 
 /* ---------------------------------- Icons ---------------------------------- */
 
-interface StatCard {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  linkText: string;
-  colorClass: string;
-}
+
 
 interface POItem {
   code: string;
@@ -119,31 +113,10 @@ const NavIconHome = () => (
   </svg>
 );
 
-const NavIconBag = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-    <path d="M3 6h18" />
-    <path d="M16 10a4 4 0 0 1-8 0" />
-  </svg>
-);
-
-const NavIconMessage = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-  </svg>
-);
-
 const NavIconBuilding = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="4" y="2" width="16" height="20" rx="1" />
     <path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01" />
-  </svg>
-);
-
-const NavIconSettings = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="3" />
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
   </svg>
 );
 
@@ -285,47 +258,40 @@ const NavIconFileCheck = () => (
   </svg>
 );
 
-const NavIconUsers = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-);
-
-const NavIconBarChart = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="20" x2="12" y2="10" />
-    <line x1="18" y1="20" x2="18" y2="4" />
-    <line x1="6" y1="20" x2="6" y2="16" />
-  </svg>
-);
-
 /* ---------------------------------- Static data ---------------------------------- */
 
-const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
-  { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
-  { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
-  { key: "activeRFQs", icon: <NavIconFile />, label: "Active RFQs" },
-  { key: "evaluateQuotations", icon: <NavIconFileCheck />, label: "Evaluate Quotations" },
-  { key: "product", icon: <NavIconFileCheck />, label: "Product" },
-  { key: "purchaseOrders", icon: <NavIconBag />, label: "Purchase Orders" },
+const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number }[] = [
+  { key: "dashboard", icon: <NavIconHome />, label: "Dashboard", section: "MAIN" },
+  { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ", section: "SOURCING & ORDERS" },
+  { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog", section: "DIRECTORY & CATALOG" },
   { key: "models", icon: <NavIconModels />, label: "Models" },
-  { key: "supplierDirectory", icon: <NavIconUsers />, label: "Supplier Directory" },
-  { key: "spendReports", icon: <NavIconBarChart />, label: "Procurement Spend Reports" },
-  { key: "messages", icon: <NavIconMessage />, label: "Messages" },
-  { key: "companyProfile", icon: <NavIconBuilding />, label: "Company Profile" },
-  { key: "settings", icon: <NavIconSettings />, label: "Settings" },
 ];
 
+interface StatCard {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  linkText: string;
+  cardClass: string;
+  iconClass: string;
+  urgencyBadge?: string;
+}
+
+interface POItem {
+  code: string;
+  status: "ACCEPTED" | "DELIVERED";
+  company: string;
+  orderDate: string;
+  amount: string;
+}
+
 const statCards: StatCard[] = [
-  { icon: <IconFile />, label: "ACTIVE RFQS", value: 3, linkText: "Manage RFQs >", colorClass: "pud-stat-icon-blue" },
-  { icon: <IconMail />, label: "QUOTATIONS RECEIVED", value: 5, linkText: "Review bids >", colorClass: "pud-stat-icon-indigo" },
-  { icon: <IconTrend />, label: "SUPPLIERS ENGAGED", value: 8, linkText: "View directory", colorClass: "pud-stat-icon-green" },
-  { icon: <IconBag />, label: "PURCHASE ORDERS", value: 4, linkText: "Track orders >", colorClass: "pud-stat-icon-purple" },
-  { icon: <IconInvoice />, label: "PENDING INVOICES", value: 2, linkText: "Invoice list >", colorClass: "pud-stat-icon-orange" },
-  { icon: <IconBell />, label: "NOTIFICATIONS", value: 3, linkText: "Inquiries & Alerts >", colorClass: "pud-stat-icon-teal" },
+  { icon: <IconFile />, label: "Active RFQs", value: 3, linkText: "Manage RFQs >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
+  { icon: <IconMail />, label: "Quotations received", value: 5, linkText: "Review bids >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
+  { icon: <IconTrend />, label: "Suppliers engaged", value: 8, linkText: "View directory >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
+  { icon: <IconBag />, label: "Purchase orders", value: 4, linkText: "Track orders >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
+  { icon: <IconInvoice />, label: "Invoices", value: 2, linkText: "Invoice list >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "Needs action" },
+  { icon: <IconBell />, label: "Notifications", value: 3, linkText: "Inquiries & alerts >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "New alerts" },
 ];
 
 const poItems: POItem[] = [
@@ -515,7 +481,7 @@ const BuyersDashboard: React.FC = () => {
   const [freezingBid, setFreezingBid] = useState(false);
 
   const handleOpenAllRfqs = async () => {
-    setActiveNav("activeRFQs");
+    setActiveNav("allRfqs");
     setRfqPageView("allRfqs");
     if (allRfqsLoaded || loadingAllRfqs) return;
 
@@ -573,8 +539,13 @@ const BuyersDashboard: React.FC = () => {
 
   const handleNavClick = (key: string) => {
     setIsMobileSidebarOpen(false);
-    if (key === "activeRFQs") {
+    if (key === "activeRFQs" || key === "allRfqs") {
       handleOpenAllRfqs();
+      return;
+    }
+    if (key === "rfqDetail") {
+      setRfqPageView("rfqDetail");
+      setActiveNav("rfqDetail");
       return;
     }
     setActiveNav(key);
@@ -583,6 +554,7 @@ const BuyersDashboard: React.FC = () => {
 
   const handleViewRfqDetailsFullPage = async (rfqId: string) => {
     setRfqPageView("rfqDetail");
+    setActiveNav("rfqDetail");
     setFullPageRfqId(rfqId);
     setLoadingFullPageRfq(true);
     setFullPageRfqError(null);
@@ -797,9 +769,26 @@ const BuyersDashboard: React.FC = () => {
     }
   };
 
+  const headerNavItems = React.useMemo(() => {
+    const items = [...navItems.filter((item) => item.key !== "activeRFQs")];
+
+    if (rfqPageView === "rfqDetail") {
+      const createIndex = items.findIndex((i) => i.key === "createRFQ");
+      const rfqLabel = fullPageRfq?.rfqNumber ? `View RFQ (${fullPageRfq.rfqNumber})` : "View RFQ";
+      const detailItem = { key: "rfqDetail", icon: <NavIconFile />, label: rfqLabel };
+      if (createIndex !== -1) {
+        items.splice(createIndex + 1, 0, detailItem);
+      } else {
+        items.unshift(detailItem);
+      }
+    }
+
+    return items;
+  }, [rfqPageView, fullPageRfq]);
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9" }}>
-      <Header />
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9", paddingTop: "5.25rem" }}>
+      <Header navItems={headerNavItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout} />
 
       <div
         className={`pud-shell${isMobileSidebarOpen ? " pud-sidebar-open-mobile" : ""}`}
@@ -825,15 +814,19 @@ const BuyersDashboard: React.FC = () => {
         <aside className="pud-sidebar">
           <nav className="pud-nav">
             {navItems.map((item) => (
-              <div
-                key={item.key}
-                className={`pud-nav-item${activeNav === item.key ? " pud-nav-item-active" : ""}`}
-                onClick={() => handleNavClick(item.key)}
-              >
-                <span className="pud-nav-icon">{item.icon}</span>
-                <span className="pud-nav-label">{item.label}</span>
-                {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
-              </div>
+              <React.Fragment key={item.key}>
+                {item.section && (
+                  <div className="pud-nav-section-title">{item.section}</div>
+                )}
+                <div
+                  className={`pud-nav-item${activeNav === item.key ? " pud-nav-item-active" : ""}`}
+                  onClick={() => handleNavClick(item.key)}
+                >
+                  <span className="pud-nav-icon">{item.icon}</span>
+                  <span className="pud-nav-label">{item.label}</span>
+                  {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
+                </div>
+              </React.Fragment>
             ))}
             <div
               className="pud-nav-item pud-nav-item-logout"
@@ -867,17 +860,35 @@ const BuyersDashboard: React.FC = () => {
             ) : activeNav === "template" ? (
               <UserTemplate />
             ) : rfqPageView === "allRfqs" ? (
-              <>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                  <div>
-                    <h1 className="pud-title">All RFQs</h1>
-                    <p className="pud-subtitle" style={{ marginBottom: 0 }}>
-                      Complete list of RFQs you've posted, awaiting supplier quotations.
-                    </p>
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.03)' }}>
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={handleBackToDashboard}
+                      title="Back to Dashboard"
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        padding: 0,
+                        margin: 0,
+                        cursor: 'pointer',
+                        color: '#0f172a',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        outline: 'none',
+                      }}
+                    >
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <h1 className="pud-title" style={{ margin: 0 }}>All RFQs</h1>
                   </div>
-                  <button className="pud-btn pud-btn-outline" onClick={handleBackToDashboard}>
-                    ← Back to Dashboard
-                  </button>
+                  <p className="pud-subtitle" style={{ margin: 0, marginTop: '4px' }}>
+                    Complete list of RFQs you've posted, awaiting supplier quotations.
+                  </p>
                 </div>
 
                 {loadingAllRfqs ? (
@@ -905,12 +916,15 @@ const BuyersDashboard: React.FC = () => {
                             <th>Organization</th>
                             <th>Delivery Location</th>
                             <th>Closing Date</th>
-                            <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
                           {allRfqsList.map((rfq: any, idx: number) => (
-                            <tr key={rfq.rfqId || idx}>
+                            <tr
+                              key={rfq.rfqId || idx}
+                              onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                              style={{ cursor: 'pointer' }}
+                            >
                               <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
                               <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
                               <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
@@ -920,14 +934,6 @@ const BuyersDashboard: React.FC = () => {
                                 {rfq.endDate
                                   ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
                                   : "—"}
-                              </td>
-                              <td>
-                                <button
-                                  className="pud-btn pud-btn-outline"
-                                  onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                                >
-                                  View RFQ Details
-                                </button>
                               </td>
                             </tr>
                           ))}
@@ -960,7 +966,7 @@ const BuyersDashboard: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </>
+              </div>
             ) : rfqPageView === "rfqDetail" ? (
               <>
                 <div className="pud-modal pud-rfq-fullpage">
@@ -1277,26 +1283,37 @@ const BuyersDashboard: React.FC = () => {
               />
             ) : (
               <>
-                <h1 className="pud-title">Buyer Operations Command</h1>
-                <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
-
-                <div className="pud-status-banner">
-                  <span className="pud-status-dot" />
+                <div className="pud-dashboard-header">
                   <div>
-                    <div className="pud-status-title">Active Approved Buyer Portal Status (100%)</div>
-                    <div className="pud-status-subtext">
-                      Your credentials, certification audit records, and bank routes are verified for secure bidding.
-                    </div>
+                    <h1 className="pud-title">Buyer Operations Command</h1>
+                    <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
+                  </div>
+                  <div className="pud-dashboard-actions">
+                    <button
+                      type="button"
+                      className="pud-btn-create-rfq"
+                      onClick={() => handleNavClick("createRFQ")}
+                    >
+                      <NavIconFilePlus />
+                      <span>+ Create New RFQ</span>
+                    </button>
                   </div>
                 </div>
 
                 <div className="pud-stats-grid">
                   {statCards.map((stat) => (
-                    <div className="pud-stat-card" key={stat.label}>
-                      <div className={`pud-stat-icon ${stat.colorClass}`}>{stat.icon}</div>
+                    <div className={`pud-stat-card ${stat.cardClass}`} key={stat.label}>
+                      <div className="pud-stat-top">
+                        <div className={`pud-stat-icon ${stat.iconClass}`}>{stat.icon}</div>
+                        {stat.urgencyBadge && (
+                          <span className="pud-urgency-badge">⚡ {stat.urgencyBadge}</span>
+                        )}
+                      </div>
                       <div className="pud-stat-label">{stat.label}</div>
                       <div className="pud-stat-value">{stat.value}</div>
-                      <div className="pud-stat-link">{stat.linkText}</div>
+                      <a className="pud-stat-link" href="#" onClick={(e) => { e.preventDefault(); handleNavClick("activeRFQs"); }}>
+                        {stat.linkText}
+                      </a>
                     </div>
                   ))}
                 </div>
@@ -1343,29 +1360,29 @@ const BuyersDashboard: React.FC = () => {
                     ) : (
                       <div className="pud-panel-list">
                         {rfqs.slice(0, visibleRfqCount).map((rfq) => (
-                          <div className="pud-rfq-row" key={rfq.rfqId}>
-                            <div className="pud-rfq-info">
-                              <div className="pud-rfq-meta">
-                                <span className="pud-code-badge">{rfq.rfqNumber}</span>
-                                <span className="pud-dot-sep">•</span>
-                                <span className="pud-company">{rfq.organizationName}</span>
-                              </div>
-                              <div className="pud-rfq-title">{rfq.title}</div>
-                              <div className="pud-rfq-details">
-                                <span>
-                                  <IconCalendar /> Closes: {new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                                </span>
-                                <span>
-                                  <IconPin /> Deliv: {rfq.deliveryLocation}
-                                </span>
-                              </div>
+                          <div
+                            className="pud-rfq-card-item"
+                            key={rfq.rfqId}
+                            onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                            role="button"
+                            tabIndex={0}
+                          >
+                            <div className="pud-rfq-meta">
+                              <span className="pud-code-badge">{rfq.rfqNumber}</span>
+                              <span className="pud-dot-sep">•</span>
+                              <span className="pud-company">{rfq.organizationName}</span>
                             </div>
-                            <button
-                              className="pud-btn pud-btn-outline"
-                              onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                            >
-                              View RFQ Details
-                            </button>
+
+                            <div className="pud-rfq-title pud-rfq-link-title">{rfq.title}</div>
+
+                            <div className="pud-rfq-details">
+                              <span>
+                                <IconCalendar /> Closes: {rfq.endDate ? new Date(rfq.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Open'}
+                              </span>
+                              <span>
+                                <IconPin /> Deliv: {rfq.deliveryLocation}
+                              </span>
+                            </div>
                           </div>
                         ))}
                       </div>

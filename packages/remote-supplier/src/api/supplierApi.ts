@@ -359,6 +359,7 @@ export const fetchRFQMasterData = async (payload: {
   supplierId: string;
   index: number;
   limit: number;
+  status?: string;
 }): Promise<RFQMasterDataItem[] | ErrorResponseDto> => {
   try {
     const response = await supplierInstance.post('/api/v1/supplier/rfq-master-data', payload);
@@ -774,8 +775,21 @@ export const fetchCommodities = async (
 
 export const fetchSupplierCatalog = async (): Promise<SupplierCatalogListItem[] | ErrorResponseDto> => {
   try {
-    const response = await supplierInstance.get<SupplierCatalogListItem[]>('/api/v1/supplier/catalog');
-    return response.data ?? [];
+    const response = await supplierInstance.get<any>('/api/v1/supplier/catalog');
+    const resData = response.data;
+    if (Array.isArray(resData)) {
+      return resData;
+    }
+    if (resData && Array.isArray(resData.data)) {
+      return resData.data;
+    }
+    if (resData && Array.isArray(resData.catalogs)) {
+      return resData.catalogs;
+    }
+    if (resData && Array.isArray(resData.result)) {
+      return resData.result;
+    }
+    return [];
   } catch (error: any) {
     if (error.response?.status === 401) {
       (window as any).handleUnauthorized?.();
@@ -1288,10 +1302,20 @@ export const fetchSupplierCatalogDetail = async (
   catalogId: string
 ): Promise<CatalogDetailResponse | ErrorResponseDto> => {
   try {
-    const response = await supplierInstance.get<CatalogDetailResponse>(
+    const response = await supplierInstance.get<any>(
       `/api/v1/supplier/catalog/${catalogId}`
     );
-    return response.data ?? [];
+    const resData = response.data;
+    if (Array.isArray(resData)) {
+      return resData;
+    }
+    if (resData && Array.isArray(resData.data)) {
+      return resData.data;
+    }
+    if (resData && typeof resData === 'object' && (resData.catalogId || resData.id)) {
+      return [resData];
+    }
+    return [];
   } catch (error: any) {
     if (error.response?.status === 401) {
       (window as any).handleUnauthorized?.();
