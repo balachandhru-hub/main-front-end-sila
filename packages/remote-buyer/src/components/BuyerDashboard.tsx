@@ -733,7 +733,7 @@ const BuyersDashboard: React.FC = () => {
   }, [rfqPageView, fullPageRfq]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f4f6f9", paddingTop: "5.25rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#edeff0", paddingTop: "5.25rem" }}>
       <Header navItems={headerNavItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout} />
 
       <div

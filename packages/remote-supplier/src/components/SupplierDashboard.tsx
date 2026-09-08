@@ -2020,732 +2020,732 @@ const SupplierDashboard: React.FC = () => {
               {notYetOpen
                 ? "This RFQ hasn't opened for bidding yet — check back after the start date."
                 : frozen
-                ? "The buyer has frozen this RFQ's bid. You can no longer submit a quotation."
-                : "This RFQ's submission window has closed. You can no longer submit a quotation."}
-          </div>
-        )}
-
-        {/* Modal Footer */}
-        <div className="pud-modal-footer">
-          <button
-            type="button"
-            className="pud-btn pud-btn-outline"
-            onClick={closeRfqDetail}
-            style={{ marginRight: '10px' }}
-          >
-            Close
-          </button>
-          {selectedRfq && (
-            <button
-              type="submit"
-              className="pud-btn pud-btn-message"
-              disabled={submittingQuote || !canSubmit}
-              style={{ background: '#2563eb', color: '#ffffff' }}
-              title={
-                notYetOpen
-                  ? "This RFQ hasn't opened for bidding yet."
-                  : frozen
-                    ? "The buyer has frozen this RFQ's bid."
-                    : closed
-                      ? "This RFQ's submission window has closed."
-                      : undefined
-              }
-            >
-              {submittingQuote
-                ? "Submitting..."
-                : notYetOpen
-                  ? "Not Yet Open"
-                  : frozen
-                    ? "Bid Frozen"
-                    : closed
-                      ? "Submission Closed"
-                      : "Submit Quotation"}
-            </button>
+                  ? "The buyer has frozen this RFQ's bid. You can no longer submit a quotation."
+                  : "This RFQ's submission window has closed. You can no longer submit a quotation."}
+            </div>
           )}
-        </div>
-      </form >
+
+          {/* Modal Footer */}
+          <div className="pud-modal-footer">
+            <button
+              type="button"
+              className="pud-btn pud-btn-outline"
+              onClick={closeRfqDetail}
+              style={{ marginRight: '10px' }}
+            >
+              Close
+            </button>
+            {selectedRfq && (
+              <button
+                type="submit"
+                className="pud-btn pud-btn-message"
+                disabled={submittingQuote || !canSubmit}
+                style={{ background: '#2563eb', color: '#ffffff' }}
+                title={
+                  notYetOpen
+                    ? "This RFQ hasn't opened for bidding yet."
+                    : frozen
+                      ? "The buyer has frozen this RFQ's bid."
+                      : closed
+                        ? "This RFQ's submission window has closed."
+                        : undefined
+                }
+              >
+                {submittingQuote
+                  ? "Submitting..."
+                  : notYetOpen
+                    ? "Not Yet Open"
+                    : frozen
+                      ? "Bid Frozen"
+                      : closed
+                        ? "Submission Closed"
+                        : "Submit Quotation"}
+              </button>
+            )}
+          </div>
+        </form >
 
       </>
     );
   };
 
-const { notYetOpen, closed, frozen, canSubmit } = useMemo(
-  () => getRfqSubmissionWindowStatus(selectedRfq),
-  [selectedRfq, rfqWindowTick],
-);
-return (
-  <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9', paddingTop: '5.25rem' }}>
-    <Header navItems={navItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout} />
-
-    <div
-      className={`pud-shell${isMobileSidebarOpen ? " pud-sidebar-open-mobile" : ""}`}
-      style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
-    >
-      <button
-        type="button"
-        className="pud-mobile-sidebar-toggle"
-        onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
-        aria-label={isMobileSidebarOpen ? "Close menu" : "Open menu"}
-        aria-expanded={isMobileSidebarOpen}
-      >
-        {isMobileSidebarOpen ? <IconClose /> : <IconMenu />}
-      </button>
+  const { notYetOpen, closed, frozen, canSubmit } = useMemo(
+    () => getRfqSubmissionWindowStatus(selectedRfq),
+    [selectedRfq, rfqWindowTick],
+  );
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9', paddingTop: '5.25rem' }}>
+      <Header navItems={navItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout} />
 
       <div
-        className="pud-sidebar-backdrop"
-        onClick={() => setIsMobileSidebarOpen(false)}
-        aria-hidden="true"
-      />
+        className={`pud-shell${isMobileSidebarOpen ? " pud-sidebar-open-mobile" : ""}`}
+        style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
+      >
+        <button
+          type="button"
+          className="pud-mobile-sidebar-toggle"
+          onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
+          aria-label={isMobileSidebarOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMobileSidebarOpen}
+        >
+          {isMobileSidebarOpen ? <IconClose /> : <IconMenu />}
+        </button>
 
-      <aside className="pud-sidebar">
-        <nav className="pud-nav">
+        <div
+          className="pud-sidebar-backdrop"
+          onClick={() => setIsMobileSidebarOpen(false)}
+          aria-hidden="true"
+        />
 
-          {navItems.map((item) => (
-            <div
-              key={item.key}
-              className={`pud-nav-item${activeNav === item.key ? " pud-nav-item-active" : ""}`}
-              onClick={() => handleNavClick(item.key)}
-            >
-              <span className="pud-nav-icon">{item.icon}</span>
-              <span className="pud-nav-label">{item.label}</span>
-              {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
-            </div>
-          ))}
+        <aside className="pud-sidebar">
+          <nav className="pud-nav">
 
-
-          <Catalog
-            onShowCatalogList={() => setActiveNav("catalogList")}
-            onCloseCatalogList={() => {
-              setActiveNav("dashboard");
-              setRfqPageView("dashboard");
-              setSelectedRfqId(null);
-              setSelectedRfq(null);
-              setRfqDetailError(null);
-            }}
-            fullViewContainer={activeNav === "catalogList" ? catalogViewContainer : null}
-          />
-
-          <div
-            className="pud-nav-item pud-nav-item-logout"
-            style={{
-              marginTop: "auto",
-              opacity: loggingOut ? 0.6 : 1,
-              cursor: loggingOut ? "not-allowed" : "pointer",
-              pointerEvents: loggingOut ? "none" : "auto",
-            }}
-            onClick={handleLogout}
-            role="button"
-            aria-disabled={loggingOut}
-            title={logoutError || undefined}
-          >
-            <span className="bad-nav-item-logout" style={{ transform: "rotate(180deg)" }}>
-              <LogoutIcon />
-            </span>
-            <span className="bad-nav-item-logout">{loggingOut ? "Logging out..." : "Log Out"}</span>
-          </div>
-        </nav>
-      </aside>
-
-      <div className="pud-main">
-        <main className="pud-content">
-          {activeNav === "catalogList" ? (
-            <div ref={setCatalogViewContainer} />
-          ) : rfqPageView === "allRfqs" ? (
-            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.03)' }}>
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <button
-                    type="button"
-                    onClick={handleBackToDashboard}
-                    title="Back to Dashboard"
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      padding: 0,
-                      margin: 0,
-                      cursor: 'pointer',
-                      color: '#0f172a',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      outline: 'none',
-                    }}
-                  >
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M19 12H5M12 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <h1 className="pud-title" style={{ margin: 0 }}>All RFQs</h1>
-                </div>
-                <p className="pud-subtitle" style={{ margin: 0, marginTop: '4px' }}>
-                  Sourcing opportunities matched to your industry categories.
-                </p>
+            {navItems.map((item) => (
+              <div
+                key={item.key}
+                className={`pud-nav-item${activeNav === item.key ? " pud-nav-item-active" : ""}`}
+                onClick={() => handleNavClick(item.key)}
+              >
+                <span className="pud-nav-icon">{item.icon}</span>
+                <span className="pud-nav-label">{item.label}</span>
+                {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
               </div>
+            ))}
 
-              {loadingAllRfqs ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
-                  <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                    <div className="pud-spinner" />
-                    <span>Loading all sourcing opportunities...</span>
-                  </div>
-                </div>
-              ) : allRfqsError && allRfqsList.length === 0 ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>{allRfqsError}</div>
-              ) : allRfqsList.length === 0 ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
-                  No RFQs found.
-                </div>
-              ) : (
-                <>
-                  <div className="pud-rfq-table-container">
-                    <table className="pud-rfq-items-table pud-allrfqs-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '48px' }}>S.No</th>
-                          <th>RFQ Number</th>
-                          <th>Title</th>
-                          <th>Organization</th>
-                          <th>Delivery Location</th>
-                          <th>Closing Date</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allRfqsList.map((rfq: any, idx: number) => (
-                          <tr
-                            key={rfq.rfqId || idx}
-                            onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <td style={{ color: '#94a3b8', fontWeight: 600 }}>
-                              {(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}
-                            </td>
-                            <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
-                            <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
-                            <td>{rfq.organizationName}</td>
-                            <td>{rfq.deliveryLocation}</td>
-                            <td>
-                              {rfq.endDate
-                                ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                                : "—"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
 
-                  <div className="pud-pagination pud-allrfqs-pagination">
-                    <button
-                      type="button"
-                      className={`pud-page-btn${allRfqsPage === 1 || loadingAllRfqs ? " pud-page-btn-disabled" : ""}`}
-                      onClick={handlePreviousRfqPage}
-                      disabled={allRfqsPage === 1 || loadingAllRfqs}
-                      aria-label="Previous RFQ page"
-                    >
-                      <IconChevronLeft />
-                    </button>
-
-                    <span className="pud-page-number">
-                      Page {allRfqsPage}
-                    </span>
-
-                    <button
-                      type="button"
-                      className={`pud-page-btn${!hasNextRfqPage || loadingAllRfqs ? " pud-page-btn-disabled" : ""}`}
-                      onClick={handleNextRfqPage}
-                      disabled={!hasNextRfqPage || loadingAllRfqs}
-                      aria-label="Next RFQ page"
-                    >
-                      <IconChevronRight />
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          ) : rfqPageView === "rfqDetail" ? (
-            <>
-              <div className="pud-rfq-fullpage">
-                {renderRfqDetailInner()}
-              </div>
-            </>
-          ) : activeNav === "companyProfile" ? (
-            <CompanyProfile
-              mode="network-admin"
-              entityLabel="Supplier"
-              fetchProfile={async () => {
-                const profile = await getSupplierProfile();
-                if (profile && 'id' in profile) {
-                  return profile as any;
-                }
-                return null;
+            <Catalog
+              onShowCatalogList={() => setActiveNav("catalogList")}
+              onCloseCatalogList={() => {
+                setActiveNav("dashboard");
+                setRfqPageView("dashboard");
+                setSelectedRfqId(null);
+                setSelectedRfq(null);
+                setRfqDetailError(null);
               }}
-            />) : (
-            // ) : activeNav === "invitations" ? (
-            //   <Invitations />
-            // ) : (
-            <>
-              <div className="pud-dashboard-header">
-                <div>
-                  <h1 className="pud-title">Supplier Operations Command</h1>
-                  <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
-                </div>
-              </div>
+              fullViewContainer={activeNav === "catalogList" ? catalogViewContainer : null}
+            />
 
-              <div className="pud-stats-grid">
-                {statCards.map((stat) => (
-                  <div className={`pud-stat-card ${stat.cardClass}`} key={stat.label}>
-                    <div className="pud-stat-top">
-                      <div className={`pud-stat-icon ${stat.iconClass}`}>{stat.icon}</div>
-                      {stat.urgencyBadge && (
-                        <span className="pud-urgency-badge">⚡ {stat.urgencyBadge}</span>
-                      )}
-                    </div>
-                    <div className="pud-stat-label">{stat.label}</div>
-                    <div className="pud-stat-value">{stat.value}</div>
-                    <div className="pud-stat-link">{stat.linkText}</div>
+            <div
+              className="pud-nav-item pud-nav-item-logout"
+              style={{
+                marginTop: "auto",
+                opacity: loggingOut ? 0.6 : 1,
+                cursor: loggingOut ? "not-allowed" : "pointer",
+                pointerEvents: loggingOut ? "none" : "auto",
+              }}
+              onClick={handleLogout}
+              role="button"
+              aria-disabled={loggingOut}
+              title={logoutError || undefined}
+            >
+              <span className="bad-nav-item-logout" style={{ transform: "rotate(180deg)" }}>
+                <LogoutIcon />
+              </span>
+              <span className="bad-nav-item-logout">{loggingOut ? "Logging out..." : "Log Out"}</span>
+            </div>
+          </nav>
+        </aside>
+
+        <div className="pud-main">
+          <main className="pud-content">
+            {activeNav === "catalogList" ? (
+              <div ref={setCatalogViewContainer} />
+            ) : rfqPageView === "allRfqs" ? (
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.03)' }}>
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={handleBackToDashboard}
+                      title="Back to Dashboard"
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        padding: 0,
+                        margin: 0,
+                        cursor: 'pointer',
+                        color: '#0f172a',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        outline: 'none',
+                      }}
+                    >
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <h1 className="pud-title" style={{ margin: 0 }}>All RFQs</h1>
                   </div>
-                ))}
-              </div>
+                  <p className="pud-subtitle" style={{ margin: 0, marginTop: '4px' }}>
+                    Sourcing opportunities matched to your industry categories.
+                  </p>
+                </div>
 
-              <div className="pud-panels">
-                <section className="pud-panel">
-                  <div className="pud-panel-header">
-                    <div>
-                      <div className="pud-panel-title">Recent Sourcing Opportunities</div>
-                      <div className="pud-panel-subtitle">Newly listed RFQs matched to your industry categories</div>
+                {loadingAllRfqs ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
+                    <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                      <div className="pud-spinner" />
+                      <span>Loading all sourcing opportunities...</span>
                     </div>
-                    {!loadingRfqs && !rfqsError && rfqs.length > 0 && (
-                      <a
-                        className="pud-panel-link"
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleOpenAllRfqs();
-                        }}
+                  </div>
+                ) : allRfqsError && allRfqsList.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>{allRfqsError}</div>
+                ) : allRfqsList.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                    No RFQs found.
+                  </div>
+                ) : (
+                  <>
+                    <div className="pud-rfq-table-container">
+                      <table className="pud-rfq-items-table pud-allrfqs-table">
+                        <thead>
+                          <tr>
+                            <th style={{ width: '48px' }}>S.No</th>
+                            <th>RFQ Number</th>
+                            <th>Title</th>
+                            <th>Organization</th>
+                            <th>Delivery Location</th>
+                            <th>Closing Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {allRfqsList.map((rfq: any, idx: number) => (
+                            <tr
+                              key={rfq.rfqId || idx}
+                              onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <td style={{ color: '#94a3b8', fontWeight: 600 }}>
+                                {(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}
+                              </td>
+                              <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
+                              <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                              <td>{rfq.organizationName}</td>
+                              <td>{rfq.deliveryLocation}</td>
+                              <td>
+                                {rfq.endDate
+                                  ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                  : "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="pud-pagination pud-allrfqs-pagination">
+                      <button
+                        type="button"
+                        className={`pud-page-btn${allRfqsPage === 1 || loadingAllRfqs ? " pud-page-btn-disabled" : ""}`}
+                        onClick={handlePreviousRfqPage}
+                        disabled={allRfqsPage === 1 || loadingAllRfqs}
+                        aria-label="Previous RFQ page"
                       >
-                        View All RFQs →
-                      </a>
-                    )}
-                  </div>
-                  {loadingRfqs ? (
-                    <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px' }}>
-                      <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                        <div className="pud-spinner" />
-                        <span>Loading sourcing opportunities...</span>
-                      </div>
-                    </div>
-                  ) : rfqsError ? (
-                    <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
-                      <div style={{ color: '#ef4444', fontSize: '14px', textAlign: 'center' }}>
-                        {rfqsError}
-                      </div>
-                    </div>
-                  ) : rfqs.length === 0 ? (
-                    <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px', padding: '24px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
-                        <div style={{
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '12px',
-                          background: '#f1f5f9',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#64748b'
-                        }}>
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="11" cy="11" r="8" />
-                            <path d="m21 21-4.3-4.3" />
-                          </svg>
-                        </div>
-                        <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
-                          No matching RFQs right now
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="pud-panel-list">
-                      {rfqs.slice(0, visibleRfqCount).map((rfq) => (
-                        <div
-                          className="pud-rfq-card-item"
-                          key={rfq.rfqId}
-                          onClick={() => handleViewRfqDetails(rfq.rfqId)}
-                          role="button"
-                          tabIndex={0}
-                        >
-                          <div className="pud-rfq-meta">
-                            <span className="pud-code-badge">{rfq.rfqNumber}</span>
-                            <span className="pud-dot-sep">•</span>
-                            <span className="pud-company">{rfq.organizationName}</span>
-                          </div>
-                          <div className="pud-rfq-title pud-rfq-link-title">{rfq.title}</div>
-                          <div className="pud-rfq-details">
-                            <span>
-                              <IconCalendar /> Closes: {rfq.endDate ? new Date(rfq.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Open'}
-                            </span>
-                            <span>
-                              <IconPin /> Deliv: {rfq.deliveryLocation}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
+                        <IconChevronLeft />
+                      </button>
 
-                <section className="pud-panel">
-                  <div className="pud-panel-header">
-                    <div>
-                      <div className="pud-panel-title">Recent Purchase Orders</div>
-                      <div className="pud-panel-subtitle">New orders requiring attention</div>
+                      <span className="pud-page-number">
+                        Page {allRfqsPage}
+                      </span>
+
+                      <button
+                        type="button"
+                        className={`pud-page-btn${!hasNextRfqPage || loadingAllRfqs ? " pud-page-btn-disabled" : ""}`}
+                        onClick={handleNextRfqPage}
+                        disabled={!hasNextRfqPage || loadingAllRfqs}
+                        aria-label="Next RFQ page"
+                      >
+                        <IconChevronRight />
+                      </button>
                     </div>
-                    <a className="pud-panel-link" href="#" onClick={(e) => e.preventDefault()}>View All →</a>
-                  </div>
-                  <div className="pud-panel-list">
-                    {poItems.map((po) => (
-                      <div className="pud-po-row" key={po.code}>
-                        <div className="pud-po-info">
-                          <div className="pud-po-meta">
-                            <span className="pud-po-code">{po.code}</span>
-                            <span className={`pud-status-badge pud-status-badge-${po.status.toLowerCase()}`}>
-                              {po.status}
-                            </span>
-                          </div>
-                          <div className="pud-po-company">{po.company}</div>
-                          <div className="pud-po-date"><IconCalendar /> Order Date: {po.orderDate}</div>
-                        </div>
-                        <div className="pud-po-right">
-                          <div className="pud-po-amount">{po.amount}</div>
-                          <a className="pud-po-process" href="#" onClick={(e) => e.preventDefault()}>Process →</a>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
+                  </>
+                )}
               </div>
-
-              <section className="pud-matchmaker">
-                <div className="pud-matchmaker-header">
-                  <div className="pud-matchmaker-title-row">
-                    <span className="pud-matchmaker-icon"><IconSparkles /></span>
-                    <div className="pud-matchmaker-title">Smart Sourcing Matchmaker</div>
-                  </div>
-                  <div className="pud-matchmaker-subtitle">
-                    Active enterprise buyers looking for products and services matching your certified categories and registered ship-to locations.
+            ) : rfqPageView === "rfqDetail" ? (
+              <>
+                <div className="pud-rfq-fullpage">
+                  {renderRfqDetailInner()}
+                </div>
+              </>
+            ) : activeNav === "companyProfile" ? (
+              <CompanyProfile
+                mode="network-admin"
+                entityLabel="Supplier"
+                fetchProfile={async () => {
+                  const profile = await getSupplierProfile();
+                  if (profile && 'id' in profile) {
+                    return profile as any;
+                  }
+                  return null;
+                }}
+              />) : (
+              // ) : activeNav === "invitations" ? (
+              //   <Invitations />
+              // ) : (
+              <>
+                <div className="pud-dashboard-header">
+                  <div>
+                    <h1 className="pud-title">Supplier Operations Command</h1>
+                    <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
                   </div>
                 </div>
 
-                <div className="pud-match-grid">
-                  {matchCards.map((card) => (
-                    <div className="pud-match-card" key={card.name}>
-                      <span className="pud-match-location"><IconPin /> {card.location}</span>
-                      <div className="pud-match-top">
-                        <div className="pud-match-avatar">{card.initials}</div>
-                        <div>
-                          <div className="pud-match-name">{card.name}</div>
-                          <div className="pud-match-seeking"><NavIconBuilding /> Seeking: {card.seeking}</div>
-                        </div>
-                      </div>
-                      <p className="pud-match-desc">{card.description}</p>
-                      <div className="pud-match-rep-row">
-                        <span className="pud-match-rep-label">Representative:</span>
-                        <span className="pud-match-rep-name">{card.representative}</span>
-                      </div>
-                      <div className="pud-match-actions">
-                        <button
-                          className="pud-btn pud-btn-outline pud-btn-flex"
-                          onClick={() => setSelectedProfile(card)}
-                        >
-                          <IconEye /> Profile
-                        </button>
-                        {card.actionVariant === "message" ? (
-                          <button className="pud-btn pud-btn-message pud-btn-flex">
-                            <IconMessageSquare /> Message
-                          </button>
-                        ) : (
-                          <button className="pud-btn pud-btn-interest pud-btn-flex">
-                            <IconSend /> Send Interest
-                          </button>
+                <div className="pud-stats-grid">
+                  {statCards.map((stat) => (
+                    <div className={`pud-stat-card ${stat.cardClass}`} key={stat.label}>
+                      <div className="pud-stat-top">
+                        <div className={`pud-stat-icon ${stat.iconClass}`}>{stat.icon}</div>
+                        {stat.urgencyBadge && (
+                          <span className="pud-urgency-badge">⚡ {stat.urgencyBadge}</span>
                         )}
                       </div>
+                      <div className="pud-stat-label">{stat.label}</div>
+                      <div className="pud-stat-value">{stat.value}</div>
+                      <div className="pud-stat-link">{stat.linkText}</div>
                     </div>
                   ))}
                 </div>
 
-                <div className="pud-pagination">
-                  <button className="pud-page-btn pud-page-btn-disabled" disabled>
-                    <IconChevronLeft />
-                  </button>
-                  <button className="pud-page-btn pud-page-btn-active">
-                    <IconChevronRight />
-                  </button>
+                <div className="pud-panels">
+                  <section className="pud-panel">
+                    <div className="pud-panel-header">
+                      <div>
+                        <div className="pud-panel-title">Recent Sourcing Opportunities</div>
+                        <div className="pud-panel-subtitle">Newly listed RFQs matched to your industry categories</div>
+                      </div>
+                      {!loadingRfqs && !rfqsError && rfqs.length > 0 && (
+                        <a
+                          className="pud-panel-link"
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleOpenAllRfqs();
+                          }}
+                        >
+                          View All RFQs →
+                        </a>
+                      )}
+                    </div>
+                    {loadingRfqs ? (
+                      <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px' }}>
+                        <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                          <div className="pud-spinner" />
+                          <span>Loading sourcing opportunities...</span>
+                        </div>
+                      </div>
+                    ) : rfqsError ? (
+                      <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
+                        <div style={{ color: '#ef4444', fontSize: '14px', textAlign: 'center' }}>
+                          {rfqsError}
+                        </div>
+                      </div>
+                    ) : rfqs.length === 0 ? (
+                      <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px', padding: '24px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
+                          <div style={{
+                            width: '42px',
+                            height: '42px',
+                            borderRadius: '12px',
+                            background: '#f1f5f9',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#64748b'
+                          }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="11" cy="11" r="8" />
+                              <path d="m21 21-4.3-4.3" />
+                            </svg>
+                          </div>
+                          <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
+                            No matching RFQs right now
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="pud-panel-list">
+                        {rfqs.slice(0, visibleRfqCount).map((rfq) => (
+                          <div
+                            className="pud-rfq-card-item"
+                            key={rfq.rfqId}
+                            onClick={() => handleViewRfqDetails(rfq.rfqId)}
+                            role="button"
+                            tabIndex={0}
+                          >
+                            <div className="pud-rfq-meta">
+                              <span className="pud-code-badge">{rfq.rfqNumber}</span>
+                              <span className="pud-dot-sep">•</span>
+                              <span className="pud-company">{rfq.organizationName}</span>
+                            </div>
+                            <div className="pud-rfq-title pud-rfq-link-title">{rfq.title}</div>
+                            <div className="pud-rfq-details">
+                              <span>
+                                <IconCalendar /> Closes: {rfq.endDate ? new Date(rfq.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Open'}
+                              </span>
+                              <span>
+                                <IconPin /> Deliv: {rfq.deliveryLocation}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="pud-panel">
+                    <div className="pud-panel-header">
+                      <div>
+                        <div className="pud-panel-title">Recent Purchase Orders</div>
+                        <div className="pud-panel-subtitle">New orders requiring attention</div>
+                      </div>
+                      <a className="pud-panel-link" href="#" onClick={(e) => e.preventDefault()}>View All →</a>
+                    </div>
+                    <div className="pud-panel-list">
+                      {poItems.map((po) => (
+                        <div className="pud-po-row" key={po.code}>
+                          <div className="pud-po-info">
+                            <div className="pud-po-meta">
+                              <span className="pud-po-code">{po.code}</span>
+                              <span className={`pud-status-badge pud-status-badge-${po.status.toLowerCase()}`}>
+                                {po.status}
+                              </span>
+                            </div>
+                            <div className="pud-po-company">{po.company}</div>
+                            <div className="pud-po-date"><IconCalendar /> Order Date: {po.orderDate}</div>
+                          </div>
+                          <div className="pud-po-right">
+                            <div className="pud-po-amount">{po.amount}</div>
+                            <a className="pud-po-process" href="#" onClick={(e) => e.preventDefault()}>Process →</a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
                 </div>
-              </section>
-            </>
-          )}
-        </main>
-      </div>
 
-      {selectedProfile && (
-        <div className="pud-modal-overlay" onClick={() => setSelectedProfile(null)}>
-          <div className="pud-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="pud-modal-header">
-              <span className="pud-modal-badge">
-                <IconShieldCheck /> Verified Sourcing Partner
-              </span>
-              <button className="pud-modal-close" onClick={() => setSelectedProfile(null)}>
-                <IconClose />
-              </button>
-              <h2 className="pud-modal-name">{selectedProfile.name}</h2>
-              <div className="pud-modal-meta">
-                <span><IconPin /> {selectedProfile.location}</span>
-                <span><IconGlobe /> {selectedProfile.website}</span>
-              </div>
-            </div>
-
-            <div className="pud-modal-body">
-              <div className="pud-modal-section-title">Organization Description</div>
-              <p className="pud-modal-desc">{selectedProfile.description}</p>
-
-              <div className="pud-modal-analytics">
-                <div className="pud-modal-analytics-title">
-                  <IconSparkles /> Verified Match Analytics
-                </div>
-                <div className="pud-modal-analytics-grid">
-                  <div className="pud-modal-analytics-item">
-                    <span className="pud-modal-check"><IconCheckCircle /></span>
-                    <div>
-                      <div className="pud-modal-analytics-label">Interest Category</div>
-                      <div className="pud-modal-analytics-value">{selectedProfile.seeking}</div>
-                      <div className="pud-modal-analytics-note">{selectedProfile.categoryNote}</div>
+                <section className="pud-matchmaker">
+                  <div className="pud-matchmaker-header">
+                    <div className="pud-matchmaker-title-row">
+                      <span className="pud-matchmaker-icon"><IconSparkles /></span>
+                      <div className="pud-matchmaker-title">Smart Sourcing Matchmaker</div>
+                    </div>
+                    <div className="pud-matchmaker-subtitle">
+                      Active enterprise buyers looking for products and services matching your certified categories and registered ship-to locations.
                     </div>
                   </div>
-                  <div className="pud-modal-analytics-item">
-                    <span className="pud-modal-check"><IconCheckCircle /></span>
-                    <div>
-                      <div className="pud-modal-analytics-label">Delivery Destination</div>
-                      <div className="pud-modal-analytics-value">{selectedProfile.location}</div>
-                      <div className="pud-modal-analytics-note">{selectedProfile.destinationNote}</div>
+
+                  <div className="pud-match-grid">
+                    {matchCards.map((card) => (
+                      <div className="pud-match-card" key={card.name}>
+                        <span className="pud-match-location"><IconPin /> {card.location}</span>
+                        <div className="pud-match-top">
+                          <div className="pud-match-avatar">{card.initials}</div>
+                          <div>
+                            <div className="pud-match-name">{card.name}</div>
+                            <div className="pud-match-seeking"><NavIconBuilding /> Seeking: {card.seeking}</div>
+                          </div>
+                        </div>
+                        <p className="pud-match-desc">{card.description}</p>
+                        <div className="pud-match-rep-row">
+                          <span className="pud-match-rep-label">Representative:</span>
+                          <span className="pud-match-rep-name">{card.representative}</span>
+                        </div>
+                        <div className="pud-match-actions">
+                          <button
+                            className="pud-btn pud-btn-outline pud-btn-flex"
+                            onClick={() => setSelectedProfile(card)}
+                          >
+                            <IconEye /> Profile
+                          </button>
+                          {card.actionVariant === "message" ? (
+                            <button className="pud-btn pud-btn-message pud-btn-flex">
+                              <IconMessageSquare /> Message
+                            </button>
+                          ) : (
+                            <button className="pud-btn pud-btn-interest pud-btn-flex">
+                              <IconSend /> Send Interest
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pud-pagination">
+                    <button className="pud-page-btn pud-page-btn-disabled" disabled>
+                      <IconChevronLeft />
+                    </button>
+                    <button className="pud-page-btn pud-page-btn-active">
+                      <IconChevronRight />
+                    </button>
+                  </div>
+                </section>
+              </>
+            )}
+          </main>
+        </div>
+
+        {selectedProfile && (
+          <div className="pud-modal-overlay" onClick={() => setSelectedProfile(null)}>
+            <div className="pud-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="pud-modal-header">
+                <span className="pud-modal-badge">
+                  <IconShieldCheck /> Verified Sourcing Partner
+                </span>
+                <button className="pud-modal-close" onClick={() => setSelectedProfile(null)}>
+                  <IconClose />
+                </button>
+                <h2 className="pud-modal-name">{selectedProfile.name}</h2>
+                <div className="pud-modal-meta">
+                  <span><IconPin /> {selectedProfile.location}</span>
+                  <span><IconGlobe /> {selectedProfile.website}</span>
+                </div>
+              </div>
+
+              <div className="pud-modal-body">
+                <div className="pud-modal-section-title">Organization Description</div>
+                <p className="pud-modal-desc">{selectedProfile.description}</p>
+
+                <div className="pud-modal-analytics">
+                  <div className="pud-modal-analytics-title">
+                    <IconSparkles /> Verified Match Analytics
+                  </div>
+                  <div className="pud-modal-analytics-grid">
+                    <div className="pud-modal-analytics-item">
+                      <span className="pud-modal-check"><IconCheckCircle /></span>
+                      <div>
+                        <div className="pud-modal-analytics-label">Interest Category</div>
+                        <div className="pud-modal-analytics-value">{selectedProfile.seeking}</div>
+                        <div className="pud-modal-analytics-note">{selectedProfile.categoryNote}</div>
+                      </div>
+                    </div>
+                    <div className="pud-modal-analytics-item">
+                      <span className="pud-modal-check"><IconCheckCircle /></span>
+                      <div>
+                        <div className="pud-modal-analytics-label">Delivery Destination</div>
+                        <div className="pud-modal-analytics-value">{selectedProfile.location}</div>
+                        <div className="pud-modal-analytics-note">{selectedProfile.destinationNote}</div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="pud-modal-info-grid">
-                <div>
-                  <div className="pud-modal-info-label">Company Representative</div>
-                  <div className="pud-modal-info-value">
-                    {selectedProfile.representative} ({selectedProfile.repTitle})
+                <div className="pud-modal-info-grid">
+                  <div>
+                    <div className="pud-modal-info-label">Company Representative</div>
+                    <div className="pud-modal-info-value">
+                      {selectedProfile.representative} ({selectedProfile.repTitle})
+                    </div>
+                    <a className="pud-modal-info-link" href={`mailto:${selectedProfile.repEmail}`}>
+                      {selectedProfile.repEmail}
+                    </a>
                   </div>
-                  <a className="pud-modal-info-link" href={`mailto:${selectedProfile.repEmail}`}>
-                    {selectedProfile.repEmail}
-                  </a>
+                  <div>
+                    <div className="pud-modal-info-label">Scale of Operations</div>
+                    <div className="pud-modal-info-value">Revenue: {selectedProfile.revenue}</div>
+                    <div className="pud-modal-info-value">Scale: {selectedProfile.employees}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="pud-modal-info-label">Scale of Operations</div>
-                  <div className="pud-modal-info-value">Revenue: {selectedProfile.revenue}</div>
-                  <div className="pud-modal-info-value">Scale: {selectedProfile.employees}</div>
-                </div>
+
               </div>
 
-            </div>
-
-            <div className="pud-modal-footer">
-              {selectedProfile.actionVariant === "message" ? (
-                <button className="pud-btn pud-btn-message pud-modal-footer-btn">
-                  <IconMessageSquare /> Message Buyer
-                </button>
-              ) : (
-                <button className="pud-btn pud-btn-interest pud-modal-footer-btn">
-                  <IconSend /> Send Interest
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {otpStage === "send" && (
-        <div className="pud-modal-overlay" onClick={() => setOtpStage("none")} style={{ zIndex: 9999 }}>
-          <div className="pud-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', zIndex: 10000 }}>
-            <div className="pud-modal-header" style={{ paddingBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
-              <span className="pud-modal-badge">
-                <IconMail /> Verify It's You
-              </span>
-              <button className="pud-modal-close" onClick={() => setOtpStage("none")}>
-                <IconClose />
-              </button>
-            </div>
-
-            <div className="pud-modal-body" style={{ textAlign: 'center', paddingTop: '24px', paddingBottom: '24px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b', marginBottom: '12px' }}>
-                Confirm Your Quotation
-              </h3>
-              <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '0', lineHeight: '1.5' }}>
-                For security, we'll send a one-time code to your registered email before this quotation goes to the buyer.
-              </p>
-              {otpError && (
-                <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '14px' }}>{otpError}</div>
-              )}
-            </div>
-
-            <div className="pud-modal-footer" style={{ borderTop: '1px solid #e2e8f0', gap: '10px' }}>
-              <button type="button" className="pud-btn pud-btn-outline" onClick={() => setOtpStage("none")} style={{ flex: 1 }}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="pud-btn pud-btn-message"
-                onClick={handleSendOtp}
-                disabled={sendingOtp}
-                style={{ flex: 1, background: '#2563eb', color: '#ffffff' }}
-              >
-                {sendingOtp ? "Sending..." : "Send OTP"}
-              </button>
+              <div className="pud-modal-footer">
+                {selectedProfile.actionVariant === "message" ? (
+                  <button className="pud-btn pud-btn-message pud-modal-footer-btn">
+                    <IconMessageSquare /> Message Buyer
+                  </button>
+                ) : (
+                  <button className="pud-btn pud-btn-interest pud-modal-footer-btn">
+                    <IconSend /> Send Interest
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {otpStage === "verify" && (
-        <div className="pud-modal-overlay" onClick={() => setOtpStage("none")} style={{ zIndex: 9999 }}>
-          <div className="pud-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', zIndex: 10000 }}>
-            <div className="pud-modal-header" style={{ paddingBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
-              <span className="pud-modal-badge">
-                <IconMail /> Enter Verification Code
-              </span>
-              <button className="pud-modal-close" onClick={() => setOtpStage("none")}>
-                <IconClose />
-              </button>
-            </div>
+        {otpStage === "send" && (
+          <div className="pud-modal-overlay" onClick={() => setOtpStage("none")} style={{ zIndex: 9999 }}>
+            <div className="pud-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', zIndex: 10000 }}>
+              <div className="pud-modal-header" style={{ paddingBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
+                <span className="pud-modal-badge">
+                  <IconMail /> Verify It's You
+                </span>
+                <button className="pud-modal-close" onClick={() => setOtpStage("none")}>
+                  <IconClose />
+                </button>
+              </div>
 
-            <div className="pud-modal-body" style={{ paddingTop: '20px', paddingBottom: '8px' }}>
-              <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px', textAlign: 'center' }}>
-                We've sent a 6-digit code to your email. It expires in{" "}
-                <strong style={{ color: otpRemaining <= 30 ? '#ef4444' : '#1e293b' }}>
-                  {formatOtpTimer(otpRemaining)}
-                </strong>.
-              </p>
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                className="pud-rfq-item-input"
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                placeholder="Enter OTP"
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  fontSize: '18px',
-                  letterSpacing: '4px',
-                  textAlign: 'center',
-                  fontWeight: 700,
-                  color: '#0f172a'
-                }}
-              />
-              {otpRemaining <= 0 ? (
-                <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '10px', textAlign: 'center' }}>
-                  Code expired. Please resend the OTP.
-                </div>
-              ) : otpError ? (
-                <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '10px', textAlign: 'center' }}>{otpError}</div>
-              ) : null}
-              <div style={{ textAlign: 'center', marginTop: '10px' }}>
+              <div className="pud-modal-body" style={{ textAlign: 'center', paddingTop: '24px', paddingBottom: '24px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b', marginBottom: '12px' }}>
+                  Confirm Your Quotation
+                </h3>
+                <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '0', lineHeight: '1.5' }}>
+                  For security, we'll send a one-time code to your registered email before this quotation goes to the buyer.
+                </p>
+                {otpError && (
+                  <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '14px' }}>{otpError}</div>
+                )}
+              </div>
+
+              <div className="pud-modal-footer" style={{ borderTop: '1px solid #e2e8f0', gap: '10px' }}>
+                <button type="button" className="pud-btn pud-btn-outline" onClick={() => setOtpStage("none")} style={{ flex: 1 }}>
+                  Cancel
+                </button>
                 <button
                   type="button"
+                  className="pud-btn pud-btn-message"
                   onClick={handleSendOtp}
-                  disabled={sendingOtp || otpRemaining > 0}
-                  style={{
-                    background: 'none', border: 'none', padding: 0,
-                    color: otpRemaining > 0 ? '#94a3b8' : '#2563eb',
-                    fontSize: '13px',
-                    cursor: otpRemaining > 0 ? 'not-allowed' : 'pointer',
-                  }}
+                  disabled={sendingOtp}
+                  style={{ flex: 1, background: '#2563eb', color: '#ffffff' }}
                 >
-                  Resend OTP
+                  {sendingOtp ? "Sending..." : "Send OTP"}
                 </button>
               </div>
             </div>
+          </div>
+        )}
 
-            <div className="pud-modal-footer" style={{ borderTop: '1px solid #e2e8f0', gap: '10px' }}>
-              <button type="button" className="pud-btn pud-btn-outline" onClick={() => setOtpStage("none")} style={{ flex: 1 }}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="pud-btn pud-btn-message"
-                onClick={handleVerifyOtp}
-                disabled={verifyingOtp || otpRemaining <= 0}
-                style={{ flex: 1, background: '#2563eb', color: '#ffffff' }}
-              >
-                {verifyingOtp ? "Verifying..." : "Verify OTP"}
-              </button>
+        {otpStage === "verify" && (
+          <div className="pud-modal-overlay" onClick={() => setOtpStage("none")} style={{ zIndex: 9999 }}>
+            <div className="pud-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', zIndex: 10000 }}>
+              <div className="pud-modal-header" style={{ paddingBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
+                <span className="pud-modal-badge">
+                  <IconMail /> Enter Verification Code
+                </span>
+                <button className="pud-modal-close" onClick={() => setOtpStage("none")}>
+                  <IconClose />
+                </button>
+              </div>
+
+              <div className="pud-modal-body" style={{ paddingTop: '20px', paddingBottom: '8px' }}>
+                <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px', textAlign: 'center' }}>
+                  We've sent a 6-digit code to your email. It expires in{" "}
+                  <strong style={{ color: otpRemaining <= 30 ? '#ef4444' : '#1e293b' }}>
+                    {formatOtpTimer(otpRemaining)}
+                  </strong>.
+                </p>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  className="pud-rfq-item-input"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="Enter OTP"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    fontSize: '18px',
+                    letterSpacing: '4px',
+                    textAlign: 'center',
+                    fontWeight: 700,
+                    color: '#0f172a'
+                  }}
+                />
+                {otpRemaining <= 0 ? (
+                  <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '10px', textAlign: 'center' }}>
+                    Code expired. Please resend the OTP.
+                  </div>
+                ) : otpError ? (
+                  <div style={{ color: '#ef4444', fontSize: '13px', marginTop: '10px', textAlign: 'center' }}>{otpError}</div>
+                ) : null}
+                <div style={{ textAlign: 'center', marginTop: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={sendingOtp || otpRemaining > 0}
+                    style={{
+                      background: 'none', border: 'none', padding: 0,
+                      color: otpRemaining > 0 ? '#94a3b8' : '#2563eb',
+                      fontSize: '13px',
+                      cursor: otpRemaining > 0 ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    Resend OTP
+                  </button>
+                </div>
+              </div>
+
+              <div className="pud-modal-footer" style={{ borderTop: '1px solid #e2e8f0', gap: '10px' }}>
+                <button type="button" className="pud-btn pud-btn-outline" onClick={() => setOtpStage("none")} style={{ flex: 1 }}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="pud-btn pud-btn-message"
+                  onClick={handleVerifyOtp}
+                  disabled={verifyingOtp || otpRemaining <= 0}
+                  style={{ flex: 1, background: '#2563eb', color: '#ffffff' }}
+                >
+                  {verifyingOtp ? "Verifying..." : "Verify OTP"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {showConfirmSubmit && (
-        <div className="pud-modal-overlay" onClick={() => setShowConfirmSubmit(false)} style={{ zIndex: 9999 }}>
-          <div className="pud-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', zIndex: 10000 }}>
-            <div className="pud-modal-header" style={{ paddingBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
-              <span className="pud-modal-badge" style={{ background: '#fef3c7', color: '#d97706' }}>
-                <IconAlertCircle /> Confirmation Required
-              </span>
-              <button
-                className="pud-modal-close"
-                onClick={() => setShowConfirmSubmit(false)}
-              >
-                <IconClose />
-              </button>
-            </div>
+        {showConfirmSubmit && (
+          <div className="pud-modal-overlay" onClick={() => setShowConfirmSubmit(false)} style={{ zIndex: 9999 }}>
+            <div className="pud-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', zIndex: 10000 }}>
+              <div className="pud-modal-header" style={{ paddingBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
+                <span className="pud-modal-badge" style={{ background: '#fef3c7', color: '#d97706' }}>
+                  <IconAlertCircle /> Confirmation Required
+                </span>
+                <button
+                  className="pud-modal-close"
+                  onClick={() => setShowConfirmSubmit(false)}
+                >
+                  <IconClose />
+                </button>
+              </div>
 
-            <div className="pud-modal-body" style={{ textAlign: 'center', paddingTop: '24px', paddingBottom: '24px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b', marginBottom: '12px' }}>
-                Submit Quotation?
-              </h3>
-              <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '0', lineHeight: '1.5' }}>
-                Are you sure you want to submit this quotation? Once submitted, it will be sent to the buyer and cannot be easily modified.
-              </p>
-            </div>
+              <div className="pud-modal-body" style={{ textAlign: 'center', paddingTop: '24px', paddingBottom: '24px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b', marginBottom: '12px' }}>
+                  Submit Quotation?
+                </h3>
+                <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '0', lineHeight: '1.5' }}>
+                  Are you sure you want to submit this quotation? Once submitted, it will be sent to the buyer and cannot be easily modified.
+                </p>
+              </div>
 
-            <div className="pud-modal-footer" style={{ borderTop: '1px solid #e2e8f0', gap: '10px' }}>
-              <button
-                type="button"
-                className="pud-btn pud-btn-outline"
-                onClick={() => setShowConfirmSubmit(false)}
-                style={{ flex: 1 }}
-              >
-                No, Cancel
-              </button>
-              <button
-                type="button"
-                className="pud-btn pud-btn-message"
-                onClick={handleConfirmSubmitQuotation}
-                disabled={submittingQuote}
-                style={{ flex: 1, background: '#2563eb', color: '#ffffff' }}
-              >
-                {submittingQuote ? "Submitting..." : "Yes, Submit"}
-              </button>
+              <div className="pud-modal-footer" style={{ borderTop: '1px solid #e2e8f0', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="pud-btn pud-btn-outline"
+                  onClick={() => setShowConfirmSubmit(false)}
+                  style={{ flex: 1 }}
+                >
+                  No, Cancel
+                </button>
+                <button
+                  type="button"
+                  className="pud-btn pud-btn-message"
+                  onClick={handleConfirmSubmitQuotation}
+                  disabled={submittingQuote}
+                  style={{ flex: 1, background: '#2563eb', color: '#ffffff' }}
+                >
+                  {submittingQuote ? "Submitting..." : "Yes, Submit"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {selectedRfqId && rfqPageView === "dashboard" && (
-        <div className="pud-modal-overlay" onClick={closeRfqDetail}>
-          <div className="pud-modal pud-modal-rfq" onClick={(e) => e.stopPropagation()}>
-            {renderRfqDetailInner()}
+        {selectedRfqId && rfqPageView === "dashboard" && (
+          <div className="pud-modal-overlay" onClick={closeRfqDetail}>
+            <div className="pud-modal pud-modal-rfq" onClick={(e) => e.stopPropagation()}>
+              {renderRfqDetailInner()}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+      <EAuctionWidget />
     </div>
-    <EAuctionWidget />
-  </div>
-);
+  );
 };
 
 export default SupplierDashboard;
