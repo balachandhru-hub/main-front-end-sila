@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getTokenClaims } from '../api/authApi';
 
 export type UserRole = 'buyer' | 'supplier' |'supplier-admin'|'supplier-business-user'| 'platform-user'| 'buyer-admin' | 'buyer-business-user';
  
@@ -13,11 +14,13 @@ export const ROLE_MAPPING: Record<string, UserRole> = {
 };
 export interface AuthState {
   isLoggedIn: boolean;
+  isInitialized:boolean;
   userRole: UserRole | null;
   userId: string | null;
   personId: string | null;
   organizationId: string | null;
   roleId: string | null;
+  initializeAuth: ()=>Promise<void>;
   login: (
     details?: {
       userId?: string;
@@ -30,27 +33,57 @@ export interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  isLoggedIn: sessionStorage.getItem('vosox_logged_in') === 'true',
-  userRole: (sessionStorage.getItem('vosox_user_role') as UserRole | null) || null,
-  userId: sessionStorage.getItem('vosox_user_id') || null,
-  personId: sessionStorage.getItem('vosox_person_id') || null,
-  organizationId: sessionStorage.getItem('vosox_organization_id') || null,
-  roleId: sessionStorage.getItem('vosox_role_id') || null,
-  login: (details) => {
+  isLoggedIn: false,        
+  isInitialized: false,    
+  userRole: null,
+  userId: null,
+  personId: null,
+  organizationId: null,
+  roleId: null,
+
+  initializeAuth: async () => {
+    try {
+      const claims = await getTokenClaims(true);
+      if (claims && claims.roleId) {
+        let resolvedRole: UserRole = 'supplier';
+        if (ROLE_MAPPING[claims.roleId]) {
+          resolvedRole = ROLE_MAPPING[claims.roleId];
+        }
+
+        set({
+          isLoggedIn: true,
+          isInitialized: true,
+          userRole: resolvedRole,
+          userId: claims.userId || null,
+          personId: claims.personId || null,
+          organizationId: claims.organizationId || null,
+          roleId: claims.roleId || null,
+        });
+        return;
+      }
+    } catch {
+      // Not logged in or network error
+    }
+
+    set({
+      isLoggedIn: false,
+      isInitialized: true,
+      userRole: null,
+      userId: null,
+      personId: null,
+      organizationId: null,
+      roleId: null,
+    });
+  },
+   login: (details) => {
     let resolvedRole: UserRole = 'supplier';
     if (details?.roleId && ROLE_MAPPING[details.roleId]) {
       resolvedRole = ROLE_MAPPING[details.roleId];
     }
 
-    sessionStorage.setItem('vosox_logged_in', 'true');
-    sessionStorage.setItem('vosox_user_role', resolvedRole);
-    if (details?.userId) sessionStorage.setItem('vosox_user_id', details.userId);
-    if (details?.personId) sessionStorage.setItem('vosox_person_id', details.personId);
-    if (details?.organizationId) sessionStorage.setItem('vosox_organization_id', details.organizationId);
-    if (details?.roleId) sessionStorage.setItem('vosox_role_id', details.roleId);
-
     set({
       isLoggedIn: true,
+      isInitialized: true,
       userRole: resolvedRole,
       userId: details?.userId || null,
       personId: details?.personId || null,
@@ -62,6 +95,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     sessionStorage.clear();
     set({
       isLoggedIn: false,
+      isInitialized: true,
       userRole: null,
       userId: null,
       personId: null,

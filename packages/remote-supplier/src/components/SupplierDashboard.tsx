@@ -2115,13 +2115,6 @@ const SupplierDashboard: React.FC = () => {
 
             <Catalog
               onShowCatalogList={() => setActiveNav("catalogList")}
-              onCloseCatalogList={() => {
-                setActiveNav("dashboard");
-                setRfqPageView("dashboard");
-                setSelectedRfqId(null);
-                setSelectedRfq(null);
-                setRfqDetailError(null);
-              }}
               fullViewContainer={activeNav === "catalogList" ? catalogViewContainer : null}
             />
 

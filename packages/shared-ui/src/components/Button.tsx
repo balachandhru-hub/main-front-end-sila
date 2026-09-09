@@ -44,7 +44,7 @@ export const Button: React.FC<ButtonProps> = ({
       border: '1px solid var(--border-color, #334155)',
     },
     outline: {
-      background: 'transparent',
+      background: '#ffffff',
       color: 'var(--primary-color, #6366f1)',
       border: '1px solid var(--primary-color, #6366f1)',
     },

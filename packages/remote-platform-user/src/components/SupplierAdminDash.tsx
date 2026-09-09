@@ -434,15 +434,18 @@ const SupplierAdminDash: React.FC = () => {
     return () => clearInterval(t);
   }, [otpStage, otpExpiresAt]);
 
-  useEffect(() => {
-    useNetworkAdminAuthStore.getState().initializeFromSession();
-  }, []);
 
   /* ---------------------------------- RFQ management (ported from SupplierDashboard) ---------------------------------- */
 
-  const [supplierId, setSupplierId] = useState<string | null>(
-    sessionStorage.getItem("vosox_supplier_id")
-  );
+  const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
+  const [supplierId, setSupplierId] = useState<string | null>(currentUser?.supplierId || null);
+
+  useEffect(() => {
+    if (currentUser?.supplierId) {
+      setSupplierId(currentUser.supplierId);
+    }
+  }, [currentUser?.supplierId]);
+
   const [rfqs, setRfqs] = useState<RFQMasterDataItem[]>([]);
   const [loadingRfqs, setLoadingRfqs] = useState(true);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
@@ -503,7 +506,6 @@ const SupplierAdminDash: React.FC = () => {
           }
 
           if (profile && profile.id) {
-            sessionStorage.setItem("vosox_supplier_id", profile.id);
             setSupplierId(profile.id);
           } else {
             setRfqsError("Supplier profile not found. Please complete onboarding.");
@@ -2064,13 +2066,6 @@ const SupplierAdminDash: React.FC = () => {
             <Catalog
               isAdmin={true}
               onShowCatalogList={() => setActiveNav("catalogList")}
-              onCloseCatalogList={() => {
-                setActiveNav("dashboard");
-                setRfqPageView("dashboard");
-                setSelectedRfqId(null);
-                setSelectedRfq(null);
-                setRfqDetailError(null);
-              }}
               fullViewContainer={activeNav === "catalogList" ? catalogViewContainer : null}
             />
 
