@@ -1,8 +1,26 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Loader, isErrorResponse } from '@vosox/shared-ui';
-import { FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
-import { fetchExternalRfqDetails, submitExternalQuotation } from '../api/externalSupplierApi';
+import {
+  FaCheckCircle,
+  FaExclamationCircle,
+  FaFileAlt,
+  FaRegCalendarAlt,
+  FaMapMarkerAlt,
+  FaClipboardList,
+  FaQuestionCircle,
+  FaFileInvoiceDollar,
+  FaPaperclip,
+  FaCircle,
+  FaEye,
+  FaDownload,
+  FaUserPlus,
+} from 'react-icons/fa';
+import {
+  fetchExternalRfqDetails,
+  submitExternalQuotation,
+  fetchExternalAsset,
+} from '../api/externalSupplierApi';
 import type {
   ExternalRFQDetailResponse,
   ExternalSubmitQuotationPayload,
@@ -18,15 +36,16 @@ const parseAsUtcMs = (dateStr?: string | null): number | null => {
 };
 
 const getSubmissionWindowStatus = (rfq: ExternalRFQDetailResponse | null) => {
-  if (!rfq) return { notYetOpen: false, closed: false, canSubmit: false };
+  if (!rfq) return { notYetOpen: false, closed: false, frozen: false, canSubmit: false };
   const startMs = parseAsUtcMs(rfq.startDate);
   const endMs = parseAsUtcMs(rfq.endDate);
   const nowMs = Date.now();
 
   const notYetOpen = startMs !== null && nowMs < startMs;
   const closed = endMs !== null && nowMs > endMs;
+  const frozen = rfq.status === 'Freezing';
 
-  return { notYetOpen, closed, canSubmit: !notYetOpen && !closed };
+  return { notYetOpen, closed, frozen, canSubmit: !notYetOpen && !closed && !frozen };
 };
 
 const formatDate = (dateStr?: string | null) => {
@@ -35,6 +54,16 @@ const formatDate = (dateStr?: string | null) => {
   return Number.isNaN(d.getTime())
     ? '—'
     : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+// Purely presentational — picks a badge colour for the status text, does not affect
+// submission eligibility (that's still decided solely by getSubmissionWindowStatus).
+const getStatusTone = (status?: string | null) => {
+  const s = (status || '').toLowerCase();
+  if (s === 'open') return 'success';
+  if (s === 'freezing') return 'warning';
+  if (s === 'closed') return 'danger';
+  return 'neutral';
 };
 
 // The backend can return an all-zero placeholder GUID for an unset id — that string is
@@ -66,6 +95,30 @@ interface QuestionAnswerState {
   fileName?: string;
 }
 
+interface QuoteLineItem {
+  deliveryCharge: number;
+  deliveryType: string;
+  discount: number;
+  discountType: string;
+  tax: number;
+  taxType: string;
+  quotedPrice: number;
+  subTotal: number;
+  quotedAmount: number;
+}
+
+const EMPTY_LINE_ITEM: QuoteLineItem = {
+  deliveryCharge: 0,
+  deliveryType: 'PERCENTAGE',
+  discount: 0,
+  discountType: 'PERCENTAGE',
+  tax: 0,
+  taxType: 'PERCENTAGE',
+  quotedPrice: 0,
+  subTotal: 0,
+  quotedAmount: 0,
+};
+
 const ExternalSupplierBid: React.FC = () => {
   const { rfqId, sessionToken } = useParams<{ rfqId: string; sessionToken: string }>();
   const navigate = useNavigate();
@@ -83,6 +136,7 @@ const ExternalSupplierBid: React.FC = () => {
   const [tax, setTax] = useState<number>(0);
   const [taxType, setTaxType] = useState<string>('PERCENTAGE');
   const [itemPrices, setItemPrices] = useState<{ [key: string]: number }>({});
+  const [lineItems, setLineItems] = useState<{ [supplierRFQItemId: string]: QuoteLineItem }>({});
   const [quotationId, setQuotationId] = useState<string | null>(null);
   const [hasExistingQuote, setHasExistingQuote] = useState(false);
 
@@ -132,9 +186,11 @@ const ExternalSupplierBid: React.FC = () => {
       setRfq(data);
 
       const existingQuote = data.supplierQuotation?.[0];
+      // A quotation record can exist as an empty DRAFT placeholder before the supplier has
+      // ever submitted anything — only a SUBMITTED quote counts as "you already have one".
       if (existingQuote) {
-        setHasExistingQuote(true);
         setQuotationId(existingQuote.qutationId || existingQuote.id || null);
+        setHasExistingQuote(existingQuote.status === 'SUBMITTED');
         setTotalPrice(existingQuote.totalPrice || 0);
         setDeliveryCharge(existingQuote.deliveryCharge || 0);
         setDeliveryType(existingQuote.deliveryType || 'PERCENTAGE');
@@ -152,6 +208,29 @@ const ExternalSupplierBid: React.FC = () => {
       });
       setItemPrices(prices);
 
+      if (!data.addLotOption) {
+        const nextLineItems: { [supplierRFQItemId: string]: QuoteLineItem } = {};
+        data.items?.forEach((item) => {
+          const itemKey = item.supplierRFQItemId;
+          if (!itemKey) return;
+          const source = data.supplierQuotationItems?.find((qi) => qi.supplierRFQItemId === itemKey);
+          nextLineItems[itemKey] = {
+            deliveryCharge: source?.deliveryCharge ?? 0,
+            deliveryType: source?.deliveryType || 'PERCENTAGE',
+            discount: source?.discount ?? 0,
+            discountType: source?.discountType || 'PERCENTAGE',
+            tax: source?.tax ?? 0,
+            taxType: source?.taxType || 'PERCENTAGE',
+            quotedPrice: source?.quotedPrice ?? 0,
+            subTotal: source?.subTotal ?? 0,
+            quotedAmount: source?.quotedAmount ?? 0,
+          };
+        });
+        setLineItems(nextLineItems);
+      } else {
+        setLineItems({});
+      }
+
       const initialAnswers: typeof answers = {};
       data.questions?.forEach((q) => {
         initialAnswers[q.questionId] = { answer: '', questionOptionId: null, questionOptionIds: [] };
@@ -164,13 +243,28 @@ const ExternalSupplierBid: React.FC = () => {
     load();
   }, [rfqId, sessionToken]);
 
-  const { notYetOpen, canSubmit } = useMemo(
+  const { notYetOpen, closed, frozen, canSubmit } = useMemo(
     () => getSubmissionWindowStatus(rfq),
     [rfq, windowTick]
   );
 
-  const handleItemPriceChange = (key: string, value: number) => {
-    setItemPrices((prev) => ({ ...prev, [key]: value }));
+  const handleLineItemFieldChange = (
+    supplierRFQItemId: string,
+    field: keyof QuoteLineItem,
+    value: string
+  ) => {
+    setLineItems((prev) => {
+      const existing = prev[supplierRFQItemId] || EMPTY_LINE_ITEM;
+      const isNumericField =
+        field === 'deliveryCharge' || field === 'discount' || field === 'tax' || field === 'quotedPrice';
+      return {
+        ...prev,
+        [supplierRFQItemId]: {
+          ...existing,
+          [field]: isNumericField ? Number(value) || 0 : value,
+        },
+      };
+    });
   };
 
   const handleTextAnswerChange = (questionId: string, value: string) => {
@@ -196,6 +290,64 @@ const ExternalSupplierBid: React.FC = () => {
     setAnswers((prev) => ({ ...prev, [questionId]: { ...prev[questionId], fileName: file?.name || '' } }));
   };
 
+  // Mirrors Supplier Admin's handleDocumentAction (base64 decode → blob → open/download).
+  const handleDocumentAction = async (doc: { id?: string; fileName?: string; fileType?: string }, action: 'preview' | 'download') => {
+    const assetId = doc.id;
+    if (!assetId || !sessionToken) {
+      alert('Document asset ID is missing.');
+      return;
+    }
+
+    try {
+      const data = await fetchExternalAsset(assetId, sessionToken);
+      if (isErrorResponse(data)) {
+        throw new Error(data.message || 'Failed to fetch document.');
+      }
+
+      const fileBytes = (data as any).fileBytes;
+      const fileName = (data as any).fileName || doc.fileName || 'document';
+      const rawType = ((data as any).contentType || (data as any).fileType || doc.fileType || 'pdf').toLowerCase();
+
+      let mimeType = 'application/pdf';
+      if (rawType.includes('pdf')) mimeType = 'application/pdf';
+      else if (rawType.includes('png')) mimeType = 'image/png';
+      else if (rawType.includes('jpg') || rawType.includes('jpeg')) mimeType = 'image/jpeg';
+      else if (rawType.includes('txt')) mimeType = 'text/plain';
+      else if (rawType.includes('doc')) mimeType = 'application/msword';
+
+      let url = (data as any).url || (data as any).fileUrl;
+
+      if (fileBytes) {
+        const cleanBase64 = fileBytes.replace(/^data:.*?;base64,/, '');
+        const byteCharacters = atob(cleanBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mimeType });
+        url = URL.createObjectURL(blob);
+      }
+
+      if (!url) {
+        throw new Error('Document content not available.');
+      }
+
+      if (action === 'preview') {
+        window.open(url, '_blank');
+      } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Could not access document.');
+    }
+  };
+
   const findUnansweredRequiredQuestion = () => {
     return (rfq?.questions || []).find((q) => {
       if (!q.isRequired) return false;
@@ -216,7 +368,9 @@ const ExternalSupplierBid: React.FC = () => {
       setSubmitError(
         notYetOpen
           ? "This RFQ hasn't opened for bidding yet."
-          : "This RFQ's submission window has closed. You can no longer submit a quotation."
+          : frozen
+            ? "The buyer has frozen this RFQ's bid. You can no longer submit a quotation."
+            : "This RFQ's submission window has closed. You can no longer submit a quotation."
       );
       return;
     }
@@ -239,8 +393,11 @@ const ExternalSupplierBid: React.FC = () => {
     setSubmitSuccess(false);
 
     try {
+      const supplierRFQId = rfq.items?.[0]?.supplierRFQId || null;
+
       const payload: ExternalSubmitQuotationPayload = {
         supplierQuotationId: quotationId,
+        supplierRFQId,
         totalPrice: Number(totalPrice),
         deliveryCharge: Number(deliveryCharge),
         deliveryType,
@@ -248,22 +405,35 @@ const ExternalSupplierBid: React.FC = () => {
         discountType,
         tax: Number(tax),
         taxType,
-        ...(!rfq.addLotOption
-          ? {
-              items: rfq.items.map((item, idx) => {
-                const key = item.id || item.buyerRFQItemId || `item-${idx}`;
-                const existingItemQuote = rfq.supplierQuotationItems?.[idx];
-                return {
-                  supplierRFQItemId:
-                    validId(item.supplierRFQItemId) ||
-                    validId(existingItemQuote?.supplierRFQItemId) ||
-                    null,
-                  buyerRFQItemId: item.id || item.buyerRFQItemId || '',
-                  quotedPrice: Number(itemPrices[key] ?? 0),
-                };
-              }),
-            }
-          : {}),
+        temporaryVerificationToken: null,
+        items: rfq.addLotOption
+          ? rfq.items.map((item, idx) => {
+              const key = item.id || item.buyerRFQItemId || `item-${idx}`;
+              const existingItemQuote = rfq.supplierQuotationItems?.[idx];
+              return {
+                supplierRFQItemId:
+                  validId(item.supplierRFQItemId) ||
+                  validId(existingItemQuote?.supplierRFQItemId) ||
+                  null,
+                buyerRFQItemId: item.id || item.buyerRFQItemId || '',
+                quotedPrice: Number(itemPrices[key] ?? 0),
+              };
+            })
+          : rfq.items.map((item) => {
+              const itemKey = item.supplierRFQItemId;
+              const line = itemKey ? lineItems[itemKey] : undefined;
+              return {
+                supplierRFQItemId: itemKey || null,
+                buyerRFQItemId: item.id || item.buyerRFQItemId || '',
+                quotedPrice: Number(line?.quotedPrice ?? 0),
+                deliveryCharge: Number(line?.deliveryCharge ?? 0),
+                deliveryType: line?.deliveryType || 'PERCENTAGE',
+                discount: Number(line?.discount ?? 0),
+                discountType: line?.discountType || 'PERCENTAGE',
+                tax: Number(line?.tax ?? 0),
+                taxType: line?.taxType || 'PERCENTAGE',
+              };
+            }),
       };
 
       const result = await submitExternalQuotation(rfqId, sessionToken, payload);
@@ -308,8 +478,8 @@ const ExternalSupplierBid: React.FC = () => {
         <p>Your quotation for <strong>{rfq?.title}</strong> has been sent to the buyer. You can close this page now.</p>
         <div className="ebid-register-prompt">
           <p>Want to continue using the platform? Register now to create your account and access more features.</p>
-          <button type="button" className="ebid-submit-btn" onClick={() => navigate('/')}>
-            Register
+          <button type="button" className="ebid-submit-btn ebid-btn-with-icon" onClick={() => navigate('/')}>
+            <FaUserPlus /> Register
           </button>
         </div>
       </div>
@@ -318,46 +488,110 @@ const ExternalSupplierBid: React.FC = () => {
     content = (
       <form className="ebid-form" onSubmit={handleSubmitClick}>
         <section className="ebid-card">
-          <div className="ebid-card-header">
-            <h1 className="ebid-rfq-title">{rfq.title}</h1>
-            {rfq.status && <span className="ebid-badge">{rfq.status}</span>}
+          <div className="ebid-hero-top">
+            <div className="ebid-hero-title-group">
+              <span className="ebid-hero-icon"><FaFileAlt /></span>
+              <h1 className="ebid-rfq-title">{rfq.title}</h1>
+            </div>
+            {rfq.status && (
+              <span className={`ebid-badge ebid-badge-${getStatusTone(rfq.status)}`}>
+                <FaCircle className="ebid-badge-dot" />
+                {rfq.status}
+              </span>
+            )}
           </div>
+
+          <div className="ebid-hero-meta">
+            <span className="ebid-hero-meta-item">
+              <FaRegCalendarAlt /> Closes {formatDate(rfq.endDate)}
+            </span>
+            <span className="ebid-hero-meta-item">
+              <FaMapMarkerAlt /> {rfq.deliveryLocation || '—'}
+            </span>
+          </div>
+
           {rfq.description && <p className="ebid-rfq-desc">{rfq.description}</p>}
 
           <div className="ebid-meta-grid">
             <div className="ebid-meta-item">
-              <span className="ebid-meta-label">Delivery Location</span>
-              <span className="ebid-meta-value">{rfq.deliveryLocation || '—'}</span>
-            </div>
-            <div className="ebid-meta-item">
-              <span className="ebid-meta-label">Opens</span>
+              <span className="ebid-meta-label">Start Date</span>
               <span className="ebid-meta-value">{formatDate(rfq.startDate)}</span>
             </div>
             <div className="ebid-meta-item">
-              <span className="ebid-meta-label">Closes</span>
+              <span className="ebid-meta-label">End Date</span>
               <span className="ebid-meta-value">{formatDate(rfq.endDate)}</span>
+            </div>
+            <div className="ebid-meta-item">
+              <span className="ebid-meta-label">Add Lot Option</span>
+              <span className="ebid-meta-value">{rfq.addLotOption ? 'Allowed' : 'Not Allowed'}</span>
             </div>
           </div>
 
           {hasExistingQuote && (
             <div className="ebid-info-notice">
-              You already have a quotation on file for this RFQ. Submitting again will update it.
+              You already have a submitted quotation on file for this RFQ. Submitting again will update it.
             </div>
           )}
 
           {((rfq.technicalSpecificationDocuments?.length ?? 0) > 0 ||
             (rfq.termsConditionDocuments?.length ?? 0) > 0) && (
             <div className="ebid-docs">
-              <span className="ebid-section-label">Reference Documents</span>
+              <span className="ebid-section-heading">
+                <FaPaperclip /> <span className="ebid-section-label">Reference Documents</span>
+              </span>
               <div className="ebid-docs-list">
                 {rfq.technicalSpecificationDocuments?.map((doc) => (
-                  <div className="ebid-doc-chip" key={doc.id}>
-                    {doc.fileName} <span className="ebid-doc-chip-type">Tech Spec</span>
+                  <div className="ebid-doc-card" key={doc.id}>
+                    <span className="ebid-doc-card-icon"><FaFileAlt /></span>
+                    <div className="ebid-doc-card-info">
+                      <div className="ebid-doc-card-name" title={doc.fileName}>{doc.fileName}</div>
+                      <div className="ebid-doc-card-type">Tech Spec &bull; {doc.fileType?.toUpperCase()}</div>
+                    </div>
+                    <div className="ebid-doc-card-actions">
+                      <button
+                        type="button"
+                        className="ebid-icon-btn"
+                        title="View document"
+                        onClick={() => handleDocumentAction(doc, 'preview')}
+                      >
+                        <FaEye />
+                      </button>
+                      <button
+                        type="button"
+                        className="ebid-icon-btn"
+                        title="Download document"
+                        onClick={() => handleDocumentAction(doc, 'download')}
+                      >
+                        <FaDownload />
+                      </button>
+                    </div>
                   </div>
                 ))}
                 {rfq.termsConditionDocuments?.map((doc) => (
-                  <div className="ebid-doc-chip" key={doc.id}>
-                    {doc.fileName} <span className="ebid-doc-chip-type">Terms &amp; Conditions</span>
+                  <div className="ebid-doc-card" key={doc.id}>
+                    <span className="ebid-doc-card-icon ebid-doc-card-icon-terms"><FaFileAlt /></span>
+                    <div className="ebid-doc-card-info">
+                      <div className="ebid-doc-card-name" title={doc.fileName}>{doc.fileName}</div>
+                      <div className="ebid-doc-card-type">Terms &amp; Conditions &bull; {doc.fileType?.toUpperCase()}</div>
+                    </div>
+                    <div className="ebid-doc-card-actions">
+                      <button
+                        type="button"
+                        className="ebid-icon-btn"
+                        title="View document"
+                        onClick={() => handleDocumentAction(doc, 'preview')}
+                      >
+                        <FaEye />
+                      </button>
+                      <button
+                        type="button"
+                        className="ebid-icon-btn"
+                        title="Download document"
+                        onClick={() => handleDocumentAction(doc, 'download')}
+                      >
+                        <FaDownload />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -366,64 +600,165 @@ const ExternalSupplierBid: React.FC = () => {
         </section>
 
         <section className="ebid-card">
-          <span className="ebid-section-label">Required Materials &amp; Services</span>
-          <div className="ebid-table-wrap">
-            <table className="ebid-items-table">
-              <thead>
-                <tr>
-                  <th>Material</th>
-                  <th>Code</th>
-                  <th>Qty</th>
-                  {!rfq.addLotOption && <th className="ebid-col-price">Your Unit Quote</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {rfq.items?.map((item, idx) => {
-                  const key = item.id || item.buyerRFQItemId || `item-${idx}`;
-                  return (
-                    <tr key={key}>
-                      <td>
-                        <div className="ebid-item-cell">
-                          <div className="ebid-item-desc">{item.description}</div>
-                          {item.costCenterName && (
-                            <div className="ebid-item-sub">Cost Center: {item.costCenterName}</div>
-                          )}
-                          {(item.attachments?.length ?? 0) > 0 && (
-                            <div className="ebid-item-attachments">
-                              {item.attachments!.map((att) => (
-                                <span className="ebid-doc-chip" key={att.id}>{att.fileName}</span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td>{item.materialCode || 'N/A'}</td>
-                      <td>{item.quantity} {item.uom}</td>
-                      {!rfq.addLotOption && (
-                        <td>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            className="ebid-input"
-                            value={itemPrices[key] || ''}
-                            onChange={(e) => handleItemPriceChange(key, parseFloat(e.target.value) || 0)}
-                            placeholder="0.00"
-                            required
-                          />
-                        </td>
-                      )}
+          <span className="ebid-section-heading">
+            <FaClipboardList /> <span className="ebid-section-label">Required Materials &amp; Services</span>
+          </span>
+
+          {rfq.addLotOption ? (
+            <div className="ebid-table-card">
+              <div className="ebid-table-wrap">
+                <table className="ebid-items-table">
+                  <thead>
+                    <tr>
+                      <th>Material Info</th>
+                      <th className="ebid-col-code">Code</th>
+                      <th className="ebid-col-num">Qty Required</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {rfq.items?.map((item, idx) => (
+                      <tr key={item.id || item.buyerRFQItemId || `item-${idx}`}>
+                        <td>
+                          <div className="ebid-item-desc">{item.description}</div>
+                        </td>
+                        <td className="ebid-col-code">{item.materialCode || 'N/A'}</td>
+                        <td className="ebid-col-num">{item.quantity} {item.uom}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="ebid-table-card">
+              <div className="ebid-table-wrap">
+                <table className="ebid-items-table">
+                  <thead>
+                    <tr>
+                      <th>Material Info</th>
+                      <th className="ebid-col-code">Code</th>
+                      <th className="ebid-col-num">Qty</th>
+                      <th>Delivery Charge</th>
+                      <th>Delivery Type</th>
+                      <th>Discount</th>
+                      <th>Discount Type</th>
+                      <th>Tax</th>
+                      <th>Tax Type</th>
+                      <th className="ebid-col-price">Quoted Price</th>
+                      <th className="ebid-col-price">Sub Total</th>
+                      <th className="ebid-col-price">Quoted Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rfq.items?.map((item, idx) => {
+                      const itemKey = item.supplierRFQItemId || `item-${idx}`;
+                      const line = lineItems[itemKey] || EMPTY_LINE_ITEM;
+                      return (
+                        <tr key={itemKey}>
+                          <td>
+                            <div className="ebid-item-desc">{item.description}</div>
+                          </td>
+                          <td className="ebid-col-code">{item.materialCode || 'N/A'}</td>
+                          <td className="ebid-col-num">{item.quantity} {item.uom}</td>
+                          <td>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              className="ebid-input"
+                              value={line.deliveryCharge || ''}
+                              onChange={(e) => handleLineItemFieldChange(itemKey, 'deliveryCharge', e.target.value)}
+                              placeholder="0.00"
+                            />
+                          </td>
+                          <td>
+                            <select
+                              className="ebid-input"
+                              value={line.deliveryType}
+                              onChange={(e) => handleLineItemFieldChange(itemKey, 'deliveryType', e.target.value)}
+                            >
+                              <option value="PERCENTAGE">PERCENTAGE</option>
+                              <option value="AMOUNT">AMOUNT</option>
+                            </select>
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              className="ebid-input"
+                              value={line.discount || ''}
+                              onChange={(e) => handleLineItemFieldChange(itemKey, 'discount', e.target.value)}
+                              placeholder="0.00"
+                            />
+                          </td>
+                          <td>
+                            <select
+                              className="ebid-input"
+                              value={line.discountType}
+                              onChange={(e) => handleLineItemFieldChange(itemKey, 'discountType', e.target.value)}
+                            >
+                              <option value="PERCENTAGE">PERCENTAGE</option>
+                              <option value="AMOUNT">AMOUNT</option>
+                            </select>
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              className="ebid-input"
+                              value={line.tax || ''}
+                              onChange={(e) => handleLineItemFieldChange(itemKey, 'tax', e.target.value)}
+                              placeholder="0.00"
+                            />
+                          </td>
+                          <td>
+                            <select
+                              className="ebid-input"
+                              value={line.taxType}
+                              onChange={(e) => handleLineItemFieldChange(itemKey, 'taxType', e.target.value)}
+                            >
+                              <option value="PERCENTAGE">PERCENTAGE</option>
+                              <option value="AMOUNT">AMOUNT</option>
+                            </select>
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              className="ebid-input ebid-input-strong"
+                              value={line.quotedPrice || ''}
+                              onChange={(e) => handleLineItemFieldChange(itemKey, 'quotedPrice', e.target.value)}
+                              placeholder="0.00"
+                              required
+                            />
+                          </td>
+                          <td className="ebid-readonly-value">{line.subTotal.toFixed(2)}</td>
+                          <td className="ebid-readonly-value">{line.quotedAmount.toFixed(2)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              </div>
+
+              <div className="ebid-line-total">
+                <span>Total Price Quote</span>
+                <span className="ebid-line-total-value">{Number(totalPrice).toFixed(2)}</span>
+              </div>
+            </>
+          )}
         </section>
 
         {(rfq.questions?.length ?? 0) > 0 && (
           <section className="ebid-card">
-            <span className="ebid-section-label">Additional Questions from Buyer</span>
+            <span className="ebid-section-heading">
+              <FaQuestionCircle /> <span className="ebid-section-label">Additional Questions from Buyer</span>
+            </span>
             <div className="ebid-questions">
               {[...rfq.questions]
                 .sort((a, b) => a.displayOrder - b.displayOrder)
@@ -502,94 +837,121 @@ const ExternalSupplierBid: React.FC = () => {
           </section>
         )}
 
-        <section className="ebid-card">
-          <span className="ebid-section-label">Commercial Proposal</span>
-          <div className="ebid-commercial-grid">
-            <div className="ebid-field">
-              <label>Delivery Charge</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                className="ebid-input"
-                value={deliveryCharge || ''}
-                onChange={(e) => setDeliveryCharge(Number(e.target.value) || 0)}
-                placeholder="0.00"
-              />
+        {rfq.addLotOption && (
+          <section className="ebid-card">
+            <span className="ebid-section-heading">
+              <FaFileInvoiceDollar /> <span className="ebid-section-label">Commercial Proposal / Quotation Details</span>
+            </span>
+            <div className="ebid-commercial-grid">
+              <div className="ebid-field">
+                <label>Delivery Charge</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="ebid-input"
+                  value={deliveryCharge || ''}
+                  onChange={(e) => setDeliveryCharge(Number(e.target.value) || 0)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="ebid-field">
+                <label>Delivery Type</label>
+                <select className="ebid-input" value={deliveryType} onChange={(e) => setDeliveryType(e.target.value)}>
+                  <option value="PERCENTAGE">PERCENTAGE</option>
+                  <option value="AMOUNT">AMOUNT</option>
+                </select>
+              </div>
+              <div className="ebid-field">
+                <label>Discount</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="ebid-input"
+                  value={discount || ''}
+                  onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="ebid-field">
+                <label>Discount Type</label>
+                <select className="ebid-input" value={discountType} onChange={(e) => setDiscountType(e.target.value)}>
+                  <option value="PERCENTAGE">PERCENTAGE</option>
+                  <option value="AMOUNT">AMOUNT</option>
+                </select>
+              </div>
+              <div className="ebid-field">
+                <label>Tax</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="ebid-input"
+                  value={tax || ''}
+                  onChange={(e) => setTax(Number(e.target.value) || 0)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="ebid-field">
+                <label>Tax Type</label>
+                <select className="ebid-input" value={taxType} onChange={(e) => setTaxType(e.target.value)}>
+                  <option value="PERCENTAGE">PERCENTAGE</option>
+                  <option value="AMOUNT">AMOUNT</option>
+                </select>
+              </div>
+              <div className="ebid-field ebid-field-total">
+                <label>Total Price Quote</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="ebid-input ebid-input-total"
+                  value={totalPrice}
+                  onChange={(e) => setTotalPrice(Number(e.target.value) || 0)}
+                  placeholder="0.00"
+                  required
+                />
+              </div>
             </div>
-            <div className="ebid-field">
-              <label>Delivery Type</label>
-              <select className="ebid-input" value={deliveryType} onChange={(e) => setDeliveryType(e.target.value)}>
-                <option value="PERCENTAGE">PERCENTAGE</option>
-                <option value="AMOUNT">AMOUNT</option>
-              </select>
-            </div>
-            <div className="ebid-field">
-              <label>Discount</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                className="ebid-input"
-                value={discount || ''}
-                onChange={(e) => setDiscount(Number(e.target.value) || 0)}
-                placeholder="0.00"
-              />
-            </div>
-            <div className="ebid-field">
-              <label>Discount Type</label>
-              <select className="ebid-input" value={discountType} onChange={(e) => setDiscountType(e.target.value)}>
-                <option value="PERCENTAGE">PERCENTAGE</option>
-                <option value="AMOUNT">AMOUNT</option>
-              </select>
-            </div>
-            <div className="ebid-field">
-              <label>Tax</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                className="ebid-input"
-                value={tax || ''}
-                onChange={(e) => setTax(Number(e.target.value) || 0)}
-                placeholder="0.00"
-              />
-            </div>
-            <div className="ebid-field">
-              <label>Tax Type</label>
-              <select className="ebid-input" value={taxType} onChange={(e) => setTaxType(e.target.value)}>
-                <option value="PERCENTAGE">PERCENTAGE</option>
-                <option value="AMOUNT">AMOUNT</option>
-              </select>
-            </div>
-            <div className="ebid-field ebid-field-total">
-              <label>Total Price Quote</label>
-              <input
-                type="number"
-                step="0.01"
-                className="ebid-input ebid-input-total"
-                value={totalPrice}
-                onChange={(e) => setTotalPrice(Number(e.target.value) || 0)}
-                placeholder="0.00"
-                required
-              />
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {!canSubmit && (
           <div className="ebid-window-notice">
             {notYetOpen
               ? "This RFQ hasn't opened for bidding yet — check back after the start date."
-              : "This RFQ's submission window has closed. You can no longer submit a quotation."}
+              : frozen
+                ? "The buyer has frozen this RFQ's bid. You can no longer submit a quotation."
+                : "This RFQ's submission window has closed. You can no longer submit a quotation."}
           </div>
         )}
 
         {submitError && <div className="ebid-error-banner">{submitError}</div>}
 
         <div className="ebid-submit-bar">
-          <button type="submit" className="ebid-submit-btn" disabled={submitting || !canSubmit}>
-            {submitting ? 'Submitting…' : 'Submit Quotation'}
+          <button
+            type="submit"
+            className="ebid-submit-btn"
+            disabled={submitting || !canSubmit}
+            title={
+              notYetOpen
+                ? "This RFQ hasn't opened for bidding yet."
+                : frozen
+                  ? "The buyer has frozen this RFQ's bid."
+                  : closed
+                    ? "This RFQ's submission window has closed."
+                    : undefined
+            }
+          >
+            {submitting
+              ? 'Submitting…'
+              : notYetOpen
+                ? 'Not Yet Open'
+                : frozen
+                  ? 'Bid Frozen'
+                  : closed
+                    ? 'Submission Closed'
+                    : 'Submit Quotation'}
           </button>
         </div>
       </form>
