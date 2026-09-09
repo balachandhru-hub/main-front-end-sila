@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Loader, ToastContainer, toastService as toast } from '@vosox/shared-ui';
-import { createBusinessUser, getOrganizationUsers } from './api/departmentcostapi'; 
+import { createBusinessUser, getOrganizationUsers } from './api/departmentcostapi';
 import { Country } from 'country-state-city';
 import { CiMail } from 'react-icons/ci';
 import { FaUser, FaLock, FaEye, FaEyeSlash, FaPhone, FaMapMarkerAlt, FaGlobe, FaSearch, FaPlus } from 'react-icons/fa';
@@ -162,7 +162,7 @@ const UserAdmin: React.FC = () => {
     try {
       const roleId = getBusinessUserRoleId();
       const userTypeDisplay = getUserTypeDisplayName();
-      
+
       if (!roleId) {
         setError('Invalid user role. Cannot create business user.');
         setIsLoading(false);
@@ -342,7 +342,7 @@ const UserAdmin: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="user-admin-form">
+            <form className="user-admin-form">
               {error && <div className="user-admin-error">{error}</div>}
 
               <div className="user-admin-form-group">
@@ -465,7 +465,8 @@ const UserAdmin: React.FC = () => {
                   </button>
                 </div>
               </div>
-
+            </form>
+            <footer className="user-admin-footer">
               <div className="user-admin-form-actions">
                 <Button
                   type="button"
@@ -481,11 +482,12 @@ const UserAdmin: React.FC = () => {
                   variant="primary"
                   size="lg"
                   disabled={isLoading}
+                  onClick={handleSubmit}
                 >
                   {isLoading ? 'Creating...' : 'Create User'}
                 </Button>
               </div>
-            </form>
+            </footer>
 
             {isLoading && (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.8)', borderRadius: '12px' }}>

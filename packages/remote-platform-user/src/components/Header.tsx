@@ -159,9 +159,27 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
     }
   };
 
+  const handleLogoClick = () => {
+    if (onNavClick) {
+      const dashItem = navItems?.find(
+        (item) => item.key === 'dashboard' || item.label.toLowerCase() === 'dashboard'
+      );
+      onNavClick(dashItem ? dashItem.key : 'dashboard');
+    } else {
+      navigate('/platform-user/dashboard');
+    }
+  };
+
   return (
     <header className="vsx-header">
-      <div className="vsx-header-brand">
+      <div 
+        className="vsx-header-brand" 
+        onClick={handleLogoClick}
+        style={{ cursor: 'pointer' }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLogoClick(); }}
+      >
         <img src={sila_logo} alt="SILA" className="vsx-header-logo" />
       </div>
 
