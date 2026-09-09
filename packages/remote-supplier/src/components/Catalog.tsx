@@ -598,7 +598,7 @@ const Catalog: React.FC<CatalogProps> = ({
         setCreateCatalogError(null);
         try {
             const organizationId =
-                useAuthStore.getState().organizationId || sessionStorage.getItem("vosox_organization_id") || "";
+                useAuthStore.getState().organizationId || "";
 
             if (!organizationId) {
                 throw new Error("Organization ID not found. Please log in again.");
