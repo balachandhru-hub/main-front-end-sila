@@ -2066,13 +2066,6 @@ const SupplierAdminDash: React.FC = () => {
             <Catalog
               isAdmin={true}
               onShowCatalogList={() => setActiveNav("catalogList")}
-              onCloseCatalogList={() => {
-                setActiveNav("dashboard");
-                setRfqPageView("dashboard");
-                setSelectedRfqId(null);
-                setSelectedRfq(null);
-                setRfqDetailError(null);
-              }}
               fullViewContainer={activeNav === "catalogList" ? catalogViewContainer : null}
             />
 
