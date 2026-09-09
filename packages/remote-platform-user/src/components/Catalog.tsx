@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import "./Catalog.css";
-import { useAuthStore } from "../../../host-app/src/store/useAuthStore";
+import { useNetworkAdminAuthStore } from "../store/useAuthStore";
 import { 
   createSupplierCatalog, 
   fetchUnits, 
@@ -319,7 +319,7 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
         setCreateCatalogError(null);
         try {
             const organizationId =
-                useAuthStore.getState().organizationId || sessionStorage.getItem("vosox_organization_id") || "";
+                useNetworkAdminAuthStore.getState().currentUser?.organizationId ||  "";
 
             if (!organizationId) {
                 throw new Error("Organization ID not found. Please log in again.");
