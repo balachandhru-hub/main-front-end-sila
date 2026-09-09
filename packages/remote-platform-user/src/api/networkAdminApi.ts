@@ -489,6 +489,9 @@ export const updatePersonDetail = async (
 };
 
 
+export const PERSON_DETAIL_UPDATED_EVENT = 'person-detail:updated';
+
+let personDetailCacheGeneration = 0;
 let personDetailCache: PersonDetailDto | null = null;
 let personDetailInFlight: Promise<PersonDetailDto | ErrorResponseDto> | null = null;
 
@@ -496,7 +499,12 @@ export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorRe
   if (personDetailCache) return personDetailCache;
   if (personDetailInFlight) return personDetailInFlight;
 
+  const generation = personDetailCacheGeneration;
+
   personDetailInFlight = getPersonDetail().then((result) => {
+    if (generation !== personDetailCacheGeneration) {
+      return result;
+    }
     if (!isErrorResponse(result)) {
       personDetailCache = result;
     }
@@ -507,8 +515,20 @@ export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorRe
   return personDetailInFlight;
 };
 
-export const invalidatePersonDetailCache = () => {
-  personDetailCache = null;
+export const invalidatePersonDetailCache = (updated?: PersonDetailDto) => {
+  // Only reseed the cache from a response that carries the full record; a
+  // partial payload would leave consumers reading missing fields.
+  const fresh = updated && updated.personId ? updated : null;
+
+  personDetailCacheGeneration += 1;
+  personDetailCache = fresh;
+  personDetailInFlight = null;
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent<PersonDetailDto | null>(PERSON_DETAIL_UPDATED_EVENT, { detail: fresh })
+    );
+  }
 };
 
 export const createDeliveryLocation = async (

@@ -46,7 +46,7 @@ const SupplierProfilePage: React.FC = () => {
     if (isErrorResponse(result)) {
       setError(result.message || 'Failed to update profile.');
     } else {
-      invalidatePersonDetailCache();
+      invalidatePersonDetailCache(result);
       setPersonDetail(result as unknown as PersonDetail);
     }
 
