@@ -44,12 +44,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   initializeAuth: async () => {
     try {
       const claims = await getTokenClaims(true);
-      if (claims && claims.roleId) {
-        let resolvedRole: UserRole = 'supplier';
-        if (ROLE_MAPPING[claims.roleId]) {
-          resolvedRole = ROLE_MAPPING[claims.roleId];
-        }
-
+      const resolvedRole = claims?.roleId ? ROLE_MAPPING[claims.roleId] : undefined;
+      if (resolvedRole) {
         set({
           isLoggedIn: true,
           isInitialized: true,
@@ -76,9 +72,18 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   },
    login: (details) => {
-    let resolvedRole: UserRole = 'supplier';
-    if (details?.roleId && ROLE_MAPPING[details.roleId]) {
-      resolvedRole = ROLE_MAPPING[details.roleId];
+    const resolvedRole = details?.roleId ? ROLE_MAPPING[details.roleId] : undefined;
+    if (!resolvedRole) {
+      set({
+        isLoggedIn: false,
+        isInitialized: true,
+        userRole: null,
+        userId: null,
+        personId: null,
+        organizationId: null,
+        roleId: null,
+      });
+      return;
     }
 
     set({
