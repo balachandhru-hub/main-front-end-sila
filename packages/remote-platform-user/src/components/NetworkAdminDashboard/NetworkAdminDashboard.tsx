@@ -104,10 +104,6 @@ const NetworkAdminDashboard: React.FC = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
-    useNetworkAdminAuthStore.getState().initializeFromSession();
-  }, []);
-
-  useEffect(() => {
     if (!currentUser?.organizationId) return;
 
     const fetchUsers = async () => {

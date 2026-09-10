@@ -17,7 +17,7 @@ import {
     type UnitItem,
     type CatalogDetailResponseItem,
 } from "../api/supplierApi";
-import { isErrorResponse } from '@vosox/shared-ui';
+import { isErrorResponse, Button } from '@vosox/shared-ui';
 import type { CatalogAssetDto, CatalogDetailDto, SupplierCatalogListItem } from "../dto/supplierDto";
 
 /* ============================== Types ============================== */
@@ -182,14 +182,12 @@ const IconExternalLink = (props: IconProps) => (
 
 interface CatalogProps {
     onShowCatalogList?: () => void;
-    onCloseCatalogList?: () => void;
     fullViewContainer?: HTMLDivElement | null;
     isAdmin?: boolean;
 }
 
 const Catalog: React.FC<CatalogProps> = ({
     onShowCatalogList,
-    onCloseCatalogList,
     fullViewContainer,
     isAdmin = false
 }) => {
@@ -598,7 +596,7 @@ const Catalog: React.FC<CatalogProps> = ({
         setCreateCatalogError(null);
         try {
             const organizationId =
-                useAuthStore.getState().organizationId || sessionStorage.getItem("vosox_organization_id") || "";
+                useAuthStore.getState().organizationId || "";
 
             if (!organizationId) {
                 throw new Error("Organization ID not found. Please log in again.");
@@ -814,7 +812,7 @@ const Catalog: React.FC<CatalogProps> = ({
             )}
 
             {/* Create Catalog Modal */}
-            {showCreateCatalogModal && (
+            {showCreateCatalogModal && createPortal(
                 <div className="pud-modal-overlay" onClick={closeCreateCatalogModal}>
                     <div className="pud-modal pud-modal-catalog" onClick={(e) => e.stopPropagation()}>
                         <div className="pud-modal-header">
@@ -1190,13 +1188,14 @@ const Catalog: React.FC<CatalogProps> = ({
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Upload Catalog Modal */}
-            {showUploadCatalogModal && (
+            {showUploadCatalogModal && createPortal(
                 <div className="pud-modal-overlay" onClick={closeUploadCatalogModal}>
-                    <div className="pud-modal" onClick={(e) => e.stopPropagation()}>
+                    <div className="pud-modal pud-modal-upload" onClick={(e) => e.stopPropagation()}>
                         <div className="pud-modal-header">
                             <button className="pud-modal-close" onClick={closeUploadCatalogModal} title="Close">
                                 <IconClose />
@@ -1295,7 +1294,8 @@ const Catalog: React.FC<CatalogProps> = ({
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Catalog List Portal */}
@@ -1525,25 +1525,23 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </p>
                                 </div>
                                 <div className="pud-catalog-fullview-actions">
-                                    <button
-                                        type="button"
-                                        className="pud-btn pud-btn-outline"
-                                        onClick={() => {
-                                            setShowCatalogListModal(false);
-                                            setShowPunchOutFullPage(false);
-                                            onCloseCatalogList?.();
-                                        }}
-                                    >
-                                        <IconChevronRight /> Back to Dashboard
-                                    </button>
                                     {isAdmin && (
-                                        <button
+                                        <Button
                                             type="button"
-                                            className="pud-btn pud-btn-message"
+                                            variant="outline"
+                                            onClick={() => setShowUploadCatalogModal(true)}
+                                        >
+                                            <IconUploadCloud /> Upload Catalog
+                                        </Button>
+                                    )}
+                                    {isAdmin && (
+                                        <Button
+                                            type="button"
+                                            variant="primary"
                                             onClick={() => setShowCreateCatalogModal(true)}
                                         >
                                             + Add Catalog
-                                        </button>
+                                        </Button>
                                     )}
                                 </div>
                             </div>

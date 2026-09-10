@@ -397,16 +397,18 @@ const BuyerAdminDash: React.FC = () => {
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
 
-  const [buyerId, setBuyerId] = useState<string | null>(
-    sessionStorage.getItem("vosox_buyer_id")
-  );
+  const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
+  const [buyerId, setBuyerId] = useState<string | null>(currentUser?.buyerId || null);
+
+  useEffect(() => {
+    if (currentUser?.buyerId) {
+      setBuyerId(currentUser.buyerId);
+    }
+  }, [currentUser?.buyerId]);
+
 
   // STATE FOR QUOTATION COMPARISON
   const [selectedQuotationsRfq, setSelectedQuotationsRfq] = useState<any | null>(null);
-
-  useEffect(() => {
-    useNetworkAdminAuthStore.getState().initializeFromSession();
-  }, []);
 
   useEffect(() => {
     const loadBuyerProfile = async () => {
@@ -414,7 +416,6 @@ const BuyerAdminDash: React.FC = () => {
         try {
           const profile = await getBuyerProfile();
           if (profile?.id) {
-            sessionStorage.setItem("vosox_buyer_id", profile.id);
             setBuyerId(profile.id);
           } else {
             setRfqsError("Buyer profile not found. Please complete onboarding.");
@@ -652,6 +653,7 @@ const BuyerAdminDash: React.FC = () => {
     } catch (error: any) {
       setLogoutError(error?.message || "Logout request failed, clearing session locally.");
     } finally {
+      useNetworkAdminAuthStore.getState().logout();
       sessionStorage.clear();
       window.dispatchEvent(new CustomEvent("session:expired"));
       setLoggingOut(false);

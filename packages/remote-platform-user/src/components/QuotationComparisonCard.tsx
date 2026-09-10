@@ -170,7 +170,7 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
   // next to Rate/Amount, since a supplier's own line ordering can differ from the RFQ's.
   const showLLColumn = data.addLotOption === false;
   const fvLvColSpan = showLLColumn ? 3 : 2;
-  const supplierGroupColSpan = fvLvColSpan * 2;
+  const supplierGroupColSpan = fvLvColSpan ;
   const BASE_COLUMN_COUNT = 5; // Expand, Material Info, LN, Code, Qty
 
   const getSupplierName = (supplier: BidSupplierQuotationDto, index: number) =>
@@ -190,6 +190,7 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
                   <div className="qcc-supplier-group-name">{getSupplierName(supplier, index)}</div>
                 </th>
               ))}
+              {/* <th colSpan={6}></th> */}
             </tr>
             <tr>
               <th className="qcc-expand-header"></th>
@@ -322,16 +323,23 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
               <td></td>
               <td></td>
               <td></td>
-              {suppliers.map((supplier, index) => (
-                <td key={supplier.supplierId || index} colSpan={supplierGroupColSpan}>
-                  <div className="qcc-grand-total-grid">
-                    <span>Grand Total (FV):</span>
-                    <span>{formatMoney(calcGrandTotal(supplier.firstVersion))}</span>
-                    <span>Grand Total (LV):</span>
-                    <span>{formatMoney(calcGrandTotal(supplier.latestVersion))}</span>
-                  </div>
-                </td>
-              ))}
+            {suppliers.map((supplier, index) => (
+  <React.Fragment key={supplier.supplierId || index}>
+    <td colSpan={supplierGroupColSpan}>
+      <div className="qcc-grand-total-grid">
+        <span>Grand Total (FV):</span>
+        <span>{formatMoney(calcGrandTotal(supplier.firstVersion))}</span>
+      </div>
+    </td>
+
+    <td colSpan={supplierGroupColSpan}>
+      <div className="qcc-grand-total-grid">
+        <span>Grand Total (LV):</span>
+        <span>{formatMoney(calcGrandTotal(supplier.latestVersion))}</span>
+      </div>
+    </td>
+  </React.Fragment>
+))}
             </tr>
           </tfoot>
         </table>

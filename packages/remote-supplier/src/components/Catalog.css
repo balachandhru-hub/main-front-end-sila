@@ -633,14 +633,17 @@
 .pud-modal {
     background: #ffffff;
     border-radius: 0.75rem;
-    box-shadow: 0 1.25rem 1.5625rem rgba(0, 0, 0, 0.15);
     width: 100%;
     flex-direction: column;
 }
 
-.pud-modal-catalog {
+.pud-modal.pud-modal-catalog {
     height: 35rem;
-    width: 50rem;
+    width: 37.5rem;
+}
+
+.pud-modal.pud-modal-upload {
+    width: 37.5rem;
 }
 
 .pud-modal-pdf {
@@ -823,7 +826,8 @@
     justify-content: space-between;
     gap: 1.25rem;
     padding: 0.5rem 0.7rem;
-    background: #ffffff;
+    background: #c4c3c2;
+    margin-bottom: 1.25rem  ;
 }
 
 .pud-catalog-fullview-header>div:first-child {

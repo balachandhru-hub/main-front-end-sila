@@ -271,6 +271,8 @@ interface StatCard {
   cardClass: string;
   iconClass: string;
   urgencyBadge?: string;
+// When all the cards have their own link to navigate, remove the onClickable
+  isClickable?: boolean; 
 }
 
 interface POItem {
@@ -281,13 +283,14 @@ interface POItem {
   amount: string;
 }
 
+// When all the cards have their own link to navigate, remove the onClickable
 const statCards: StatCard[] = [
-  { icon: <IconFile />, label: "Active RFQs", value: 3, linkText: "Manage RFQs >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
-  { icon: <IconMail />, label: "Quotations received", value: 5, linkText: "Review bids >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
-  { icon: <IconTrend />, label: "Suppliers engaged", value: 8, linkText: "View directory >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
-  { icon: <IconBag />, label: "Purchase orders", value: 4, linkText: "Track orders >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
-  { icon: <IconInvoice />, label: "Invoices", value: 2, linkText: "Invoice list >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "Needs action" },
-  { icon: <IconBell />, label: "Notifications", value: 3, linkText: "Inquiries & alerts >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "New alerts" },
+  { icon: <IconFile />, label: "Active RFQs", value: 3, linkText: "Manage RFQs >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral", isClickable: true, },
+  { icon: <IconMail />, label: "Quotations received", value: 5, linkText: "Review bids >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral",isClickable: false, },
+  { icon: <IconTrend />, label: "Suppliers engaged", value: 8, linkText: "View directory >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral",isClickable: false, },
+  { icon: <IconBag />, label: "Purchase orders", value: 4, linkText: "Track orders >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral",isClickable: false, },
+  { icon: <IconInvoice />, label: "Invoices", value: 2, linkText: "Invoice list >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "Needs action",isClickable: false, },
+  { icon: <IconBell />, label: "Notifications", value: 3, linkText: "Inquiries & alerts >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "New alerts",isClickable: false, },
 ];
 
 const poItems: POItem[] = [
@@ -625,11 +628,15 @@ const BuyersDashboard: React.FC = () => {
     }
   };
 
-  const handleBackToAllRfqs = () => {
+  const handleBackToAllRfqs = async() => {
     setRfqPageView("allRfqs");
     setFullPageRfq(null);
     setFullPageRfqId(null);
     setFullPageRfqError(null);
+
+    if (allRfqsLoaded || loadingAllRfqs) return;
+
+    await loadAllRfqsPage(1);
   };
 
   const handleFreezeBid = async () => {
@@ -1223,7 +1230,7 @@ const BuyersDashboard: React.FC = () => {
                       onClick={() => handleNavClick("createRFQ")}
                     >
                       <NavIconFilePlus />
-                      <span>+ Create New RFQ</span>
+                      <span> + Create RFQ</span>
                     </button>
                   </div>
                 </div>
@@ -1239,7 +1246,11 @@ const BuyersDashboard: React.FC = () => {
                       </div>
                       <div className="pud-stat-label">{stat.label}</div>
                       <div className="pud-stat-value">{stat.value}</div>
-                      <a className="pud-stat-link" href="#" onClick={(e) => { e.preventDefault(); handleNavClick("activeRFQs"); }}>
+                      <a className="pud-stat-link" href="#" onClick={(e) => { e.preventDefault();
+                      //There is isClickable, only true value link is working where other links are showing but not working.
+                      // For now only Manage RFQ is working 
+                      // When all the links have their own navigation remove the isClickable field in interface and in array object.
+                        if(stat.isClickable){handleNavClick("activeRFQs");} }}> 
                         {stat.linkText}
                       </a>
                     </div>
