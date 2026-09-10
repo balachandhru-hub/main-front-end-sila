@@ -14,6 +14,8 @@ export interface User {
   userRole: UserRole;
   createdAt: string;
   status: 'active' | 'inactive';
+  buyerId?:string;
+  supplierId?:string;
   organizationId?: string;
   userId?: string;
   personId?: string;

@@ -391,3 +391,10 @@ export const getBidComparisonData = async (
     };
   }
 };
+
+export const getTokenClaims = async (skipRefresh = false) => {
+  const response = await platformInstance.get('/api/v1/identity/token-claim', {
+    ...({ _skipRefresh: skipRefresh } as any),
+  });
+  return response.data;
+};

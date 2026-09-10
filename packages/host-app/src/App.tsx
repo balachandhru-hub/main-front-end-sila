@@ -19,7 +19,17 @@ const Protected: React.FC<{
   children,
   allowedRoles,
 }) => {
-  const { isLoggedIn, userRole } = useAuthStore();
+  const { isLoggedIn, userRole, isInitialized } = useAuthStore();
+   if(!isInitialized){
+    return(
+      <Loader 
+      fullScreen={true}
+      message='Verifying session...'
+      theme='light'
+      color='#1976d2'
+      />  
+    );
+  }
 
   if (!isLoggedIn) {
     return <Navigate to="/" replace />;
@@ -43,16 +53,18 @@ const Protected: React.FC<{
 };
 
 const Shell = () => {
-  const { isLoggedIn, userRole, logout } = useAuthStore();
+  const { isLoggedIn, userRole, logout, isInitialized,initializeAuth} = useAuthStore();
   const { fetchAndSetAuth, setAuth, clearAuth } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  React.useEffect(()=>{
+    initializeAuth();
+  },[initializeAuth])
   React.useEffect(() => {
     if (isLoggedIn) {
       fetchAndSetAuth();
-    } else {
-    }
-  }, []);
+    } 
+  }, [isLoggedIn,fetchAndSetAuth]);
 
   React.useEffect(() => {
     const handleSessionExpired = () => {
@@ -97,7 +109,14 @@ const Shell = () => {
             <Route
               path="/"
               element={
-                isLoggedIn ? (
+                !isInitialized ? (
+                  <Loader 
+                  fullScreen={true}
+                  message='Verifying session...'
+                  theme='light'
+                  color='#1976d2'
+                  />  
+                ) :isLoggedIn ? (
                   <Navigate to={getRedirectUrl()} replace />
                 ) : (
                   <Login
