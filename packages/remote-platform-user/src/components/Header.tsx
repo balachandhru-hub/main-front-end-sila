@@ -117,8 +117,10 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
         navigate('/platform-user/buyer-admin/profile');
       } else if (role === 'SUPPLIER_ADMINISTRATOR') {
         navigate('/platform-user/supplier-admin/profile');
-      } else if (role === 'BUYER_NETWORK_ADMIN' || role === 'SUPPLIER_NETWORK_ADMIN') {
-        navigate('/platform-user/network-admin/profile');
+      } else if (role === 'BUYER_NETWORK_ADMIN') {
+        navigate('/platform-user/buyer-network-admin/profile');
+      } else if (role === 'SUPPLIER_NETWORK_ADMIN') {
+        navigate('/platform-user/supplier-network-admin/profile');
       } else {
         navigate('/platform-user/dashboard');
       }
@@ -133,8 +135,10 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
       navigate('/platform-user/buyer-admin/profile');
     } else if (role === 'SUPPLIER_ADMINISTRATOR') {
       navigate('/platform-user/supplier-admin/profile');
-    } else if (role === 'BUYER_NETWORK_ADMIN' || role === 'SUPPLIER_NETWORK_ADMIN') {
-      navigate('/platform-user/network-admin/profile');
+    } else if (role === 'BUYER_NETWORK_ADMIN') {
+      navigate('/platform-user/buyer-network-admin/profile');
+    } else if (role === 'SUPPLIER_NETWORK_ADMIN') {
+      navigate('/platform-user/supplier-network-admin/profile');
     } else {
       navigate('/platform-user/dashboard');
     }

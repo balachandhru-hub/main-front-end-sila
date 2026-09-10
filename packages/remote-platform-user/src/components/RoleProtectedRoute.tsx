@@ -3,9 +3,9 @@ import { Navigate } from 'react-router-dom';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
 import type { UserRole } from '../types';
 
-const ROLE_HOME_ROUTE: Record<UserRole, string> = {
-  BUYER_NETWORK_ADMIN: '/platform-user/network-admin',
-  SUPPLIER_NETWORK_ADMIN: '/platform-user/network-admin',
+export const ROLE_HOME_ROUTE: Record<UserRole, string> = {
+  BUYER_NETWORK_ADMIN: '/platform-user/buyer-network-admin',
+  SUPPLIER_NETWORK_ADMIN: '/platform-user/supplier-network-admin',
   BUYER_ADMINISTRATOR: '/platform-user/buyer-admin',
   SUPPLIER_ADMINISTRATOR: '/platform-user/supplier-admin',
   BUYER_USER: '/buyer/dashboard',
@@ -20,13 +20,18 @@ interface RoleProtectedRouteProps {
 
 const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({ allowedRoles, children }) => {
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
+  const isLoading = useNetworkAdminAuthStore((state) => state.isLoading);
+
+  if (isLoading) {
+    return null;
+  }
 
   if (!currentUser) {
-    return <Navigate to="/platform-user/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (!allowedRoles.includes(currentUser.userRole)) {
-    return <Navigate to={ROLE_HOME_ROUTE[currentUser.userRole] || '/platform-user/dashboard'} replace />;
+    return <Navigate to={ROLE_HOME_ROUTE[currentUser.userRole] || '/'} replace />;
   }
 
   return <>{children}</>;

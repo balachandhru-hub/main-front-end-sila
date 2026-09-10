@@ -66,7 +66,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
     }
   };
 
-  const getRedirectUrl = (roleId: string): string => {
+  const getRedirectUrl = (roleId: string): string | null => {
     switch (roleId) {
       case ROLE_IDS.BUYER_ADMIN:
         return '/platform-user/buyer-admin';
@@ -77,13 +77,13 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
       case ROLE_IDS.SUPPLIER_NETWORK_ADMIN:
         return '/platform-user/supplier-network-admin';
       case ROLE_IDS.PLATFORM_ADMIN:
-        return '/platform-user';
+        return '/platform-user/dashboard';
       case ROLE_IDS.SUPPLIER:
         return '/supplier/dashboard';
       case ROLE_IDS.BUYER:
         return '/buyer/dashboard';
       default:
-        return '/supplier/dashboard';
+        return null;
     }
   };
 
@@ -113,9 +113,13 @@ if (claims && claims.roleId) {
     organizationType: claims.organizationType,
   };
 
-  onLoginSuccess?.(details);
-
   const redirectUrl = getRedirectUrl(claims.roleId);
+  if (!redirectUrl) {
+    setError('Unrecognized user role. Please contact support.');
+    return;
+  }
+
+  onLoginSuccess?.(details);
   navigate(redirectUrl, { replace: true });
 } else {
   setError('Failed to retrieve user claims. Role ID not found.');
