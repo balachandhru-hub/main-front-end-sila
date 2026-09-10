@@ -59,7 +59,9 @@
   box-shadow: 0 0.0625rem 0.125rem rgba(15, 23, 42, 0.04);
 }
 
-.ebid-card-header {
+/* --- RFQ hero card --- */
+
+.ebid-hero-top {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
@@ -67,22 +69,106 @@
   gap: 0.75rem;
 }
 
+.ebid-hero-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.ebid-hero-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.625rem;
+  background: #eff6ff;
+  color: #2f6feb;
+}
+
+.ebid-hero-icon svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
 .ebid-rfq-title {
   font-size: clamp(1.15rem, 1.6vw, 1.5rem);
   font-weight: 700;
   color: #0f172a;
+  overflow-wrap: anywhere;
 }
 
 .ebid-badge {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
   background: #eff6ff;
   color: #2f6feb;
   border: 0.0625rem solid #dbeafe;
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 0.25rem 0.625rem;
+  padding: 0.3125rem 0.75rem;
   border-radius: 999rem;
   white-space: nowrap;
+}
+
+.ebid-badge-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  flex-shrink: 0;
+}
+
+.ebid-badge-success {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.ebid-badge-warning {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+.ebid-badge-danger {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.ebid-badge-neutral {
+  background: #eff6ff;
+  color: #2f6feb;
+  border-color: #dbeafe;
+}
+
+.ebid-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  background: #f5f8ff;
+  border: 0.0625rem solid #e6edfc;
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.875rem;
+}
+
+.ebid-hero-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  font-size: 0.8rem;
+  color: #3f4c66;
+  font-weight: 500;
+}
+
+.ebid-hero-meta-item svg {
+  flex-shrink: 0;
+  width: 0.9rem;
+  height: 0.9rem;
+  color: #2f6feb;
 }
 
 .ebid-rfq-desc {
@@ -133,11 +219,36 @@
   font-weight: 500;
 }
 
+/* --- Section headings --- */
+
+.ebid-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding-bottom: 0.875rem;
+  border-bottom: 0.0625rem solid #eef1f5;
+  color: #1e293b;
+}
+
+.ebid-section-heading svg {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0.375rem;
+  border-radius: 0.5rem;
+  background: #eff6ff;
+  color: #2f6feb;
+  box-sizing: border-box;
+}
+
 .ebid-section-label {
   display: block;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  color: #64748b;
+  color: #334155;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -145,48 +256,104 @@
 .ebid-docs {
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 0.875rem;
 }
 
 .ebid-docs-list {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.5rem;
 }
 
-.ebid-doc-chip {
-  background: #f1f5f9;
-  color: #334155;
-  font-size: 0.8rem;
-  font-weight: 500;
-  padding: 0.375rem 0.625rem;
-  border-radius: 0.375rem;
+.ebid-doc-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #f8fafc;
+  border: 0.0625rem solid #e2e8f0;
+  border-radius: 0.625rem;
+  padding: 0.625rem 0.75rem;
+}
+
+.ebid-doc-card-icon {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  background: #eff6ff;
+  color: #2f6feb;
 }
 
-.ebid-doc-chip-type {
-  color: #94a3b8;
-  font-size: 0.7rem;
+.ebid-doc-card-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.ebid-doc-card-icon-terms {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.ebid-doc-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ebid-doc-card-name {
+  font-size: 0.85rem;
   font-weight: 600;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.ebid-item-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.ebid-item-attachments {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-}
-
-.ebid-item-attachments .ebid-doc-chip {
+.ebid-doc-card-type {
   font-size: 0.7rem;
-  padding: 0.25rem 0.5rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.ebid-doc-card-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.ebid-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ebid-icon-btn svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.ebid-icon-btn:hover {
+  background: #eff6ff;
+  color: #2f6feb;
+}
+
+/* --- Items table --- */
+
+.ebid-table-card {
+  border: 0.0625rem solid #e2e8f0;
+  border-radius: 0.75rem;
+  overflow: hidden;
 }
 
 .ebid-table-wrap {
@@ -199,25 +366,53 @@
   font-size: 0.85rem;
 }
 
-.ebid-items-table th {
+.ebid-col-code {
+  white-space: nowrap;
+}
+
+.ebid-items-table thead th {
   text-align: left;
   font-size: 0.7rem;
   font-weight: 700;
-  color: #64748b;
+  color: #2f6feb;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  padding: 0.5rem 0.625rem;
-  border-bottom: 0.0625rem solid #e2e8f0;
+  padding: 0.75rem 0.75rem;
+  background: #eff6ff;
+  border-bottom: 0.0625rem solid #dbeafe;
+  white-space: nowrap;
 }
 
 .ebid-items-table td {
-  padding: 0.75rem 0.625rem;
+  padding: 0.75rem;
   border-bottom: 0.0625rem solid #f1f5f9;
-  vertical-align: top;
+  vertical-align: middle;
+}
+
+.ebid-items-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ebid-items-table tbody tr:nth-child(even) {
+  background: #fafbfc;
+}
+
+.ebid-items-table tbody tr:hover {
+  background: #f0f5ff;
+}
+
+.ebid-col-num {
+  text-align: right;
 }
 
 .ebid-col-price {
   width: 8.5rem;
+  text-align: right;
+}
+
+.ebid-items-table td.ebid-col-num,
+.ebid-items-table td.ebid-readonly-value {
+  text-align: right;
 }
 
 .ebid-item-desc {
@@ -225,10 +420,40 @@
   color: #1e293b;
 }
 
-.ebid-item-sub {
-  font-size: 0.75rem;
-  color: #64748b;
+.ebid-input-strong {
+  font-weight: 600;
+  color: #0f172a;
+  text-align: right;
 }
+
+.ebid-readonly-value {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.ebid-line-total {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  background: #f8fafc;
+  border: 0.0625rem solid #e2e8f0;
+  border-radius: 0.625rem;
+  padding: 1rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.ebid-line-total-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #16a34a;
+}
+
+/* --- Questions --- */
 
 .ebid-questions {
   display: flex;
@@ -279,10 +504,16 @@
   cursor: pointer;
 }
 
+/* --- Commercial proposal --- */
+
 .ebid-commercial-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   gap: 1rem;
+  background: #f8fafc;
+  border: 0.0625rem solid #e2e8f0;
+  border-radius: 0.625rem;
+  padding: 1.25rem;
 }
 
 .ebid-field {
@@ -305,6 +536,7 @@
 
 .ebid-input {
   width: 100%;
+  min-width: 6rem;
   padding: 0.5rem 0.75rem;
   border: 0.0625rem solid #cbd5e1;
   border-radius: 0.5rem;
@@ -312,6 +544,13 @@
   color: #0f172a;
   background: #ffffff;
   box-sizing: border-box;
+}
+
+/* Native <select> needs extra room for its text plus the browser's own dropdown
+   arrow — a generic min-width sized for number inputs was clipping "PERCENTAGE". */
+select.ebid-input {
+  min-width: 9rem;
+  padding-right: 1.75rem;
 }
 
 .ebid-input:focus {
@@ -365,6 +604,12 @@
   transition: background 0.15s ease, opacity 0.15s ease;
 }
 
+.ebid-btn-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .ebid-submit-btn:hover:not(:disabled) {
   background: #2559c4;
 }
@@ -384,6 +629,8 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/* --- Status / success screens --- */
 
 .ebid-status-card {
   display: flex;
@@ -434,6 +681,8 @@
   padding-top: 1.25rem;
 }
 
+/* --- Confirm modal --- */
+
 .ebid-modal-overlay {
   position: fixed;
   inset: 0;
@@ -476,9 +725,79 @@
   padding-top: 0.5rem;
 }
 
-@media (max-width: 40em) {
+/* --- Responsive --- */
+
+@media (max-width: 1024px) {
+  .ebid-main {
+    gap: 1rem;
+  }
+
+  .ebid-commercial-grid {
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  }
+
+  .ebid-meta-grid {
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .ebid-card {
+    gap: 0.875rem;
+  }
+
+  .ebid-hero-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ebid-commercial-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ebid-field-total {
+    grid-column: 1 / -1;
+  }
+
+  .ebid-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .ebid-modal-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 468px) {
+  .ebid-header {
+    gap: 0.5rem;
+  }
+
+  .ebid-header-title {
+    font-size: 0.85rem;
+  }
+
   .ebid-rfq-title {
-    font-size: 1.15rem;
+    font-size: 1.05rem;
+  }
+
+  .ebid-hero-icon {
+    width: 2.125rem;
+    height: 2.125rem;
+    font-size: 0.95rem;
+  }
+
+  .ebid-hero-meta {
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .ebid-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ebid-commercial-grid {
+    grid-template-columns: 1fr;
   }
 
   .ebid-submit-bar {
@@ -489,11 +808,11 @@
     width: 100%;
   }
 
-  .ebid-modal-actions {
-    flex-direction: column-reverse;
+  .ebid-btn-outline {
+    width: 100%;
   }
 
-  .ebid-modal-actions button {
-    width: 100%;
+  .ebid-status-icon {
+    font-size: 2rem;
   }
 }
