@@ -69,6 +69,7 @@ export interface ExternalQuotationItemPayload {
 
 export interface ExternalSubmitQuotationPayload {
   supplierQuotationId?: string | null;
+  supplierRFQId?: string | null;
   totalPrice: number;
   deliveryCharge: number;
   deliveryType: string;
@@ -76,9 +77,11 @@ export interface ExternalSubmitQuotationPayload {
   discountType: string;
   tax: number;
   taxType: string;
+  // The session token is sent via the X-Session-Token request header (confirmed with
+  // backend), never in the body. This field is still required by the backend contract,
+  // but must always be an explicit JSON null for the external (no-OTP) flow.
+  temporaryVerificationToken: null;
   items?: ExternalQuotationItemPayload[];
-  // No verification token field here — the session token is sent exclusively via the
-  // X-Session-Token request header (confirmed with backend), never in the body.
 }
 
 export interface ExternalSubmitQuotationResponse {

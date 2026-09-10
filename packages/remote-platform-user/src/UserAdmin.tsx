@@ -5,7 +5,7 @@ import { Country } from 'country-state-city';
 import { CiMail } from 'react-icons/ci';
 import { FaUser, FaLock, FaEye, FaEyeSlash, FaPhone, FaMapMarkerAlt, FaGlobe, FaSearch, FaPlus } from 'react-icons/fa';
 import './UserAdmin.css';
-import { useAuthStore } from '../../host-app/src/store/useAuthStore';
+import { useNetworkAdminAuthStore } from './store/useAuthStore';
 
 interface BusinessUser {
   personId: string;
@@ -22,7 +22,8 @@ interface BusinessUser {
 }
 
 const UserAdmin: React.FC = () => {
-  const { userRole } = useAuthStore();
+  const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
+  const userRole = currentUser?.userRole;
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -45,7 +46,7 @@ const UserAdmin: React.FC = () => {
   // Fetch real users on mount
   useEffect(() => {
     const fetchUsers = async () => {
-      const orgId = sessionStorage.getItem('vosox_organization_id');
+      const orgId = currentUser?.organizationId;
       if (!orgId) {
         setError('Organization ID not found. Please log in again.');
         return;
@@ -68,11 +69,11 @@ const UserAdmin: React.FC = () => {
       }
     };
     fetchUsers();
-  }, []);
+  }, [currentUser?.organizationId]);
 
   const getPageTitle = () => {
-    if (userRole === 'buyer-admin') return 'Buyer Business User List';
-    if (userRole === 'supplier-admin') return 'Supplier Business User List';
+    if (userRole === 'BUYER_ADMINISTRATOR') return 'Buyer Business User List';
+    if (userRole === 'SUPPLIER_ADMINISTRATOR') return 'Supplier Business User List';
     return 'Business User List';
   };
 
@@ -81,14 +82,14 @@ const UserAdmin: React.FC = () => {
   };
 
   const getBusinessUserRoleId = () => {
-    if (userRole === 'buyer-admin') return '5a72f81e-a2c5-4f4a-bd55-6376c3c9ed73';
-    if (userRole === 'supplier-admin') return '937aab61-b505-4e1c-a5a3-cd63e29c6db9';
+    if (userRole === 'BUYER_ADMINISTRATOR') return '5a72f81e-a2c5-4f4a-bd55-6376c3c9ed73';
+    if (userRole === 'SUPPLIER_ADMINISTRATOR') return '937aab61-b505-4e1c-a5a3-cd63e29c6db9';
     return null;
   };
 
   const getUserTypeDisplayName = () => {
-    if (userRole === 'buyer-admin') return 'Buyer User';
-    if (userRole === 'supplier-admin') return 'Supplier User';
+   if (userRole === 'BUYER_ADMINISTRATOR') return 'Buyer User';
+    if (userRole === 'SUPPLIER_ADMINISTRATOR') return 'Supplier User';
     return 'Business User';
   };
 

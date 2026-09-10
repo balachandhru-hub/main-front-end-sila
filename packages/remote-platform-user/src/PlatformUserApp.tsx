@@ -32,10 +32,6 @@ import RoleProtectedRoute from './components/RoleProtectedRoute';
 
 const NETWORK_ADMIN_ROLES: NetworkAdminRole[] = ['BUYER_NETWORK_ADMIN', 'SUPPLIER_NETWORK_ADMIN'];
 
-const readIsNetworkAdminProfileComplete = (): boolean => {
-  return sessionStorage.getItem('vosox_network_admin_profile_complete') === 'true';
-};
-
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -66,7 +62,7 @@ const NetworkAdminOnboardingRoute: React.FC<NetworkAdminOnboardingRouteProps> = 
   const navigate = useNavigate();
 
   const handleOnboardingComplete = async (data: any) => {
-    const orgId = organizationId || sessionStorage.getItem('vosox_organization_id');
+    const orgId = organizationId ;
 
     if (!orgId) {
       throw new Error('Organization ID not found. Please log in again.');
@@ -275,8 +271,6 @@ const entityId = Array.isArray(entityTypes)
           await createNetworkAdminSupplierProfile(payload);
         }
       }
-
-      sessionStorage.setItem('vosox_network_admin_profile_complete', 'true');
       onCompleteSuccess();
       navigate('/platform-user/network-admin', { replace: true });
     } catch (error) {
@@ -305,7 +299,7 @@ const PlatformUserApp: React.FC = () => {
 
   useEffect(() => {
     initializeFromSession();
-  }, [initializeFromSession]);
+  }, []);
 
   const isNetworkAdmin =
     currentUser ? NETWORK_ADMIN_ROLES.includes(currentUser.userRole as NetworkAdminRole) : false;
@@ -318,22 +312,11 @@ const PlatformUserApp: React.FC = () => {
     }
 
     const checkProfile = async () => {
-      const orgId = currentUser?.organizationId || sessionStorage.getItem('vosox_organization_id');
-      const previousOrgId = sessionStorage.getItem('vosox_na_last_org_id');
-
-      if (orgId && previousOrgId && orgId !== previousOrgId) {
-        sessionStorage.removeItem('vosox_network_admin_profile_complete');
-      }
-      if (orgId) {
-        sessionStorage.setItem('vosox_na_last_org_id', orgId);
-      }
-
-      if (readIsNetworkAdminProfileComplete()) {
-        setProfileComplete(true);
+     const orgId = currentUser?.organizationId;
+      if (!orgId) {
         setCheckingProfile(false);
         return;
       }
-
       try {
         const profile = await getNetworkAdminProfile(networkAdminRole);
 
@@ -344,7 +327,6 @@ const PlatformUserApp: React.FC = () => {
             setRejectedProfile(profile);
             setProfileComplete(false);
           } else {
-            sessionStorage.setItem('vosox_network_admin_profile_complete', 'true');
             setProfileComplete(true);
           }
         } else {
