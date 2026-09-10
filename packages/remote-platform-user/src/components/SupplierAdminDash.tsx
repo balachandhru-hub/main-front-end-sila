@@ -114,13 +114,13 @@ const IconBell = () => (
   </svg>
 );
 
-const IconMenu = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="3" y1="6" x2="21" y2="6" />
-    <line x1="3" y1="12" x2="21" y2="12" />
-    <line x1="3" y1="18" x2="21" y2="18" />
-  </svg>
-);
+// const IconMenu = () => (
+//   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <line x1="3" y1="6" x2="21" y2="6" />
+//     <line x1="3" y1="12" x2="21" y2="12" />
+//     <line x1="3" y1="18" x2="21" y2="18" />
+//   </svg>
+// );
 
 const NavIconHome = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -736,13 +736,13 @@ const SupplierAdminDash: React.FC = () => {
     await loadAllRfqsPage(1);
   };
 
-  const handleBackToDashboard = () => {
-    setRfqPageView("dashboard");
-    setActiveNav("dashboard");
-    setSelectedRfqId(null);
-    setSelectedRfq(null);
-    setRfqDetailError(null);
-  };
+  // const handleBackToDashboard = () => {
+  //   setRfqPageView("dashboard");
+  //   setActiveNav("dashboard");
+  //   setSelectedRfqId(null);
+  //   setSelectedRfq(null);
+  //   setRfqDetailError(null);
+  // };
 
   const handleNavClick = (key: string) => {
     setIsMobileSidebarOpen(false);
@@ -2033,16 +2033,6 @@ const SupplierAdminDash: React.FC = () => {
         className={`sad-shell${isMobileSidebarOpen ? " sad-sidebar-open-mobile" : ""}`}
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
       >
-        <button
-          type="button"
-          className="sad-mobile-sidebar-toggle"
-          onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
-          aria-label={isMobileSidebarOpen ? "Close menu" : "Open menu"}
-          aria-expanded={isMobileSidebarOpen}
-        >
-          {isMobileSidebarOpen ? <IconClose /> : <IconMenu />}
-        </button>
-
         <div
           className="sad-sidebar-backdrop"
           onClick={() => setIsMobileSidebarOpen(false)}
@@ -2114,16 +2104,11 @@ const SupplierAdminDash: React.FC = () => {
                 <Invitations isAdmin adminRole="supplier" />
               ) : rfqPageView === "allRfqs" ? (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
-                    <div>
-                      <h1 className="pud-title">All RFQs</h1>
-                      <p className="pud-subtitle" style={{ marginBottom: 0 }}>
-                        Sourcing opportunities matched to your industry categories.
-                      </p>
-                    </div>
-                    <button className="pud-btn pud-btn-outline" onClick={handleBackToDashboard}>
-                      ← Back to Dashboard
-                    </button>
+                  <div style={{ display: 'grid', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
+                    <h1 className="pud-title">All RFQs</h1>
+                    <span className="pud-subtitle" style={{ marginBottom: 0 }}>
+                      Sourcing opportunities matched to your industry categories.
+                    </span>
                   </div>
 
                   {loadingAllRfqs ? (
@@ -2143,7 +2128,7 @@ const SupplierAdminDash: React.FC = () => {
                     <>
                       <div className="pud-rfq-table-container">
                         <table className="pud-rfq-items-table pud-allrfqs-table">
-                          <thead>
+                          <thead className="ua-table">
                             <tr>
                               <th style={{ width: '48px' }}>S.No</th>
                               <th>RFQ Number</th>

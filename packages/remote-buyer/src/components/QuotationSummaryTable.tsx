@@ -37,6 +37,7 @@ export interface QuotationSummaryQuotationItem {
   deliveryCharge?: number | null;
   deliveryType?: string | null;
   lineNumber?: number | null;
+  rank?: string | null;
 }
 
 export interface QuotationSummarySupplierQuotation {
@@ -76,8 +77,8 @@ const getSupplierQuotationItem = (
 const formatMoney = (value: number | null | undefined, currencyCode?: string | null): string =>
   value === null || value === undefined ? "—" : currencyCode ? `${value} ${currencyCode}` : `${value}`;
 
-const formatLineNumber = (value: number | null | undefined): string =>
-  value === null || value === undefined ? "—" : `${value}`;
+const formatRank = (value: string | null | undefined): string =>
+  value === null || value === undefined || value === "" ? "—" : value;
 
 // Tax/Discount/Delivery Charge can each be quoted either as a percentage or a flat
 // amount (see taxType/discountType/deliveryType). Render accordingly.
@@ -125,6 +126,24 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
     (q) => q.quotationId || q.totalPrice !== null
   );
   const showSupplierColumns = quotedSuppliers.length > 0;
+
+  // Line numbers come from the supplier's quotation lines, not the RFQ items themselves,
+  // so pull them from the lead supplier's quote (falling back to the first quoted supplier)
+  // to both display and order the rows.
+  const lineNumberSourceSupplier = quotedSuppliers.find((q) => q.isLead) || quotedSuppliers[0];
+  const getItemLineNumber = (rfqItem: QuotationSummaryRfqItem): number | undefined =>
+    lineNumberSourceSupplier ? getSupplierQuotationItem(lineNumberSourceSupplier, rfqItem)?.lineNumber ?? undefined : undefined;
+
+  const displayItems = lineNumberSourceSupplier
+    ? [...rfq.items].sort((a, b) => {
+        const lnA = getItemLineNumber(a);
+        const lnB = getItemLineNumber(b);
+        if (lnA === undefined && lnB === undefined) return 0;
+        if (lnA === undefined) return 1;
+        if (lnB === undefined) return -1;
+        return lnA - lnB;
+      })
+    : rfq.items;
   const showLLColumn = rfq.addLotOption === false;
   const supplierGroupColSpan = showLLColumn ? 3 : 2;
   // Base columns: Expand, Material Info, LN, Code, Qty.
@@ -199,9 +218,10 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
             )}
           </thead>
           <tbody>
-            {rfq.items.map((item, idx) => {
+            {displayItems.map((item, idx) => {
               const rowKey = item.id || `${idx}`;
               const isExpanded = expandedRfqItems.has(rowKey);
+              const lineNumber = getItemLineNumber(item) ?? idx + 1;
 
               return (
                 <React.Fragment key={rowKey}>
@@ -227,7 +247,7 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
                         </div>
                       )}
                     </td>
-                    <td className="qst-ll-cell">{idx + 1}</td>
+                    <td className="qst-ll-cell">{lineNumber}</td>
                     <td>
                       <div>
                         {item.materialCode || "N/A"}
@@ -243,7 +263,7 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
                           <td className="qst-rate-cell">{formatMoney(matchedItem?.quotedPrice, quote.currency)}</td>
                           <td className="qst-amount-cell">{formatMoney(matchedItem?.quotedAmount, quote.currency)}</td>
                           {showLLColumn && (
-                            <td className="qst-ll-cell">{formatLineNumber(matchedItem?.lineNumber)}</td>
+                            <td className="qst-ll-cell">{formatRank(matchedItem?.rank)}</td>
                           )}
                         </React.Fragment>
                       );

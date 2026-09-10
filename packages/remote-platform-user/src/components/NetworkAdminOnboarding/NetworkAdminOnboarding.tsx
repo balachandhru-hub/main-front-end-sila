@@ -6,6 +6,7 @@ import "./NetworkAdminOnboarding.css";
 import { fetchSegments, fetchClasses, fetchReferenceList } from "../../api/masterdataApi";
 import type { SelectedProduct, SelectedSubProduct } from "../../api/masterdataApi";
 import type { NetworkAdminProfileResponse } from "../../dto/networkAdminDto";
+import { useNetworkAdminAuthStore } from "../../store/useAuthStore";
 
 interface BusinessInfo {
     industry: string;
@@ -341,6 +342,11 @@ function SubProductDropdown({
 
 export default function NetworkAdminOnboarding({ onComplete, onboardingData, rejectedProfile }: NetworkAdminOnboardingProps) {
     const navigate = useNavigate();
+    const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
+    const networkAdminHome =
+      currentUser?.userRole === 'SUPPLIER_NETWORK_ADMIN'
+        ? '/platform-user/supplier-network-admin'
+        : '/platform-user/buyer-network-admin';
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [furthestStep, setFurthestStep] = useState<number>(1);
 
@@ -1764,7 +1770,7 @@ if (Array.isArray(data)) {
                         <button
                             type="button"
                             className="bp-btn bp-btn-primary"
-                            onClick={() => navigate('/platform-user/network-admin')}
+                            onClick={() => navigate(networkAdminHome)}
                         >
                             Go to Dashboard
                         </button>

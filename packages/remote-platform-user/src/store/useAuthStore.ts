@@ -3,6 +3,12 @@ import type { User, UserRole } from '../types';
 import { ROLE_ID_MAPPING } from '../constants/roleMapping';
 import { getTokenClaims } from '../api/platformApi'
 
+function notifySessionInvalid() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('session:expired'));
+  }
+}
+
 export interface TokenClaims {
   userId: string;
   personId?: string;
@@ -44,11 +50,12 @@ export const useNetworkAdminAuthStore = create<AuthState>((set) => ({
         isLoading: false,
         isAuthenticated: false,
       });
+      notifySessionInvalid();
       return;
     }
     if (claims && claims.userId && claims.roleId) {
       const mappedRole = mapRoleIdToUserRole(claims.roleId);
-      
+
       if (mappedRole) {
         const user: User = {
           id: claims.userId,
@@ -71,14 +78,16 @@ export const useNetworkAdminAuthStore = create<AuthState>((set) => ({
           isLoading: false,
         });
       } else {
-        set({ 
+        set({
           claims: null,
           currentUser: null,
-          isLoading: false, 
+          isLoading: false,
           isAuthenticated: false });
+        notifySessionInvalid();
       }
     } else {
       set({ isLoading: false, isAuthenticated: false,claims: null, currentUser: null, });
+      notifySessionInvalid();
     }
   },
 
@@ -100,9 +109,16 @@ export const useNetworkAdminAuthStore = create<AuthState>((set) => ({
       currentUser: null,
       claims: null,
       isAuthenticated: false,
+      isLoading: true,
     });
   },
 }));
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('session:expired', () => {
+    useNetworkAdminAuthStore.getState().logout();
+  });
+}
 
 
 const ROLE_ID_TO_USER_ROLE: Record<string, UserRole> = Object.fromEntries(

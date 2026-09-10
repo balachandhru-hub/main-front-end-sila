@@ -10,7 +10,12 @@ import Header from '../components/Header';
 const NetworkAdminProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const authLoading = useNetworkAdminAuthStore((state) => state.isLoading);
+  const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const initializeFromSession = useNetworkAdminAuthStore((state) => state.initializeFromSession);
+  const networkAdminHome =
+    currentUser?.userRole === 'SUPPLIER_NETWORK_ADMIN'
+      ? '/platform-user/supplier-network-admin'
+      : '/platform-user/buyer-network-admin';
   const hasLoadedRef = useRef(false);
 
   const [personDetail, setPersonDetail] = useState<PersonDetail | null>(null);
@@ -56,7 +61,7 @@ const NetworkAdminProfilePage: React.FC = () => {
     if (isErrorResponse(result)) {
       setError(result.message || 'Failed to update profile.');
     } else {
-      invalidatePersonDetailCache();
+      invalidatePersonDetailCache(result);
       setPersonDetail(result as unknown as PersonDetail);
     }
 
@@ -77,7 +82,7 @@ const NetworkAdminProfilePage: React.FC = () => {
           saving={saving}
           error={error}
           onSave={handleSave}
-          onBack={() => navigate('/platform-user/network-admin')}
+          onBack={() => navigate(networkAdminHome)}
         />
       </div>
     </div>
