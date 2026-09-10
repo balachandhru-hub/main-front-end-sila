@@ -259,8 +259,8 @@
     border-radius: 0.75rem;
     padding: 1.25rem;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+    min-width: 0;
     height: 100%;
-
 }
 
 .pud-panel-header {
@@ -410,6 +410,7 @@
     gap: 0.875rem;
     font-size: 0.75rem;
     color: #64748b;
+    
 }
 
 .pud-rfq-details span {
@@ -437,6 +438,7 @@
     flex-direction: column;
     align-items: flex-end;
     justify-content: center;
+    
 }
 
 .pud-header-spacer {
@@ -763,6 +765,7 @@ h1.pud-title,
 .pud-panel-list {
     display: flex;
     flex-direction: column;
+    width: 100%;
 }
 
 .pud-rfq-row {
@@ -833,12 +836,12 @@ h1.pud-title,
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 0.5rem 0.75rem;
+    padding: 0.75rem;
     border-radius: 0.5rem;
     border: 1px solid #e2e8f0;
     background: #ffffff;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    margin: 0.2rem 0;
+    margin: 0.25rem 0rem;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
     cursor: pointer;
 }
