@@ -1,17 +1,37 @@
+/* =========================================================================
+   RFQ Questions & Answers
+   ========================================================================= */
+
 .qsans-page {
-    background: #ffffff;
+    --qs-brand: #2563eb;
+    --qs-brand-dark: #1d4ed8;
+    --qs-ink: #0f172a;
+    --qs-ink-soft: #475569;
+    --qs-muted: #64748b;
+    --qs-line: #e2e8f0;
+    --qs-line-soft: #eef2f7;
+    --qs-surface: #ffffff;
+    --qs-surface-alt: #f8fafc;
+
+    display: flex;
+    flex-direction: column;
+    background: var(--qs-surface);
     border-radius: 0.875rem;
     width: 100%;
-    width: 100%;
-    overflow: visible;
-    box-shadow: 0 0.25rem 1.25rem rgba(15, 23, 42, 0.08);
-    font-family: Arial, Helvetica, sans-serif;
+    max-height: 100%;
+    overflow: hidden;
+    box-shadow: 0 0.25rem 1.5rem rgba(15, 23, 42, 0.08);
+    color: var(--qs-ink);
+    font-family: "Inter", "Segoe UI", Arial, Helvetica, sans-serif;
 }
+
+/* -------- Header -------- */
 
 .qsans-header {
     position: relative;
-    background: linear-gradient(120deg, #3b82f6 0%, #2f6feb 60%, #2563eb 100%);
-    padding: 1.5rem 1.75rem 1.375rem 1.75rem;
+    flex-shrink: 0;
+    background: linear-gradient(120deg, #3b82f6 0%, #2f6feb 55%, var(--qs-brand-dark) 100%);
+    padding: 1.375rem 4rem 1.375rem 1.75rem;
     border-radius: 0.875rem 0.875rem 0 0;
     color: #ffffff;
 }
@@ -19,14 +39,21 @@
 .qsans-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.375rem;
-    background: #ffffff;
-    color: #2f6feb;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    padding: 0.4375rem 0.875rem;
-    border-radius: 0.3125rem;
-    padding-bottom: 1rem;
+    gap: 0.4375rem;
+    background: rgba(255, 255, 255, 0.16);
+    border: 0.0625rem solid rgba(255, 255, 255, 0.35);
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    padding: 0.3125rem 0.75rem;
+    border-radius: 999px;
+    margin-bottom: 0.75rem;
+}
+
+.qsans-badge svg {
+    width: 0.875rem;
+    height: 0.875rem;
 }
 
 .qsans-close {
@@ -36,49 +63,97 @@
     width: 2rem;
     height: 2rem;
     border-radius: 50%;
-    border: none;
-    background: #ffffff;
-    color: #2f6feb;
+    border: 0.0625rem solid rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
 }
 
 .qsans-close:hover {
-    background: #eef2ff;
+    background: rgba(255, 255, 255, 0.28);
+}
+
+.qsans-close:focus-visible {
+    outline: 0.125rem solid #ffffff;
+    outline-offset: 0.125rem;
 }
 
 .qsans-title {
-    font-size: 1.5rem;
-    font-weight: 500;
+    font-size: 1.375rem;
+    line-height: 1.3;
+    font-weight: 600;
     margin: 0;
     color: #ffffff;
     word-break: break-word;
 }
 
+.qsans-header-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.4375rem;
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.qsans-header-dot {
+    width: 0.1875rem;
+    height: 0.1875rem;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+/* -------- Body -------- */
+
 .qsans-body {
-    padding: 1.5rem 1.75rem 0.5rem 1.75rem;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
     overflow-x: hidden;
+    padding: 1.5rem 1.75rem;
+    background: var(--qs-surface-alt);
+}
+
+.qsans-section-head {
+    margin-bottom: 1.125rem;
 }
 
 .qsans-section-title {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: #111827;
-    padding-bottom: 1rem;
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: var(--qs-ink);
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+.qsans-section-sub {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.8125rem;
+    color: var(--qs-muted);
 }
 
 .qsans-empty {
-    font-size: 0.8125rem;
-    color: #64748b;
-    padding: 1.5rem 0;
+    font-size: 0.875rem;
+    color: var(--qs-muted);
+    background: var(--qs-surface);
+    border: 0.0625rem dashed var(--qs-line);
+    border-radius: 0.75rem;
+    padding: 2.25rem 1.5rem;
+    text-align: center;
 }
 
 .qsans-error {
     padding: 1.5rem;
     text-align: center;
-    color: #ef4444;
+    color: #b91c1c;
+    background: #fef2f2;
+    border: 0.0625rem solid #fecaca;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
 }
 
 .qsans-loading {
@@ -88,15 +163,15 @@
     flex-direction: column;
     gap: 0.75rem;
     min-height: 18.75rem;
-    color: #64748b;
+    color: var(--qs-muted);
     font-size: 0.875rem;
 }
 
 .qsans-spinner {
     width: 2rem;
     height: 2rem;
-    border: 0.125rem solid #e2e8f0;
-    border-top-color: #2563eb;
+    border: 0.1875rem solid var(--qs-line);
+    border-top-color: var(--qs-brand);
     border-radius: 50%;
     animation: qsans-spin 0.8s linear infinite;
 }
@@ -112,15 +187,15 @@
 .qsans-suppliers {
     display: flex;
     flex-direction: column;
-    gap: 1.75rem;
-    padding-bottom: 1.5rem;
+    gap: 1rem;
 }
 
 .qsans-supplier-block {
-    border: 0.0625rem solid #e2e8f0;
+    border: 0.0625rem solid var(--qs-line);
     border-radius: 0.75rem;
-    background: #f8fafc;
-    padding: 1.25rem;
+    background: var(--qs-surface);
+    padding: 1.125rem 1.25rem 1.25rem 1.25rem;
+    box-shadow: 0 0.0625rem 0.125rem rgba(15, 23, 42, 0.04);
 }
 
 .qsans-supplier-header {
@@ -129,17 +204,18 @@
     gap: 0.75rem;
     margin-bottom: 1rem;
     padding-bottom: 0.875rem;
-    border-bottom: 0.0625rem solid #e2e8f0;
+    border-bottom: 0.0625rem solid var(--qs-line-soft);
 }
 
 .qsans-supplier-avatar {
     width: 2.25rem;
     height: 2.25rem;
-    border-radius: 50%;
-    background: #2f6feb;
+    border-radius: 0.625rem;
+    background: linear-gradient(135deg, #3b82f6, var(--qs-brand-dark));
     color: #ffffff;
-    font-size: 0.9375rem;
+    font-size: 0.8125rem;
     font-weight: 700;
+    letter-spacing: 0.02em;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -147,9 +223,32 @@
 }
 
 .qsans-supplier-name {
-    font-size: 1rem;
+    font-size: 0.9375rem;
     font-weight: 600;
-    color: #0f172a;
+    color: var(--qs-ink);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.qsans-supplier-progress {
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--qs-ink-soft);
+    background: #f1f5f9;
+    border: 0.0625rem solid var(--qs-line);
+    padding: 0.1875rem 0.5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.qsans-supplier-progress.is-complete {
+    color: #047857;
+    background: #ecfdf5;
+    border-color: #a7f3d0;
 }
 
 /* -------- Question / Answer cards -------- */
@@ -157,55 +256,117 @@
 .qsans-questions-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.625rem;
 }
 
 .qsans-qa-card {
-    background: #ffffff;
-    border: 0.0625rem solid #e2e8f0;
-    border-radius: 0.5rem;
-    padding: 0.625rem 0.875rem;
+    background: var(--qs-surface);
+    border: 0.0625rem solid var(--qs-line);
+    border-radius: 0.625rem;
+    padding: 0.75rem 0.875rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.qsans-qa-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 0.0625rem 0.375rem rgba(15, 23, 42, 0.06);
 }
 
 .qsans-qa-question-row {
     display: flex;
-    justify-content: space-between;
     align-items: flex-start;
-    gap: 0.625rem;
-    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.qsans-qa-index {
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--qs-brand);
+    background: #eff6ff;
+    border-radius: 0.3125rem;
+    padding: 0.125rem 0.375rem;
+    line-height: 1.4;
+    margin-top: 0.0625rem;
 }
 
 .qsans-qa-question {
+    flex: 1;
+    min-width: 0;
     font-size: 0.8125rem;
     font-weight: 600;
+    line-height: 1.5;
     color: #1e293b;
+    word-break: break-word;
+}
+
+.qsans-qa-tags {
+    display: flex;
+    align-items: center;
+    gap: 0.3125rem;
+    flex-shrink: 0;
 }
 
 .qsans-qa-type {
     font-size: 0.6875rem;
-    color: #64748b;
-    background: #e2e8f0;
-    padding: 0.125rem 0.375rem;
-    border-radius: 0.25rem;
+    font-weight: 500;
+    color: var(--qs-muted);
+    background: #f1f5f9;
+    border: 0.0625rem solid var(--qs-line);
+    padding: 0.125rem 0.4375rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.qsans-qa-required {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #b45309;
+    background: #fffbeb;
+    border: 0.0625rem solid #fde68a;
+    padding: 0.125rem 0.4375rem;
+    border-radius: 999px;
     white-space: nowrap;
 }
 
 .qsans-qa-answer-row {
-    padding-top: 0.625rem;
+    margin-top: 0.625rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.625rem;
+    gap: 0.75rem;
     flex-wrap: wrap;
-    background: #eff6ff;
-    border: 0.0625rem solid #dbeafe;
+    background: var(--qs-surface-alt);
+    border: 0.0625rem solid var(--qs-line-soft);
+    border-left: 0.1875rem solid var(--qs-brand);
     border-radius: 0.375rem;
-    padding: 0.5rem 0.625rem;
+    padding: 0.5rem 0.6875rem;
 }
 
 .qsans-qa-answer {
-    font-size: 0.78125rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4375rem;
+    min-width: 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
     color: #334155;
+    word-break: break-word;
+}
+
+.qsans-qa-answer-icon {
+    display: inline-flex;
+    color: var(--qs-brand);
+    flex-shrink: 0;
+}
+
+.qsans-qa-answer-icon svg {
+    width: 0.9375rem;
+    height: 0.9375rem;
+}
+
+.qsans-qa-answer-text {
+    min-width: 0;
     word-break: break-word;
 }
 
@@ -217,15 +378,24 @@
 }
 
 .qsans-qa-empty {
-    margin-top: 0.5rem;
+    margin-top: 0.625rem;
     font-size: 0.75rem;
     color: #94a3b8;
     font-style: italic;
+    background: var(--qs-surface-alt);
+    border: 0.0625rem dashed var(--qs-line);
+    border-radius: 0.375rem;
+    padding: 0.4375rem 0.6875rem;
 }
 
 .qsans-asset-error {
-    font-size: 0.6875rem;
-    color: #ef4444;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: #b91c1c;
+    background: #fef2f2;
+    border: 0.0625rem solid #fecaca;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
 }
 
 /* -------- Buttons -------- */
@@ -233,8 +403,8 @@
 .qsans-btn {
     border-radius: 0.4375rem;
     font-size: 0.75rem;
-    font-weight: 500;
-    padding: 0.25rem 0.625rem;
+    font-weight: 600;
+    padding: 0.3125rem 0.6875rem;
     cursor: pointer;
     border: 0.0625rem solid transparent;
     white-space: nowrap;
@@ -242,38 +412,48 @@
     align-items: center;
     justify-content: center;
     gap: 0.375rem;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.qsans-btn:focus-visible {
+    outline: 0.125rem solid var(--qs-brand);
+    outline-offset: 0.125rem;
 }
 
 .qsans-btn-outline {
-    background: #ffffff;
-    border-color: #2f6feb;
-    color: #2f6feb;
+    background: var(--qs-surface);
+    border-color: #bfdbfe;
+    color: var(--qs-brand);
 }
 
-.qsans-btn-outline:hover {
+.qsans-btn-outline:hover:not(:disabled) {
     background: #eff6ff;
+    border-color: var(--qs-brand);
 }
 
 .qsans-btn-outline:disabled {
-    opacity: 0.6;
+    opacity: 0.55;
     cursor: not-allowed;
 }
 
 /* -------- Footer -------- */
 
 .qsans-footer {
+    flex-shrink: 0;
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
-    padding: 1rem 1.75rem 1.5rem 1.75rem;
+    align-items: center;
     gap: 0.625rem;
-    border-top: 0.0625rem solid #f1f5f9;
-    padding-top: 0.5rem;
+    padding: 0.875rem 1.75rem;
+    background: var(--qs-surface);
+    border-top: 0.0625rem solid var(--qs-line);
+    border-radius: 0 0 0.875rem 0.875rem;
 }
 
 .qsans-footer .qsans-btn {
-    padding: 0.6875rem 1.375rem;
-    font-size: 0.875rem;
+    padding: 0.5625rem 1.375rem;
+    font-size: 0.8125rem;
 }
 
 /* -------- Attachment viewer -------- */
@@ -289,35 +469,77 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 0.625rem;
+    gap: 0.75rem;
+    padding-bottom: 0.75rem;
 }
 
 .qsans-attachment-name {
     font-size: 0.8125rem;
     font-weight: 600;
     color: #1e293b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .qsans-attachment-frame {
     flex: 1;
     width: 100%;
     min-height: 30rem;
-    border: 0.0625rem solid #e2e8f0;
+    border: 0.0625rem solid var(--qs-line);
     border-radius: 0.5rem;
-    background: #f8fafc;
+    background: var(--qs-surface);
 }
 
-@media (max-width: 560px) {
+/* -------- Scrollbar -------- */
+
+.qsans-body::-webkit-scrollbar {
+    width: 0.5rem;
+}
+
+.qsans-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+}
+
+.qsans-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* -------- Responsive -------- */
+
+@media (max-width: 35rem) {
 
     .qsans-header,
     .qsans-body,
     .qsans-footer {
-        padding-left: 1.25rem;
-        padding-right: 1.25rem;
+        padding-left: 1.125rem;
+        padding-right: 1.125rem;
+    }
+
+    .qsans-header {
+        padding-right: 3.5rem;
+    }
+
+    .qsans-title {
+        font-size: 1.125rem;
+    }
+
+    .qsans-qa-question-row {
+        flex-wrap: wrap;
+    }
+
+    .qsans-qa-tags {
+        width: 100%;
+        padding-left: 1.75rem;
     }
 
     .qsans-qa-answer-row {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .qsans-footer .qsans-btn {
+        flex: 1;
     }
 }

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
-import { getPersonDetailCached } from '../api/networkAdminApi';
+import { getPersonDetailCached, PERSON_DETAIL_UPDATED_EVENT } from '../api/networkAdminApi';
+import type { PersonDetailDto } from '../api/networkAdminApi';
 import { isErrorResponse } from '@vosox/shared-ui';
 import './Header.css';
 
@@ -66,8 +67,8 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const hasLoadedRef = useRef(false);
 
-  const [orgName, setOrgName] = useState<string>('');
-  const [orgEmail, setOrgEmail] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
+  const [userEmail, setUserEmail] = useState<string>('');
 
   useEffect(() => {
     if (!currentUser) return;
@@ -81,14 +82,35 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
         return;
       }
 
-      setOrgName(result.organizationName || '');
-      setOrgEmail(result.organizationEmail || '');
+      setUserName(result.name || '');
+      setUserEmail(result.email || '');
     };
 
     loadPersonDetail();
   }, [currentUser]);
 
-  const firstLetter = orgName ? orgName.trim().charAt(0).toUpperCase() : '';
+  useEffect(() => {
+    const handlePersonDetailUpdated = (event: Event) => {
+      const updated = (event as CustomEvent<PersonDetailDto | null>).detail;
+
+      if (updated) {
+        setUserName(updated.name || '');
+        setUserEmail(updated.email || '');
+        return;
+      }
+
+      getPersonDetailCached().then((result) => {
+        if (isErrorResponse(result)) return;
+        setUserName(result.name || '');
+        setUserEmail(result.email || '');
+      });
+    };
+
+    window.addEventListener(PERSON_DETAIL_UPDATED_EVENT, handlePersonDetailUpdated);
+    return () => window.removeEventListener(PERSON_DETAIL_UPDATED_EVENT, handlePersonDetailUpdated);
+  }, []);
+
+  const firstLetter = userName ? userName.trim().charAt(0).toUpperCase() : '';
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -208,8 +230,8 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
       <div className="vsx-header-right" style={{ position: 'relative' }}>
         <div className="vsx-header-user-card" onClick={handleAvatarClick} role="button" tabIndex={0}>
           <div className="vsx-header-account">
-            <span className="vsx-header-account-name" title={orgName}>{orgName || 'Admin Portal'}</span>
-            <span className="vsx-header-account-email" title={orgEmail}>{orgEmail || 'System Administrator'}</span>
+            <span className="vsx-header-account-name" title={userName}>{userName || 'Admin Portal'}</span>
+            <span className="vsx-header-account-email" title={userEmail}>{userEmail || 'System Administrator'}</span>
           </div>
           <div className="vsx-header-avatar">
             {firstLetter || 'A'}
