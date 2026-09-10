@@ -30,6 +30,7 @@ export default defineConfig(({ command, mode }) => {
       alias: command === 'serve' ? {
         'remoteBuyer/BuyerApp': path.resolve(__dirname, '../remote-buyer/src/BuyerApp.tsx'),
         'remoteSupplier/SupplierApp': path.resolve(__dirname, '../remote-supplier/src/SupplierApp.tsx'),
+        'remoteSupplier/ExternalSupplierBid': path.resolve(__dirname, '../remote-supplier/src/pages/ExternalSupplierBid.tsx'),
         'remotePlatformUser/PlatformUserApp': path.resolve(__dirname, '../remote-platform-user/src/PlatformUserApp.tsx'),
       } : undefined,
     },

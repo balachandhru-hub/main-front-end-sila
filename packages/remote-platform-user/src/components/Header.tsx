@@ -117,8 +117,10 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
         navigate('/platform-user/buyer-admin/profile');
       } else if (role === 'SUPPLIER_ADMINISTRATOR') {
         navigate('/platform-user/supplier-admin/profile');
-      } else if (role === 'BUYER_NETWORK_ADMIN' || role === 'SUPPLIER_NETWORK_ADMIN') {
-        navigate('/platform-user/network-admin/profile');
+      } else if (role === 'BUYER_NETWORK_ADMIN') {
+        navigate('/platform-user/buyer-network-admin/profile');
+      } else if (role === 'SUPPLIER_NETWORK_ADMIN') {
+        navigate('/platform-user/supplier-network-admin/profile');
       } else {
         navigate('/platform-user/dashboard');
       }
@@ -133,8 +135,10 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
       navigate('/platform-user/buyer-admin/profile');
     } else if (role === 'SUPPLIER_ADMINISTRATOR') {
       navigate('/platform-user/supplier-admin/profile');
-    } else if (role === 'BUYER_NETWORK_ADMIN' || role === 'SUPPLIER_NETWORK_ADMIN') {
-      navigate('/platform-user/network-admin/profile');
+    } else if (role === 'BUYER_NETWORK_ADMIN') {
+      navigate('/platform-user/buyer-network-admin/profile');
+    } else if (role === 'SUPPLIER_NETWORK_ADMIN') {
+      navigate('/platform-user/supplier-network-admin/profile');
     } else {
       navigate('/platform-user/dashboard');
     }
@@ -159,9 +163,27 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
     }
   };
 
+  const handleLogoClick = () => {
+    if (onNavClick) {
+      const dashItem = navItems?.find(
+        (item) => item.key === 'dashboard' || item.label.toLowerCase() === 'dashboard'
+      );
+      onNavClick(dashItem ? dashItem.key : 'dashboard');
+    } else {
+      navigate('/platform-user/dashboard');
+    }
+  };
+
   return (
     <header className="vsx-header">
-      <div className="vsx-header-brand">
+      <div 
+        className="vsx-header-brand" 
+        onClick={handleLogoClick}
+        style={{ cursor: 'pointer' }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLogoClick(); }}
+      >
         <img src={sila_logo} alt="SILA" className="vsx-header-logo" />
       </div>
 

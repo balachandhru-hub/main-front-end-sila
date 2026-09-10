@@ -10,6 +10,7 @@ import { Loader } from '@vosox/shared-ui';
 const BuyerApp = React.lazy(() => import('remoteBuyer/BuyerApp'));
 const SupplierApp = React.lazy(() => import('remoteSupplier/SupplierApp'));
 const PlatformUserApp = React.lazy(() => import('remotePlatformUser/PlatformUserApp'));
+const ExternalSupplierBid = React.lazy(() => import('remoteSupplier/ExternalSupplierBid'));
 
 const Protected: React.FC<{
   children: React.ReactNode;
@@ -18,7 +19,17 @@ const Protected: React.FC<{
   children,
   allowedRoles,
 }) => {
-  const { isLoggedIn, userRole } = useAuthStore();
+  const { isLoggedIn, userRole, isInitialized } = useAuthStore();
+   if(!isInitialized){
+    return(
+      <Loader 
+      fullScreen={true}
+      message='Verifying session...'
+      theme='light'
+      color='#1976d2'
+      />  
+    );
+  }
 
   if (!isLoggedIn) {
     return <Navigate to="/" replace />;
@@ -42,16 +53,18 @@ const Protected: React.FC<{
 };
 
 const Shell = () => {
-  const { isLoggedIn, userRole, logout } = useAuthStore();
+  const { isLoggedIn, userRole, logout, isInitialized,initializeAuth} = useAuthStore();
   const { fetchAndSetAuth, setAuth, clearAuth } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  React.useEffect(()=>{
+    initializeAuth();
+  },[initializeAuth])
   React.useEffect(() => {
     if (isLoggedIn) {
       fetchAndSetAuth();
-    } else {
-    }
-  }, []);
+    } 
+  }, [isLoggedIn,fetchAndSetAuth]);
 
   React.useEffect(() => {
     const handleSessionExpired = () => {
@@ -65,6 +78,7 @@ const Shell = () => {
 
   const isAuthPage = location.pathname === '/';
   const isRegistration = location.pathname.includes('/registration');
+  const isExternalBid = location.pathname.startsWith('/external-supplier/');
 
   const getRedirectUrl = () => {
     if (userRole === 'buyer-admin') {
@@ -82,7 +96,7 @@ const Shell = () => {
 
   return (
     <div className="app-container">
-      <main className={`main-content ${!isLoggedIn || isAuthPage || isRegistration ? 'no-padding' : ''}`}>
+      <main className={`main-content ${!isLoggedIn || isAuthPage || isRegistration || isExternalBid ? 'no-padding' : ''}`}>
         <React.Suspense fallback={
           <Loader
             fullScreen={true}
@@ -95,7 +109,14 @@ const Shell = () => {
             <Route
               path="/"
               element={
-                isLoggedIn ? (
+                !isInitialized ? (
+                  <Loader 
+                  fullScreen={true}
+                  message='Verifying session...'
+                  theme='light'
+                  color='#1976d2'
+                  />  
+                ) :isLoggedIn ? (
                   <Navigate to={getRedirectUrl()} replace />
                 ) : (
                   <Login
@@ -115,6 +136,9 @@ const Shell = () => {
 
             <Route path="/supplier-registration" element={<SupplierRegistration />} />
             <Route path="/buyer-registration" element={<BuyersRegistration />} />
+
+            {/* External Supplier Bid — unauthenticated, reached via a direct invitation link */}
+            <Route path="/external-supplier/bid/:rfqId/:sessionToken" element={<ExternalSupplierBid />} />
 
             {/* Buyer Remote Routes */}
             <Route
