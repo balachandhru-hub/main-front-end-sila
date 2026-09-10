@@ -15,6 +15,7 @@ import type {
   ExternalSubmitQuotationPayload,
   ExternalSubmitQuotationResponse,
 } from '../dto/externalSupplierDto';
+import type { SupplierAssetDto } from './supplierApi';
 import type { ErrorResponseDto } from '@vosox/shared-ui';
 
 const wrapError = (error: any, fallbackMessage: string): ErrorResponseDto => {
@@ -49,6 +50,35 @@ export const fetchExternalRfqDetails = async (
     return response.data;
   } catch (error: any) {
     return wrapError(error, 'Failed to load RFQ details');
+  }
+};
+
+// Mirrors fetchBuyerAsset's buyer-asset-first, supplier-asset-fallback lookup, but
+// authenticates via X-Session-Token instead of the internal session cookie. ASSUMPTION
+// (unconfirmed with backend): the asset endpoints accept the same session token as the
+// two external-rfq endpoints — flag/verify if attachments don't load for a real link.
+export const fetchExternalAsset = async (
+  assetId: string,
+  sessionToken: string
+): Promise<SupplierAssetDto | ErrorResponseDto> => {
+  const headers = sessionTokenHeader(sessionToken);
+  try {
+    try {
+      const response = await externalSupplierInstance.get<SupplierAssetDto>(
+        `/api/v1/buyer/asset/${assetId}`,
+        headers
+      );
+      if (response.data) return response.data;
+    } catch {
+      // fallback to supplier asset endpoint
+    }
+    const response = await externalSupplierInstance.get<SupplierAssetDto>(
+      `/api/v1/supplier/asset/${assetId}`,
+      headers
+    );
+    return response.data;
+  } catch (error: any) {
+    return wrapError(error, 'Failed to fetch document');
   }
 };
 

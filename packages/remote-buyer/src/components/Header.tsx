@@ -160,8 +160,11 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
 
   return (
     <header className="vsx-header">
-      <div className="vsx-header-brand">
+      <div className="vsx-header-brand" >
+        <a href="/buyer/dashboard">
         <img src={SilaLogo} alt="SILA Logo" className="vsx-header-logo" />
+        </a>
+        
       </div>
 
       {navItems && navItems.length > 0 && (

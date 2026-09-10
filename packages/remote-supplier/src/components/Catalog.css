@@ -633,7 +633,6 @@
 .pud-modal {
     background: #ffffff;
     border-radius: 0.75rem;
-    box-shadow: 0 1.25rem 1.5625rem rgba(0, 0, 0, 0.15);
     width: 100%;
     flex-direction: column;
 }

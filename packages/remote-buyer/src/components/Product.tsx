@@ -280,12 +280,12 @@ const Product: React.FC = () => {
           }
         });
       } else {
-        setError((results as any)?.message || "Failed to fetch catalogs. Please try again.");
+        setError("Failed to fetch catalogs. Please try again.");
         setCatalogResults([]);
       }
       setHasSearched(true);
     } catch (err: any) {
-      setError(err?.message || "Failed to fetch catalogs. Please try again.");
+      setError("Failed to fetch catalogs. Please try again.");
       setCatalogResults([]);
       setHasSearched(true);
     } finally {

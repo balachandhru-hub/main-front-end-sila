@@ -425,7 +425,7 @@
     color: #ffffff;
 }
 
-.pud-page-number{
+.pud-page-number {
     font-size: 0.8125rem;
     padding: 0 0.375rem;
 }
@@ -1166,6 +1166,10 @@
     color: #334155;
 }
 
+.ua-table {
+    background-color: white;
+}
+
 @media (max-width: 64rem) {
     .sad-stats-grid {
         grid-template-columns: repeat(3, 1fr);
@@ -1225,9 +1229,10 @@
         max-width: 100%;
     }
 
-    .sad-content {
-        padding-top: 3.5rem;
+    .pud-rfq-items-table tbody tr:hover td {
+        background: #f5f5f5;
     }
+
 }
 
 @media (max-width: 48rem) {
@@ -1275,8 +1280,8 @@
         padding-right: 1.25rem;
     }
 
-    .sad-content {
-        padding-top: 7.75rem;
+    .pud-rfq-items-table tbody tr:hover td {
+        background: #f5f5f5;
     }
 }
 
@@ -1284,8 +1289,12 @@
     .sad-stats-grid {
         grid-template-columns: 1fr;
     }
-    
-    .profile-banner{
+
+    .profile-banner {
         align-items: center;
+    }
+
+    .pud-rfq-items-table tbody tr:hover td {
+        background: #f5f5f5;
     }
 }
