@@ -2080,8 +2080,8 @@ const SupplierDashboard: React.FC = () => {
       <div
         className={`pud-shell${isMobileSidebarOpen ? " pud-sidebar-open-mobile" : ""}`}
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
-      >
-        <button
+       >
+        {/* <button
           type="button"
           className="pud-mobile-sidebar-toggle"
           onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
@@ -2091,11 +2091,11 @@ const SupplierDashboard: React.FC = () => {
           {isMobileSidebarOpen ? <IconClose /> : <IconMenu />}
         </button>
 
-        <div
+      <div
           className="pud-sidebar-backdrop"
           onClick={() => setIsMobileSidebarOpen(false)}
           aria-hidden="true"
-        />
+        /> */}
 
         <aside className="pud-sidebar">
           <nav className="pud-nav">
