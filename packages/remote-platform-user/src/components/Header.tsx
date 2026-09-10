@@ -166,6 +166,7 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
     }
   };
 
+
   const handleResetPassword = () => {
     setIsDropdownOpen(false);
   };
@@ -208,6 +209,7 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
       >
         <img src={sila_logo} alt="SILA" className="vsx-header-logo" />
       </div>
+
 
       {navItems && navItems.length > 0 && (
         <nav className="vsx-header-nav">
