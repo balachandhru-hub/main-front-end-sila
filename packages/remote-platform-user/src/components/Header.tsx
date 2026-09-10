@@ -53,6 +53,7 @@ export interface HeaderNavItem {
   icon?: React.ReactNode;
   label: string;
   badge?: number;
+  subItems?: { key: string; label: string }[];
 }
 
 export interface HeaderProps {
@@ -66,6 +67,19 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
   const navigate = useNavigate();
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const hasLoadedRef = useRef(false);
+  const [openDropdownKey, setOpenDropdownKey] = useState<string | null>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleDropdownEnter = (key: string) => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    setOpenDropdownKey(key);
+  };
+
+  const handleDropdownLeave = () => {
+    hideTimerRef.current = setTimeout(() => {
+      setOpenDropdownKey(null);
+    }, 400);
+  };
 
   const [userName, setUserName] = useState<string>('');
   const [userEmail, setUserEmail] = useState<string>('');
@@ -212,15 +226,45 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
       {navItems && navItems.length > 0 && (
         <nav className="vsx-header-nav">
           {navItems.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`vsx-header-nav-item${activeNav === item.key ? " vsx-header-nav-item-active" : ""}`}
-              onClick={() => onNavClick && onNavClick(item.key)}
-            >
-              <span className="vsx-header-nav-label">{item.label}</span>
-              {item.badge ? <span className="vsx-header-nav-badge">{item.badge}</span> : null}
-            </button>
+            item.subItems ? (
+              <div
+                key={item.key}
+                className="bad-header-dropdown-container"
+                onMouseEnter={() => handleDropdownEnter(item.key)}
+                onMouseLeave={handleDropdownLeave}
+              >
+                <button
+                  type="button"
+                  className={`vsx-header-nav-item${activeNav === item.key || item.subItems.some(s => s.key === activeNav) ? " vsx-header-nav-item-active" : ""}`}
+                >
+                  <span className="vsx-header-nav-label">{item.label}</span>
+                </button>
+                <div
+                  className="bad-header-dropdown-menu"
+                  style={openDropdownKey === item.key ? { visibility: 'visible', opacity: 1, pointerEvents: 'auto' } : {}}
+                >
+                  {item.subItems.map((sub) => (
+                    <div
+                      key={sub.key}
+                      className={`bad-header-subitem${activeNav === sub.key ? " bad-header-subitem-active" : ""}`}
+                      onClick={() => { onNavClick && onNavClick(sub.key); setOpenDropdownKey(null); }}
+                    >
+                      {sub.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <button
+                key={item.key}
+                type="button"
+                className={`vsx-header-nav-item${activeNav === item.key ? " vsx-header-nav-item-active" : ""}`}
+                onClick={() => onNavClick && onNavClick(item.key)}
+              >
+                <span className="vsx-header-nav-label">{item.label}</span>
+                {item.badge ? <span className="vsx-header-nav-badge">{item.badge}</span> : null}
+              </button>
+            )
           ))}
         </nav>
       )}
