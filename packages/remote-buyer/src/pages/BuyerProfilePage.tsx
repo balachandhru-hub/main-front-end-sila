@@ -49,7 +49,7 @@ const BuyerProfilePage: React.FC = () => {
       return;
     }
 
-    invalidatePersonDetailCache();
+    invalidatePersonDetailCache(result);
     setPersonDetail(result as PersonDetail);
     setSaving(false);
   };
