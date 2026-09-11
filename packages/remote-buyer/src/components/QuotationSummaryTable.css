@@ -240,3 +240,70 @@
 .qst-total-quote-row td:last-child {
     border-bottom-right-radius: 0.5625rem;
 }
+
+.qst-supplier-rank-header {
+    text-align: center;
+    vertical-align: top;
+    background: #f5f8fd;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-left: 0.0625rem solid #d7e0ec;
+}
+
+.qst-supplier-rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.125rem 0.625rem;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #2f6feb;
+    font-size: 0.71875rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.qst-summary-row td {
+    background: #f0fdf4;
+    border-top: 0.125rem solid #dbe3ea;
+}
+
+.qst-summary-row td:first-child {
+    background: #ffffff;
+    border-left: none;
+}
+
+.qst-summary-cell {
+    vertical-align: top;
+    text-align: center;
+    border-left: 0.0625rem solid #dbe3ea;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+
+.qst-summary-grid {
+    display: inline-grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 0.75rem;
+    row-gap: 0.25rem;
+    text-align: left;
+}
+
+.qst-summary-item-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #47536b;
+    white-space: nowrap;
+}
+
+.qst-summary-item-value {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #15803d;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.qst-summary-item-negative {
+    color: #dc2626;
+}
