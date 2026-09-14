@@ -663,6 +663,26 @@ h1.pud-title,
   background: #eff6ff;
 }
 
+/* Used on RFQ header action buttons (e.g. Chat) that sit against the blue
+   modal-header gradient — explicit so it never washes out against that background. */
+.pud-btn-chat {
+  background: #ffffff !important;
+  border: 0.0625rem solid #2f6feb !important;
+  color: #2f6feb !important;
+  font-weight: 600 !important;
+}
+
+.pud-btn-chat:hover {
+  background: #eff6ff !important;
+  border-color: #255bcc !important;
+  color: #255bcc !important;
+}
+
+.pud-btn-chat:focus-visible {
+  outline: 0.125rem solid #ffffff;
+  outline-offset: 0.125rem;
+}
+
 .pud-btn-flex {
   flex: 1;
 }

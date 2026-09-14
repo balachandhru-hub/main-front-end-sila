@@ -142,6 +142,16 @@ export interface BuyerSupplierQuotation {
   isLead?: boolean;
 }
 
+export interface InvitedUserDto {
+  rfqId: string;
+  supplierId: string;
+  organizationId: string;
+  userId: string;
+  name: string;
+  email: string;
+  userName: string;
+}
+
 export interface BuyerRFQDetailResponse {
   title: string;
   description: string;
@@ -159,6 +169,7 @@ export interface BuyerRFQDetailResponse {
   questions: RfqQuestionDto[];
   items: RfqItemDto[];
   supplierIds: string[];
+  invitedUsers?: InvitedUserDto[];
   rfqVerificationTemplateId: string | null;
   supplierQuotation: BuyerSupplierQuotation[];
   supplierAnswers?: RfqSupplierAnswersDto | null;

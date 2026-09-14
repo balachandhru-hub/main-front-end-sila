@@ -6,6 +6,7 @@ import UserAdmin from "../UserAdmin";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import Catalog from "../../../remote-supplier/src/components/Catalog";
 import Invitations from "../../../remote-supplier/src/components/Invitations";
+import SupplierRFQChat from "../../../remote-supplier/src/components/SupplierRFQChat/SupplierRFQChat";
 import { useNetworkAdminAuthStore } from "../store/useAuthStore";
 import {
   fetchRFQMasterData,
@@ -459,6 +460,7 @@ const SupplierAdminDash: React.FC = () => {
   const [selectedRfq, setSelectedRfq] = useState<RFQDetailResponse | null>(null);
   const [loadingRfqDetail, setLoadingRfqDetail] = useState(false);
   const [rfqDetailError, setRfqDetailError] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const [rfqAnswers, setRfqAnswers] = useState<{
     [questionId: string]: {
@@ -1361,6 +1363,18 @@ const SupplierAdminDash: React.FC = () => {
             <div className="pud-modal-meta">
               <span><IconCalendar /> Closes: {new Date(selectedRfq.endDate).toLocaleDateString()}</span>
               <span><IconPin /> Delivery: {selectedRfq.deliveryLocation}</span>
+              {supplierId && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="pud-btn pud-btn-outline pud-btn-chat"
+                    onClick={() => setIsChatOpen(true)}
+                    title="Chat with the buyer"
+                  >
+                    <IconMessageSquare /> Chat
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2642,6 +2656,17 @@ const SupplierAdminDash: React.FC = () => {
               {renderRfqDetailInner()}
             </div>
           </div>
+        )}
+
+        {isChatOpen && selectedRfqId && supplierId && (
+          <SupplierRFQChat
+            onClose={() => setIsChatOpen(false)}
+            rfqId={selectedRfqId}
+            rfqTitle={selectedRfq?.title}
+            supplierId={supplierId}
+            buyerId={selectedRfq?.buyerId}
+            buyerName={selectedRfq?.buyerName}
+          />
         )}
       </div>
       <EAuctionWidget />

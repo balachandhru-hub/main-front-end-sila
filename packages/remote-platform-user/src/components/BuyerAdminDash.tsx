@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import "./BuyerAdminDash.css";
 import Header from "./Header";
 import UserAdmin from "../UserAdmin";
@@ -23,6 +23,7 @@ import { ToastContainer } from "@vosox/shared-ui";
 import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
 import QuotationSummaryTable from "../../../remote-buyer/src/components/QuotationSummaryTable";
 import QuotationComparisonCard from "./QuotationComparisonCard";
+import BuyerRFQChat from "../../../remote-buyer/src/components/BuyerRFQChat/BuyerRFQChat";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -512,6 +513,19 @@ const BuyerAdminDash: React.FC = () => {
   const [loadingFullPageRfq, setLoadingFullPageRfq] = useState(false);
   const [fullPageRfqError, setFullPageRfqError] = useState<string | null>(null);
   const [freezingBid, setFreezingBid] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  // Known supplier org names from quotation data, used to give the chat a
+  // real supplier name instead of an individual invited user's name.
+  const chatSupplierNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    const quotations = Array.isArray(fullPageRfq?.supplierQuotation) ? fullPageRfq.supplierQuotation : [];
+    for (const quote of quotations) {
+      if (quote?.supplierId && quote?.supplierName) {
+        map[quote.supplierId] = quote.supplierName;
+      }
+    }
+    return map;
+  }, [fullPageRfq]);
 
   const handleOpenAllRfqs = async () => {
     setActiveNav("activeRFQs");
@@ -969,6 +983,16 @@ const BuyerAdminDash: React.FC = () => {
                         <span><IconCalendar /> Closes: {new Date(fullPageRfq.endDate).toLocaleDateString()}</span>
                         <span><IconPin /> Delivery: {fullPageRfq.deliveryLocation}</span>
                         <div className="bad-rfq-header-actions">
+                          {Array.isArray(fullPageRfq.invitedUsers) && fullPageRfq.invitedUsers.length > 0 && (
+                            <button
+                              type="button"
+                              className="bad-btn bad-btn-outline bad-btn-chat"
+                              onClick={() => setIsChatOpen(true)}
+                              title="Chat with invited suppliers"
+                            >
+                              <IconMessageSquare /> Chat
+                            </button>
+                          )}
                           <button
                             className="bad-btn bad-btn-outline"
                             onClick={() => handleOpenQuotationComparison(fullPageRfq)}
@@ -1487,6 +1511,17 @@ const BuyerAdminDash: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {isChatOpen && fullPageRfqId && (
+          <BuyerRFQChat
+            onClose={() => setIsChatOpen(false)}
+            rfqId={fullPageRfqId}
+            rfqNumber={fullPageRfq?.rfqNumber}
+            rfqTitle={fullPageRfq?.title}
+            invitedUsers={fullPageRfq?.invitedUsers || []}
+            supplierNames={chatSupplierNames}
+          />
         )}
       </div>
     </div>
