@@ -53,10 +53,12 @@
     transform: scale(0.95);
     box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
   }
+
   70% {
     transform: scale(1);
     box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
   }
+
   100% {
     transform: scale(0.95);
     box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
@@ -94,6 +96,7 @@
     opacity: 0;
     transform: translateY(10px) scale(0.97);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -211,13 +214,18 @@
 }
 
 @keyframes eauction-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .eauction-portal-container {
   width: 100%;
-  max-width: 1400px;
+  max-width: 1600px;
   height: 92vh;
   max-height: 920px;
   background: #f8fafc;
@@ -234,7 +242,8 @@
 /* SAP Ariba Top Navigation Header Bar */
 .eauction-portal-header {
   height: 3.75rem;
-  background: #0057b8; /* Signature SAP Ariba Blue Header */
+  background: #0057b8;
+  /* Signature SAP Ariba Blue Header */
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -261,7 +270,7 @@
   justify-content: center;
   font-weight: 900;
   font-size: 1.25rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .eauction-portal-title {
@@ -453,10 +462,25 @@
   font-size: 0.8125rem;
 }
 
-.rank-1 { background: #047857; color: #ffffff; }
-.rank-2 { background: #d97706; color: #ffffff; }
-.rank-3 { background: #64748b; color: #ffffff; }
-.rank-4 { background: #475569; color: #ffffff; }
+.rank-1 {
+  background: #047857;
+  color: #ffffff;
+}
+
+.rank-2 {
+  background: #d97706;
+  color: #ffffff;
+}
+
+.rank-3 {
+  background: #64748b;
+  color: #ffffff;
+}
+
+.rank-4 {
+  background: #475569;
+  color: #ffffff;
+}
 
 .eauction-action-btn {
   padding: 0.35rem 0.75rem;
@@ -534,20 +558,98 @@
   flex-shrink: 0;
 }
 
-.avatar-red { background: #ef4444; }
-.avatar-gold { background: #f59e0b; }
-.avatar-teal { background: #0d9488; }
-.avatar-blue { background: #0057b8; }
+.avatar-red {
+  background: #ef4444;
+}
+
+.avatar-gold {
+  background: #f59e0b;
+}
+
+.avatar-teal {
+  background: #0d9488;
+}
+
+.avatar-blue {
+  background: #0057b8;
+}
 
 /* Supplier Live Bidding Submission Panel */
 .eauction-supplier-bid-box {
-  background: #f0fdf4;
-  border: 1.5px solid #10b981;
-  border-radius: 0.5rem;
-  padding: 1rem;
+  background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1.5px solid #a7f3d0;
+  border-radius: 0.75rem;
+  padding: 1.125rem;
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: 1rem;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);
+}
+
+.eauction-bid-field-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #047857;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.3rem;
+  display: block;
+}
+
+.eauction-bid-field-input {
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  background: #ffffff;
+  color: #0f172a;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.eauction-bid-field-input:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.eauction-total-quote-row {
+  border-top: 1px dashed #a7f3d0;
+  padding-top: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.eauction-total-quote-label {
+  font-weight: 700;
+  font-size: 0.8125rem;
+  color: #0f172a;
+}
+
+.eauction-total-quote-value-box {
+  border: 1.5px solid #a7f3d0;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.9rem;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Compact total-quote bar shown under the item table for line-item (non-lot) bidding */
+.eauction-line-item-total-bar {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1.5px solid #a7f3d0;
+  border-radius: 0.75rem;
+  padding: 0.875rem 1.125rem;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);
+  flex-wrap: wrap;
 }
 
 .eauction-bid-quick-btn {
@@ -586,4 +688,10 @@
   background: linear-gradient(135deg, #059669 0%, #065f46 100%);
   transform: translateY(-1px);
   box-shadow: 0 6px 14px rgba(16, 185, 129, 0.35);
+}
+
+.eauction-btn-submit-bid--inline {
+  width: auto;
+  padding: 0.6rem 1.5rem;
+  white-space: nowrap;
 }

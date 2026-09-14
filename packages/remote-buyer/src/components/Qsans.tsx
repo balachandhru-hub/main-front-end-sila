@@ -28,6 +28,32 @@ interface QsAnsProps {
     error?: string | null;
 }
 
+/* ---------------------------------- Helpers ---------------------------------- */
+
+const getInitials = (name: string) =>
+    name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((word) => word[0]?.toUpperCase() || "")
+        .join("") || "?";
+
+const formatQuestionType = (type?: string) => {
+    if (!type) return "";
+    const normalized = String(type).toLowerCase();
+    const labels: Record<string, string> = {
+        text: "Text",
+        textarea: "Long text",
+        checkbox: "Checkbox",
+        radio: "Single choice",
+        select: "Dropdown",
+        file: "File",
+        number: "Number",
+        date: "Date",
+    };
+    return labels[normalized] || normalized.charAt(0).toUpperCase() + normalized.slice(1);
+};
+
 /* ---------------------------------- Component ---------------------------------- */
 
 const QsAns: React.FC<QsAnsProps> = ({ rfq, onBack, loading = false, error = null }) => {
@@ -146,6 +172,13 @@ const QsAns: React.FC<QsAnsProps> = ({ rfq, onBack, loading = false, error = nul
                 <h2 className="qsans-title">
                     {loading ? "Loading Q&A..." : rfq?.title || "RFQ Question Answers"}
                 </h2>
+                {!loading && !error && (questions.length > 0 || suppliers.length > 0) && (
+                    <div className="qsans-header-meta">
+                        <span>{questions.length} question{questions.length === 1 ? "" : "s"}</span>
+                        <span className="qsans-header-dot" />
+                        <span>{suppliers.length} supplier response{suppliers.length === 1 ? "" : "s"}</span>
+                    </div>
+                )}
             </div>
 
             <div className="qsans-body">
@@ -173,7 +206,12 @@ const QsAns: React.FC<QsAnsProps> = ({ rfq, onBack, loading = false, error = nul
                     <div className="qsans-error">{error}</div>
                 ) : (
                     <>
-                        <div className="qsans-section-title">Evaluation Questions &amp; Answers</div>
+                        <div className="qsans-section-head">
+                            <h3 className="qsans-section-title">Evaluation Questions &amp; Answers</h3>
+                            <p className="qsans-section-sub">
+                                Responses submitted by each supplier for this RFQ.
+                            </p>
+                        </div>
 
                         {questions.length === 0 ? (
                             <div className="qsans-empty">No evaluation questions were configured for this RFQ.</div>
@@ -183,6 +221,12 @@ const QsAns: React.FC<QsAnsProps> = ({ rfq, onBack, loading = false, error = nul
                             <div className="qsans-suppliers">
                                 {suppliers.map((supplier: any, sIdx: number) => {
                                     const displayName = supplier?.supplierName || `Supplier ${sIdx + 1}`;
+                                    const answeredCount = questions.filter((q: any) => {
+                                        const m = getAnswerForQuestion(supplier, q);
+                                        return Boolean(
+                                            (m?.answer && String(m.answer).trim() !== "") || m?.attachment?.fileName
+                                        );
+                                    }).length;
 
                                     return (
                                         <div
@@ -190,7 +234,13 @@ const QsAns: React.FC<QsAnsProps> = ({ rfq, onBack, loading = false, error = nul
                                             key={supplier?.supplierRFQId ? `${supplier.supplierRFQId}-${supplier.supplierId}-${sIdx}` : sIdx}
                                         >
                                             <div className="qsans-supplier-header">
-                                                <span className="qsans-supplier-name">{displayName}</span>
+                                                <span className="qsans-supplier-avatar">{getInitials(displayName)}</span>
+                                                <span className="qsans-supplier-name" title={displayName}>{displayName}</span>
+                                                <span
+                                                    className={`qsans-supplier-progress${answeredCount === questions.length ? " is-complete" : ""}`}
+                                                >
+                                                    {answeredCount}/{questions.length} answered
+                                                </span>
                                             </div>
 
                                             <div className="qsans-questions-list">
@@ -204,17 +254,28 @@ const QsAns: React.FC<QsAnsProps> = ({ rfq, onBack, loading = false, error = nul
                                                     return (
                                                         <div className="qsans-qa-card" key={q.id || qIdx}>
                                                             <div className="qsans-qa-question-row">
-                                                                <span className="qsans-qa-question">
-                                                                    Q{qIdx + 1}: {q.question}
-                                                                </span>
-                                                                <span className="qsans-qa-type">
-                                                                    {q.questionType} {q.isRequired ? "(Required)" : ""}
+                                                                <span className="qsans-qa-index">Q{qIdx + 1}</span>
+                                                                <span className="qsans-qa-question">{q.question}</span>
+                                                                <span className="qsans-qa-tags">
+                                                                    {q.isRequired && (
+                                                                        <span className="qsans-qa-required">Required</span>
+                                                                    )}
+                                                                    <span className="qsans-qa-type">
+                                                                        {formatQuestionType(q.questionType)}
+                                                                    </span>
                                                                 </span>
                                                             </div>
 
                                                             {display ? (
                                                                 <div className="qsans-qa-answer-row">
-                                                                    <span className="qsans-qa-answer">{display}</span>
+                                                                    <span className="qsans-qa-answer">
+                                                                        {match?.attachment && (
+                                                                            <span className="qsans-qa-answer-icon">
+                                                                                <IconFile />
+                                                                            </span>
+                                                                        )}
+                                                                        <span className="qsans-qa-answer-text">{display}</span>
+                                                                    </span>
                                                                     {match?.attachment && (
                                                                         <div className="qsans-qa-actions">
                                                                             <button

@@ -49,13 +49,13 @@ const IconClose = () => (
   </svg>
 );
 
-const IconMenu = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="3" y1="6" x2="21" y2="6" />
-    <line x1="3" y1="12" x2="21" y2="12" />
-    <line x1="3" y1="18" x2="21" y2="18" />
-  </svg>
-);
+// const IconMenu = () => (
+//   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <line x1="3" y1="6" x2="21" y2="6" />
+//     <line x1="3" y1="12" x2="21" y2="12" />
+//     <line x1="3" y1="18" x2="21" y2="18" />
+//   </svg>
+// );
 
 const IconMail = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -271,6 +271,8 @@ interface StatCard {
   cardClass: string;
   iconClass: string;
   urgencyBadge?: string;
+// When all the cards have their own link to navigate, remove the onClickable
+  isClickable?: boolean; 
 }
 
 interface POItem {
@@ -281,13 +283,14 @@ interface POItem {
   amount: string;
 }
 
+// When all the cards have their own link to navigate, remove the onClickable
 const statCards: StatCard[] = [
-  { icon: <IconFile />, label: "Active RFQs", value: 3, linkText: "Manage RFQs >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
-  { icon: <IconMail />, label: "Quotations received", value: 5, linkText: "Review bids >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
-  { icon: <IconTrend />, label: "Suppliers engaged", value: 8, linkText: "View directory >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
-  { icon: <IconBag />, label: "Purchase orders", value: 4, linkText: "Track orders >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral" },
-  { icon: <IconInvoice />, label: "Invoices", value: 2, linkText: "Invoice list >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "Needs action" },
-  { icon: <IconBell />, label: "Notifications", value: 3, linkText: "Inquiries & alerts >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "New alerts" },
+  { icon: <IconFile />, label: "Active RFQs", value: 3, linkText: "Manage RFQs >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral", isClickable: true, },
+  { icon: <IconMail />, label: "Quotations received", value: 5, linkText: "Review bids >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral",isClickable: false, },
+  { icon: <IconTrend />, label: "Suppliers engaged", value: 8, linkText: "View directory >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral",isClickable: false, },
+  { icon: <IconBag />, label: "Purchase orders", value: 4, linkText: "Track orders >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral",isClickable: false, },
+  { icon: <IconInvoice />, label: "Invoices", value: 2, linkText: "Invoice list >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "Needs action",isClickable: false, },
+  { icon: <IconBell />, label: "Notifications", value: 3, linkText: "Inquiries & alerts >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "New alerts",isClickable: false, },
 ];
 
 const poItems: POItem[] = [
@@ -625,11 +628,15 @@ const BuyersDashboard: React.FC = () => {
     }
   };
 
-  const handleBackToAllRfqs = () => {
+  const handleBackToAllRfqs = async() => {
     setRfqPageView("allRfqs");
     setFullPageRfq(null);
     setFullPageRfqId(null);
     setFullPageRfqError(null);
+
+    if (allRfqsLoaded || loadingAllRfqs) return;
+
+    await loadAllRfqsPage(1);
   };
 
   const handleFreezeBid = async () => {
@@ -741,7 +748,7 @@ const BuyersDashboard: React.FC = () => {
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
       >
 
-        <button
+        {/* <button
           type="button"
           className="pud-mobile-sidebar-toggle"
           onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
@@ -755,7 +762,7 @@ const BuyersDashboard: React.FC = () => {
           className="pud-sidebar-backdrop"
           onClick={() => setIsMobileSidebarOpen(false)}
           aria-hidden="true"
-        />
+        /> */}
 
         <aside className="pud-sidebar">
           <nav className="pud-nav">
@@ -1223,7 +1230,7 @@ const BuyersDashboard: React.FC = () => {
                       onClick={() => handleNavClick("createRFQ")}
                     >
                       <NavIconFilePlus />
-                      <span>+ Create New RFQ</span>
+                      <span> + Create RFQ</span>
                     </button>
                   </div>
                 </div>
@@ -1239,7 +1246,11 @@ const BuyersDashboard: React.FC = () => {
                       </div>
                       <div className="pud-stat-label">{stat.label}</div>
                       <div className="pud-stat-value">{stat.value}</div>
-                      <a className="pud-stat-link" href="#" onClick={(e) => { e.preventDefault(); handleNavClick("activeRFQs"); }}>
+                      <a className="pud-stat-link" href="#" onClick={(e) => { e.preventDefault();
+                      //There is isClickable, only true value link is working where other links are showing but not working.
+                      // For now only Manage RFQ is working 
+                      // When all the links have their own navigation remove the isClickable field in interface and in array object.
+                        if(stat.isClickable){handleNavClick("activeRFQs");} }}> 
                         {stat.linkText}
                       </a>
                     </div>

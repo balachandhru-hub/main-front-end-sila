@@ -47,8 +47,8 @@
 
 .vsx-header-nav {
     display: flex;
-    align-items: center;
-    gap: 0.25rem;
+    align-items: stretch;
+    gap: 1px;
     margin-left: 1.5rem;
     margin-right: 1rem;
     overflow-x: auto;
@@ -63,28 +63,29 @@
 .vsx-header-nav-item {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.875rem;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
+    height: auto;
+    padding: 8px 14px;
+    position: relative;
+    font-size: 0.9375rem;
     font-weight: 500;
     color: #475569;
     background: transparent;
-    border: 1px solid transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.15s ease-in-out;
+    transition: color 0.15s ease-in-out;
 }
 
 .vsx-header-nav-item:hover {
-    color: #0f172a;
-    background: #f1f5f9;
+    color: #2f6feb;
+    background: transparent;
 }
 
 .vsx-header-nav-item-active {
-    color: #0c6fd1;
-    background: #eff6ff;
-    border-color: #0c6fd1;
+    color: #2f6feb;
+    background: transparent;
+    border-bottom: 2px solid #2f6feb;
     font-weight: 600;
 }
 

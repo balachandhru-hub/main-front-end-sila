@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
-import { getPersonDetailCached } from '../api/networkAdminApi';
+import { getPersonDetailCached, PERSON_DETAIL_UPDATED_EVENT } from '../api/networkAdminApi';
+import type { PersonDetailDto } from '../api/networkAdminApi';
 import { isErrorResponse } from '@vosox/shared-ui';
 import './Header.css';
 
@@ -52,6 +53,7 @@ export interface HeaderNavItem {
   icon?: React.ReactNode;
   label: string;
   badge?: number;
+  subItems?: { key: string; label: string }[];
 }
 
 export interface HeaderProps {
@@ -65,9 +67,22 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
   const navigate = useNavigate();
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const hasLoadedRef = useRef(false);
+  const [openDropdownKey, setOpenDropdownKey] = useState<string | null>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [orgName, setOrgName] = useState<string>('');
-  const [orgEmail, setOrgEmail] = useState<string>('');
+  const handleDropdownEnter = (key: string) => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    setOpenDropdownKey(key);
+  };
+
+  const handleDropdownLeave = () => {
+    hideTimerRef.current = setTimeout(() => {
+      setOpenDropdownKey(null);
+    }, 400);
+  };
+
+  const [userName, setUserName] = useState<string>('');
+  const [userEmail, setUserEmail] = useState<string>('');
 
   useEffect(() => {
     if (!currentUser) return;
@@ -81,14 +96,35 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
         return;
       }
 
-      setOrgName(result.organizationName || '');
-      setOrgEmail(result.organizationEmail || '');
+      setUserName(result.name || '');
+      setUserEmail(result.email || '');
     };
 
     loadPersonDetail();
   }, [currentUser]);
 
-  const firstLetter = orgName ? orgName.trim().charAt(0).toUpperCase() : '';
+  useEffect(() => {
+    const handlePersonDetailUpdated = (event: Event) => {
+      const updated = (event as CustomEvent<PersonDetailDto | null>).detail;
+
+      if (updated) {
+        setUserName(updated.name || '');
+        setUserEmail(updated.email || '');
+        return;
+      }
+
+      getPersonDetailCached().then((result) => {
+        if (isErrorResponse(result)) return;
+        setUserName(result.name || '');
+        setUserEmail(result.email || '');
+      });
+    };
+
+    window.addEventListener(PERSON_DETAIL_UPDATED_EVENT, handlePersonDetailUpdated);
+    return () => window.removeEventListener(PERSON_DETAIL_UPDATED_EVENT, handlePersonDetailUpdated);
+  }, []);
+
+  const firstLetter = userName ? userName.trim().charAt(0).toUpperCase() : '';
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -117,8 +153,10 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
         navigate('/platform-user/buyer-admin/profile');
       } else if (role === 'SUPPLIER_ADMINISTRATOR') {
         navigate('/platform-user/supplier-admin/profile');
-      } else if (role === 'BUYER_NETWORK_ADMIN' || role === 'SUPPLIER_NETWORK_ADMIN') {
-        navigate('/platform-user/network-admin/profile');
+      } else if (role === 'BUYER_NETWORK_ADMIN') {
+        navigate('/platform-user/buyer-network-admin/profile');
+      } else if (role === 'SUPPLIER_NETWORK_ADMIN') {
+        navigate('/platform-user/supplier-network-admin/profile');
       } else {
         navigate('/platform-user/dashboard');
       }
@@ -133,12 +171,15 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
       navigate('/platform-user/buyer-admin/profile');
     } else if (role === 'SUPPLIER_ADMINISTRATOR') {
       navigate('/platform-user/supplier-admin/profile');
-    } else if (role === 'BUYER_NETWORK_ADMIN' || role === 'SUPPLIER_NETWORK_ADMIN') {
-      navigate('/platform-user/network-admin/profile');
+    } else if (role === 'BUYER_NETWORK_ADMIN') {
+      navigate('/platform-user/buyer-network-admin/profile');
+    } else if (role === 'SUPPLIER_NETWORK_ADMIN') {
+      navigate('/platform-user/supplier-network-admin/profile');
     } else {
       navigate('/platform-user/dashboard');
     }
   };
+
 
   const handleResetPassword = () => {
     setIsDropdownOpen(false);
@@ -159,24 +200,73 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
     }
   };
 
+  const handleLogoClick = () => {
+    if (onNavClick) {
+      const dashItem = navItems?.find(
+        (item) => item.key === 'dashboard' || item.label.toLowerCase() === 'dashboard'
+      );
+      onNavClick(dashItem ? dashItem.key : 'dashboard');
+    } else {
+      navigate('/platform-user/dashboard');
+    }
+  };
+
   return (
     <header className="vsx-header">
-      <div className="vsx-header-brand">
+      <div 
+        className="vsx-header-brand" 
+        onClick={handleLogoClick}
+        style={{ cursor: 'pointer' }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLogoClick(); }}
+      >
         <img src={sila_logo} alt="SILA" className="vsx-header-logo" />
       </div>
+
 
       {navItems && navItems.length > 0 && (
         <nav className="vsx-header-nav">
           {navItems.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`vsx-header-nav-item${activeNav === item.key ? " vsx-header-nav-item-active" : ""}`}
-              onClick={() => onNavClick && onNavClick(item.key)}
-            >
-              <span className="vsx-header-nav-label">{item.label}</span>
-              {item.badge ? <span className="vsx-header-nav-badge">{item.badge}</span> : null}
-            </button>
+            item.subItems ? (
+              <div
+                key={item.key}
+                className="bad-header-dropdown-container"
+                onMouseEnter={() => handleDropdownEnter(item.key)}
+                onMouseLeave={handleDropdownLeave}
+              >
+                <button
+                  type="button"
+                  className={`vsx-header-nav-item${activeNav === item.key || item.subItems.some(s => s.key === activeNav) ? " vsx-header-nav-item-active" : ""}`}
+                >
+                  <span className="vsx-header-nav-label">{item.label}</span>
+                </button>
+                <div
+                  className="bad-header-dropdown-menu"
+                  style={openDropdownKey === item.key ? { visibility: 'visible', opacity: 1, pointerEvents: 'auto' } : {}}
+                >
+                  {item.subItems.map((sub) => (
+                    <div
+                      key={sub.key}
+                      className={`bad-header-subitem${activeNav === sub.key ? " bad-header-subitem-active" : ""}`}
+                      onClick={() => { onNavClick && onNavClick(sub.key); setOpenDropdownKey(null); }}
+                    >
+                      {sub.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <button
+                key={item.key}
+                type="button"
+                className={`vsx-header-nav-item${activeNav === item.key ? " vsx-header-nav-item-active" : ""}`}
+                onClick={() => onNavClick && onNavClick(item.key)}
+              >
+                <span className="vsx-header-nav-label">{item.label}</span>
+                {item.badge ? <span className="vsx-header-nav-badge">{item.badge}</span> : null}
+              </button>
+            )
           ))}
         </nav>
       )}
@@ -186,8 +276,8 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
       <div className="vsx-header-right" style={{ position: 'relative' }}>
         <div className="vsx-header-user-card" onClick={handleAvatarClick} role="button" tabIndex={0}>
           <div className="vsx-header-account">
-            <span className="vsx-header-account-name" title={orgName}>{orgName || 'Admin Portal'}</span>
-            <span className="vsx-header-account-email" title={orgEmail}>{orgEmail || 'System Administrator'}</span>
+            <span className="vsx-header-account-name" title={userName}>{userName || 'Admin Portal'}</span>
+            <span className="vsx-header-account-email" title={userEmail}>{userEmail || 'System Administrator'}</span>
           </div>
           <div className="vsx-header-avatar">
             {firstLetter || 'A'}

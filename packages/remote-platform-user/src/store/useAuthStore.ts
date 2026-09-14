@@ -1,44 +1,75 @@
 import { create } from 'zustand';
 import type { User, UserRole } from '../types';
 import { ROLE_ID_MAPPING } from '../constants/roleMapping';
+import { getTokenClaims } from '../api/platformApi'
+
+function notifySessionInvalid() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('session:expired'));
+  }
+}
+
+export interface TokenClaims {
+  userId: string;
+  personId?: string;
+  organizationId?: string;
+  roleId: string;
+  permissions?: string[];
+  buyerId?: string;
+  supplierId?: string | null;
+  organizationType?: number;
+}
 
 export interface AuthState {
   currentUser: User | null;
+  claims: TokenClaims | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  initializeFromSession: () => void;
+  initializeFromSession: () => Promise<void>;
   setCurrentUser: (user: User) => void;
+  setClaims: (claims: TokenClaims) => void;
   logout: () => void;
 }
 
 export const useNetworkAdminAuthStore = create<AuthState>((set) => ({
   currentUser: null,
+  claims: null,
   isAuthenticated: false,
   isLoading: true,
+  initializeFromSession: async () => {
+    
+    let claims;
 
-  initializeFromSession: () => {
-    const userId = sessionStorage.getItem('vosox_user_id');
-    const personId = sessionStorage.getItem('vosox_person_id');
-    const organizationId = sessionStorage.getItem('vosox_organization_id');
-    const roleId = sessionStorage.getItem('vosox_role_id');
-    const userEmail = sessionStorage.getItem('vosox_user_email');
-    const userName = sessionStorage.getItem('vosox_user_name');
+    try {
+      claims = await getTokenClaims(true);
+      set({ claims });
+    } catch {
+      set({
+        claims: null,
+        currentUser: null,
+        isLoading: false,
+        isAuthenticated: false,
+      });
+      notifySessionInvalid();
+      return;
+    }
+    if (claims && claims.userId && claims.roleId) {
+      const mappedRole = mapRoleIdToUserRole(claims.roleId);
 
-    if (userId && roleId) {
-      const mappedRole = mapRoleIdToUserRole(roleId);
-      
       if (mappedRole) {
         const user: User = {
-          id: userId,
-          email: userEmail || `user-${userId}@company.com`,
-          name: userName || 'User',
+          id: claims.userId,
+          email: `user-${claims.userId}@company.com`,
+          name: 'User',
           userRole: mappedRole,
           createdAt: new Date().toISOString().split('T')[0],
           status: 'active',
-          organizationId: organizationId || undefined,
-          userId,
-          personId: personId || undefined,
-          roleId,
+          organizationId: claims.organizationId || undefined,
+          userId: claims.userId,
+          personId: claims.personId || undefined,
+          roleId: claims.roleId,
+          buyerId: claims.buyerId || undefined,
+          supplierId: claims.supplierId || undefined,
         };
 
         set({
@@ -47,31 +78,47 @@ export const useNetworkAdminAuthStore = create<AuthState>((set) => ({
           isLoading: false,
         });
       } else {
-        set({ isLoading: false, isAuthenticated: false });
+        set({
+          claims: null,
+          currentUser: null,
+          isLoading: false,
+          isAuthenticated: false });
+        notifySessionInvalid();
       }
     } else {
-      set({ isLoading: false, isAuthenticated: false });
+      set({ isLoading: false, isAuthenticated: false,claims: null, currentUser: null, });
+      notifySessionInvalid();
     }
   },
+
 
   setCurrentUser: (user: User) => {
     set({
       currentUser: user,
       isAuthenticated: true,
+      isLoading: false,
     });
-    sessionStorage.setItem('vosox_user_email', user.email);
-    sessionStorage.setItem('vosox_user_name', user.name);
+  },
+
+  setClaims: (claims: TokenClaims) => {
+  set({ claims });
   },
 
   logout: () => {
     set({
       currentUser: null,
+      claims: null,
       isAuthenticated: false,
+      isLoading: true,
     });
-    sessionStorage.removeItem('vosox_user_email');
-    sessionStorage.removeItem('vosox_user_name');
   },
 }));
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('session:expired', () => {
+    useNetworkAdminAuthStore.getState().logout();
+  });
+}
 
 
 const ROLE_ID_TO_USER_ROLE: Record<string, UserRole> = Object.fromEntries(

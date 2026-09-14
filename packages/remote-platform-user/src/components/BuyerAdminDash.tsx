@@ -30,6 +30,8 @@ interface StatCard {
   value: number;
   linkText: string;
   colorClass: string;
+  isClickable?: boolean; 
+  navKey?:string;
 }
 
 interface POItem {
@@ -270,23 +272,31 @@ const NavIconFilePlus = () => (
   </svg>
 );
 
-const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number }[] = [
+const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number; subItems?: { key: string; label: string }[] }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard", section: "MAIN" },
   { key: "invitations", icon: <IconMail />, label: "Invitations", section: "SOURCING & ORDERS" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog", section: "DIRECTORY & CATALOG" },
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
-  { key: "template", icon: <NavIconTemplate />, label: "Templates" },
+  { 
+    key: "configuration", 
+    icon: <NavIconTemplate />, 
+    label: "Configuration",
+    subItems: [
+      { key: "template", label: "Templates" },
+      { key: "approvalManagement", label: "Approval Management" }
+    ]
+  },
 ];
 
 const statCards: StatCard[] = [
-  { icon: <IconFile />, label: "ACTIVE RFQS", value: 3, linkText: "Manage RFQs >", colorClass: "bad-stat-icon-blue" },
-  { icon: <NavIconFilePlus />, label: "CREATE RFQ", value: 3, linkText: "Manage RFQs >", colorClass: "bad-stat-icon-blue" },
-  { icon: <IconMail />, label: "QUOTATIONS RECEIVED", value: 5, linkText: "Review bids >", colorClass: "bad-stat-icon-indigo" },
-  { icon: <IconTrend />, label: "SUPPLIERS ENGAGED", value: 8, linkText: "View directory", colorClass: "bad-stat-icon-green" },
-  { icon: <IconBag />, label: "PURCHASE ORDERS", value: 4, linkText: "Track orders >", colorClass: "bad-stat-icon-purple" },
-  { icon: <IconInvoice />, label: "PENDING INVOICES", value: 2, linkText: "Invoice list >", colorClass: "bad-stat-icon-orange" },
-  { icon: <IconBell />, label: "NOTIFICATIONS", value: 3, linkText: "Inquiries & Alerts >", colorClass: "bad-stat-icon-teal" },
+  { icon: <IconFile />, navKey: "activeRFQs", label: "ACTIVE RFQS", value: 3, linkText: "Manage RFQs >", colorClass: "bad-stat-icon-blue" },
+  { icon: <NavIconFilePlus />, navKey: "createRFQ", label: "CREATE RFQ", value: 0, linkText: "Create RFQ >", colorClass: "bad-stat-icon-blue" },
+  { icon: <IconMail />, navKey: "quotationsReceived", label: "QUOTATIONS RECEIVED", value: 5, linkText: "Review bids >", colorClass: "bad-stat-icon-indigo" },
+  { icon: <IconTrend />, navKey: "suppliersEngaged", label: "SUPPLIERS ENGAGED", value: 8, linkText: "View directory", colorClass: "bad-stat-icon-green" },
+  { icon: <IconBag />, navKey: "purchaseOrders", label: "PURCHASE ORDERS", value: 4, linkText: "Track orders >", colorClass: "bad-stat-icon-purple" },
+  { icon: <IconInvoice />, navKey: "pendingInvoices", label: "PENDING INVOICES", value: 2, linkText: "Invoice list >", colorClass: "bad-stat-icon-orange" },
+  { icon: <IconBell />, navKey: "notifications", label: "NOTIFICATIONS", value: 3, linkText: "Inquiries & Alerts >", colorClass: "bad-stat-icon-teal" },
 ];
 
 const poItems: POItem[] = [
@@ -397,16 +407,18 @@ const BuyerAdminDash: React.FC = () => {
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
 
-  const [buyerId, setBuyerId] = useState<string | null>(
-    sessionStorage.getItem("vosox_buyer_id")
-  );
+  const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
+  const [buyerId, setBuyerId] = useState<string | null>(currentUser?.buyerId || null);
+
+  useEffect(() => {
+    if (currentUser?.buyerId) {
+      setBuyerId(currentUser.buyerId);
+    }
+  }, [currentUser?.buyerId]);
+
 
   // STATE FOR QUOTATION COMPARISON
   const [selectedQuotationsRfq, setSelectedQuotationsRfq] = useState<any | null>(null);
-
-  useEffect(() => {
-    useNetworkAdminAuthStore.getState().initializeFromSession();
-  }, []);
 
   useEffect(() => {
     const loadBuyerProfile = async () => {
@@ -414,7 +426,6 @@ const BuyerAdminDash: React.FC = () => {
         try {
           const profile = await getBuyerProfile();
           if (profile?.id) {
-            sessionStorage.setItem("vosox_buyer_id", profile.id);
             setBuyerId(profile.id);
           } else {
             setRfqsError("Buyer profile not found. Please complete onboarding.");
@@ -576,10 +587,20 @@ const BuyerAdminDash: React.FC = () => {
     setRfqPageView("dashboard");
   };
 
-  const handleBackToDashboard = () => {
-    setRfqPageView("dashboard");
-    setActiveNav("dashboard");
-  };
+  const handleCardClick = (navKey?: string, label?: string) => {
+    if (navKey === "activeRFQs" || label === "ACTIVE RFQs") {
+      handleOpenAllRfqs(); // Redirects to All/Manage RFQs table
+    } else if (navKey === "createRFQ" || label === "CREATE RFQ") {
+      handleNavClick("createRFQ"); // Redirects to Create RFQ form
+    } else if (navKey) {
+      handleNavClick(navKey);
+  }
+};
+
+  // const handleBackToDashboard = () => {
+  //   setRfqPageView("dashboard");
+  //   setActiveNav("dashboard");
+  // };
 
   const handleViewRfqDetailsFullPage = async (rfqId: string) => {
     setRfqPageView("rfqDetail");
@@ -652,6 +673,7 @@ const BuyerAdminDash: React.FC = () => {
     } catch (error: any) {
       setLogoutError(error?.message || "Logout request failed, clearing session locally.");
     } finally {
+      useNetworkAdminAuthStore.getState().logout();
       sessionStorage.clear();
       window.dispatchEvent(new CustomEvent("session:expired"));
       setLoggingOut(false);
@@ -781,14 +803,39 @@ const BuyerAdminDash: React.FC = () => {
                 {item.section && (
                   <div className="bad-nav-section-title">{item.section}</div>
                 )}
-                <div
-                  className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
-                  onClick={() => handleNavClick(item.key)}
-                >
-                  <span className="bad-nav-icon">{item.icon}</span>
-                  <span className="bad-nav-label">{item.label}</span>
-                  {item.badge && <span className="bad-nav-badge">{item.badge}</span>}
-                </div>
+                {item.subItems ? (
+                  <div className="bad-nav-dropdown-container">
+                    <div
+                      className={`bad-nav-item${activeNav === item.key || item.subItems.some(sub => sub.key === activeNav) ? " bad-nav-item-active" : ""}`}
+                    >
+                      <span className="bad-nav-icon">{item.icon}</span>
+                      <span className="bad-nav-label">{item.label}</span>
+                      <span className="bad-nav-chevron">
+                        <IconChevronRight />
+                      </span>
+                    </div>
+                    <div className="bad-nav-dropdown-menu">
+                      {item.subItems.map(subItem => (
+                        <div
+                          key={subItem.key}
+                          onClick={() => handleNavClick(subItem.key)}
+                          className={`bad-nav-subitem${activeNav === subItem.key ? " bad-nav-subitem-active" : ""}`}
+                        >
+                          {subItem.label}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
+                    onClick={() => handleNavClick(item.key)}
+                  >
+                    <span className="bad-nav-icon">{item.icon}</span>
+                    <span className="bad-nav-label">{item.label}</span>
+                    {item.badge && <span className="bad-nav-badge">{item.badge}</span>}
+                  </div>
+                )}
               </React.Fragment>
             ))}
             <div
@@ -838,22 +885,25 @@ const BuyerAdminDash: React.FC = () => {
                   <UserTemplate templates={templates} />
                 )}
               </div>
+            ) : activeNav === "approvalManagement" ? (
+              <div style={{ padding: '2rem', textAlign: 'center', background: '#fff', borderRadius: '0.625rem', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.04)' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#0f172a' }}>Approval Management</h2>
+                <p style={{ paddingTop: '1rem', color: '#64748b' }}>Approval management functionality will be displayed here.</p>
+              </div>
             ) : activeNav === "createRFQ" ? (
               <CreateRFQ />
             ) : activeNav === "product" ? (
               <Product />
             ) : rfqPageView === "allRfqs" ? (
               <>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
+              <div className="bad-table">
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '1.25rem', }}>
                   <div>
                     <h1 className="bad-title">All RFQs</h1>
                     <p className="bad-subtitle" style={{ marginBottom: 0 }}>
                       RFQs posted across your organization, awaiting supplier quotations.
                     </p>
                   </div>
-                  <button className="bad-btn bad-btn-outline" onClick={handleBackToDashboard}>
-                    ← Back to Dashboard
-                  </button>
                 </div>
 
                 {loadingAllRfqs ? (
@@ -881,12 +931,12 @@ const BuyerAdminDash: React.FC = () => {
                             <th>Organization</th>
                             <th>Delivery Location</th>
                             <th>Closing Date</th>
-                            <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
                           {allRfqsList.map((rfq: any, idx: number) => (
-                            <tr key={rfq.rfqId || idx}>
+                            <tr key={rfq.rfqId || idx}
+                            onClick={()=> handleViewRfqDetailsFullPage(rfq.rfqId)}>
                               <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
                               <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
                               <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
@@ -896,14 +946,6 @@ const BuyerAdminDash: React.FC = () => {
                                 {rfq.endDate
                                   ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
                                   : "—"}
-                              </td>
-                              <td>
-                                <button
-                                  className="bad-btn bad-btn-outline"
-                                  onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                                >
-                                  View RFQ Details
-                                </button>
                               </td>
                             </tr>
                           ))}
@@ -936,6 +978,7 @@ const BuyerAdminDash: React.FC = () => {
                     </div>
                   </div>
                 )}
+              </div>
               </>
             ) : rfqPageView === "rfqDetail" ? (
               <>
@@ -1231,8 +1274,10 @@ const BuyerAdminDash: React.FC = () => {
               />
             ) : (
               <>
+              <div>
                 <h1 className="bad-title" style={{ fontSize: '20px', fontWeight: 500 }}>Buyer Admin Command Center</h1>
                 <p className="bad-subtitle">Manage buyers, track procurement activities, and oversee operations.</p>
+              </div>
 
                 <div className="bad-stats-grid">
                   {statCards.map((stat) => (
@@ -1240,7 +1285,12 @@ const BuyerAdminDash: React.FC = () => {
                       <div className={`bad-stat-icon ${stat.colorClass}`}>{stat.icon}</div>
                       <div className="bad-stat-label">{stat.label}</div>
                       <div className="bad-stat-value">{stat.value}</div>
-                      <div className="bad-stat-link">{stat.linkText}</div>
+                      <a className="bad-stat-link" href="#" onClick={(e) => {
+                            e.preventDefault();
+                            handleCardClick(stat.navKey,stat.label);
+                          }}> 
+                        {stat.linkText}
+                      </a>
                     </div>
                   ))}
                 </div>

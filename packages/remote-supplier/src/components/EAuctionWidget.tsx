@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './EAuctionWidget.css';
 import {
   fetchRFQMasterData,
@@ -25,6 +25,18 @@ export interface LiveAuctionItem {
   endDate: string;
   formattedEndDate: string;
   status?: string | null;
+}
+
+interface QuoteLineItem {
+  deliveryCharge: number;
+  deliveryType: string;
+  discount: number;
+  discountType: string;
+  tax: number;
+  taxType: string;
+  quotedPrice: number;
+  subTotal: number;
+  quotedAmount: number;
 }
 
 const DEFAULT_SUPPLIER_ID = "60fb0677-bd04-4caf-8467-8b5bdcdd0b8b";
@@ -69,6 +81,9 @@ const deleteCookie = (name: string) => {
 /* ---------------------------------- Component ---------------------------------- */
 
 const PAGE_SIZE = 5;
+// The rfq-master-data endpoint returns a bare array with no total, so the count is
+// resolved with one wide fetch when the board opens.
+const TOTAL_COUNT_FETCH_LIMIT = 1000;
 
 export const EAuctionWidget: React.FC = () => {
   const [isHovered, setIsHovered] = useState(false);
@@ -76,6 +91,9 @@ export const EAuctionWidget: React.FC = () => {
   const [auctions, setAuctions] = useState<LiveAuctionItem[]>([]);
   const [selectedLot, setSelectedLot] = useState<LiveAuctionItem | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalAuctions, setTotalAuctions] = useState<number>(0);
+  const [hasNextPage, setHasNextPage] = useState<boolean>(false);
+  const knownTotalRef = useRef<number>(0);
 
   // API State for selected RFQ details & existing quotation
   const [selectedRfqDetails, setSelectedRfqDetails] = useState<RFQDetailResponse | null>(null);
@@ -92,17 +110,19 @@ export const EAuctionWidget: React.FC = () => {
   const [taxType, setTaxType] = useState<string>("PERCENTAGE");
   const [totalPriceQuote, setTotalPriceQuote] = useState<string>("0");
   const [itemPrices, setItemPrices] = useState<{ [key: string]: string }>({});
+  const [quoteLineItems, setQuoteLineItems] = useState<{ [supplierRFQItemId: string]: QuoteLineItem }>({});
 
   const [submittingBid, setSubmittingBid] = useState<boolean>(false);
   const [submitBidError, setSubmitBidError] = useState<string | null>(null);
   const [bidSubmittedMessage, setBidSubmittedMessage] = useState<string | null>(null);
 
-  const fetchLiveBidsData = async () => {
+  const fetchLiveBidsData = async (page: number = currentPage) => {
     setLoadingApi(true);
+    const startIndex = (page - 1) * PAGE_SIZE;
     try {
       const res = await fetchRFQMasterData({
-        index: 0,
-        limit: 10,
+        index: startIndex,
+        limit: PAGE_SIZE,
         supplierId: DEFAULT_SUPPLIER_ID,
         status: "LIVE",
       });
@@ -110,10 +130,28 @@ export const EAuctionWidget: React.FC = () => {
       const rawList = Array.isArray(res)
         ? res
         : (res as any)?.data && Array.isArray((res as any).data)
-        ? (res as any).data
-        : (res as any)?.rfqs && Array.isArray((res as any).rfqs)
-        ? (res as any).rfqs
-        : [];
+          ? (res as any).data
+          : (res as any)?.rfqs && Array.isArray((res as any).rfqs)
+            ? (res as any).rfqs
+            : [];
+
+      const reportedTotal =
+        (res as any)?.totalCount ??
+        (res as any)?.total ??
+        (res as any)?.totalRecords ??
+        null;
+
+      if (typeof reportedTotal === 'number') {
+        knownTotalRef.current = reportedTotal;
+        setTotalAuctions(reportedTotal);
+        setHasNextPage(startIndex + rawList.length < reportedTotal);
+      } else if (knownTotalRef.current > 0) {
+        setHasNextPage(startIndex + rawList.length < knownTotalRef.current);
+      } else {
+        // No total known yet: a full page means there is more to come
+        setHasNextPage(rawList.length === PAGE_SIZE);
+        setTotalAuctions((prev) => Math.max(prev, startIndex + rawList.length));
+      }
 
       if (rawList.length > 0) {
         const mapped: LiveAuctionItem[] = rawList.map((item: any, idx: number) => {
@@ -139,18 +177,57 @@ export const EAuctionWidget: React.FC = () => {
       } else {
         setAuctions([]);
         setSelectedLot(null);
+        // Landed on an empty page (rows removed since last fetch) - step back
+        if (page > 1) setCurrentPage(page - 1);
       }
     } catch (err) {
       console.error("Error fetching live RFQ master data:", err);
       setAuctions([]);
       setSelectedLot(null);
+      setTotalAuctions(0);
+      setHasNextPage(false);
     } finally {
       setLoadingApi(false);
     }
   };
 
+  // Resolve the true total tender count (the list endpoint does not report one)
+  const fetchLiveBidsTotal = async () => {
+    try {
+      const res = await fetchRFQMasterData({
+        index: 0,
+        limit: TOTAL_COUNT_FETCH_LIMIT,
+        supplierId: DEFAULT_SUPPLIER_ID,
+        status: "LIVE",
+      });
+
+      const reportedTotal =
+        (res as any)?.totalCount ?? (res as any)?.total ?? (res as any)?.totalRecords ?? null;
+
+      const fullList = Array.isArray(res)
+        ? res
+        : (res as any)?.data && Array.isArray((res as any).data)
+          ? (res as any).data
+          : (res as any)?.rfqs && Array.isArray((res as any).rfqs)
+            ? (res as any).rfqs
+            : [];
+
+      const total = typeof reportedTotal === 'number' ? reportedTotal : fullList.length;
+      knownTotalRef.current = total;
+      setTotalAuctions(total);
+      setHasNextPage((prev) => (total > 0 ? currentPage * PAGE_SIZE < total : prev));
+    } catch (err) {
+      console.error("Error fetching live RFQ total count:", err);
+    }
+  };
+
   useEffect(() => {
-    fetchLiveBidsData();
+    fetchLiveBidsData(currentPage);
+  }, [isModalOpen, currentPage]);
+
+  useEffect(() => {
+    knownTotalRef.current = 0;
+    fetchLiveBidsTotal();
   }, [isModalOpen]);
 
   // Load RFQ details and supplier quotation when selectedLot changes
@@ -163,6 +240,7 @@ export const EAuctionWidget: React.FC = () => {
 
     const loadRfqDetailsAndQuotation = async () => {
       setLoadingDetails(true);
+      let isAddLotOption = false;
       try {
         const [detailsRes, quoteRes] = await Promise.all([
           fetchRFQById(selectedLot.id),
@@ -172,6 +250,7 @@ export const EAuctionWidget: React.FC = () => {
         if (detailsRes && !('statusCode' in detailsRes) && 'title' in detailsRes) {
           const det = detailsRes as RFQDetailResponse;
           setSelectedRfqDetails(det);
+          isAddLotOption = Boolean(det.addLotOption);
 
           // Enrich auction list row with detailed RFQ info (delivery location, endDate, orgName)
           setAuctions((prev) =>
@@ -203,6 +282,32 @@ export const EAuctionWidget: React.FC = () => {
           }
           setItemPrices(prices);
 
+          // Pre-fill per-item line details for line-item (non-lot) bidding
+          if (!det.addLotOption) {
+            const lineItems: { [supplierRFQItemId: string]: QuoteLineItem } = {};
+            det.items?.forEach((item) => {
+              const itemKey = item.supplierRFQItemId;
+              if (!itemKey) return;
+              const source = det.supplierQuotationItems?.find(
+                (qi) => qi.supplierRFQItemId === itemKey
+              );
+              lineItems[itemKey] = {
+                deliveryCharge: source?.deliveryCharge ?? 0,
+                deliveryType: source?.deliveryType || "PERCENTAGE",
+                discount: source?.discount ?? 0,
+                discountType: source?.discountType || "PERCENTAGE",
+                tax: source?.tax ?? 0,
+                taxType: source?.taxType || "PERCENTAGE",
+                quotedPrice: source?.quotedPrice ?? 0,
+                subTotal: source?.subTotal ?? 0,
+                quotedAmount: source?.quotedAmount ?? 0,
+              };
+            });
+            setQuoteLineItems(lineItems);
+          } else {
+            setQuoteLineItems({});
+          }
+
           if (det.supplierQuotation && det.supplierQuotation.length > 0) {
             const sq = det.supplierQuotation[0];
             if (sq.totalPrice) setTotalPriceQuote(String(sq.totalPrice));
@@ -233,6 +338,27 @@ export const EAuctionWidget: React.FC = () => {
                 prices[key] = String(qi.quotedPrice || 0);
               });
               setItemPrices((prev) => ({ ...prev, ...prices }));
+
+              if (!isAddLotOption) {
+                setQuoteLineItems((prev) => {
+                  const next = { ...prev };
+                  mine.supplierQuotationItems?.forEach((qi) => {
+                    if (!qi.supplierRFQItemId) return;
+                    next[qi.supplierRFQItemId] = {
+                      deliveryCharge: qi.deliveryCharge ?? 0,
+                      deliveryType: qi.deliveryType || "PERCENTAGE",
+                      discount: qi.discount ?? 0,
+                      discountType: qi.discountType || "PERCENTAGE",
+                      tax: qi.tax ?? 0,
+                      taxType: qi.taxType || "PERCENTAGE",
+                      quotedPrice: qi.quotedPrice ?? 0,
+                      subTotal: qi.subTotal ?? 0,
+                      quotedAmount: qi.quotedAmount ?? 0,
+                    };
+                  });
+                  return next;
+                });
+              }
             }
           }
         }
@@ -340,6 +466,34 @@ export const EAuctionWidget: React.FC = () => {
     }
   };
 
+  const handleLineItemFieldChange = (
+    supplierRFQItemId: string,
+    field: keyof QuoteLineItem,
+    value: string
+  ) => {
+    setQuoteLineItems((prev) => {
+      const existing: QuoteLineItem = prev[supplierRFQItemId] || {
+        deliveryCharge: 0,
+        deliveryType: "PERCENTAGE",
+        discount: 0,
+        discountType: "PERCENTAGE",
+        tax: 0,
+        taxType: "PERCENTAGE",
+        quotedPrice: 0,
+        subTotal: 0,
+        quotedAmount: 0,
+      };
+      const isNumericField = field === "deliveryCharge" || field === "discount" || field === "tax" || field === "quotedPrice";
+      return {
+        ...prev,
+        [supplierRFQItemId]: {
+          ...existing,
+          [field]: isNumericField ? (Number(value) || 0) : value,
+        },
+      };
+    });
+  };
+
   const executeSubmitLiveBid = async (verificationToken: string) => {
     if (!selectedLot) return;
     setSubmittingBid(true);
@@ -371,8 +525,10 @@ export const EAuctionWidget: React.FC = () => {
         tax: Number(tax) || 0,
         taxType: taxType || "PERCENTAGE",
         temporaryVerificationToken: verificationToken,
-        items: selectedRfqDetails?.items && selectedRfqDetails.items.length > 0
-          ? selectedRfqDetails.items.map((item, idx) => {
+        items: !selectedRfqDetails?.items || selectedRfqDetails.items.length === 0
+          ? []
+          : selectedRfqDetails.addLotOption
+            ? selectedRfqDetails.items.map((item, idx) => {
               const key = item.id || item.buyerRFQItemId || `item-${idx}`;
               const itemQuote = selectedRfqDetails.supplierQuotationItems?.[idx];
               return {
@@ -381,7 +537,21 @@ export const EAuctionWidget: React.FC = () => {
                 quotedPrice: Number(itemPrices[key] ?? 0),
               };
             })
-          : []
+            : selectedRfqDetails.items.map((item) => {
+              const itemKey = item.supplierRFQItemId;
+              const line = itemKey ? quoteLineItems[itemKey] : undefined;
+              return {
+                supplierRFQItemId: itemKey || null,
+                buyerRFQItemId: item.id || item.buyerRFQItemId || "",
+                quotedPrice: Number(line?.quotedPrice ?? 0),
+                deliveryCharge: Number(line?.deliveryCharge ?? 0),
+                deliveryType: line?.deliveryType || "PERCENTAGE",
+                discount: Number(line?.discount ?? 0),
+                discountType: line?.discountType || "PERCENTAGE",
+                tax: Number(line?.tax ?? 0),
+                taxType: line?.taxType || "PERCENTAGE",
+              } as any;
+            })
       };
 
       const res = await submitSupplierQuotation(payload);
@@ -604,9 +774,8 @@ export const EAuctionWidget: React.FC = () => {
                         </tr>
                       ) : (
                         (() => {
-                          const paginatedAuctions = auctions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-                          return paginatedAuctions.map((auc, idx) => {
+                          // Rows are already paginated server-side (index / limit)
+                          return auctions.map((auc, idx) => {
                             const globalIdx = (currentPage - 1) * PAGE_SIZE + idx + 1;
                             return (
                               <tr
@@ -648,68 +817,57 @@ export const EAuctionWidget: React.FC = () => {
 
                   {/* Pagination Bar */}
                   {auctions.length > 0 && (() => {
-                    const totalPages = Math.ceil(auctions.length / PAGE_SIZE) || 1;
                     const startItem = (currentPage - 1) * PAGE_SIZE + 1;
-                    const endItem = Math.min(currentPage * PAGE_SIZE, auctions.length);
+                    const endItem = (currentPage - 1) * PAGE_SIZE + auctions.length;
+                    const canGoPrev = currentPage > 1;
+                    const canGoNext = hasNextPage;
+
+                    const navBtnStyle = (enabled: boolean): React.CSSProperties => ({
+                      padding: '0.3rem 0.6rem',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '0.375rem',
+                      background: enabled ? '#ffffff' : '#f8fafc',
+                      color: enabled ? '#0f172a' : '#94a3b8',
+                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      cursor: enabled ? 'pointer' : 'not-allowed',
+                    });
 
                     return (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.875rem', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0' }}>
                         <div style={{ fontSize: '0.78125rem', color: '#64748b' }}>
-                          Showing <strong style={{ color: '#0f172a' }}>{startItem}</strong> to <strong style={{ color: '#0f172a' }}>{endItem}</strong> of <strong style={{ color: '#0f172a' }}>{auctions.length}</strong> live tenders
+                          Showing <strong style={{ color: '#0f172a' }}>{startItem}</strong> to <strong style={{ color: '#0f172a' }}>{endItem}</strong> of <strong style={{ color: '#0f172a' }}>{Math.max(totalAuctions, endItem)}</strong> live tenders
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                           <button
-                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                            disabled={currentPage === 1}
-                            style={{
-                              padding: '0.3rem 0.6rem',
-                              border: '1px solid #cbd5e1',
-                              borderRadius: '0.375rem',
-                              background: currentPage === 1 ? '#f8fafc' : '#ffffff',
-                              color: currentPage === 1 ? '#94a3b8' : '#0f172a',
-                              fontWeight: 600,
-                              fontSize: '0.75rem',
-                              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                            }}
+                            onClick={() => canGoPrev && setCurrentPage((p) => Math.max(1, p - 1))}
+                            disabled={!canGoPrev}
+                            style={navBtnStyle(canGoPrev)}
                           >
-                            ‹ Prev
+                            &lsaquo; Prev
                           </button>
 
-                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
-                            <button
-                              key={pg}
-                              onClick={() => setCurrentPage(pg)}
-                              style={{
-                                padding: '0.3rem 0.6rem',
-                                border: pg === currentPage ? '1px solid #0057b8' : '1px solid #cbd5e1',
-                                borderRadius: '0.375rem',
-                                background: pg === currentPage ? '#0057b8' : '#ffffff',
-                                color: pg === currentPage ? '#ffffff' : '#0f172a',
-                                fontWeight: 700,
-                                fontSize: '0.75rem',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              {pg}
-                            </button>
-                          ))}
-
-                          <button
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={currentPage === totalPages || totalPages === 0}
+                          <span
                             style={{
                               padding: '0.3rem 0.6rem',
-                              border: '1px solid #cbd5e1',
+                              border: '1px solid #0057b8',
                               borderRadius: '0.375rem',
-                              background: (currentPage === totalPages || totalPages === 0) ? '#f8fafc' : '#ffffff',
-                              color: (currentPage === totalPages || totalPages === 0) ? '#94a3b8' : '#0f172a',
-                              fontWeight: 600,
+                              background: '#0057b8',
+                              color: '#ffffff',
+                              fontWeight: 700,
                               fontSize: '0.75rem',
-                              cursor: (currentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer',
                             }}
                           >
-                            Next ›
+                            {currentPage}
+                          </span>
+
+                          <button
+                            onClick={() => canGoNext && setCurrentPage((p) => p + 1)}
+                            disabled={!canGoNext}
+                            style={navBtnStyle(canGoNext)}
+                          >
+                            Next &rsaquo;
                           </button>
                         </div>
                       </div>
@@ -718,7 +876,10 @@ export const EAuctionWidget: React.FC = () => {
                 </div>
 
                 {/* Split Bottom Workspace */}
-                <div className="eauction-grid-split">
+                <div
+                  className="eauction-grid-split"
+                  style={selectedRfqDetails?.addLotOption === false ? { gridTemplateColumns: '1fr' } : undefined}
+                >
                   {/* Left Column: Live Bidding View */}
                   <div className="eauction-panel-light" style={{ display: 'flex', flexDirection: 'column' }}>
                     <div className="eauction-panel-head">
@@ -745,218 +906,354 @@ export const EAuctionWidget: React.FC = () => {
                           Loading material specification details...
                         </div>
                       ) : selectedRfqDetails?.items && selectedRfqDetails.items.length > 0 ? (
-                        <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '0.5rem', background: '#ffffff' }}>
-                          <table className="eauction-table" style={{ margin: 0 }}>
-                            <thead>
-                              <tr style={{ background: '#f8fafc' }}>
-                                <th style={{ width: '36px' }}>#</th>
-                                <th>Description</th>
-                                <th>Code</th>
-                                <th>Qty / UOM</th>
-                                <th>Cost Center</th>
-                                {!selectedRfqDetails.addLotOption && (
-                                  <th style={{ width: '130px', textAlign: 'right' }}>Bid Price ($)</th>
-                                )}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {selectedRfqDetails.items.map((item, idx) => {
-                                const itemKey = item.id || item.buyerRFQItemId || `item-${idx}`;
-                                return (
-                                  <tr key={itemKey}>
-                                    <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
-                                    <td>
-                                      <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '0.8125rem' }}>{item.description}</div>
-                                      {item.materialGroup && (
-                                        <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>Group: {item.materialGroup}</div>
-                                      )}
-                                    </td>
-                                    <td>
-                                      <span style={{ background: '#f1f5f9', color: '#334155', padding: '2px 6px', borderRadius: '4px', fontSize: '0.6875rem', fontFamily: 'monospace', fontWeight: 600 }}>
-                                        {item.materialCode || "N/A"}
-                                      </span>
-                                    </td>
-                                    <td style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.8125rem' }}>
-                                      {item.quantity} <span style={{ fontSize: '0.6875rem', color: '#64748b' }}>{item.uom}</span>
-                                    </td>
-                                    <td style={{ fontSize: '0.75rem', color: '#475569' }}>
-                                      {item.costCenterName || item.costCenter || "—"}
-                                    </td>
-                                    {!selectedRfqDetails.addLotOption && (
+                        selectedRfqDetails.addLotOption ? (
+                          <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '0.5rem', background: '#ffffff' }}>
+                            <table className="eauction-table" style={{ margin: 0 }}>
+                              <thead>
+                                <tr style={{ background: '#f8fafc' }}>
+                                  <th style={{ width: '36px' }}>#</th>
+                                  <th>Description</th>
+                                  <th>Code</th>
+                                  <th>Qty / UOM</th>
+                                  <th>Cost Center</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedRfqDetails.items.map((item, idx) => {
+                                  const itemKey = item.id || item.buyerRFQItemId || `item-${idx}`;
+                                  return (
+                                    <tr key={itemKey}>
+                                      <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
+                                      <td>
+                                        <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '0.8125rem' }}>{item.description}</div>
+                                        {item.materialGroup && (
+                                          <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>Group: {item.materialGroup}</div>
+                                        )}
+                                      </td>
+                                      <td>
+                                        <span style={{ background: '#f1f5f9', color: '#334155', padding: '2px 6px', borderRadius: '4px', fontSize: '0.6875rem', fontFamily: 'monospace', fontWeight: 600 }}>
+                                          {item.materialCode || "N/A"}
+                                        </span>
+                                      </td>
+                                      <td style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.8125rem' }}>
+                                        {item.quantity} <span style={{ fontSize: '0.6875rem', color: '#64748b' }}>{item.uom}</span>
+                                      </td>
+                                      <td style={{ fontSize: '0.75rem', color: '#475569' }}>
+                                        {item.costCenterName || item.costCenter || "—"}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '0.5rem', background: '#ffffff' }}>
+                            <table className="eauction-table" style={{ margin: 0 }}>
+                              <thead>
+                                <tr style={{ background: '#f8fafc' }}>
+                                  <th>Material Info</th>
+                                  <th>Code</th>
+                                  <th>Qty</th>
+                                  <th style={{ width: '100px' }}>Delivery Charge</th>
+                                  <th style={{ width: '110px' }}>Delivery Type</th>
+                                  <th style={{ width: '100px' }}>Discount</th>
+                                  <th style={{ width: '110px' }}>Discount Type</th>
+                                  <th style={{ width: '100px' }}>Tax</th>
+                                  <th style={{ width: '110px' }}>Tax Type</th>
+                                  <th style={{ width: '110px', textAlign: 'right' }}>Quoted Price</th>
+                                  <th style={{ width: '100px', textAlign: 'right' }}>Sub Total</th>
+                                  <th style={{ width: '110px', textAlign: 'right' }}>Quoted Amount</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedRfqDetails.items.map((item, idx) => {
+                                  const itemKey = item.supplierRFQItemId || `item-${idx}`;
+                                  const line = quoteLineItems[itemKey] || {
+                                    deliveryCharge: 0,
+                                    deliveryType: "PERCENTAGE",
+                                    discount: 0,
+                                    discountType: "PERCENTAGE",
+                                    tax: 0,
+                                    taxType: "PERCENTAGE",
+                                    quotedPrice: 0,
+                                    subTotal: 0,
+                                    quotedAmount: 0,
+                                  };
+                                  return (
+                                    <tr key={itemKey}>
+                                      <td>
+                                        <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '0.8125rem' }}>{item.description}</div>
+                                        {item.materialGroup && (
+                                          <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>Group: {item.materialGroup}</div>
+                                        )}
+                                      </td>
+                                      <td>
+                                        <span style={{ background: '#f1f5f9', color: '#334155', padding: '2px 6px', borderRadius: '4px', fontSize: '0.6875rem', fontFamily: 'monospace', fontWeight: 600 }}>
+                                          {item.materialCode || "N/A"}
+                                        </span>
+                                      </td>
+                                      <td style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.8125rem' }}>
+                                        {item.quantity} <span style={{ fontSize: '0.6875rem', color: '#64748b' }}>{item.uom}</span>
+                                      </td>
+                                      <td>
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          value={line.deliveryCharge || ""}
+                                          onChange={(e) => handleLineItemFieldChange(itemKey, "deliveryCharge", e.target.value)}
+                                          placeholder="0.00"
+                                          style={{ width: '90px', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem' }}
+                                        />
+                                      </td>
+                                      <td>
+                                        <select
+                                          value={line.deliveryType}
+                                          onChange={(e) => handleLineItemFieldChange(itemKey, "deliveryType", e.target.value)}
+                                          style={{ width: '100px', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', background: '#ffffff' }}
+                                        >
+                                          <option value="PERCENTAGE">PERCENTAGE</option>
+                                          <option value="AMOUNT">AMOUNT</option>
+                                        </select>
+                                      </td>
+                                      <td>
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          value={line.discount || ""}
+                                          onChange={(e) => handleLineItemFieldChange(itemKey, "discount", e.target.value)}
+                                          placeholder="0.00"
+                                          style={{ width: '90px', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem' }}
+                                        />
+                                      </td>
+                                      <td>
+                                        <select
+                                          value={line.discountType}
+                                          onChange={(e) => handleLineItemFieldChange(itemKey, "discountType", e.target.value)}
+                                          style={{ width: '100px', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', background: '#ffffff' }}
+                                        >
+                                          <option value="PERCENTAGE">PERCENTAGE</option>
+                                          <option value="AMOUNT">AMOUNT</option>
+                                        </select>
+                                      </td>
+                                      <td>
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          value={line.tax || ""}
+                                          onChange={(e) => handleLineItemFieldChange(itemKey, "tax", e.target.value)}
+                                          placeholder="0.00"
+                                          style={{ width: '90px', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem' }}
+                                        />
+                                      </td>
+                                      <td>
+                                        <select
+                                          value={line.taxType}
+                                          onChange={(e) => handleLineItemFieldChange(itemKey, "taxType", e.target.value)}
+                                          style={{ width: '100px', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', background: '#ffffff' }}
+                                        >
+                                          <option value="PERCENTAGE">PERCENTAGE</option>
+                                          <option value="AMOUNT">AMOUNT</option>
+                                        </select>
+                                      </td>
                                       <td style={{ textAlign: 'right' }}>
                                         <input
                                           type="number"
-                                          value={itemPrices[itemKey] ?? ""}
-                                          onChange={(e) => {
-                                            const val = e.target.value;
-                                            const nextPrices = { ...itemPrices, [itemKey]: val };
-                                            setItemPrices(nextPrices);
-
-                                            let sum = 0;
-                                            selectedRfqDetails.items.forEach((it, i) => {
-                                              const k = it.id || it.buyerRFQItemId || `item-${i}`;
-                                              const p = parseFloat(k === itemKey ? val : String(nextPrices[k] || 0)) || 0;
-                                              sum += p * (it.quantity || 1);
-                                            });
-                                            setTotalPriceQuote(String(sum.toFixed(2)));
-                                          }}
+                                          step="0.01"
+                                          min="0"
+                                          value={line.quotedPrice || ""}
+                                          onChange={(e) => handleLineItemFieldChange(itemKey, "quotedPrice", e.target.value)}
                                           placeholder="0.00"
-                                          style={{
-                                            width: '100px',
-                                            padding: '4px 8px',
-                                            border: '1.5px solid #cbd5e1',
-                                            borderRadius: '6px',
-                                            textAlign: 'right',
-                                            fontWeight: 700,
-                                            color: '#047857',
-                                            fontSize: '0.8125rem',
-                                            outline: 'none'
-                                          }}
+                                          style={{ width: '100px', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'right', fontWeight: 700, color: '#047857', fontSize: '0.75rem', outline: 'none' }}
                                         />
                                       </td>
-                                    )}
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
+                                      <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a', fontSize: '0.75rem' }}>
+                                        {line.subTotal.toFixed(2)}
+                                      </td>
+                                      <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a', fontSize: '0.75rem' }}>
+                                        {line.quotedAmount.toFixed(2)}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )
                       ) : (
                         <div style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '0.375rem', fontSize: '0.75rem', color: '#64748b' }}>
                           No material items listed for this tender.
                         </div>
                       )}
                     </div>
+
+                    {selectedRfqDetails?.addLotOption === false && (
+                      <>
+                        {submitBidError && (
+                          <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', padding: '0.625rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+                            {submitBidError}
+                          </div>
+                        )}
+
+                        {bidSubmittedMessage && (
+                          <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', padding: '0.625rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+                            {bidSubmittedMessage}
+                          </div>
+                        )}
+
+                        <div className="eauction-line-item-total-bar">
+                          <div className="eauction-total-quote-label">Total Price Quote</div>
+                          <div className="eauction-total-quote-value-box">
+                            <input
+                              type="number"
+                              value={totalPriceQuote}
+                              onChange={(e) => setTotalPriceQuote(e.target.value)}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                outline: 'none',
+                                fontSize: '1.125rem',
+                                fontWeight: 800,
+                                color: '#047857',
+                                textAlign: 'right',
+                                width: '110px',
+                              }}
+                            />
+                          </div>
+                          <button
+                            className="eauction-btn-submit-bid eauction-btn-submit-bid--inline"
+                            onClick={handleSubmitLiveBid}
+                            disabled={submittingBid}
+                            style={{ opacity: submittingBid ? 0.7 : 1 }}
+                          >
+                            {submittingBid ? "Submitting Live Bid..." : "⚡ SUBMIT LIVE BID"}
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
 
-                  {/* Right Column: Supplier Live Bidding Submission Panel */}
-                  <div className="eauction-panel-light" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div className="eauction-panel-title-text">SUBMIT COMPETITIVE BID</div>
+                  {/* Right Column: Supplier Live Bidding Submission Panel (Single Lot Bidding only) */}
+                  {selectedRfqDetails?.addLotOption !== false && (
+                    <div className="eauction-panel-light" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div className="eauction-panel-title-text">SUBMIT COMPETITIVE BID</div>
 
-                    {submitBidError && (
-                      <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', padding: '0.625rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 600 }}>
-                        {submitBidError}
+                      {submitBidError && (
+                        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', padding: '0.625rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                          {submitBidError}
+                        </div>
+                      )}
+
+                      {bidSubmittedMessage && (
+                        <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', padding: '0.625rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                          {bidSubmittedMessage}
+                        </div>
+                      )}
+
+                      {/* Quotation Details Form */}
+                      <div className="eauction-supplier-bid-box">
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                          <div>
+                            <label className="eauction-bid-field-label">Delivery Charge</label>
+                            <input
+                              type="number"
+                              className="eauction-bid-field-input"
+                              value={deliveryCharge}
+                              onChange={(e) => setDeliveryCharge(e.target.value)}
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div>
+                            <label className="eauction-bid-field-label">Delivery Type</label>
+                            <select
+                              className="eauction-bid-field-input"
+                              value={deliveryType}
+                              onChange={(e) => setDeliveryType(e.target.value)}
+                            >
+                              <option value="PERCENTAGE">PERCENTAGE</option>
+                              <option value="AMOUNT">AMOUNT</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="eauction-bid-field-label">Discount</label>
+                            <input
+                              type="number"
+                              className="eauction-bid-field-input"
+                              value={discount}
+                              onChange={(e) => setDiscount(e.target.value)}
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div>
+                            <label className="eauction-bid-field-label">Discount Type</label>
+                            <select
+                              className="eauction-bid-field-input"
+                              value={discountType}
+                              onChange={(e) => setDiscountType(e.target.value)}
+                            >
+                              <option value="PERCENTAGE">PERCENTAGE</option>
+                              <option value="AMOUNT">AMOUNT</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="eauction-bid-field-label">Tax</label>
+                            <input
+                              type="number"
+                              className="eauction-bid-field-input"
+                              value={tax}
+                              onChange={(e) => setTax(e.target.value)}
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div>
+                            <label className="eauction-bid-field-label">Tax Type</label>
+                            <select
+                              className="eauction-bid-field-input"
+                              value={taxType}
+                              onChange={(e) => setTaxType(e.target.value)}
+                            >
+                              <option value="PERCENTAGE">PERCENTAGE</option>
+                              <option value="AMOUNT">AMOUNT</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="eauction-total-quote-row">
+                          <div className="eauction-total-quote-label">Total Price Quote</div>
+                          <div className="eauction-total-quote-value-box">
+                            <span style={{ fontSize: '1rem', fontWeight: 800, color: '#047857' }}>$</span>
+                            <input
+                              type="number"
+                              value={totalPriceQuote}
+                              onChange={(e) => setTotalPriceQuote(e.target.value)}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                outline: 'none',
+                                fontSize: '1.125rem',
+                                fontWeight: 800,
+                                color: '#047857',
+                                textAlign: 'right',
+                                width: '110px',
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <button
+                          className="eauction-btn-submit-bid"
+                          onClick={handleSubmitLiveBid}
+                          disabled={submittingBid}
+                          style={{ opacity: submittingBid ? 0.7 : 1 }}
+                        >
+                          {submittingBid ? "Submitting Live Bid..." : "⚡ SUBMIT LIVE BID"}
+                        </button>
                       </div>
-                    )}
-
-                    {bidSubmittedMessage && (
-                      <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', padding: '0.625rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 600 }}>
-                        {bidSubmittedMessage}
-                      </div>
-                    )}
-
-                    {/* Quotation Details Form matching second user screenshot */}
-                    <div className="eauction-supplier-bid-box" style={{ padding: '0.875rem' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.625rem', marginBottom: '0.875rem' }}>
-                        <div>
-                          <label style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#475569', marginBottom: '0.25rem', display: 'block' }}>
-                            Delivery Charge
-                          </label>
-                          <input
-                            type="number"
-                            value={deliveryCharge}
-                            onChange={(e) => setDeliveryCharge(e.target.value)}
-                            placeholder="0.00"
-                            style={{ width: '100%', padding: '0.4rem 0.5rem', border: '1px solid #cbd5e1', borderRadius: '0.375rem', fontSize: '0.75rem', background: '#ffffff' }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#475569', marginBottom: '0.25rem', display: 'block' }}>
-                            Delivery Type
-                          </label>
-                          <select
-                            value={deliveryType}
-                            onChange={(e) => setDeliveryType(e.target.value)}
-                            style={{ width: '100%', padding: '0.4rem 0.5rem', border: '1px solid #cbd5e1', borderRadius: '0.375rem', fontSize: '0.75rem', background: '#ffffff' }}
-                          >
-                            <option value="PERCENTAGE">PERCENTAGE</option>
-                            <option value="AMOUNT">AMOUNT</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#475569', marginBottom: '0.25rem', display: 'block' }}>
-                            Discount
-                          </label>
-                          <input
-                            type="number"
-                            value={discount}
-                            onChange={(e) => setDiscount(e.target.value)}
-                            placeholder="0.00"
-                            style={{ width: '100%', padding: '0.4rem 0.5rem', border: '1px solid #cbd5e1', borderRadius: '0.375rem', fontSize: '0.75rem', background: '#ffffff' }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#475569', marginBottom: '0.25rem', display: 'block' }}>
-                            Discount Type
-                          </label>
-                          <select
-                            value={discountType}
-                            onChange={(e) => setDiscountType(e.target.value)}
-                            style={{ width: '100%', padding: '0.4rem 0.5rem', border: '1px solid #cbd5e1', borderRadius: '0.375rem', fontSize: '0.75rem', background: '#ffffff' }}
-                          >
-                            <option value="PERCENTAGE">PERCENTAGE</option>
-                            <option value="AMOUNT">AMOUNT</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#475569', marginBottom: '0.25rem', display: 'block' }}>
-                            Tax
-                          </label>
-                          <input
-                            type="number"
-                            value={tax}
-                            onChange={(e) => setTax(e.target.value)}
-                            placeholder="0.00"
-                            style={{ width: '100%', padding: '0.4rem 0.5rem', border: '1px solid #cbd5e1', borderRadius: '0.375rem', fontSize: '0.75rem', background: '#ffffff' }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#475569', marginBottom: '0.25rem', display: 'block' }}>
-                            Tax Type
-                          </label>
-                          <select
-                            value={taxType}
-                            onChange={(e) => setTaxType(e.target.value)}
-                            style={{ width: '100%', padding: '0.4rem 0.5rem', border: '1px solid #cbd5e1', borderRadius: '0.375rem', fontSize: '0.75rem', background: '#ffffff' }}
-                          >
-                            <option value="PERCENTAGE">PERCENTAGE</option>
-                            <option value="AMOUNT">AMOUNT</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.8125rem', color: '#0f172a' }}>Total Price Quote</div>
-                        <div style={{ border: '1.5px solid #a7f3d0', borderRadius: '0.5rem', padding: '0.4rem 0.875rem', background: '#f0fdf4', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <span style={{ fontSize: '1rem', fontWeight: 800, color: '#047857' }}>$</span>
-                          <input
-                            type="number"
-                            value={totalPriceQuote}
-                            onChange={(e) => setTotalPriceQuote(e.target.value)}
-                            style={{
-                              border: 'none',
-                              background: 'transparent',
-                              outline: 'none',
-                              fontSize: '1.125rem',
-                              fontWeight: 800,
-                              color: '#047857',
-                              textAlign: 'right',
-                              width: '110px',
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      <button
-                        className="eauction-btn-submit-bid"
-                        onClick={handleSubmitLiveBid}
-                        disabled={submittingBid}
-                        style={{ marginTop: '0.875rem', opacity: submittingBid ? 0.7 : 1 }}
-                      >
-                        {submittingBid ? "Submitting Live Bid..." : "⚡ SUBMIT LIVE BID"}
-                      </button>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
