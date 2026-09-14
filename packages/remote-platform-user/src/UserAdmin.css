@@ -192,7 +192,7 @@
 .ua-table-wrapper {
   background: #ffffff;
   border-radius: 10px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   overflow: hidden;
   overflow-x: auto;
@@ -207,6 +207,7 @@
 .ua-table thead {
   background: #c4c3c2;
   border-bottom: 1px solid #cbd5e1;
+
 }
 
 .ua-table th {
@@ -218,6 +219,7 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 1px solid #cbd5e1;
+  border-right: 1px solid #cbd5e1;
   white-space: nowrap;
 }
 
@@ -226,6 +228,8 @@
   color: #334155;
   border-bottom: 1px solid #e2e8f0;
   vertical-align: middle;
+  border-right: 1px solid #e2e8f0;
+
 }
 
 .ua-table tbody tr {
