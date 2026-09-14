@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './EAuctionWidget.css';
 import {
   fetchRFQMasterData,
@@ -81,6 +81,9 @@ const deleteCookie = (name: string) => {
 /* ---------------------------------- Component ---------------------------------- */
 
 const PAGE_SIZE = 5;
+// The rfq-master-data endpoint returns a bare array with no total, so the count is
+// resolved with one wide fetch when the board opens.
+const TOTAL_COUNT_FETCH_LIMIT = 1000;
 
 export const EAuctionWidget: React.FC = () => {
   const [isHovered, setIsHovered] = useState(false);
@@ -88,6 +91,9 @@ export const EAuctionWidget: React.FC = () => {
   const [auctions, setAuctions] = useState<LiveAuctionItem[]>([]);
   const [selectedLot, setSelectedLot] = useState<LiveAuctionItem | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalAuctions, setTotalAuctions] = useState<number>(0);
+  const [hasNextPage, setHasNextPage] = useState<boolean>(false);
+  const knownTotalRef = useRef<number>(0);
 
   // API State for selected RFQ details & existing quotation
   const [selectedRfqDetails, setSelectedRfqDetails] = useState<RFQDetailResponse | null>(null);
@@ -110,12 +116,13 @@ export const EAuctionWidget: React.FC = () => {
   const [submitBidError, setSubmitBidError] = useState<string | null>(null);
   const [bidSubmittedMessage, setBidSubmittedMessage] = useState<string | null>(null);
 
-  const fetchLiveBidsData = async () => {
+  const fetchLiveBidsData = async (page: number = currentPage) => {
     setLoadingApi(true);
+    const startIndex = (page - 1) * PAGE_SIZE;
     try {
       const res = await fetchRFQMasterData({
-        index: 0,
-        limit: 10,
+        index: startIndex,
+        limit: PAGE_SIZE,
         supplierId: DEFAULT_SUPPLIER_ID,
         status: "LIVE",
       });
@@ -127,6 +134,24 @@ export const EAuctionWidget: React.FC = () => {
           : (res as any)?.rfqs && Array.isArray((res as any).rfqs)
             ? (res as any).rfqs
             : [];
+
+      const reportedTotal =
+        (res as any)?.totalCount ??
+        (res as any)?.total ??
+        (res as any)?.totalRecords ??
+        null;
+
+      if (typeof reportedTotal === 'number') {
+        knownTotalRef.current = reportedTotal;
+        setTotalAuctions(reportedTotal);
+        setHasNextPage(startIndex + rawList.length < reportedTotal);
+      } else if (knownTotalRef.current > 0) {
+        setHasNextPage(startIndex + rawList.length < knownTotalRef.current);
+      } else {
+        // No total known yet: a full page means there is more to come
+        setHasNextPage(rawList.length === PAGE_SIZE);
+        setTotalAuctions((prev) => Math.max(prev, startIndex + rawList.length));
+      }
 
       if (rawList.length > 0) {
         const mapped: LiveAuctionItem[] = rawList.map((item: any, idx: number) => {
@@ -152,18 +177,57 @@ export const EAuctionWidget: React.FC = () => {
       } else {
         setAuctions([]);
         setSelectedLot(null);
+        // Landed on an empty page (rows removed since last fetch) - step back
+        if (page > 1) setCurrentPage(page - 1);
       }
     } catch (err) {
       console.error("Error fetching live RFQ master data:", err);
       setAuctions([]);
       setSelectedLot(null);
+      setTotalAuctions(0);
+      setHasNextPage(false);
     } finally {
       setLoadingApi(false);
     }
   };
 
+  // Resolve the true total tender count (the list endpoint does not report one)
+  const fetchLiveBidsTotal = async () => {
+    try {
+      const res = await fetchRFQMasterData({
+        index: 0,
+        limit: TOTAL_COUNT_FETCH_LIMIT,
+        supplierId: DEFAULT_SUPPLIER_ID,
+        status: "LIVE",
+      });
+
+      const reportedTotal =
+        (res as any)?.totalCount ?? (res as any)?.total ?? (res as any)?.totalRecords ?? null;
+
+      const fullList = Array.isArray(res)
+        ? res
+        : (res as any)?.data && Array.isArray((res as any).data)
+          ? (res as any).data
+          : (res as any)?.rfqs && Array.isArray((res as any).rfqs)
+            ? (res as any).rfqs
+            : [];
+
+      const total = typeof reportedTotal === 'number' ? reportedTotal : fullList.length;
+      knownTotalRef.current = total;
+      setTotalAuctions(total);
+      setHasNextPage((prev) => (total > 0 ? currentPage * PAGE_SIZE < total : prev));
+    } catch (err) {
+      console.error("Error fetching live RFQ total count:", err);
+    }
+  };
+
   useEffect(() => {
-    fetchLiveBidsData();
+    fetchLiveBidsData(currentPage);
+  }, [isModalOpen, currentPage]);
+
+  useEffect(() => {
+    knownTotalRef.current = 0;
+    fetchLiveBidsTotal();
   }, [isModalOpen]);
 
   // Load RFQ details and supplier quotation when selectedLot changes
@@ -710,9 +774,8 @@ export const EAuctionWidget: React.FC = () => {
                         </tr>
                       ) : (
                         (() => {
-                          const paginatedAuctions = auctions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-                          return paginatedAuctions.map((auc, idx) => {
+                          // Rows are already paginated server-side (index / limit)
+                          return auctions.map((auc, idx) => {
                             const globalIdx = (currentPage - 1) * PAGE_SIZE + idx + 1;
                             return (
                               <tr
@@ -754,68 +817,57 @@ export const EAuctionWidget: React.FC = () => {
 
                   {/* Pagination Bar */}
                   {auctions.length > 0 && (() => {
-                    const totalPages = Math.ceil(auctions.length / PAGE_SIZE) || 1;
                     const startItem = (currentPage - 1) * PAGE_SIZE + 1;
-                    const endItem = Math.min(currentPage * PAGE_SIZE, auctions.length);
+                    const endItem = (currentPage - 1) * PAGE_SIZE + auctions.length;
+                    const canGoPrev = currentPage > 1;
+                    const canGoNext = hasNextPage;
+
+                    const navBtnStyle = (enabled: boolean): React.CSSProperties => ({
+                      padding: '0.3rem 0.6rem',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '0.375rem',
+                      background: enabled ? '#ffffff' : '#f8fafc',
+                      color: enabled ? '#0f172a' : '#94a3b8',
+                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      cursor: enabled ? 'pointer' : 'not-allowed',
+                    });
 
                     return (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.875rem', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0' }}>
                         <div style={{ fontSize: '0.78125rem', color: '#64748b' }}>
-                          Showing <strong style={{ color: '#0f172a' }}>{startItem}</strong> to <strong style={{ color: '#0f172a' }}>{endItem}</strong> of <strong style={{ color: '#0f172a' }}>{auctions.length}</strong> live tenders
+                          Showing <strong style={{ color: '#0f172a' }}>{startItem}</strong> to <strong style={{ color: '#0f172a' }}>{endItem}</strong> of <strong style={{ color: '#0f172a' }}>{Math.max(totalAuctions, endItem)}</strong> live tenders
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                           <button
-                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                            disabled={currentPage === 1}
-                            style={{
-                              padding: '0.3rem 0.6rem',
-                              border: '1px solid #cbd5e1',
-                              borderRadius: '0.375rem',
-                              background: currentPage === 1 ? '#f8fafc' : '#ffffff',
-                              color: currentPage === 1 ? '#94a3b8' : '#0f172a',
-                              fontWeight: 600,
-                              fontSize: '0.75rem',
-                              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                            }}
+                            onClick={() => canGoPrev && setCurrentPage((p) => Math.max(1, p - 1))}
+                            disabled={!canGoPrev}
+                            style={navBtnStyle(canGoPrev)}
                           >
-                            ‹ Prev
+                            &lsaquo; Prev
                           </button>
 
-                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
-                            <button
-                              key={pg}
-                              onClick={() => setCurrentPage(pg)}
-                              style={{
-                                padding: '0.3rem 0.6rem',
-                                border: pg === currentPage ? '1px solid #0057b8' : '1px solid #cbd5e1',
-                                borderRadius: '0.375rem',
-                                background: pg === currentPage ? '#0057b8' : '#ffffff',
-                                color: pg === currentPage ? '#ffffff' : '#0f172a',
-                                fontWeight: 700,
-                                fontSize: '0.75rem',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              {pg}
-                            </button>
-                          ))}
-
-                          <button
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={currentPage === totalPages || totalPages === 0}
+                          <span
                             style={{
                               padding: '0.3rem 0.6rem',
-                              border: '1px solid #cbd5e1',
+                              border: '1px solid #0057b8',
                               borderRadius: '0.375rem',
-                              background: (currentPage === totalPages || totalPages === 0) ? '#f8fafc' : '#ffffff',
-                              color: (currentPage === totalPages || totalPages === 0) ? '#94a3b8' : '#0f172a',
-                              fontWeight: 600,
+                              background: '#0057b8',
+                              color: '#ffffff',
+                              fontWeight: 700,
                               fontSize: '0.75rem',
-                              cursor: (currentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer',
                             }}
                           >
-                            Next ›
+                            {currentPage}
+                          </span>
+
+                          <button
+                            onClick={() => canGoNext && setCurrentPage((p) => p + 1)}
+                            disabled={!canGoNext}
+                            style={navBtnStyle(canGoNext)}
+                          >
+                            Next &rsaquo;
                           </button>
                         </div>
                       </div>
