@@ -47,9 +47,10 @@
 
 .vsx-header-nav {
     display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    margin-left: 1.5rem;
+    align-items: stretch;
+    height: 50%;
+    gap: 1px;
+    margin-left: 2.5rem;
     margin-right: 1rem;
     overflow-x: auto;
     scrollbar-width: none;
@@ -63,33 +64,38 @@
 .vsx-header-nav-item {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.875rem;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
+    padding: 0 1.5rem;
+    position: relative;
+    font-size: 0.9375rem;
     font-weight: 500;
-    color: #606060; /* duller text */
+    color: #475569;
     background: transparent;
-    border: 1px solid transparent;
+    border: none;
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.15s ease-in-out;
+    transition: color 0.15s ease-in-out;
 }
 
 .vsx-header-nav-item:hover {
-    color: #212121; /* black on hover */
+    color: #0c6fd1;
+    background: transparent;
 }
 
 .vsx-header-nav-item-active {
-    color: #2d95fd; /* blue text */
+    color: #0c6fd1;
     background: transparent;
-    border-bottom: 2px solid #2d95fd; /* blue underline */
-    border-radius: 0;
     font-weight: 600;
 }
 
-.vsx-header-nav-item-active:hover {
-    color: #2d95fd;
+.vsx-header-nav-item-active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background-color: #0c6fd1;
+    border-radius: 3px 3px 0 0;
 }
 
 .vsx-header-nav-icon {
