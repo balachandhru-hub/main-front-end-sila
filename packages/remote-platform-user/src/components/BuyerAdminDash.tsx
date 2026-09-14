@@ -272,13 +272,21 @@ const NavIconFilePlus = () => (
   </svg>
 );
 
-const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number }[] = [
+const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number; subItems?: { key: string; label: string }[] }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard", section: "MAIN" },
   { key: "invitations", icon: <IconMail />, label: "Invitations", section: "SOURCING & ORDERS" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog", section: "DIRECTORY & CATALOG" },
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
-  { key: "template", icon: <NavIconTemplate />, label: "Templates" },
+  { 
+    key: "configuration", 
+    icon: <NavIconTemplate />, 
+    label: "Configuration",
+    subItems: [
+      { key: "template", label: "Templates" },
+      { key: "approvalManagement", label: "Approval Management" }
+    ]
+  },
 ];
 
 const statCards: StatCard[] = [
@@ -589,10 +597,10 @@ const BuyerAdminDash: React.FC = () => {
   }
 };
 
-  const handleBackToDashboard = () => {
-    setRfqPageView("dashboard");
-    setActiveNav("dashboard");
-  };
+  // const handleBackToDashboard = () => {
+  //   setRfqPageView("dashboard");
+  //   setActiveNav("dashboard");
+  // };
 
   const handleViewRfqDetailsFullPage = async (rfqId: string) => {
     setRfqPageView("rfqDetail");
@@ -795,14 +803,39 @@ const BuyerAdminDash: React.FC = () => {
                 {item.section && (
                   <div className="bad-nav-section-title">{item.section}</div>
                 )}
-                <div
-                  className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
-                  onClick={() => handleNavClick(item.key)}
-                >
-                  <span className="bad-nav-icon">{item.icon}</span>
-                  <span className="bad-nav-label">{item.label}</span>
-                  {item.badge && <span className="bad-nav-badge">{item.badge}</span>}
-                </div>
+                {item.subItems ? (
+                  <div className="bad-nav-dropdown-container">
+                    <div
+                      className={`bad-nav-item${activeNav === item.key || item.subItems.some(sub => sub.key === activeNav) ? " bad-nav-item-active" : ""}`}
+                    >
+                      <span className="bad-nav-icon">{item.icon}</span>
+                      <span className="bad-nav-label">{item.label}</span>
+                      <span className="bad-nav-chevron">
+                        <IconChevronRight />
+                      </span>
+                    </div>
+                    <div className="bad-nav-dropdown-menu">
+                      {item.subItems.map(subItem => (
+                        <div
+                          key={subItem.key}
+                          onClick={() => handleNavClick(subItem.key)}
+                          className={`bad-nav-subitem${activeNav === subItem.key ? " bad-nav-subitem-active" : ""}`}
+                        >
+                          {subItem.label}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
+                    onClick={() => handleNavClick(item.key)}
+                  >
+                    <span className="bad-nav-icon">{item.icon}</span>
+                    <span className="bad-nav-label">{item.label}</span>
+                    {item.badge && <span className="bad-nav-badge">{item.badge}</span>}
+                  </div>
+                )}
               </React.Fragment>
             ))}
             <div
@@ -851,6 +884,11 @@ const BuyerAdminDash: React.FC = () => {
                 ) : (
                   <UserTemplate templates={templates} />
                 )}
+              </div>
+            ) : activeNav === "approvalManagement" ? (
+              <div style={{ padding: '2rem', textAlign: 'center', background: '#fff', borderRadius: '0.625rem', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.04)' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#0f172a' }}>Approval Management</h2>
+                <p style={{ paddingTop: '1rem', color: '#64748b' }}>Approval management functionality will be displayed here.</p>
               </div>
             ) : activeNav === "createRFQ" ? (
               <CreateRFQ />
