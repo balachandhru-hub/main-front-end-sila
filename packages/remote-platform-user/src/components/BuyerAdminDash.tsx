@@ -30,6 +30,8 @@ interface StatCard {
   value: number;
   linkText: string;
   colorClass: string;
+  isClickable?: boolean; 
+  navKey?:string;
 }
 
 interface POItem {
@@ -288,13 +290,13 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
 ];
 
 const statCards: StatCard[] = [
-  { icon: <IconFile />, label: "ACTIVE RFQS", value: 3, linkText: "Manage RFQs >", colorClass: "bad-stat-icon-blue" },
-  { icon: <NavIconFilePlus />, label: "CREATE RFQ", value: 3, linkText: "Manage RFQs >", colorClass: "bad-stat-icon-blue" },
-  { icon: <IconMail />, label: "QUOTATIONS RECEIVED", value: 5, linkText: "Review bids >", colorClass: "bad-stat-icon-indigo" },
-  { icon: <IconTrend />, label: "SUPPLIERS ENGAGED", value: 8, linkText: "View directory", colorClass: "bad-stat-icon-green" },
-  { icon: <IconBag />, label: "PURCHASE ORDERS", value: 4, linkText: "Track orders >", colorClass: "bad-stat-icon-purple" },
-  { icon: <IconInvoice />, label: "PENDING INVOICES", value: 2, linkText: "Invoice list >", colorClass: "bad-stat-icon-orange" },
-  { icon: <IconBell />, label: "NOTIFICATIONS", value: 3, linkText: "Inquiries & Alerts >", colorClass: "bad-stat-icon-teal" },
+  { icon: <IconFile />, navKey: "activeRFQs", label: "ACTIVE RFQS", value: 3, linkText: "Manage RFQs >", colorClass: "bad-stat-icon-blue" },
+  { icon: <NavIconFilePlus />, navKey: "createRFQ", label: "CREATE RFQ", value: 0, linkText: "Create RFQ >", colorClass: "bad-stat-icon-blue" },
+  { icon: <IconMail />, navKey: "quotationsReceived", label: "QUOTATIONS RECEIVED", value: 5, linkText: "Review bids >", colorClass: "bad-stat-icon-indigo" },
+  { icon: <IconTrend />, navKey: "suppliersEngaged", label: "SUPPLIERS ENGAGED", value: 8, linkText: "View directory", colorClass: "bad-stat-icon-green" },
+  { icon: <IconBag />, navKey: "purchaseOrders", label: "PURCHASE ORDERS", value: 4, linkText: "Track orders >", colorClass: "bad-stat-icon-purple" },
+  { icon: <IconInvoice />, navKey: "pendingInvoices", label: "PENDING INVOICES", value: 2, linkText: "Invoice list >", colorClass: "bad-stat-icon-orange" },
+  { icon: <IconBell />, navKey: "notifications", label: "NOTIFICATIONS", value: 3, linkText: "Inquiries & Alerts >", colorClass: "bad-stat-icon-teal" },
 ];
 
 const poItems: POItem[] = [
@@ -585,10 +587,20 @@ const BuyerAdminDash: React.FC = () => {
     setRfqPageView("dashboard");
   };
 
-  const handleBackToDashboard = () => {
-    setRfqPageView("dashboard");
-    setActiveNav("dashboard");
-  };
+  const handleCardClick = (navKey?: string, label?: string) => {
+    if (navKey === "activeRFQs" || label === "ACTIVE RFQs") {
+      handleOpenAllRfqs(); // Redirects to All/Manage RFQs table
+    } else if (navKey === "createRFQ" || label === "CREATE RFQ") {
+      handleNavClick("createRFQ"); // Redirects to Create RFQ form
+    } else if (navKey) {
+      handleNavClick(navKey);
+  }
+};
+
+  // const handleBackToDashboard = () => {
+  //   setRfqPageView("dashboard");
+  //   setActiveNav("dashboard");
+  // };
 
   const handleViewRfqDetailsFullPage = async (rfqId: string) => {
     setRfqPageView("rfqDetail");
@@ -884,16 +896,14 @@ const BuyerAdminDash: React.FC = () => {
               <Product />
             ) : rfqPageView === "allRfqs" ? (
               <>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
+              <div className="bad-table">
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '1.25rem', }}>
                   <div>
                     <h1 className="bad-title">All RFQs</h1>
                     <p className="bad-subtitle" style={{ marginBottom: 0 }}>
                       RFQs posted across your organization, awaiting supplier quotations.
                     </p>
                   </div>
-                  <button className="bad-btn bad-btn-outline" onClick={handleBackToDashboard}>
-                    ← Back to Dashboard
-                  </button>
                 </div>
 
                 {loadingAllRfqs ? (
@@ -921,12 +931,12 @@ const BuyerAdminDash: React.FC = () => {
                             <th>Organization</th>
                             <th>Delivery Location</th>
                             <th>Closing Date</th>
-                            <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
                           {allRfqsList.map((rfq: any, idx: number) => (
-                            <tr key={rfq.rfqId || idx}>
+                            <tr key={rfq.rfqId || idx}
+                            onClick={()=> handleViewRfqDetailsFullPage(rfq.rfqId)}>
                               <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
                               <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
                               <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
@@ -936,14 +946,6 @@ const BuyerAdminDash: React.FC = () => {
                                 {rfq.endDate
                                   ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
                                   : "—"}
-                              </td>
-                              <td>
-                                <button
-                                  className="bad-btn bad-btn-outline"
-                                  onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                                >
-                                  View RFQ Details
-                                </button>
                               </td>
                             </tr>
                           ))}
@@ -976,6 +978,7 @@ const BuyerAdminDash: React.FC = () => {
                     </div>
                   </div>
                 )}
+              </div>
               </>
             ) : rfqPageView === "rfqDetail" ? (
               <>
@@ -1271,8 +1274,10 @@ const BuyerAdminDash: React.FC = () => {
               />
             ) : (
               <>
+              <div>
                 <h1 className="bad-title" style={{ fontSize: '20px', fontWeight: 500 }}>Buyer Admin Command Center</h1>
                 <p className="bad-subtitle">Manage buyers, track procurement activities, and oversee operations.</p>
+              </div>
 
                 <div className="bad-stats-grid">
                   {statCards.map((stat) => (
@@ -1280,7 +1285,12 @@ const BuyerAdminDash: React.FC = () => {
                       <div className={`bad-stat-icon ${stat.colorClass}`}>{stat.icon}</div>
                       <div className="bad-stat-label">{stat.label}</div>
                       <div className="bad-stat-value">{stat.value}</div>
-                      <div className="bad-stat-link">{stat.linkText}</div>
+                      <a className="bad-stat-link" href="#" onClick={(e) => {
+                            e.preventDefault();
+                            handleCardClick(stat.navKey,stat.label);
+                          }}> 
+                        {stat.linkText}
+                      </a>
                     </div>
                   ))}
                 </div>

@@ -7,7 +7,7 @@
 
 
 .pud-product-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 
@@ -80,7 +80,7 @@
 
 .pud-product-filter-select {
   padding: 0.625rem 0.75rem;
-  border: 0.0625rem solid #d1d5db;
+  border: 0.0625rem solid #b9babc;
   border-radius: 0.375rem;
   font-size: 0.875rem;
   color: #374151;
@@ -128,7 +128,7 @@
 .pud-product-search-input {
   flex: 1;
   padding: 0.625rem 0.75rem;
-  border: 0.0625rem solid #d1d5db;
+  border: 0.0625rem solid #b9babc;
   border-radius: 0.375rem;
   font-size: 0.875rem;
   color: #374151;
@@ -157,7 +157,7 @@
   justify-content: center;
   gap: 0.375rem;
   transition: all 0.2s ease;
-  min-width: 6.25rem;
+  min-width: 4.25rem;
 }
 
 
