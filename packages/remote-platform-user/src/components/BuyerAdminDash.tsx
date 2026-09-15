@@ -19,6 +19,7 @@ import CreateRFQ from "./UserListTable/CreateRFQ";
 import { logoutPlatformUser } from "../api/platformApi";
 import { toastService } from "@vosox/shared-ui";
 import UserTemplate from "./usertemplate"
+import ApprovalManagement from "./ApprovalManagement/ApprovalManagement";
 import { ToastContainer } from "@vosox/shared-ui";
 import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
 import QuotationSummaryTable from "../../../remote-buyer/src/components/QuotationSummaryTable";
@@ -900,10 +901,7 @@ const BuyerAdminDash: React.FC = () => {
                 )}
               </div>
             ) : activeNav === "approvalManagement" ? (
-              <div style={{ padding: '2rem', textAlign: 'center', background: '#fff', borderRadius: '0.625rem', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.04)' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#0f172a' }}>Approval Management</h2>
-                <p style={{ paddingTop: '1rem', color: '#64748b' }}>Approval management functionality will be displayed here.</p>
-              </div>
+              <ApprovalManagement />
             ) : activeNav === "createRFQ" ? (
               <CreateRFQ />
             ) : activeNav === "product" ? (
