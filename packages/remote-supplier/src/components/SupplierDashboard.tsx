@@ -1572,7 +1572,7 @@ const SupplierDashboard: React.FC = () => {
                     return (
                       <>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div className="pud-modal-section-title" style={{ marginBottom: '12px' }}>Required Materials & Services</div>
+                          <div className="pud-modal-section-title" style={{ marginBottom: '12px' }}>Quotation Summary</div>
                           <div className="pud-modal-section-title" style={{ marginBottom: '12px' }}>
                             {selectedRfq.addLotOption && headerRank !== "" && (
                               <span style={{ fontWeight: 600, fontSize: '15px', color: '#2060c6ff', background: '#ffffffff', borderRadius: '6px' }}>
@@ -1666,6 +1666,7 @@ const SupplierDashboard: React.FC = () => {
                                         (qi.id && (qi.id === itemKey || qi.id === itemId))
                                     ) || allQuotationItems[idx];
                                     const itemRank = formatRank(matchedItem?.rank) || "--";
+                                    const quotationStatus = ownQuotation?.status
 
                                     return (
                                       <tr key={itemKey}>
@@ -1771,7 +1772,7 @@ const SupplierDashboard: React.FC = () => {
                                         </td>
                                         {showRankColumn && (
                                           <td style={{ textAlign: 'left', fontWeight: 600, color: '#0f172a' }}>
-                                            {itemRank}
+                                            {quotationStatus === "SUBMITTED" ? itemRank : "-"}
                                           </td>
                                         )}
                                         <td style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px' }}>
