@@ -1503,185 +1503,261 @@ const SupplierAdminDash: React.FC = () => {
 
                 {/* Sourcing Items Table */}
                 <div>
-                  <div className="pud-modal-section-title" style={{ marginBottom: '12px' }}>Required Materials & Services</div>
-                  {selectedRfq.addLotOption ? (
-                    <div className="pud-rfq-table-container">
-                      <table className="pud-rfq-items-table">
-                        <thead>
-                          <tr>
-                            <th>Material Info</th>
-                            <th>Code</th>
-                            <th style={{ textAlign: 'left' }}>Qty Required</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedRfq.items?.map((item, idx) => {
-                            return (
-                              <tr key={idx}>
-                                <td>
-                                  <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
-                                </td>
-                                <td>
-                                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                    {item.materialCode || "N/A"}
-                                  </div>
-                                </td>
-                                <td style={{ textAlign: 'left', fontWeight: 600, color: '#0f172a' }}>
-                                  {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="pud-rfq-table-container">
-                        <table className="pud-rfq-items-table">
-                          <thead>
-                            <tr>
-                              <th>Material Info</th>
-                              <th>Code</th>
-                              <th style={{ textAlign: 'left' }}>Qty</th>
-                              <th style={{ textAlign: 'left' }}>Delivery Charge</th>
-                              <th style={{ textAlign: 'left' }}>Delivery Type</th>
-                              <th style={{ textAlign: 'left' }}>Discount</th>
-                              <th style={{ textAlign: 'left' }}>Discount Type</th>
-                              <th style={{ textAlign: 'left' }}>Tax</th>
-                              <th style={{ textAlign: 'left' }}>Tax Type</th>
-                              <th style={{ textAlign: 'left', width: '110px' }}>Quoted Price</th>
-                              <th style={{ textAlign: 'left', width: '110px' }}>Sub Total</th>
-                              <th style={{ textAlign: 'left', width: '110px' }}>Quoted Amount</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {selectedRfq.items?.map((item, idx) => {
-                              const itemKey = item.supplierRFQItemId || `item-${idx}`;
-                              const line = quoteLineItems[itemKey] || {
-                                deliveryCharge: 0,
-                                deliveryType: "PERCENTAGE",
-                                discount: 0,
-                                discountType: "PERCENTAGE",
-                                tax: 0,
-                                taxType: "PERCENTAGE",
-                                quotedPrice: 0,
-                                subTotal: 0,
-                                quotedAmount: 0,
-                              };
-                              return (
-                                <tr key={itemKey}>
-                                  <td>
-                                    <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
-                                  </td>
-                                  <td>
-                                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                      {item.materialCode || "N/A"}
-                                    </div>
-                                  </td>
-                                  <td style={{ textAlign: 'left', fontWeight: 600, color: '#0f172a' }}>
-                                    {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
-                                  </td>
-                                  <td>
-                                    <input
-                                      type="number"
-                                      step="0.01"
-                                      min="0"
-                                      className="pud-rfq-item-input"
-                                      value={line.deliveryCharge || ""}
-                                      onChange={(e) => handleLineItemFieldChange(itemKey, "deliveryCharge", e.target.value)}
-                                      placeholder="0.00"
-                                      style={{ width: '100px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px' }}
-                                    />
-                                  </td>
-                                  <td>
-                                    <select
-                                      value={line.deliveryType}
-                                      onChange={(e) => handleLineItemFieldChange(itemKey, "deliveryType", e.target.value)}
-                                      style={{ width: '110px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', background: '#ffffff' }}
-                                    >
-                                      <option value="PERCENTAGE">PERCENTAGE</option>
-                                      <option value="AMOUNT">AMOUNT</option>
-                                    </select>
-                                  </td>
-                                  <td>
-                                    <input
-                                      type="number"
-                                      step="0.01"
-                                      min="0"
-                                      className="pud-rfq-item-input"
-                                      value={line.discount || ""}
-                                      onChange={(e) => handleLineItemFieldChange(itemKey, "discount", e.target.value)}
-                                      placeholder="0.00"
-                                      style={{ width: '100px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px' }}
-                                    />
-                                  </td>
-                                  <td>
-                                    <select
-                                      value={line.discountType}
-                                      onChange={(e) => handleLineItemFieldChange(itemKey, "discountType", e.target.value)}
-                                      style={{ width: '110px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', background: '#ffffff' }}
-                                    >
-                                      <option value="PERCENTAGE">PERCENTAGE</option>
-                                      <option value="AMOUNT">AMOUNT</option>
-                                    </select>
-                                  </td>
-                                  <td>
-                                    <input
-                                      type="number"
-                                      step="0.01"
-                                      min="0"
-                                      className="pud-rfq-item-input"
-                                      value={line.tax || ""}
-                                      onChange={(e) => handleLineItemFieldChange(itemKey, "tax", e.target.value)}
-                                      placeholder="0.00"
-                                      style={{ width: '100px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px' }}
-                                    />
-                                  </td>
-                                  <td>
-                                    <select
-                                      value={line.taxType}
-                                      onChange={(e) => handleLineItemFieldChange(itemKey, "taxType", e.target.value)}
-                                      style={{ width: '110px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', background: '#ffffff' }}
-                                    >
-                                      <option value="PERCENTAGE">PERCENTAGE</option>
-                                      <option value="AMOUNT">AMOUNT</option>
-                                    </select>
-                                  </td>
-                                  <td>
-                                    <input
-                                      type="number"
-                                      step="0.01"
-                                      min="0"
-                                      className="pud-rfq-item-input"
-                                      value={line.quotedPrice || ""}
-                                      onChange={(e) => handleLineItemFieldChange(itemKey, "quotedPrice", e.target.value)}
-                                      placeholder="0.00"
-                                      style={{ width: '110px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 600, color: '#0f172a' }}
-                                      required
-                                    />
-                                  </td>
-                                  <td style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px' }}>
-                                    {line.subTotal.toFixed(2)}
-                                  </td>
-                                  <td style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px' }}>
-                                    {line.quotedAmount.toFixed(2)}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                  {(() => {
+                    const formatRank = (val: any): string => {
+                      if (val == null || val === "") return "";
+                      if (typeof val === "object") return String(val.rank ?? val.value ?? "");
+                      return String(val);
+                    };
 
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '16px 20px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '16px' }}>
-                        <span style={{ fontSize: '13px', color: '#1e293b', fontWeight: 700 }}>Total Price Quote</span>
-                        <span style={{ fontSize: '16px', fontWeight: 700, color: '#16a34a' }}>
-                          {Number(quoteTotalPrice).toFixed(2)}
-                        </span>
-                      </div>
-                    </>
-                  )}
+                    const allQuotationItems: any[] = [];
+                    const pushItems = (arr: any) => {
+                      if (Array.isArray(arr)) allQuotationItems.push(...arr);
+                    };
+
+                    pushItems(ownQuotation?.supplierQuotationItems);
+                    pushItems(selectedRfq?.supplierQuotationItems);
+
+                    if (Array.isArray(selectedRfq?.supplierQuotation)) {
+                      selectedRfq.supplierQuotation.forEach((sq: any) => pushItems(sq?.supplierQuotationItems));
+                    } else if ((selectedRfq as any)?.supplierQuotation) {
+                      pushItems((selectedRfq as any).supplierQuotation.supplierQuotationItems);
+                    }
+
+                    const rawSuppliers = (selectedRfq as any)?.suppliers;
+                    if (Array.isArray(rawSuppliers)) {
+                      rawSuppliers.forEach((s: any) => {
+                        pushItems(s?.supplierQuotationItems);
+                        if (Array.isArray(s?.supplierQuotation)) {
+                          s.supplierQuotation.forEach((sq: any) => pushItems(sq?.supplierQuotationItems));
+                        } else if (s?.supplierQuotation) {
+                          pushItems(s.supplierQuotation.supplierQuotationItems);
+                        }
+                      });
+                    } else if (rawSuppliers) {
+                      pushItems(rawSuppliers.supplierQuotationItems);
+                      pushItems(rawSuppliers.supplierQuotation?.supplierQuotationItems);
+                    }
+
+                    const showRankColumn = !selectedRfq.addLotOption;
+
+                    const headerRank = formatRank(
+                      ownQuotation?.rank ??
+                      (selectedRfq?.supplierQuotation?.[0] as any)?.rank ??
+                      (selectedRfq as any)?.suppliers?.[0]?.rank ??
+                      (selectedRfq as any)?.suppliers?.rank
+                    );
+
+                    return (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div className="pud-modal-section-title" style={{ marginBottom: '12px' }}>Quotation Summary</div>
+                          <div className="pud-modal-section-title" style={{ marginBottom: '12px' }}>
+                            {selectedRfq.addLotOption && headerRank !== "" && (
+                              <span style={{ fontWeight: 600, fontSize: '15px', color: '#2060c6ff', background: '#ffffffff', borderRadius: '6px' }}>
+                                Rank: {headerRank}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {selectedRfq.addLotOption ? (
+                          <div className="pud-rfq-table-container">
+                            <table className="pud-rfq-items-table">
+                              <thead>
+                                <tr>
+                                  <th>Material Info</th>
+                                  <th>Code</th>
+                                  <th style={{ textAlign: 'left' }}>Qty Required</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedRfq.items?.map((item, idx) => {
+                                  return (
+                                    <tr key={idx}>
+                                      <td>
+                                        <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
+                                      </td>
+                                      <td>
+                                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                          {item.materialCode || "N/A"}
+                                        </div>
+                                      </td>
+                                      <td style={{ textAlign: 'left', fontWeight: 600, color: '#0f172a' }}>
+                                        {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="pud-rfq-table-container">
+                              <table className="pud-rfq-items-table">
+                                <thead>
+                                  <tr>
+                                    <th>Material Info</th>
+                                    <th>Code</th>
+                                    <th style={{ textAlign: 'left' }}>Qty</th>
+                                    <th style={{ textAlign: 'left' }}>Delivery Charge</th>
+                                    <th style={{ textAlign: 'left' }}>Delivery Type</th>
+                                    <th style={{ textAlign: 'left' }}>Discount</th>
+                                    <th style={{ textAlign: 'left' }}>Discount Type</th>
+                                    <th style={{ textAlign: 'left' }}>Tax</th>
+                                    <th style={{ textAlign: 'left' }}>Tax Type</th>
+                                    <th style={{ textAlign: 'left', width: '110px' }}>Quoted Price</th>
+                                    {showRankColumn && <th style={{ textAlign: 'left' }}>Rank</th>}
+                                    <th style={{ textAlign: 'left', width: '110px' }}>Sub Total</th>
+                                    <th style={{ textAlign: 'left', width: '110px' }}>Quoted Amount</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {selectedRfq.items?.map((item, idx) => {
+                                    const itemKey = item.supplierRFQItemId || `item-${idx}`;
+                                    const itemId = item.id || item.buyerRFQItemId;
+                                    const line = quoteLineItems[itemKey] || {
+                                      deliveryCharge: 0,
+                                      deliveryType: "PERCENTAGE",
+                                      discount: 0,
+                                      discountType: "PERCENTAGE",
+                                      tax: 0,
+                                      taxType: "PERCENTAGE",
+                                      quotedPrice: 0,
+                                      subTotal: 0,
+                                      quotedAmount: 0,
+                                    };
+                                    const matchedItem = allQuotationItems.find(
+                                      (qi) =>
+                                        (qi.supplierRFQItemId && (qi.supplierRFQItemId === itemKey || qi.supplierRFQItemId === itemId)) ||
+                                        (qi.buyerRFQItemId && (qi.buyerRFQItemId === itemKey || qi.buyerRFQItemId === itemId)) ||
+                                        (qi.id && (qi.id === itemKey || qi.id === itemId))
+                                    ) || allQuotationItems[idx];
+                                    const itemRank = formatRank(matchedItem?.rank) || "--";
+                                    const quotationStatus = ownQuotation?.status
+
+                                    return (
+                                      <tr key={itemKey}>
+                                        <td>
+                                          <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
+                                        </td>
+                                        <td>
+                                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                            {item.materialCode || "N/A"}
+                                          </div>
+                                        </td>
+                                        <td style={{ textAlign: 'left', fontWeight: 600, color: '#0f172a' }}>
+                                          {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
+                                        </td>
+                                        <td>
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            className="pud-rfq-item-input"
+                                            value={line.deliveryCharge || ""}
+                                            onChange={(e) => handleLineItemFieldChange(itemKey, "deliveryCharge", e.target.value)}
+                                            placeholder="0.00"
+                                            style={{ width: '100px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px' }}
+                                          />
+                                        </td>
+                                        <td>
+                                          <select
+                                            value={line.deliveryType}
+                                            onChange={(e) => handleLineItemFieldChange(itemKey, "deliveryType", e.target.value)}
+                                            style={{ width: '110px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', background: '#ffffff' }}
+                                          >
+                                            <option value="PERCENTAGE">PERCENTAGE</option>
+                                            <option value="AMOUNT">AMOUNT</option>
+                                          </select>
+                                        </td>
+                                        <td>
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            className="pud-rfq-item-input"
+                                            value={line.discount || ""}
+                                            onChange={(e) => handleLineItemFieldChange(itemKey, "discount", e.target.value)}
+                                            placeholder="0.00"
+                                            style={{ width: '100px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px' }}
+                                          />
+                                        </td>
+                                        <td>
+                                          <select
+                                            value={line.discountType}
+                                            onChange={(e) => handleLineItemFieldChange(itemKey, "discountType", e.target.value)}
+                                            style={{ width: '110px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', background: '#ffffff' }}
+                                          >
+                                            <option value="PERCENTAGE">PERCENTAGE</option>
+                                            <option value="AMOUNT">AMOUNT</option>
+                                          </select>
+                                        </td>
+                                        <td>
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            className="pud-rfq-item-input"
+                                            value={line.tax || ""}
+                                            onChange={(e) => handleLineItemFieldChange(itemKey, "tax", e.target.value)}
+                                            placeholder="0.00"
+                                            style={{ width: '100px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px' }}
+                                          />
+                                        </td>
+                                        <td>
+                                          <select
+                                            value={line.taxType}
+                                            onChange={(e) => handleLineItemFieldChange(itemKey, "taxType", e.target.value)}
+                                            style={{ width: '110px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', background: '#ffffff' }}
+                                          >
+                                            <option value="PERCENTAGE">PERCENTAGE</option>
+                                            <option value="AMOUNT">AMOUNT</option>
+                                          </select>
+                                        </td>
+                                        <td>
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            className="pud-rfq-item-input"
+                                            value={line.quotedPrice || ""}
+                                            onChange={(e) => handleLineItemFieldChange(itemKey, "quotedPrice", e.target.value)}
+                                            placeholder="0.00"
+                                            style={{ width: '110px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 600, color: '#0f172a' }}
+                                            required
+                                          />
+                                        </td>
+                                        {showRankColumn && (
+                                          <td style={{ textAlign: 'left', fontWeight: 600, color: '#0f172a' }}>
+                                            {quotationStatus === 'SUBMITTED' ? itemRank : "-" }
+                                          </td>
+                                        )}
+                                        <td style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px' }}>
+                                          {line.subTotal.toFixed(2)}
+                                        </td>
+                                        <td style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px' }}>
+                                          {line.quotedAmount.toFixed(2)}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '16px 20px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '16px' }}>
+                              <span style={{ fontSize: '13px', color: '#1e293b', fontWeight: 700 }}>Total Price Quote</span>
+                              <span style={{ fontSize: '16px', fontWeight: 700, color: '#16a34a' }}>
+                                {Number(quoteTotalPrice).toFixed(2)}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {(selectedRfq.questions?.length ?? 0) > 0 && (
