@@ -97,7 +97,7 @@
 .bd-select,
 .bd-textarea {
     width: 100%;
-    border: 1px solid #d7dbe1;
+    border: 1px solid #b9babc;
     border-radius: 8px;
     padding: 10px 14px;
     font-size: 14px;
@@ -471,7 +471,7 @@
 
 .bd-input-sm,
 .bd-select-sm {
-    border: 1px solid #d7dbe1;
+    border: 1px solid #b9babc;
     border-radius: 7px;
     padding: 8px 10px;
     font-size: 13px;
@@ -1218,7 +1218,6 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 40px;
 }
 
 .bd-custom-select-trigger.disabled {
