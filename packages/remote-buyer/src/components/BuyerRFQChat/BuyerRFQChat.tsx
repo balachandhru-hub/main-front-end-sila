@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./BuyerRFQChat.css";
-import type { InvitedUserDto } from "../../dto/rfqDto";
+import type { RfqSupplierRefDto } from "../../dto/rfqDto";
 import type { ChatMessageDto, ChatThreadDto } from "../../dto/chatDto";
 import {
   fetchBuyerMessageThreads,
@@ -14,7 +14,7 @@ import type { PersonDetailDto } from "../../api/Buyerapi";
 import { toastService, isErrorResponse } from "@vosox/shared-ui";
 import ChatConversation from "./ChatConversation";
 import ChatDetails from "./ChatDetails";
-import type { ChatSupplier } from "./types";
+import type { ChatSupplier, ObservedParticipant } from "./types";
 import { downloadBase64File, fileToBase64, formatThreadTime, getInitials } from "./chatUtils";
 import { IconClose, IconMessageSquare } from "./ChatIcons";
 
@@ -25,7 +25,8 @@ interface BuyerRFQChatProps {
   rfqId: string;
   rfqNumber?: string;
   rfqTitle?: string;
-  invitedUsers: InvitedUserDto[];
+  /** The ONLY source of which suppliers appear in the chat and their display names. */
+  supplierIds: RfqSupplierRefDto[];
   /** supplierId -> known organization/supplier display name, e.g. sourced from supplierQuotation. */
   supplierNames?: Record<string, string>;
 }
@@ -35,7 +36,7 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
   rfqId,
   rfqNumber,
   rfqTitle,
-  invitedUsers,
+  supplierIds,
   supplierNames,
 }) => {
   const [threads, setThreads] = useState<ChatThreadDto[]>([]);
@@ -62,27 +63,21 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<string | null>(null);
 
-  // One chat thread per supplier — every invited user of that supplier is a
-  // participant in the same group conversation with the Buyer.
+  // One chat thread per supplier. `supplierIds` from the RFQ is the ONLY
+  // source for which suppliers appear here — a matching thread (if any) is
+  // merged in, but a supplier with no thread still gets a "Start chat" entry.
   const chatSuppliers = useMemo<ChatSupplier[]>(() => {
-    const grouped = new Map<string, InvitedUserDto[]>();
-    for (const user of invitedUsers) {
-      if (!user?.supplierId) continue;
-      if (!grouped.has(user.supplierId)) grouped.set(user.supplierId, []);
-      grouped.get(user.supplierId)!.push(user);
-    }
-
-    const list: ChatSupplier[] = [];
-    for (const [supplierId, users] of grouped.entries()) {
-      const thread = threads.find((t) => t.supplierId === supplierId) || null;
-      const supplierName =
-        thread?.counterpartyName ||
-        supplierNames?.[supplierId] ||
-        users[0]?.name ||
-        users[0]?.userName ||
-        "Supplier";
-      list.push({ supplierId, supplierName, users, thread });
-    }
+    const list: ChatSupplier[] = supplierIds
+      .filter((s) => !!s?.supplierId)
+      .map((s) => {
+        const thread = threads.find((t) => t.supplierId === s.supplierId) || null;
+        const supplierName = thread?.counterpartyName || s.supplierName || supplierNames?.[s.supplierId] || "Supplier";
+        return {
+          supplierId: s.supplierId,
+          supplierName,
+          thread,
+        };
+      });
 
     list.sort((a, b) => {
       const at = a.thread?.lastMessageAt ? new Date(a.thread.lastMessageAt).getTime() : 0;
@@ -91,10 +86,22 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
     });
 
     return list;
-  }, [invitedUsers, threads, supplierNames]);
+  }, [supplierIds, threads, supplierNames]);
 
   const currentSupplier = chatSuppliers.find((s) => s.supplierId === selectedSupplierId) || null;
   const totalUnread = threads.reduce((sum, t) => sum + (t.unreadCount || 0), 0);
+
+  // Individual supplier-side people are only knowable from who has actually
+  // sent a message in the currently open thread — not from invitedUsers.
+  const observedParticipants = useMemo<ObservedParticipant[]>(() => {
+    const seen = new Map<string, string>();
+    for (const message of messages) {
+      if (message.senderOrganizationType?.toLowerCase() === "buyer") continue;
+      if (!message.senderUserId || !message.senderName) continue;
+      if (!seen.has(message.senderUserId)) seen.set(message.senderUserId, message.senderName);
+    }
+    return Array.from(seen.entries()).map(([userId, name]) => ({ userId, name }));
+  }, [messages]);
 
   useEffect(() => {
     let cancelled = false;
@@ -322,7 +329,7 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
           </button>
         </div>
 
-        {invitedUsers.length === 0 ? (
+        {supplierIds.length === 0 ? (
           <div className="brc-empty-state">
             <div className="brc-empty-state-icon">
               <IconMessageSquare />
@@ -365,9 +372,6 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
                               </span>
                             )}
                           </div>
-                          <div className="brc-supplier-user-count">
-                            {supplier.users.length} invited user{supplier.users.length !== 1 ? "s" : ""}
-                          </div>
                           <div className="brc-supplier-preview-row">
                             {supplier.thread ? (
                               <span className="brc-supplier-preview">
@@ -395,6 +399,7 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
                 supplier={currentSupplier}
                 buyerProfile={buyerProfile}
                 isLoadingBuyerProfile={isLoadingBuyerProfile}
+                observedParticipants={observedParticipants}
                 onBack={() => setIsChatDetailsOpen(false)}
               />
             ) : (

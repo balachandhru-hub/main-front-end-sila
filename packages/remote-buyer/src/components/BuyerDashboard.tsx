@@ -964,7 +964,7 @@ const BuyersDashboard: React.FC = () => {
                         <span><IconCalendar /> Closes: {new Date(fullPageRfq.endDate).toLocaleDateString()}</span>
                         <span><IconPin /> Delivery: {fullPageRfq.deliveryLocation}</span>
                         <div className="pud-rfq-header-actions">
-                          {Array.isArray(fullPageRfq.invitedUsers) && fullPageRfq.invitedUsers.length > 0 && (
+                          {Array.isArray(fullPageRfq.supplierIds) && fullPageRfq.supplierIds.length > 0 && (
                             <button
                               type="button"
                               className="pud-btn pud-btn-outline"
@@ -1529,7 +1529,7 @@ const BuyersDashboard: React.FC = () => {
             rfqId={fullPageRfqId}
             rfqNumber={fullPageRfq?.rfqNumber}
             rfqTitle={fullPageRfq?.title}
-            invitedUsers={fullPageRfq?.invitedUsers || []}
+            supplierIds={fullPageRfq?.supplierIds || []}
             supplierNames={chatSupplierNames}
           />
         )}

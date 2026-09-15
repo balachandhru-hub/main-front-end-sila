@@ -1024,7 +1024,7 @@ const BuyerAdminDash: React.FC = () => {
                         <span><IconCalendar /> Closes: {new Date(fullPageRfq.endDate).toLocaleDateString()}</span>
                         <span><IconPin /> Delivery: {fullPageRfq.deliveryLocation}</span>
                         <div className="bad-rfq-header-actions">
-                          {Array.isArray(fullPageRfq.invitedUsers) && fullPageRfq.invitedUsers.length > 0 && (
+                          {Array.isArray(fullPageRfq.supplierIds) && fullPageRfq.supplierIds.length > 0 && (
                             <button
                               type="button"
                               className="bad-btn bad-btn-outline bad-btn-chat"
@@ -1567,7 +1567,7 @@ const BuyerAdminDash: React.FC = () => {
             rfqId={fullPageRfqId}
             rfqNumber={fullPageRfq?.rfqNumber}
             rfqTitle={fullPageRfq?.title}
-            invitedUsers={fullPageRfq?.invitedUsers || []}
+            supplierIds={fullPageRfq?.supplierIds || []}
             supplierNames={chatSupplierNames}
           />
         )}

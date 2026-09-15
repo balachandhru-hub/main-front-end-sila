@@ -1,6 +1,5 @@
 import React from "react";
 import type { PersonDetailDto } from "../../api/supplierApi";
-import type { ObservedParticipant } from "./types";
 import { getInitials } from "../../../../remote-buyer/src/components/BuyerRFQChat/chatUtils";
 import { IconChevronLeft } from "../../../../remote-buyer/src/components/BuyerRFQChat/ChatIcons";
 
@@ -8,7 +7,6 @@ interface SupplierChatDetailsProps {
   counterpartyName: string;
   myProfile: PersonDetailDto | null;
   isLoadingMyProfile: boolean;
-  observedParticipants: ObservedParticipant[];
   onBack: () => void;
 }
 
@@ -16,7 +14,6 @@ const SupplierChatDetails: React.FC<SupplierChatDetailsProps> = ({
   counterpartyName,
   myProfile,
   isLoadingMyProfile,
-  observedParticipants,
   onBack,
 }) => {
   const myDisplayName = myProfile?.name || myProfile?.userName || "You";
@@ -63,19 +60,13 @@ const SupplierChatDetails: React.FC<SupplierChatDetailsProps> = ({
             <div className="brcd-empty-note">Your details are unavailable.</div>
           )}
 
-          <div className="brcd-participant-group-label">{counterpartyName}</div>
-          {observedParticipants.length === 0 ? (
-            <div className="brcd-empty-note">No buyer users have sent a message in this conversation yet.</div>
-          ) : (
-            observedParticipants.map((participant) => (
-              <div key={participant.userId} className="brc-participant-row">
-                <div className="brc-supplier-avatar brc-participant-avatar">{getInitials(participant.name)}</div>
-                <div className="brc-participant-info">
-                  <div className="brc-participant-name">{participant.name}</div>
-                </div>
-              </div>
-            ))
-          )}
+          <div className="brcd-participant-group-label">Buyer</div>
+          <div className="brc-participant-row">
+            <div className="brc-supplier-avatar brc-participant-avatar">{getInitials(counterpartyName)}</div>
+            <div className="brc-participant-info">
+              <div className="brc-participant-name">{counterpartyName}</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -123,7 +123,7 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
           <div className="brc-conversation-name">{supplier.supplierName}</div>
           <button type="button" className="brc-conversation-participants-toggle" onClick={onOpenDetails}>
             <IconUsers />
-            {supplier.users.length} user{supplier.users.length !== 1 ? "s" : ""} in this chat
+            Chat details
           </button>
         </div>
       </div>

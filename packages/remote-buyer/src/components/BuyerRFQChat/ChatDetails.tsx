@@ -1,6 +1,6 @@
 import React from "react";
 import type { PersonDetailDto } from "../../api/Buyerapi";
-import type { ChatSupplier } from "./types";
+import type { ChatSupplier, ObservedParticipant } from "./types";
 import { getInitials } from "./chatUtils";
 import { IconChevronLeft } from "./ChatIcons";
 
@@ -8,10 +8,17 @@ interface ChatDetailsProps {
   supplier: ChatSupplier;
   buyerProfile: PersonDetailDto | null;
   isLoadingBuyerProfile: boolean;
+  observedParticipants: ObservedParticipant[];
   onBack: () => void;
 }
 
-const ChatDetails: React.FC<ChatDetailsProps> = ({ supplier, buyerProfile, isLoadingBuyerProfile, onBack }) => {
+const ChatDetails: React.FC<ChatDetailsProps> = ({
+  supplier,
+  buyerProfile,
+  isLoadingBuyerProfile,
+  observedParticipants,
+  onBack,
+}) => {
   const buyerDisplayName = buyerProfile?.name || buyerProfile?.userName || "Buyer";
 
   return (
@@ -36,14 +43,6 @@ const ChatDetails: React.FC<ChatDetailsProps> = ({ supplier, buyerProfile, isLoa
             <span className="brcd-field-label">Name</span>
             <span className="brcd-field-value">{supplier.supplierName}</span>
           </div>
-          {/* <div className="brcd-field">
-            <span className="brcd-field-label">Supplier ID</span>
-            <span className="brcd-field-value brcd-field-value-mono">{supplier.supplierId}</span>
-          </div> */}
-          <div className="brcd-field">
-            <span className="brcd-field-label">Invited users</span>
-            <span className="brcd-field-value">{supplier.users.length}</span>
-          </div>
         </div>
 
         <div className="brcd-section">
@@ -64,20 +63,17 @@ const ChatDetails: React.FC<ChatDetailsProps> = ({ supplier, buyerProfile, isLoa
             <div className="brcd-empty-note">Buyer details unavailable.</div>
           )}
 
-          <div className="brcd-participant-group-label">
-            Supplier users ({supplier.users.length})
-          </div>
-          {supplier.users.length === 0 ? (
-            <div className="brcd-empty-note">No invited users found for this supplier.</div>
+          <div className="brcd-participant-group-label">{supplier.supplierName}</div>
+          {observedParticipants.length === 0 ? (
+            <div className="brcd-empty-note">
+              No users from {supplier.supplierName} have sent a message in this conversation yet.
+            </div>
           ) : (
-            supplier.users.map((user) => (
-              <div key={user.userId} className="brc-participant-row">
-                <div className="brc-supplier-avatar brc-participant-avatar">
-                  {getInitials(user.name || user.userName)}
-                </div>
+            observedParticipants.map((participant) => (
+              <div key={participant.userId} className="brc-participant-row">
+                <div className="brc-supplier-avatar brc-participant-avatar">{getInitials(participant.name)}</div>
                 <div className="brc-participant-info">
-                  <div className="brc-participant-name">{user.name || user.userName}</div>
-                  <div className="brc-participant-email">{user.email}</div>
+                  <div className="brc-participant-name">{participant.name}</div>
                 </div>
               </div>
             ))
