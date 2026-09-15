@@ -41,7 +41,6 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    margin-top: 20px;
     flex-wrap: wrap;
 }
 
@@ -494,12 +493,13 @@
 }
 
 .inv-btn-view {
-    background: #2f6feb;
-    color: #ffffff;
+    color:#2f6feb;
+    background:#ffffff;
+    border:1px solid #2f6feb;
 }
 
 .inv-btn-view:hover {
-    background: #255bcc;
+    background:#eef2fa;
 }
 
 /* ---------- Empty state ---------- */

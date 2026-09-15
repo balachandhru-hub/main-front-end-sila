@@ -346,6 +346,8 @@ export interface RFQDetailResponse {
   supplierQuotation: RFQSupplierQuotation[];
   supplierQuotationItems: RFQSupplierQuotationItem[];
   status?: string;
+  buyerId?: string;
+  buyerName?: string;
 }
 
 export interface SubmitQuotationPayload {
