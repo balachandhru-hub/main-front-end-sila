@@ -6,6 +6,7 @@ import UserAdmin from "../UserAdmin";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import Catalog from "../../../remote-supplier/src/components/Catalog";
 import Invitations from "../../../remote-supplier/src/components/Invitations";
+import SupplierRFQChat from "../../../remote-supplier/src/components/SupplierRFQChat/SupplierRFQChat";
 import { useNetworkAdminAuthStore } from "../store/useAuthStore";
 import {
   fetchRFQMasterData,
@@ -459,6 +460,7 @@ const SupplierAdminDash: React.FC = () => {
   const [selectedRfq, setSelectedRfq] = useState<RFQDetailResponse | null>(null);
   const [loadingRfqDetail, setLoadingRfqDetail] = useState(false);
   const [rfqDetailError, setRfqDetailError] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const [rfqAnswers, setRfqAnswers] = useState<{
     [questionId: string]: {
@@ -1361,6 +1363,18 @@ const SupplierAdminDash: React.FC = () => {
             <div className="pud-modal-meta">
               <span><IconCalendar /> Closes: {new Date(selectedRfq.endDate).toLocaleDateString()}</span>
               <span><IconPin /> Delivery: {selectedRfq.deliveryLocation}</span>
+              {supplierId && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="pud-btn pud-btn-outline pud-btn-chat"
+                    onClick={() => setIsChatOpen(true)}
+                    title="Chat with the buyer"
+                  >
+                    <IconMessageSquare /> Chat
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2211,14 +2225,14 @@ const SupplierAdminDash: React.FC = () => {
                               <th>Organization</th>
                               <th>Delivery Location</th>
                               <th>Closing Date</th>
-                              <th>Action</th>
+                              {/* <th>Action</th> */}
                             </tr>
                           </thead>
                           <tbody>
                             {allRfqsList.map((rfq: any, idx: number) => (
                               <tr key={rfq.rfqId || idx}>
                                 <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
-                                <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
+                                <td><span className="pud-code-badge" onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}>{rfq.rfqNumber}</span></td>
                                 <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
                                 <td>{rfq.organizationName}</td>
                                 <td>{rfq.deliveryLocation}</td>
@@ -2227,14 +2241,14 @@ const SupplierAdminDash: React.FC = () => {
                                     ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
                                     : "—"}
                                 </td>
-                                <td>
+                                {/* <td>
                                   <button
                                     className="pud-btn pud-btn-outline"
                                     onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
                                   >
                                     View RFQ Details
                                   </button>
-                                </td>
+                                </td> */}
                               </tr>
                             ))}
                           </tbody>
@@ -2277,7 +2291,7 @@ const SupplierAdminDash: React.FC = () => {
                 <>
                   <h1 className="sad-title">Supplier Admin Command Center</h1>
                   <p className="sad-subtitle">Manage suppliers, track sourcing activities, and oversee operations.</p>
-
+{/* 
                   <div className="sad-status-banner">
                     <span className="sad-status-dot" />
                     <div>
@@ -2286,7 +2300,7 @@ const SupplierAdminDash: React.FC = () => {
                         You have administrative access to manage supplier operations and user accounts.
                       </div>
                     </div>
-                  </div>
+                  </div> */}
 
                   <div className="sad-stats-grid">
                     {statCards.map((stat) => (
@@ -2717,6 +2731,17 @@ const SupplierAdminDash: React.FC = () => {
               {renderRfqDetailInner()}
             </div>
           </div>
+        )}
+
+        {isChatOpen && selectedRfqId && supplierId && (
+          <SupplierRFQChat
+            onClose={() => setIsChatOpen(false)}
+            rfqId={selectedRfqId}
+            rfqTitle={selectedRfq?.title}
+            supplierId={supplierId}
+            buyerId={selectedRfq?.buyerId}
+            buyerName={selectedRfq?.buyerName}
+          />
         )}
       </div>
       <EAuctionWidget />
