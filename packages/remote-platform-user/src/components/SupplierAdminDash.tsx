@@ -759,20 +759,23 @@ const SupplierAdminDash: React.FC = () => {
     setRfqDetailError(null);
   };
 
-  const handleViewRfqDetailsFullPage = (rfqId: string) => {
+    const handleViewRfqDetailsFullPage = (rfqId: string) => {
     setRfqPageView("rfqDetail");
     handleViewRfqDetails(rfqId);
   };
 
   const closeRfqDetail = () => {
-    if (rfqPageView === "rfqDetail") {
-      setRfqPageView("allRfqs");
-    }
+    setActiveNav("rfqs");
+    setRfqPageView("allRfqs");
     setSelectedRfqId(null);
     setSelectedRfq(null);
     setRfqDetailError(null);
     setOwnQuotation(null);
+    if (!allRfqsLoaded && !loadingAllRfqs) {
+      loadAllRfqsPage(1);
+    }
   };
+
 
   const [quoteQuotationId, setQuoteQuotationId] = useState<string | null>(null);
   const [quoteTotalPrice, setQuoteTotalPrice] = useState<number>(0);
@@ -2153,11 +2156,11 @@ const SupplierAdminDash: React.FC = () => {
                               {/* <th>Action</th> */}
                             </tr>
                           </thead>
-                          <tbody>
+                          <tbody className="ua-table-body">
                             {allRfqsList.map((rfq: any, idx: number) => (
-                              <tr key={rfq.rfqId || idx}>
+                              <tr key={rfq.rfqId || idx} onClick={()=>handleViewRfqDetailsFullPage(rfq.rfqId) }>
                                 <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
-                                <td><span className="pud-code-badge" onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}>{rfq.rfqNumber}</span></td>
+                                <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
                                 <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
                                 <td>{rfq.organizationName}</td>
                                 <td>{rfq.deliveryLocation}</td>
@@ -2208,14 +2211,16 @@ const SupplierAdminDash: React.FC = () => {
                 </>
               ) : rfqPageView === "rfqDetail" ? (
                 <>
-                  <div className="pud-rfq-fullpage">
+                  <div className="pud-model pud-rfq-fullpage">
                     {renderRfqDetailInner()}
                   </div>
                 </>
               ) : (
                 <>
+                 <div>
                   <h1 className="sad-title">Supplier Admin Command Center</h1>
                   <p className="sad-subtitle">Manage suppliers, track sourcing activities, and oversee operations.</p>
+                 </div>
 {/* 
                   <div className="sad-status-banner">
                     <span className="sad-status-dot" />
@@ -2280,7 +2285,7 @@ const SupplierAdminDash: React.FC = () => {
                       ) : (
                         <div className="pud-panel-list">
                           {rfqs.slice(0, visibleRfqCount).map((rfq) => (
-                            <div className="pud-rfq-row" key={rfq.rfqId}>
+                            <div className="pud-rfq-row" key={rfq.rfqId} onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}>
                               <div className="pud-rfq-info">
                                 <div className="pud-rfq-meta">
                                   <span className="pud-code-badge">{rfq.rfqNumber}</span>
@@ -2297,12 +2302,6 @@ const SupplierAdminDash: React.FC = () => {
                                   </span>
                                 </div>
                               </div>
-                              <button
-                                className="pud-btn pud-btn-outline"
-                                onClick={() => handleViewRfqDetails(rfq.rfqId)}
-                              >
-                                View RFQ Details
-                              </button>
                             </div>
                           ))}
                         </div>
@@ -2650,13 +2649,13 @@ const SupplierAdminDash: React.FC = () => {
           </div>
         )}
 
-        {selectedRfqId && rfqPageView === "dashboard" && (
+     { /*  {selectedRfqId && rfqPageView === "dashboard" && (
           <div className="pud-modal-overlay" onClick={closeRfqDetail}>
             <div className="pud-modal pud-modal-rfq" onClick={(e) => e.stopPropagation()}>
               {renderRfqDetailInner()}
             </div>
           </div>
-        )}
+        )} */}
 
         {isChatOpen && selectedRfqId && supplierId && (
           <SupplierRFQChat
