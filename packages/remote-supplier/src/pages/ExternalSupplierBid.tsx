@@ -597,7 +597,7 @@ const ExternalSupplierBid: React.FC = () => {
         <section className="ebid-card">
           <span className="ebid-section-heading">
             <FaClipboardList /> <span className="ebid-section-label">Quotation Summary</span>
-            {rfq.addLotOption && headerRank !== '' && (
+            {rfq.addLotOption && quotationStatus === 'SUBMITTED' && headerRank !== '' && (
               <span className="ebid-rank-badge">
                 Rank <strong>{headerRank}</strong>
               </span>
