@@ -29,6 +29,7 @@
   font-size: 15px;
   color: #64748b;
   margin: 6px 0 0 0;
+  padding-bottom: 0.75rem;
 }
 
 /* ---------- Tabs bar ---------- */
@@ -42,6 +43,7 @@
     justify-content: space-between;
     gap: 16px;
     flex-wrap: wrap;
+    margin-bottom:1rem;
 }
 
 .inv-tabs {

@@ -2121,6 +2121,7 @@ const SupplierAdminDash: React.FC = () => {
                 <Invitations isAdmin adminRole="supplier" />
               ) : rfqPageView === "allRfqs" ? (
                 <>
+                <div className="sad-border">
                   <div style={{ display: 'grid', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
                     <h1 className="pud-title">All RFQs</h1>
                     <span className="pud-subtitle" style={{ marginBottom: 0 }}>
@@ -2208,6 +2209,7 @@ const SupplierAdminDash: React.FC = () => {
                       </div>
                     </>
                   )}
+                </div>
                 </>
               ) : rfqPageView === "rfqDetail" ? (
                 <>
