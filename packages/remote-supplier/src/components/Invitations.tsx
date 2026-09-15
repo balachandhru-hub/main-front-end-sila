@@ -1018,8 +1018,10 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
 
     return (
         <>
+            <div>
             <h1 className="inv-title">Sourcing Invitations</h1>
             <p className="inv-subtitle">Direct invitations from buyers asking you to submit price bids and proposals.</p>
+            </div>
 
             <div className="inv-tabs-bar">
                 <div className="inv-tabs">
