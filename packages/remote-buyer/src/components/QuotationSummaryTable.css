@@ -218,9 +218,9 @@
 }
 
 .qst-total-quote-row td {
-    background: #f0fdf4;
-    font-weight: 700;
-    color: #15803d;
+    background: #ffffff;
+    font-weight: 600;
+    color: #1e293b;
     text-align: right;
     font-variant-numeric: tabular-nums;
     border-left: 0.0625rem solid #dbe3ea;
@@ -239,6 +239,15 @@
 
 .qst-total-quote-row td:last-child {
     border-bottom-right-radius: 0.5625rem;
+}
+
+.qst-total-quote-row td.qst-expand-cell {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.qst-total-quote-cell {
+    text-align: right;
 }
 
 .qst-supplier-rank-header {
@@ -264,8 +273,8 @@
 }
 
 .qst-summary-row td {
-    background: #f0fdf4;
-    border-top: 0.125rem solid #dbe3ea;
+    background: #f9fafc;
+    border-top: 0.0625rem solid #e9edf3;
 }
 
 .qst-summary-row td:first-child {
@@ -276,7 +285,7 @@
 .qst-summary-cell {
     vertical-align: top;
     text-align: center;
-    border-left: 0.0625rem solid #dbe3ea;
+    border-left: 0.0625rem solid #e9edf3;
     padding-top: 0.75rem;
     padding-bottom: 0.75rem;
 }
@@ -291,15 +300,15 @@
 
 .qst-summary-item-label {
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 500;
     color: #47536b;
     white-space: nowrap;
 }
 
 .qst-summary-item-value {
     font-size: 0.8125rem;
-    font-weight: 700;
-    color: #15803d;
+    font-weight: 600;
+    color: #1e293b;
     font-variant-numeric: tabular-nums;
     text-align: right;
 }

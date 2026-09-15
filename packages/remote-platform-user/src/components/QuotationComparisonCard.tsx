@@ -87,6 +87,7 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
   useEffect(() => {
     if (!rfqId) {
@@ -100,6 +101,7 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
     setLoading(true);
     setError(null);
     setExpandedRows(new Set());
+    setIsSummaryExpanded(false);
 
     getBidComparisonData(rfqId)
       .then((response) => {
@@ -133,6 +135,8 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
       return next;
     });
   };
+
+  const toggleSummaryExpanded = () => setIsSummaryExpanded((prev) => !prev);
 
   if (loading) {
     return (
@@ -217,23 +221,21 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
             {rfqItems.length > 0 ? (
               rfqItems.map((rfqItem, idx) => {
                 const rowKey = rfqItem.id || `${idx}`;
-                const isExpanded = expandedRows.has(rowKey) && !isLotEnabled;
+                const isExpanded = expandedRows.has(rowKey);
 
                 return (
                   <React.Fragment key={rowKey}>
                     <tr>
                       <td className="qcc-expand-cell">
-                        {!isLotEnabled && (
-                          <button
-                            type="button"
-                            className="qcc-expand-toggle"
-                            onClick={() => toggleRowExpanded(rowKey)}
-                            aria-expanded={isExpanded}
-                            aria-label={isExpanded ? "Collapse item details" : "Expand item details"}
-                          >
-                            {isExpanded ? "-" : "+"}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          className="qcc-expand-toggle"
+                          onClick={() => toggleRowExpanded(rowKey)}
+                          aria-expanded={isExpanded}
+                          aria-label={isExpanded ? "Collapse item details" : "Expand item details"}
+                        >
+                          {isExpanded ? "-" : "+"}
+                        </button>
                       </td>
                       <td>
                         <div className="qcc-material-name">{rfqItem.description}</div>
@@ -323,29 +325,49 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
           </tbody>
           {isLotEnabled ? (
             <tfoot>
-              <tr className="qcc-grand-total-row qcc-summary-row">
-                <td colSpan={BASE_COLUMN_COUNT}></td>
+              <tr className="qcc-grand-total-row">
+                <td className="qcc-expand-cell">
+                  <button
+                    type="button"
+                    className="qcc-expand-toggle"
+                    onClick={toggleSummaryExpanded}
+                    aria-expanded={isSummaryExpanded}
+                    aria-label={isSummaryExpanded ? "Collapse summary" : "Expand summary"}
+                  >
+                    {isSummaryExpanded ? "-" : "+"}
+                  </button>
+                </td>
+                <td colSpan={BASE_COLUMN_COUNT - 1}></td>
                 {suppliers.map((supplier, index) => (
                   <td key={supplier.supplierId || index} colSpan={supplierNameColSpan} className="qcc-summary-cell">
-                    <div className="qcc-grand-total-grid">
-                      <span>Subtotal:</span>
-                      <span>{formatMoney(supplier.latestVersion?.totalPrice)}</span>
-                      <span>Discount:</span>
-                      <span className="qcc-discount">
-                        {formatTypedDiscount(supplier.latestVersion?.discount, supplier.latestVersion?.discountType)}
-                      </span>
-                      <span>Tax:</span>
-                      <span>{formatTypedValue(supplier.latestVersion?.tax, supplier.latestVersion?.taxType)}</span>
-                      <span>Delivery Charge:</span>
-                      <span>{formatTypedValue(supplier.latestVersion?.deliveryCharge, supplier.latestVersion?.deliveryType)}</span>
-                      <span>Grand Total (FV):</span>
-                      <span>{formatMoney(calcGrandTotal(supplier.firstVersion))}</span>
-                      <span>Grand Total (LV):</span>
-                      <span>{formatMoney(calcGrandTotal(supplier.latestVersion))}</span>
+                    <div className="qcc-total-quote-line">
+                      <span>Grand Total (FV): {formatMoney(calcGrandTotal(supplier.firstVersion))}</span>
+                      <span>Grand Total (LV): {formatMoney(calcGrandTotal(supplier.latestVersion))}</span>
                     </div>
                   </td>
                 ))}
               </tr>
+              {isSummaryExpanded && (
+                <tr className="qcc-summary-detail-row">
+                  <td colSpan={BASE_COLUMN_COUNT}></td>
+                  {suppliers.map((supplier, index) => (
+                    <td key={supplier.supplierId || index} colSpan={supplierNameColSpan} className="qcc-summary-cell">
+                      <div className="qcc-grand-total-grid">
+                        <span>Subtotal:</span>
+                        <span>{formatMoney(supplier.latestVersion?.totalPrice)}</span>
+                        <span>Discount:</span>
+                        <span className="qcc-discount">
+                          {formatTypedDiscount(supplier.latestVersion?.discount, supplier.latestVersion?.discountType)}
+                        </span>
+                        <span>Tax:</span>
+                        <span>{formatTypedValue(supplier.latestVersion?.tax, supplier.latestVersion?.taxType)}</span>
+                        <span>Delivery Charge:</span>
+                        <span>{formatTypedValue(supplier.latestVersion?.deliveryCharge, supplier.latestVersion?.deliveryType)}</span>
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              )}
             </tfoot>
           ) : (
             <tfoot>
