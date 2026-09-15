@@ -335,7 +335,8 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
                 <td colSpan={BASE_COLUMN_COUNT - 1}></td>
                 {quotedSuppliers.map((quote, sIdx) => (
                   <td key={quote.quotationId || sIdx} colSpan={supplierGroupColSpan} className="qst-total-quote-cell">
-                    Total Quote: {formatMoney(quote.totalPrice ?? 0, quote.currency)}
+                    <span className="qst-total-quote-label">Total Quote</span>
+                    <span className="qst-total-quote-amount">{formatMoney(quote.totalPrice ?? 0, quote.currency)}</span>
                   </td>
                 ))}
               </tr>
@@ -369,8 +370,9 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
               <tr className="qst-total-quote-row">
                 <td colSpan={BASE_COLUMN_COUNT}></td>
                 {quotedSuppliers.map((quote, sIdx) => (
-                  <td key={quote.quotationId || sIdx} colSpan={supplierGroupColSpan}>
-                    Total Quote: {formatMoney(quote.totalPrice ?? 0, quote.currency)}
+                  <td key={quote.quotationId || sIdx} colSpan={supplierGroupColSpan} className="qst-total-quote-cell">
+                    <span className="qst-total-quote-label">Total Quote</span>
+                    <span className="qst-total-quote-amount">{formatMoney(quote.totalPrice ?? 0, quote.currency)}</span>
                   </td>
                 ))}
               </tr>
