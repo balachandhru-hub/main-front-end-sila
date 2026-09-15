@@ -471,6 +471,15 @@ const ExternalSupplierBid: React.FC = () => {
       </div>
     );
   } else if (rfq) {
+    const formatRank = (val: unknown): string => {
+      if (val === null || val === undefined || val === '') return '';
+      return String(val);
+    };
+
+    const quotationStatus = rfq.supplierQuotation?.[0]?.status;
+    const headerRank = formatRank(rfq.supplierQuotation?.[0]?.rank);
+    const showRankColumn = !rfq.addLotOption;
+
     content = (
       <form className="ebid-form" onSubmit={handleSubmitClick}>
         <section className="ebid-card">
@@ -587,7 +596,12 @@ const ExternalSupplierBid: React.FC = () => {
 
         <section className="ebid-card">
           <span className="ebid-section-heading">
-            <FaClipboardList /> <span className="ebid-section-label">Required Materials &amp; Services</span>
+            <FaClipboardList /> <span className="ebid-section-label">Quotation Summary</span>
+            {rfq.addLotOption && headerRank !== '' && (
+              <span className="ebid-rank-badge">
+                Rank <strong>{headerRank}</strong>
+              </span>
+            )}
           </span>
 
           {rfq.addLotOption ? (
@@ -632,6 +646,7 @@ const ExternalSupplierBid: React.FC = () => {
                       <th>Tax</th>
                       <th>Tax Type</th>
                       <th className="ebid-col-price">Quoted Price</th>
+                      {showRankColumn && <th className="ebid-col-rank">Rank</th>}
                       <th className="ebid-col-price">Sub Total</th>
                       <th className="ebid-col-price">Quoted Amount</th>
                     </tr>
@@ -639,7 +654,15 @@ const ExternalSupplierBid: React.FC = () => {
                   <tbody>
                     {rfq.items?.map((item, idx) => {
                       const itemKey = item.supplierRFQItemId || `item-${idx}`;
+                      const itemId = item.id || item.buyerRFQItemId;
                       const line = lineItems[itemKey] || EMPTY_LINE_ITEM;
+                      const matchedItem =
+                        rfq.supplierQuotationItems?.find(
+                          (qi) =>
+                            (qi.supplierRFQItemId && (qi.supplierRFQItemId === itemKey || qi.supplierRFQItemId === itemId)) ||
+                            (qi.buyerRFQItemId && (qi.buyerRFQItemId === itemKey || qi.buyerRFQItemId === itemId))
+                        ) || rfq.supplierQuotationItems?.[idx];
+                      const itemRank = formatRank(matchedItem?.rank) || '--';
                       return (
                         <tr key={itemKey}>
                           <td>
@@ -722,6 +745,9 @@ const ExternalSupplierBid: React.FC = () => {
                               required
                             />
                           </td>
+                          {showRankColumn && (
+                            <td className="ebid-col-rank">{quotationStatus === 'SUBMITTED' ? itemRank : '-'}</td>
+                          )}
                           <td className="ebid-readonly-value">{line.subTotal.toFixed(2)}</td>
                           <td className="ebid-readonly-value">{line.quotedAmount.toFixed(2)}</td>
                         </tr>
@@ -949,8 +975,9 @@ const ExternalSupplierBid: React.FC = () => {
   return (
     <div className="ebid-page">
       <header className="ebid-header">
-        <img src={SilaLogo} alt="SILA" className="ebid-header-logo" />
-        <span className="ebid-header-title">Request for Quotation</span>
+        <div className="ebid-header-inner">
+          <img src={SilaLogo} alt="SILA" className="ebid-header-logo" />
+        </div>
       </header>
 
       <main className={`ebid-main${isStatusView ? ' ebid-main-centered' : ''}`}>

@@ -5,27 +5,30 @@
   background: #f4f6f9;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #1f2937;
+  padding-top: 5.5rem;
 }
 
 .ebid-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: clamp(0.75rem, 2vw, 1rem) clamp(1rem, 4vw, 2.5rem);
   background: #ffffff;
   border-bottom: 0.0625rem solid #e6e8ec;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.ebid-header-inner {
+  padding: 1rem clamp(1rem, 4vw, 2.5rem);
+  display: flex;
+  align-items: center;
 }
 
 .ebid-header-logo {
-  height: 2.25rem;
+  height: 3.4375rem;
   width: auto;
   object-fit: contain;
-}
-
-.ebid-header-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #475569;
+  display: block;
 }
 
 .ebid-main {
@@ -253,6 +256,29 @@
   letter-spacing: 0.04em;
 }
 
+.ebid-rank-badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 0.0625rem solid #dbeafe;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 0.3125rem 0.75rem;
+  border-radius: 999rem;
+  white-space: nowrap;
+}
+
+.ebid-rank-badge strong {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
 .ebid-docs {
   display: flex;
   flex-direction: column;
@@ -362,8 +388,9 @@
 
 .ebid-items-table {
   width: 100%;
+  min-width: max-content;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .ebid-col-code {
@@ -372,19 +399,28 @@
 
 .ebid-items-table thead th {
   text-align: left;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: #2f6feb;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  padding: 0.75rem 0.75rem;
+  padding: 0.625rem 0.625rem;
   background: #eff6ff;
   border-bottom: 0.0625rem solid #dbeafe;
   white-space: nowrap;
 }
 
+.ebid-items-table thead th.ebid-col-num,
+.ebid-items-table thead th.ebid-col-price {
+  text-align: right;
+}
+
+.ebid-items-table thead th.ebid-col-rank {
+  text-align: center;
+}
+
 .ebid-items-table td {
-  padding: 0.75rem;
+  padding: 0.5rem 0.625rem;
   border-bottom: 0.0625rem solid #f1f5f9;
   vertical-align: middle;
 }
@@ -408,6 +444,14 @@
 .ebid-col-price {
   width: 8.5rem;
   text-align: right;
+}
+
+.ebid-col-rank {
+  width: 4.5rem;
+  text-align: center;
+  white-space: nowrap;
+  font-weight: 700;
+  color: #1d4ed8;
 }
 
 .ebid-items-table td.ebid-col-num,
@@ -536,14 +580,18 @@
 
 .ebid-input {
   width: 100%;
-  min-width: 6rem;
-  padding: 0.5rem 0.75rem;
+  min-width: 5.5rem;
+  padding: 0.4375rem 0.625rem;
   border: 0.0625rem solid #cbd5e1;
   border-radius: 0.5rem;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #0f172a;
   background: #ffffff;
   box-sizing: border-box;
+}
+
+.ebid-items-table .ebid-input {
+  min-width: 5rem;
 }
 
 /* Native <select> needs extra room for its text plus the browser's own dropdown
@@ -551,6 +599,10 @@
 select.ebid-input {
   min-width: 9rem;
   padding-right: 1.75rem;
+}
+
+.ebid-items-table select.ebid-input {
+  min-width: 8rem;
 }
 
 .ebid-input:focus {
@@ -769,12 +821,16 @@ select.ebid-input {
 }
 
 @media (max-width: 468px) {
-  .ebid-header {
-    gap: 0.5rem;
+  .ebid-page {
+    padding-top: 4.125rem;
   }
 
-  .ebid-header-title {
-    font-size: 0.85rem;
+  .ebid-header-inner {
+    padding: 0.75rem 1rem;
+  }
+
+  .ebid-header-logo {
+    height: 2.5rem;
   }
 
   .ebid-rfq-title {
