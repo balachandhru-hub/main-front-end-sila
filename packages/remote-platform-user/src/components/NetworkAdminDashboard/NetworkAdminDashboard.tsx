@@ -278,7 +278,7 @@ const NetworkAdminDashboard: React.FC = () => {
       <Header />
 
       <div className={`nad-shell${isMobileSidebarOpen ? ' nad-sidebar-open-mobile' : ''}`}>
-        <button
+        {/* <button
           type="button"
           className="nad-mobile-sidebar-toggle"
           onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
@@ -286,15 +286,15 @@ const NetworkAdminDashboard: React.FC = () => {
           aria-expanded={isMobileSidebarOpen}
         >
           {isMobileSidebarOpen ? <IconClose /> : <IconMenu />}
-        </button>
+        </button> */}
 
-        <div
+        {/* <div
           className="nad-sidebar-backdrop"
           onClick={() => setIsMobileSidebarOpen(false)}
           aria-hidden="true"
-        />
+        /> */}
 
-        <aside className="nad-sidebar">
+        {/* <aside className="nad-sidebar">
           <nav className="nad-nav">
             {navItems.map((item) => (
               <div
@@ -324,7 +324,7 @@ const NetworkAdminDashboard: React.FC = () => {
               <span className="nad-nav-label">{loggingOut ? 'Logging out...' : 'Log Out'}</span>
             </div>
           </nav>
-        </aside>
+       </aside> */}
 
         <div className="nad-main">
           <main className="nad-content">

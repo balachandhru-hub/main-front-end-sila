@@ -8,7 +8,7 @@
 }
 
 :global(html)::-webkit-scrollbar-track {
-  background: #ffffff;
+  background: var( --bg-color);
 }
 
 :global(html)::-webkit-scrollbar-thumb {
@@ -26,7 +26,7 @@
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
-  background: #ffffff;
+  background: var(--bg-color);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   color: #1f2937;
 }
@@ -64,7 +64,7 @@
   min-width: 0;
   height: 100%;
   overflow: hidden;
-  background: #ffffff;
+  background: var(--bg-color);
 }
 
 .nad-content {
@@ -74,7 +74,7 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
 }
 
 .nad-sidebar::-webkit-scrollbar {
@@ -209,12 +209,13 @@
 }
 
 .nad-content-header {
-  padding-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
   background-color: #ffffff;
 }
 
 .nad-title {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 600;
   color: #111827;
   letter-spacing: -0.0313rem;
@@ -682,7 +683,6 @@
   }
 
   .nad-content {
-    padding-top: 3.5rem;
     width: 100%;
     max-width: 100%;
   }
@@ -717,10 +717,6 @@
 
 /* Small Screens - 768px and below */
 @media (max-width: 768px) {
-  .nad-content {
-    padding: 7.75rem 1rem 2rem 1rem;
-  }
-
   .nad-title {
     font-size: 1.375rem;
   }
@@ -761,10 +757,6 @@
     left: 0.5rem;
     width: 2.25rem;
     height: 2.25rem;
-  }
-
-  .nad-content {
-    padding: 7.5rem 0.75rem 1.5rem 0.75rem;
   }
 
   .nad-sidebar {
