@@ -25,6 +25,7 @@ import { useLocation } from "react-router-dom";
 import Header from "./Header.tsx";
 import { useAuth } from '../../../host-app/src/AuthContext.tsx';
 import EAuctionWidget from "./EAuctionWidget.tsx";
+import SupplierRFQChat from "./SupplierRFQChat/SupplierRFQChat";
 interface StatCard {
   icon: React.ReactNode;
   label: string;
@@ -429,6 +430,7 @@ const SupplierDashboard: React.FC = () => {
   const [selectedRfq, setSelectedRfq] = useState<RFQDetailResponse | null>(null);
   const [loadingRfqDetail, setLoadingRfqDetail] = useState(false);
   const [rfqDetailError, setRfqDetailError] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const [rfqAnswers, setRfqAnswers] = useState<{
     [questionId: string]: {
@@ -1388,6 +1390,18 @@ const SupplierDashboard: React.FC = () => {
             <div className="pud-modal-meta">
               <span><IconCalendar /> Closes: {new Date(selectedRfq.endDate).toLocaleDateString()}</span>
               <span><IconPin /> Delivery: {selectedRfq.deliveryLocation}</span>
+              {supplierId && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="pud-btn pud-btn-outline pud-btn-chat"
+                    onClick={() => setIsChatOpen(true)}
+                    title="Chat with the buyer"
+                  >
+                    <IconMessageSquare /> Chat
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2734,6 +2748,17 @@ const SupplierDashboard: React.FC = () => {
               {renderRfqDetailInner()}
             </div>
           </div>
+        )}
+
+        {isChatOpen && selectedRfqId && supplierId && (
+          <SupplierRFQChat
+            onClose={() => setIsChatOpen(false)}
+            rfqId={selectedRfqId}
+            rfqTitle={selectedRfq?.title}
+            supplierId={supplierId}
+            buyerId={selectedRfq?.buyerId}
+            buyerName={selectedRfq?.buyerName}
+          />
         )}
       </div>
       <EAuctionWidget />
