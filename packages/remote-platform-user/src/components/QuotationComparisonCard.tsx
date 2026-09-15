@@ -87,6 +87,7 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
   useEffect(() => {
     if (!rfqId) {
@@ -100,6 +101,7 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
     setLoading(true);
     setError(null);
     setExpandedRows(new Set());
+    setIsSummaryExpanded(false);
 
     getBidComparisonData(rfqId)
       .then((response) => {
@@ -133,6 +135,8 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
       return next;
     });
   };
+
+  const toggleSummaryExpanded = () => setIsSummaryExpanded((prev) => !prev);
 
   if (loading) {
     return (
@@ -168,9 +172,13 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
 
   // Line-wise bidding (addLotOption === false) surfaces a per-supplier line number (LL)
   // next to Rate/Amount, since a supplier's own line ordering can differ from the RFQ's.
+  const isLotEnabled = data.addLotOption === true;
   const showLLColumn = data.addLotOption === false;
   const fvLvColSpan = showLLColumn ? 3 : 2;
-  const supplierGroupColSpan = fvLvColSpan ;
+  const supplierGroupColSpan = fvLvColSpan;
+  // Supplier name / rank headers span the supplier's FULL column group (FV + LV together),
+  // not just one version's sub-group — this is twice supplierGroupColSpan.
+  const supplierNameColSpan = showLLColumn ? 6 : 4;
   const BASE_COLUMN_COUNT = 5; // Expand, Material Info, LN, Code, Qty
 
   const getSupplierName = (supplier: BidSupplierQuotationDto, index: number) =>
@@ -186,11 +194,10 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
             <tr>
               <th colSpan={BASE_COLUMN_COUNT} className="qcc-supplier-name-label">Supplier Name</th>
               {suppliers.map((supplier, index) => (
-                <th key={supplier.supplierId || index} colSpan={supplierGroupColSpan} className="qcc-supplier-group-header">
+                <th key={supplier.supplierId || index} colSpan={supplierNameColSpan} className="qcc-supplier-group-header">
                   <div className="qcc-supplier-group-name">{getSupplierName(supplier, index)}</div>
                 </th>
               ))}
-              {/* <th colSpan={6}></th> */}
             </tr>
             <tr>
               <th className="qcc-expand-header"></th>
@@ -310,38 +317,81 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
               })
             ) : (
               <tr>
-                <td colSpan={BASE_COLUMN_COUNT + suppliers.length * supplierGroupColSpan} className="qcc-no-data">
+                <td colSpan={BASE_COLUMN_COUNT + suppliers.length * supplierNameColSpan} className="qcc-no-data">
                   No line items found.
                 </td>
               </tr>
             )}
           </tbody>
-          <tfoot>
-            <tr className="qcc-grand-total-row">
-              <td></td>
-              <td>{data.addLotOption === true ? "FL" : ""}</td>
-              <td></td>
-              <td></td>
-              <td></td>
-            {suppliers.map((supplier, index) => (
-  <React.Fragment key={supplier.supplierId || index}>
-    <td colSpan={supplierGroupColSpan}>
-      <div className="qcc-grand-total-grid">
-        <span>Grand Total (FV):</span>
-        <span>{formatMoney(calcGrandTotal(supplier.firstVersion))}</span>
-      </div>
-    </td>
-
-    <td colSpan={supplierGroupColSpan}>
-      <div className="qcc-grand-total-grid">
-        <span>Grand Total (LV):</span>
-        <span>{formatMoney(calcGrandTotal(supplier.latestVersion))}</span>
-      </div>
-    </td>
-  </React.Fragment>
-))}
-            </tr>
-          </tfoot>
+          {isLotEnabled ? (
+            <tfoot>
+              <tr className="qcc-grand-total-row">
+                <td className="qcc-expand-cell">
+                  <button
+                    type="button"
+                    className="qcc-expand-toggle"
+                    onClick={toggleSummaryExpanded}
+                    aria-expanded={isSummaryExpanded}
+                    aria-label={isSummaryExpanded ? "Collapse summary" : "Expand summary"}
+                  >
+                    {isSummaryExpanded ? "-" : "+"}
+                  </button>
+                </td>
+                <td colSpan={BASE_COLUMN_COUNT - 1}></td>
+                {suppliers.map((supplier, index) => (
+                  <td key={supplier.supplierId || index} colSpan={supplierNameColSpan} className="qcc-summary-cell">
+                    <div className="qcc-total-quote-line">
+                      <span>Grand Total (FV): {formatMoney(calcGrandTotal(supplier.firstVersion))}</span>
+                      <span>Grand Total (LV): {formatMoney(calcGrandTotal(supplier.latestVersion))}</span>
+                    </div>
+                  </td>
+                ))}
+              </tr>
+              {isSummaryExpanded && (
+                <tr className="qcc-summary-detail-row">
+                  <td colSpan={BASE_COLUMN_COUNT}></td>
+                  {suppliers.map((supplier, index) => (
+                    <td key={supplier.supplierId || index} colSpan={supplierNameColSpan} className="qcc-summary-cell">
+                      <div className="qcc-grand-total-grid">
+                        <span>Subtotal:</span>
+                        <span>{formatMoney(supplier.latestVersion?.totalPrice)}</span>
+                        <span>Discount:</span>
+                        <span className="qcc-discount">
+                          {formatTypedDiscount(supplier.latestVersion?.discount, supplier.latestVersion?.discountType)}
+                        </span>
+                        <span>Tax:</span>
+                        <span>{formatTypedValue(supplier.latestVersion?.tax, supplier.latestVersion?.taxType)}</span>
+                        <span>Delivery Charge:</span>
+                        <span>{formatTypedValue(supplier.latestVersion?.deliveryCharge, supplier.latestVersion?.deliveryType)}</span>
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              )}
+            </tfoot>
+          ) : (
+            <tfoot>
+              <tr className="qcc-grand-total-row">
+                <td colSpan={BASE_COLUMN_COUNT}></td>
+                {suppliers.map((supplier, index) => (
+                  <React.Fragment key={supplier.supplierId || index}>
+                    <td colSpan={supplierGroupColSpan} className="qcc-summary-cell">
+                      <div className="qcc-grand-total-grid">
+                        <span>Grand Total (FV):</span>
+                        <span>{formatMoney(calcGrandTotal(supplier.firstVersion))}</span>
+                      </div>
+                    </td>
+                    <td colSpan={supplierGroupColSpan} className="qcc-summary-cell">
+                      <div className="qcc-grand-total-grid">
+                        <span>Grand Total (LV):</span>
+                        <span>{formatMoney(calcGrandTotal(supplier.latestVersion))}</span>
+                      </div>
+                    </td>
+                  </React.Fragment>
+                ))}
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
     </div>
