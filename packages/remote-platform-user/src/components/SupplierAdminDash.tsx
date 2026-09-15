@@ -2111,7 +2111,7 @@ const SupplierAdminDash: React.FC = () => {
         <div className="sad-main">
           <main className="sad-content">
             {activeNav === "catalogList" ? (
-              <div ref={setCatalogViewContainer} />
+              <div ref={setCatalogViewContainer} style={{ padding: "0.5rem 1.5rem" }} />
             )
               : activeNav === "userList" ? (
                 <UserAdmin />
@@ -2218,7 +2218,7 @@ const SupplierAdminDash: React.FC = () => {
                   </div>
                 </>
               ) : (
-                <>
+                <div style={{ padding: "0.5rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.625rem" }}>
                  <div>
                   <h1 className="sad-title">Supplier Admin Command Center</h1>
                   <p className="sad-subtitle">Manage suppliers, track sourcing activities, and oversee operations.</p>
@@ -2398,7 +2398,7 @@ const SupplierAdminDash: React.FC = () => {
                       </button>
                     </div>
                   </section>
-                </>
+                </div>
               )}
           </main>
         </div>
