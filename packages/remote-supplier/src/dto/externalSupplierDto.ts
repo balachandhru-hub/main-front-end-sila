@@ -1,10 +1,3 @@
-// externalSupplierDto.ts
-//
-// Types for the External Supplier Bid page (/external-supplier/bid/:rfqId/:sessionToken).
-// Kept in their own file rather than folded into supplierDto.ts because the external
-// GET/PUT contract genuinely differs from the internal one (richer per-item quotation
-// fields, invitedUsers, no email/OTP token).
-
 import type {
   RFQDetailDocument,
   RFQDetailItem,
@@ -77,9 +70,6 @@ export interface ExternalSubmitQuotationPayload {
   discountType: string;
   tax: number;
   taxType: string;
-  // The session token is sent via the X-Session-Token request header (confirmed with
-  // backend), never in the body. This field is still required by the backend contract,
-  // but must always be an explicit JSON null for the external (no-OTP) flow.
   temporaryVerificationToken: null;
   items?: ExternalQuotationItemPayload[];
 }
@@ -89,4 +79,11 @@ export interface ExternalSubmitQuotationResponse {
   message: string;
   description: string;
   id: string;
+}
+
+export interface ExternalAssetDto {
+  assetId: string;
+  fileName: string;
+  contentType: string;
+  fileBytes: string;
 }
