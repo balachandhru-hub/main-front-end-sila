@@ -7,6 +7,13 @@ import type {
   BuyerRFQDetailResponse,
 } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
+import type {
+  SendBuyerMessagePayload,
+  ChatMessageDto,
+  ChatThreadDto,
+  MarkThreadReadResponseDto,
+  ChatAttachmentDownloadDto,
+} from "../dto/chatDto";
 
 export interface BuyerCatalogAssetItem {
   id: string;
@@ -718,6 +725,9 @@ export const updatePersonDetail = async (
 };
 
 
+export const PERSON_DETAIL_UPDATED_EVENT = 'person-detail:updated';
+
+let personDetailCacheGeneration = 0;
 let personDetailCache: PersonDetailDto | null = null;
 let personDetailInFlight: Promise<PersonDetailDto | ErrorResponseDto> | null = null;
 
@@ -725,7 +735,12 @@ export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorRe
   if (personDetailCache) return personDetailCache;
   if (personDetailInFlight) return personDetailInFlight;
 
+  const generation = personDetailCacheGeneration;
+
   personDetailInFlight = getPersonDetail().then((result) => {
+    if (generation !== personDetailCacheGeneration) {
+      return result;
+    }
     if (!isErrorResponse(result)) {
       personDetailCache = result;
     }
@@ -736,8 +751,20 @@ export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorRe
   return personDetailInFlight;
 };
 
-export const invalidatePersonDetailCache = () => {
-  personDetailCache = null;
+export const invalidatePersonDetailCache = (updated?: PersonDetailDto) => {
+  // Only reseed the cache from a response that carries the full record; a
+  // partial payload would leave consumers reading missing fields.
+  const fresh = updated && updated.personId ? updated : null;
+
+  personDetailCacheGeneration += 1;
+  personDetailCache = fresh;
+  personDetailInFlight = null;
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent<PersonDetailDto | null>(PERSON_DETAIL_UPDATED_EVENT, { detail: fresh })
+    );
+  }
 };
 
 export interface BuyerAssetDownloadResponse {
@@ -1106,6 +1133,92 @@ export const fetchBuyerCatalogDetail = async (
       message: 'Unexpected Error',
       description: 'Something went wrong while fetching product details.',
     };
+  }
+};
+
+export const sendBuyerMessage = async (
+  payload: SendBuyerMessagePayload
+): Promise<ChatMessageDto> => {
+  try {
+    const response = await axiosInstance.post<ChatMessageDto>('/api/v1/buyer/message', payload);
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to send message (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+export const fetchBuyerMessageThreads = async (rfqId: string): Promise<ChatThreadDto[]> => {
+  try {
+    const response = await axiosInstance.get<ChatThreadDto[]>('/api/v1/buyer/message/threads', {
+      params: { rfqId },
+    });
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    // A 404 here means the RFQ has no chat threads yet, not a real failure.
+    if (error?.response?.status === 404) {
+      return [];
+    }
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to fetch chat threads (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+export const fetchBuyerMessageHistory = async (
+  threadId: string,
+  index = 0,
+  limit = 20
+): Promise<ChatMessageDto[]> => {
+  try {
+    const response = await axiosInstance.get<ChatMessageDto[]>(
+      `/api/v1/buyer/message/thread/${threadId}/history`,
+      { params: { index, limit } }
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to fetch chat history (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+export const markBuyerThreadAsRead = async (threadId: string): Promise<MarkThreadReadResponseDto> => {
+  try {
+    const response = await axiosInstance.post<MarkThreadReadResponseDto>(
+      `/api/v1/buyer/message/thread/${threadId}/read`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to mark conversation as read (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+export const downloadBuyerMessageAttachment = async (
+  attachmentId: string
+): Promise<ChatAttachmentDownloadDto> => {
+  try {
+    const response = await axiosInstance.get<ChatAttachmentDownloadDto>(
+      `/api/v1/buyer/message/attachment/${attachmentId}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to download attachment (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
   }
 };
 

@@ -19,6 +19,21 @@ import type {
 } from '../dto/supplierDto';
 import type { ErrorResponseDto } from '@vosox/shared-ui';
 import { isErrorResponse } from '@vosox/shared-ui';
+import type {
+  ChatMessageDto,
+  ChatThreadDto,
+  ChatAttachmentInputDto,
+  ChatAttachmentDownloadDto,
+  MarkThreadReadResponseDto,
+} from '../../../remote-buyer/src/dto/chatDto';
+export type {
+  ChatMessageDto,
+  ChatThreadDto,
+  ChatAttachmentInputDto,
+  ChatAttachmentDto,
+  ChatAttachmentDownloadDto,
+  MarkThreadReadResponseDto,
+} from '../../../remote-buyer/src/dto/chatDto';
 export type {
   SupplierQuotationBySupplierIdResponse,
   SupplierQuotationByIdItem,
@@ -955,6 +970,9 @@ export const updatePersonDetail = async (
 };
 
 
+export const PERSON_DETAIL_UPDATED_EVENT = 'person-detail:updated';
+
+let personDetailCacheGeneration = 0;
 let personDetailCache: PersonDetailDto | null = null;
 let personDetailInFlight: Promise<PersonDetailDto | ErrorResponseDto> | null = null;
 
@@ -962,7 +980,12 @@ export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorRe
   if (personDetailCache) return personDetailCache;
   if (personDetailInFlight) return personDetailInFlight;
 
+  const generation = personDetailCacheGeneration;
+
   personDetailInFlight = getPersonDetail().then((result) => {
+    if (generation !== personDetailCacheGeneration) {
+      return result;
+    }
     if (!isErrorResponse(result)) {
       personDetailCache = result;
     }
@@ -973,8 +996,20 @@ export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorRe
   return personDetailInFlight;
 };
 
-export const invalidatePersonDetailCache = () => {
-  personDetailCache = null;
+export const invalidatePersonDetailCache = (updated?: PersonDetailDto) => {
+  // Only reseed the cache from a response that carries the full record; a
+  // partial payload would leave consumers reading missing fields.
+  const fresh = updated && updated.personId ? updated : null;
+
+  personDetailCacheGeneration += 1;
+  personDetailCache = fresh;
+  personDetailInFlight = null;
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent<PersonDetailDto | null>(PERSON_DETAIL_UPDATED_EVENT, { detail: fresh })
+    );
+  }
 };
 
 export interface UnitItem {
@@ -1403,6 +1438,200 @@ export const verifyOtp = async (
       statusCode: 500,
       message: 'Unexpected Error',
       description: 'Something went wrong while verifying the OTP.',
+    };
+  }
+};
+
+/* ---------------------------------- RFQ Chat ---------------------------------- */
+
+export interface SendSupplierMessagePayload {
+  rfqId: string;
+  supplierId: string;
+  body: string;
+  attachments: ChatAttachmentInputDto[];
+}
+
+export const sendSupplierMessage = async (
+  payload: SendSupplierMessagePayload
+): Promise<ChatMessageDto | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.post<ChatMessageDto>('/api/v1/supplier/message', payload);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to send message',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while sending the message.',
+    };
+  }
+};
+
+export const fetchSupplierMessageThreads = async (
+  rfqId: string
+): Promise<ChatThreadDto[] | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.get<ChatThreadDto[]>('/api/v1/supplier/message/threads', {
+      params: { rfqId },
+    });
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    // "No conversations found" for this RFQ is an expected empty state, not a
+    // real failure — treat it as zero threads whether the backend reports it
+    // via the HTTP status or via a status_code/statusCode field in the body
+    // (this API has been seen to return the latter even on a non-404 transport status).
+    const bodyStatus = error.response?.data?.status_code ?? error.response?.data?.statusCode;
+    if (error.response?.status === 404 || bodyStatus === 404) {
+      return [];
+    }
+
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch chat threads',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching chat threads.',
+    };
+  }
+};
+
+export const fetchSupplierMessageHistory = async (
+  threadId: string,
+  index = 0,
+  limit = 20
+): Promise<ChatMessageDto[] | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.get<ChatMessageDto[]>(
+      `/api/v1/supplier/message/thread/${threadId}/history`,
+      { params: { index, limit } }
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch chat history',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching chat history.',
+    };
+  }
+};
+
+export const markSupplierThreadAsRead = async (
+  threadId: string
+): Promise<MarkThreadReadResponseDto | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.post<MarkThreadReadResponseDto>(
+      `/api/v1/supplier/message/thread/${threadId}/read`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to mark conversation as read',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while marking the conversation as read.',
+    };
+  }
+};
+
+export const downloadSupplierMessageAttachment = async (
+  attachmentId: string
+): Promise<ChatAttachmentDownloadDto | ErrorResponseDto> => {
+  try {
+    const response = await supplierInstance.get<ChatAttachmentDownloadDto>(
+      `/api/v1/supplier/message/attachment/${attachmentId}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to download attachment',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while downloading the attachment.',
     };
   }
 };
