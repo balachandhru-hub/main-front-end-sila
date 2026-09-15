@@ -1,4 +1,4 @@
-  import React, { useState, useEffect } from "react";
+  import React, { useState, useEffect, useMemo } from "react";
 import "./BuyerDashBoard.css";
 import CreateRFQ from "./Create_RFQ.tsx";
 import Product from "./Product.tsx";
@@ -7,6 +7,7 @@ import Header from "./Header";
 import QsAns from "./Qsans.tsx";
 import QuotationSummaryTable from "./QuotationSummaryTable.tsx";
 import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, fetchBuyerAsset, updateRfqStatus } from "../api/Buyerapi";
+import BuyerRFQChat from "./BuyerRFQChat/BuyerRFQChat";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
 import QuotationComparisonCard from "../../../remote-platform-user/src/components/QuotationComparisonCard.tsx";
 import { CompanyProfile, toastService } from '@vosox/shared-ui';
@@ -49,13 +50,13 @@ const IconClose = () => (
   </svg>
 );
 
-const IconMenu = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="3" y1="6" x2="21" y2="6" />
-    <line x1="3" y1="12" x2="21" y2="12" />
-    <line x1="3" y1="18" x2="21" y2="18" />
-  </svg>
-);
+// const IconMenu = () => (
+//   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <line x1="3" y1="6" x2="21" y2="6" />
+//     <line x1="3" y1="12" x2="21" y2="12" />
+//     <line x1="3" y1="18" x2="21" y2="18" />
+//   </svg>
+// );
 
 const IconMail = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -475,6 +476,19 @@ const BuyersDashboard: React.FC = () => {
   const [loadingFullPageRfq, setLoadingFullPageRfq] = useState(false);
   const [fullPageRfqError, setFullPageRfqError] = useState<string | null>(null);
   const [freezingBid, setFreezingBid] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  // Known supplier org names from quotation data, used to give the chat a
+  // real supplier name instead of an individual invited user's name.
+  const chatSupplierNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    const quotations = Array.isArray(fullPageRfq?.supplierQuotation) ? fullPageRfq.supplierQuotation : [];
+    for (const quote of quotations) {
+      if (quote?.supplierId && quote?.supplierName) {
+        map[quote.supplierId] = quote.supplierName;
+      }
+    }
+    return map;
+  }, [fullPageRfq]);
 
   const handleOpenAllRfqs = async () => {
     setActiveNav("allRfqs");
@@ -748,7 +762,7 @@ const BuyersDashboard: React.FC = () => {
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
       >
 
-        <button
+        {/* <button
           type="button"
           className="pud-mobile-sidebar-toggle"
           onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
@@ -762,7 +776,7 @@ const BuyersDashboard: React.FC = () => {
           className="pud-sidebar-backdrop"
           onClick={() => setIsMobileSidebarOpen(false)}
           aria-hidden="true"
-        />
+        /> */}
 
         <aside className="pud-sidebar">
           <nav className="pud-nav">
@@ -950,6 +964,16 @@ const BuyersDashboard: React.FC = () => {
                         <span><IconCalendar /> Closes: {new Date(fullPageRfq.endDate).toLocaleDateString()}</span>
                         <span><IconPin /> Delivery: {fullPageRfq.deliveryLocation}</span>
                         <div className="pud-rfq-header-actions">
+                          {Array.isArray(fullPageRfq.supplierIds) && fullPageRfq.supplierIds.length > 0 && (
+                            <button
+                              type="button"
+                              className="pud-btn pud-btn-outline"
+                              onClick={() => setIsChatOpen(true)}
+                              title="Chat with invited suppliers"
+                            >
+                              <IconMessageSquare /> Chat
+                            </button>
+                          )}
                           <button
                             className="pud-btn pud-btn-outline"
                             onClick={() => handleOpenQuotationComparison(fullPageRfq)}
@@ -1497,6 +1521,17 @@ const BuyersDashboard: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {isChatOpen && fullPageRfqId && (
+          <BuyerRFQChat
+            onClose={() => setIsChatOpen(false)}
+            rfqId={fullPageRfqId}
+            rfqNumber={fullPageRfq?.rfqNumber}
+            rfqTitle={fullPageRfq?.title}
+            supplierIds={fullPageRfq?.supplierIds || []}
+            supplierNames={chatSupplierNames}
+          />
         )}
       </div>
     </div>
