@@ -1,21 +1,10 @@
-// externalSupplierApi.ts
-//
-// API wrapper for the External Supplier Bid page. Hits the two endpoints backend has
-// provided for this flow:
-//   GET /api/v1/supplier/external-rfq/{rfqId}
-//   PUT /api/v1/supplier/external-rfq/{rfqId}/quotation
-//
-// Confirmed with backend: the session token from the URL is sent as the
-// `X-Session-Token` request header on BOTH calls — never as a query param and
-// never inside the request body.
-
 import externalSupplierInstance from './externalSupplierInstance';
 import type {
   ExternalRFQDetailResponse,
   ExternalSubmitQuotationPayload,
   ExternalSubmitQuotationResponse,
+  ExternalAssetDto,
 } from '../dto/externalSupplierDto';
-import type { SupplierAssetDto } from './supplierApi';
 import type { ErrorResponseDto } from '@vosox/shared-ui';
 
 const wrapError = (error: any, fallbackMessage: string): ErrorResponseDto => {
@@ -53,28 +42,18 @@ export const fetchExternalRfqDetails = async (
   }
 };
 
-// Mirrors fetchBuyerAsset's buyer-asset-first, supplier-asset-fallback lookup, but
-// authenticates via X-Session-Token instead of the internal session cookie. ASSUMPTION
-// (unconfirmed with backend): the asset endpoints accept the same session token as the
-// two external-rfq endpoints — flag/verify if attachments don't load for a real link.
 export const fetchExternalAsset = async (
   assetId: string,
+  rfqId: string,
   sessionToken: string
-): Promise<SupplierAssetDto | ErrorResponseDto> => {
-  const headers = sessionTokenHeader(sessionToken);
+): Promise<ExternalAssetDto | ErrorResponseDto> => {
   try {
-    try {
-      const response = await externalSupplierInstance.get<SupplierAssetDto>(
-        `/api/v1/buyer/asset/${assetId}`,
-        headers
-      );
-      if (response.data) return response.data;
-    } catch {
-      // fallback to supplier asset endpoint
-    }
-    const response = await externalSupplierInstance.get<SupplierAssetDto>(
-      `/api/v1/supplier/asset/${assetId}`,
-      headers
+    const response = await externalSupplierInstance.get<ExternalAssetDto>(
+      `/api/v1/buyer/externa-asset/${assetId}`,
+      {
+        ...sessionTokenHeader(sessionToken),
+        params: { rfqId },
+      }
     );
     return response.data;
   } catch (error: any) {
