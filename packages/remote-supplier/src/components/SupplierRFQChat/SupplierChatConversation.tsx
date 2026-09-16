@@ -20,6 +20,7 @@ import {
 
 interface SupplierChatConversationProps {
   counterpartyName: string;
+  currentUserId?: string;
   hasThread: boolean;
   messages: ChatMessageDto[];
   isLoadingMessages: boolean;
@@ -38,6 +39,7 @@ interface SupplierChatConversationProps {
 
 const SupplierChatConversation: React.FC<SupplierChatConversationProps> = ({
   counterpartyName,
+  currentUserId,
   hasThread,
   messages,
   isLoadingMessages,
@@ -148,7 +150,7 @@ const SupplierChatConversation: React.FC<SupplierChatConversationProps> = ({
           )}
 
           {messages.map((message, index) => {
-            const isOwn = message.senderOrganizationType?.toLowerCase() === "supplier";
+            const isOwn = !!currentUserId && message.senderUserId === currentUserId;
             const previousMessage = messages[index - 1];
             const showDateSeparator =
               !previousMessage || !isSameCalendarDay(previousMessage.dateCreated, message.dateCreated);
