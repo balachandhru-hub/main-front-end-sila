@@ -35,15 +35,17 @@
   width: 100%;
   max-width: 100%;
   margin: 0;
-  padding: 0 0 24px 0;
   box-sizing: border-box;
+  border-radius: 12px;
+  padding: 0.75rem 1.75rem 1.5rem;
+  background-color:#ffffff;
+  border: 0.0625rem solid #e6e8ec;
+  box-shadow: rgba(0, 0, 0, 0.03) 0px 1px 3px 0px;
 }
 
 /* ── Header ── */
 .ua-header {
   margin-bottom: 24px;
-  border-bottom: 1px solid #cbd5e1;
-  padding-bottom: 16px;
 }
 
 .ua-title {
@@ -192,7 +194,7 @@
 .ua-table-wrapper {
   background: #ffffff;
   border-radius: 10px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   overflow: hidden;
   overflow-x: auto;
@@ -202,22 +204,25 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
+  border-radius:0.5rem;
 }
 
 .ua-table thead {
   background: #c4c3c2;
   border-bottom: 1px solid #cbd5e1;
+
 }
 
 .ua-table th {
+  background:#c4c3c2;
   text-align: left;
   padding: 14px 20px;
   font-weight: 700;
-  color: #424649;
-  font-size: 0.8rem;
+  color: #32363A;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid #cbd5e1;
+  border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
 }
 
@@ -226,6 +231,8 @@
   color: #334155;
   border-bottom: 1px solid #e2e8f0;
   vertical-align: middle;
+  border-right: 1px solid #e2e8f0;
+
 }
 
 .ua-table tbody tr {
@@ -373,7 +380,7 @@
 .user-admin-input {
   width: 100%;
   padding: 0.75rem 1rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid #b9babc;
   border-radius: 6px;
   font-size: 0.95rem;
   transition: all 0.2s ease;

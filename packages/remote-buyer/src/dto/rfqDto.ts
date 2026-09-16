@@ -142,6 +142,21 @@ export interface BuyerSupplierQuotation {
   isLead?: boolean;
 }
 
+export interface InvitedUserDto {
+  rfqId: string;
+  supplierId: string;
+  organizationId: string;
+  userId: string;
+  name: string;
+  email: string;
+  userName: string;
+}
+
+export interface RfqSupplierRefDto {
+  supplierId: string;
+  supplierName: string;
+}
+
 export interface BuyerRFQDetailResponse {
   title: string;
   description: string;
@@ -158,7 +173,8 @@ export interface BuyerRFQDetailResponse {
   termsConditionDocuments: RfqDocumentAssetDto[];
   questions: RfqQuestionDto[];
   items: RfqItemDto[];
-  supplierIds: string[];
+  supplierIds: RfqSupplierRefDto[];
+  invitedUsers?: InvitedUserDto[] | null;
   rfqVerificationTemplateId: string | null;
   supplierQuotation: BuyerSupplierQuotation[];
   supplierAnswers?: RfqSupplierAnswersDto | null;

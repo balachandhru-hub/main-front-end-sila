@@ -56,8 +56,6 @@ const formatDate = (dateStr?: string | null) => {
     : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
-// Purely presentational — picks a badge colour for the status text, does not affect
-// submission eligibility (that's still decided solely by getSubmissionWindowStatus).
 const getStatusTone = (status?: string | null) => {
   const s = (status || '').toLowerCase();
   if (s === 'open') return 'success';
@@ -66,9 +64,6 @@ const getStatusTone = (status?: string | null) => {
   return 'neutral';
 };
 
-// The backend can return an all-zero placeholder GUID for an unset id — that string is
-// still "truthy" in JS, so it must be filtered out explicitly rather than relying on `||`
-// alone (this caused a "Supplier RFQ Item not found" submission failure previously).
 const validId = (id?: string | null): string | null =>
   id && id !== '00000000-0000-0000-0000-000000000000' ? id : null;
 
@@ -140,8 +135,6 @@ const ExternalSupplierBid: React.FC = () => {
   const [quotationId, setQuotationId] = useState<string | null>(null);
   const [hasExistingQuote, setHasExistingQuote] = useState(false);
 
-  // Buyer questions are validated as required, but there is currently no backend
-  // endpoint to submit external-supplier answers — only the quotation itself is sent.
   const [answers, setAnswers] = useState<{ [questionId: string]: QuestionAnswerState }>({});
 
   const [showConfirm, setShowConfirm] = useState(false);
@@ -186,8 +179,6 @@ const ExternalSupplierBid: React.FC = () => {
       setRfq(data);
 
       const existingQuote = data.supplierQuotation?.[0];
-      // A quotation record can exist as an empty DRAFT placeholder before the supplier has
-      // ever submitted anything — only a SUBMITTED quote counts as "you already have one".
       if (existingQuote) {
         setQuotationId(existingQuote.qutationId || existingQuote.id || null);
         setHasExistingQuote(existingQuote.status === 'SUBMITTED');
@@ -290,23 +281,26 @@ const ExternalSupplierBid: React.FC = () => {
     setAnswers((prev) => ({ ...prev, [questionId]: { ...prev[questionId], fileName: file?.name || '' } }));
   };
 
-  // Mirrors Supplier Admin's handleDocumentAction (base64 decode → blob → open/download).
   const handleDocumentAction = async (doc: { id?: string; fileName?: string; fileType?: string }, action: 'preview' | 'download') => {
     const assetId = doc.id;
-    if (!assetId || !sessionToken) {
+    if (!assetId || !rfqId || !sessionToken) {
       alert('Document asset ID is missing.');
       return;
     }
 
     try {
-      const data = await fetchExternalAsset(assetId, sessionToken);
+      const data = await fetchExternalAsset(assetId, rfqId, sessionToken);
       if (isErrorResponse(data)) {
         throw new Error(data.message || 'Failed to fetch document.');
       }
 
-      const fileBytes = (data as any).fileBytes;
-      const fileName = (data as any).fileName || doc.fileName || 'document';
-      const rawType = ((data as any).contentType || (data as any).fileType || doc.fileType || 'pdf').toLowerCase();
+      const fileBytes = data.fileBytes;
+      const fileName = data.fileName || doc.fileName || 'document';
+      const rawType = (data.contentType || doc.fileType || 'pdf').toLowerCase();
+
+      if (!fileBytes) {
+        throw new Error('Document content not available.');
+      }
 
       let mimeType = 'application/pdf';
       if (rawType.includes('pdf')) mimeType = 'application/pdf';
@@ -315,23 +309,15 @@ const ExternalSupplierBid: React.FC = () => {
       else if (rawType.includes('txt')) mimeType = 'text/plain';
       else if (rawType.includes('doc')) mimeType = 'application/msword';
 
-      let url = (data as any).url || (data as any).fileUrl;
-
-      if (fileBytes) {
-        const cleanBase64 = fileBytes.replace(/^data:.*?;base64,/, '');
-        const byteCharacters = atob(cleanBase64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: mimeType });
-        url = URL.createObjectURL(blob);
+      const cleanBase64 = fileBytes.replace(/^data:.*?;base64,/, '');
+      const byteCharacters = atob(cleanBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
-
-      if (!url) {
-        throw new Error('Document content not available.');
-      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: mimeType });
+      const url = URL.createObjectURL(blob);
 
       if (action === 'preview') {
         window.open(url, '_blank');
@@ -485,6 +471,15 @@ const ExternalSupplierBid: React.FC = () => {
       </div>
     );
   } else if (rfq) {
+    const formatRank = (val: unknown): string => {
+      if (val === null || val === undefined || val === '') return '';
+      return String(val);
+    };
+
+    const quotationStatus = rfq.supplierQuotation?.[0]?.status;
+    const headerRank = formatRank(rfq.supplierQuotation?.[0]?.rank);
+    const showRankColumn = !rfq.addLotOption;
+
     content = (
       <form className="ebid-form" onSubmit={handleSubmitClick}>
         <section className="ebid-card">
@@ -601,7 +596,12 @@ const ExternalSupplierBid: React.FC = () => {
 
         <section className="ebid-card">
           <span className="ebid-section-heading">
-            <FaClipboardList /> <span className="ebid-section-label">Required Materials &amp; Services</span>
+            <FaClipboardList /> <span className="ebid-section-label">Quotation Summary</span>
+            {rfq.addLotOption && quotationStatus === 'SUBMITTED' && headerRank !== '' && (
+              <span className="ebid-rank-badge">
+                Rank <strong>{headerRank}</strong>
+              </span>
+            )}
           </span>
 
           {rfq.addLotOption ? (
@@ -646,6 +646,7 @@ const ExternalSupplierBid: React.FC = () => {
                       <th>Tax</th>
                       <th>Tax Type</th>
                       <th className="ebid-col-price">Quoted Price</th>
+                      {showRankColumn && <th className="ebid-col-rank">Rank</th>}
                       <th className="ebid-col-price">Sub Total</th>
                       <th className="ebid-col-price">Quoted Amount</th>
                     </tr>
@@ -653,7 +654,15 @@ const ExternalSupplierBid: React.FC = () => {
                   <tbody>
                     {rfq.items?.map((item, idx) => {
                       const itemKey = item.supplierRFQItemId || `item-${idx}`;
+                      const itemId = item.id || item.buyerRFQItemId;
                       const line = lineItems[itemKey] || EMPTY_LINE_ITEM;
+                      const matchedItem =
+                        rfq.supplierQuotationItems?.find(
+                          (qi) =>
+                            (qi.supplierRFQItemId && (qi.supplierRFQItemId === itemKey || qi.supplierRFQItemId === itemId)) ||
+                            (qi.buyerRFQItemId && (qi.buyerRFQItemId === itemKey || qi.buyerRFQItemId === itemId))
+                        ) || rfq.supplierQuotationItems?.[idx];
+                      const itemRank = formatRank(matchedItem?.rank) || '--';
                       return (
                         <tr key={itemKey}>
                           <td>
@@ -736,6 +745,9 @@ const ExternalSupplierBid: React.FC = () => {
                               required
                             />
                           </td>
+                          {showRankColumn && (
+                            <td className="ebid-col-rank">{quotationStatus === 'SUBMITTED' ? itemRank : '-'}</td>
+                          )}
                           <td className="ebid-readonly-value">{line.subTotal.toFixed(2)}</td>
                           <td className="ebid-readonly-value">{line.quotedAmount.toFixed(2)}</td>
                         </tr>
@@ -963,8 +975,9 @@ const ExternalSupplierBid: React.FC = () => {
   return (
     <div className="ebid-page">
       <header className="ebid-header">
-        <img src={SilaLogo} alt="SILA" className="ebid-header-logo" />
-        <span className="ebid-header-title">Request for Quotation</span>
+        <div className="ebid-header-inner">
+          <img src={SilaLogo} alt="SILA" className="ebid-header-logo" />
+        </div>
       </header>
 
       <main className={`ebid-main${isStatusView ? ' ebid-main-centered' : ''}`}>

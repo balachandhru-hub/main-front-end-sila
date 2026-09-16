@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import "./BuyerAdminDash.css";
 import Header from "./Header";
 import UserAdmin from "../UserAdmin";
@@ -11,7 +11,6 @@ import {
   fetchBuyerRFQs,
   fetchBuyerRFQById,
   fetchBuyerVerificationTemplates,
-  fetchBuyerAsset,
   updateRfqStatus,
   type VerificationTemplate
 } from "../../../remote-buyer/src/api/Buyerapi";
@@ -19,10 +18,12 @@ import CreateRFQ from "./UserListTable/CreateRFQ";
 import { logoutPlatformUser } from "../api/platformApi";
 import { toastService } from "@vosox/shared-ui";
 import UserTemplate from "./usertemplate"
+import ApprovalManagement from "./ApprovalManagement/ApprovalManagement";
 import { ToastContainer } from "@vosox/shared-ui";
 import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
-import QuotationSummaryTable from "../../../remote-buyer/src/components/QuotationSummaryTable";
 import QuotationComparisonCard from "./QuotationComparisonCard";
+import BidComparisonAwardView from "./BidComparisonAwardView";
+import BuyerRFQChat from "../../../remote-buyer/src/components/BuyerRFQChat/BuyerRFQChat";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -30,6 +31,8 @@ interface StatCard {
   value: number;
   linkText: string;
   colorClass: string;
+  isClickable?: boolean; 
+  navKey?:string;
 }
 
 interface POItem {
@@ -186,13 +189,13 @@ const IconEye = () => (
   </svg>
 );
 
-const IconDownload = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-    <polyline points="7 10 12 15 17 10" />
-    <line x1="12" y1="15" x2="12" y2="3" />
-  </svg>
-);
+// const IconDownload = () => (
+//   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+//     <polyline points="7 10 12 15 17 10" />
+//     <line x1="12" y1="15" x2="12" y2="3" />
+//   </svg>
+// );
 
 const IconMessageSquare = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -207,20 +210,20 @@ const IconSend = () => (
   </svg>
 );
 
-const IconBidCompare = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="20" x2="12" y2="10" />
-    <line x1="18" y1="20" x2="18" y2="4" />
-    <line x1="6" y1="20" x2="6" y2="16" />
-  </svg>
-);
+// const IconBidCompare = () => (
+//   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <line x1="12" y1="20" x2="12" y2="10" />
+//     <line x1="18" y1="20" x2="18" y2="4" />
+//     <line x1="6" y1="20" x2="6" y2="16" />
+//   </svg>
+// );
 
-const IconFreezeLock = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-);
+// const IconFreezeLock = () => (
+//   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+//     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+//   </svg>
+// );
 
 const IconSparkles = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -288,13 +291,13 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
 ];
 
 const statCards: StatCard[] = [
-  { icon: <IconFile />, label: "ACTIVE RFQS", value: 3, linkText: "Manage RFQs >", colorClass: "bad-stat-icon-blue" },
-  { icon: <NavIconFilePlus />, label: "CREATE RFQ", value: 3, linkText: "Manage RFQs >", colorClass: "bad-stat-icon-blue" },
-  { icon: <IconMail />, label: "QUOTATIONS RECEIVED", value: 5, linkText: "Review bids >", colorClass: "bad-stat-icon-indigo" },
-  { icon: <IconTrend />, label: "SUPPLIERS ENGAGED", value: 8, linkText: "View directory", colorClass: "bad-stat-icon-green" },
-  { icon: <IconBag />, label: "PURCHASE ORDERS", value: 4, linkText: "Track orders >", colorClass: "bad-stat-icon-purple" },
-  { icon: <IconInvoice />, label: "PENDING INVOICES", value: 2, linkText: "Invoice list >", colorClass: "bad-stat-icon-orange" },
-  { icon: <IconBell />, label: "NOTIFICATIONS", value: 3, linkText: "Inquiries & Alerts >", colorClass: "bad-stat-icon-teal" },
+  { icon: <IconFile />, navKey: "activeRFQs", label: "ACTIVE RFQS", value: 3, linkText: "Manage RFQs >", colorClass: "bad-stat-icon-blue" },
+  { icon: <NavIconFilePlus />, navKey: "createRFQ", label: "CREATE RFQ", value: 0, linkText: "Create RFQ >", colorClass: "bad-stat-icon-blue" },
+  { icon: <IconMail />, navKey: "quotationsReceived", label: "QUOTATIONS RECEIVED", value: 5, linkText: "Review bids >", colorClass: "bad-stat-icon-indigo" },
+  { icon: <IconTrend />, navKey: "suppliersEngaged", label: "SUPPLIERS ENGAGED", value: 8, linkText: "View directory", colorClass: "bad-stat-icon-green" },
+  { icon: <IconBag />, navKey: "purchaseOrders", label: "PURCHASE ORDERS", value: 4, linkText: "Track orders >", colorClass: "bad-stat-icon-purple" },
+  { icon: <IconInvoice />, navKey: "pendingInvoices", label: "PENDING INVOICES", value: 2, linkText: "Invoice list >", colorClass: "bad-stat-icon-orange" },
+  { icon: <IconBell />, navKey: "notifications", label: "NOTIFICATIONS", value: 3, linkText: "Inquiries & Alerts >", colorClass: "bad-stat-icon-teal" },
 ];
 
 const poItems: POItem[] = [
@@ -520,6 +523,19 @@ const BuyerAdminDash: React.FC = () => {
   const [loadingFullPageRfq, setLoadingFullPageRfq] = useState(false);
   const [fullPageRfqError, setFullPageRfqError] = useState<string | null>(null);
   const [freezingBid, setFreezingBid] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  // Known supplier org names from quotation data, used to give the chat a
+  // real supplier name instead of an individual invited user's name.
+  const chatSupplierNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    const quotations = Array.isArray(fullPageRfq?.supplierQuotation) ? fullPageRfq.supplierQuotation : [];
+    for (const quote of quotations) {
+      if (quote?.supplierId && quote?.supplierName) {
+        map[quote.supplierId] = quote.supplierName;
+      }
+    }
+    return map;
+  }, [fullPageRfq]);
 
   const handleOpenAllRfqs = async () => {
     setActiveNav("activeRFQs");
@@ -585,10 +601,20 @@ const BuyerAdminDash: React.FC = () => {
     setRfqPageView("dashboard");
   };
 
-  const handleBackToDashboard = () => {
-    setRfqPageView("dashboard");
-    setActiveNav("dashboard");
-  };
+  const handleCardClick = (navKey?: string, label?: string) => {
+    if (navKey === "activeRFQs" || label === "ACTIVE RFQs") {
+      handleOpenAllRfqs(); // Redirects to All/Manage RFQs table
+    } else if (navKey === "createRFQ" || label === "CREATE RFQ") {
+      handleNavClick("createRFQ"); // Redirects to Create RFQ form
+    } else if (navKey) {
+      handleNavClick(navKey);
+  }
+};
+
+  // const handleBackToDashboard = () => {
+  //   setRfqPageView("dashboard");
+  //   setActiveNav("dashboard");
+  // };
 
   const handleViewRfqDetailsFullPage = async (rfqId: string) => {
     setRfqPageView("rfqDetail");
@@ -634,10 +660,10 @@ const BuyerAdminDash: React.FC = () => {
   };
 
   // HANDLER FOR QUOTATION COMPARISON - FULL PAGE VIEW
-  const handleOpenQuotationComparison = (rfq: any) => {
-    setSelectedQuotationsRfq(rfq);
-    setRfqPageView("quotationComparison");
-  };
+  // const handleOpenQuotationComparison = (rfq: any) => {
+  //   setSelectedQuotationsRfq(rfq);
+  //   setRfqPageView("quotationComparison");
+  // };
 
   const handleBackFromQuotationComparison = () => {
     setRfqPageView("rfqDetail");
@@ -668,64 +694,64 @@ const BuyerAdminDash: React.FC = () => {
     }
   };
 
-  const handleDocumentAction = async (doc: any, action: 'preview' | 'download') => {
-    const assetId = doc.id || doc.assetId;
-    if (!assetId) {
-      alert("Document asset ID is missing.");
-      return;
-    }
+  // const handleDocumentAction = async (doc: any, action: 'preview' | 'download') => {
+  //   const assetId = doc.id || doc.assetId;
+  //   if (!assetId) {
+  //     alert("Document asset ID is missing.");
+  //     return;
+  //   }
 
-    try {
-      const data = await fetchBuyerAsset(assetId);
-      if ('statusCode' in data && data.statusCode) {
-        throw new Error(data.message || 'Failed to fetch document.');
-      }
+  //   try {
+  //     const data = await fetchBuyerAsset(assetId);
+  //     if ('statusCode' in data && data.statusCode) {
+  //       throw new Error(data.message || 'Failed to fetch document.');
+  //     }
 
-      const fileBytes = (data as any).fileBytes;
-      const fileName = (data as any).fileName || doc.fileName || doc.assetName || "document";
-      const rawType = ((data as any).contentType || (data as any).fileType || doc.fileType || "pdf").toLowerCase();
+  //     const fileBytes = (data as any).fileBytes;
+  //     const fileName = (data as any).fileName || doc.fileName || doc.assetName || "document";
+  //     const rawType = ((data as any).contentType || (data as any).fileType || doc.fileType || "pdf").toLowerCase();
 
-      let mimeType = "application/pdf";
-      if (rawType.includes("pdf")) mimeType = "application/pdf";
-      else if (rawType.includes("png")) mimeType = "image/png";
-      else if (rawType.includes("jpg") || rawType.includes("jpeg")) mimeType = "image/jpeg";
-      else if (rawType.includes("txt")) mimeType = "text/plain";
-      else if (rawType.includes("doc")) mimeType = "application/msword";
+  //     let mimeType = "application/pdf";
+  //     if (rawType.includes("pdf")) mimeType = "application/pdf";
+  //     else if (rawType.includes("png")) mimeType = "image/png";
+  //     else if (rawType.includes("jpg") || rawType.includes("jpeg")) mimeType = "image/jpeg";
+  //     else if (rawType.includes("txt")) mimeType = "text/plain";
+  //     else if (rawType.includes("doc")) mimeType = "application/msword";
 
-      let url = (data as any).url || (data as any).fileUrl;
-      let createdBlobUrl = "";
+  //     let url = (data as any).url || (data as any).fileUrl;
+  //     let createdBlobUrl = "";
 
-      if (fileBytes) {
-        const cleanBase64 = fileBytes.replace(/^data:.*?;base64,/, '');
-        const byteCharacters = atob(cleanBase64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: mimeType });
-        createdBlobUrl = URL.createObjectURL(blob);
-        url = createdBlobUrl;
-      }
+  //     if (fileBytes) {
+  //       const cleanBase64 = fileBytes.replace(/^data:.*?;base64,/, '');
+  //       const byteCharacters = atob(cleanBase64);
+  //       const byteNumbers = new Array(byteCharacters.length);
+  //       for (let i = 0; i < byteCharacters.length; i++) {
+  //         byteNumbers[i] = byteCharacters.charCodeAt(i);
+  //       }
+  //       const byteArray = new Uint8Array(byteNumbers);
+  //       const blob = new Blob([byteArray], { type: mimeType });
+  //       createdBlobUrl = URL.createObjectURL(blob);
+  //       url = createdBlobUrl;
+  //     }
 
-      if (!url) {
-        throw new Error("Document content not available.");
-      }
+  //     if (!url) {
+  //       throw new Error("Document content not available.");
+  //     }
 
-      if (action === 'preview') {
-        window.open(url, '_blank');
-      } else {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
-    } catch (err: any) {
-      alert(err?.message || "Could not access document.");
-    }
-  };
+  //     if (action === 'preview') {
+  //       window.open(url, '_blank');
+  //     } else {
+  //       const a = document.createElement('a');
+  //       a.href = url;
+  //       a.download = fileName;
+  //       document.body.appendChild(a);
+  //       a.click();
+  //       document.body.removeChild(a);
+  //     }
+  //   } catch (err: any) {
+  //     alert(err?.message || "Could not access document.");
+  //   }
+  // };
 
   // const renderQuoteStatusBadges = (quote: any) => (
   //   <>
@@ -874,26 +900,21 @@ const BuyerAdminDash: React.FC = () => {
                 )}
               </div>
             ) : activeNav === "approvalManagement" ? (
-              <div style={{ padding: '2rem', textAlign: 'center', background: '#fff', borderRadius: '0.625rem', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.04)' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#0f172a' }}>Approval Management</h2>
-                <p style={{ paddingTop: '1rem', color: '#64748b' }}>Approval management functionality will be displayed here.</p>
-              </div>
+              <ApprovalManagement />
             ) : activeNav === "createRFQ" ? (
               <CreateRFQ />
             ) : activeNav === "product" ? (
               <Product />
             ) : rfqPageView === "allRfqs" ? (
               <>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
+              <div className="bad-table">
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '1.25rem', }}>
                   <div>
                     <h1 className="bad-title">All RFQs</h1>
                     <p className="bad-subtitle" style={{ marginBottom: 0 }}>
                       RFQs posted across your organization, awaiting supplier quotations.
                     </p>
                   </div>
-                  <button className="bad-btn bad-btn-outline" onClick={handleBackToDashboard}>
-                    ← Back to Dashboard
-                  </button>
                 </div>
 
                 {loadingAllRfqs ? (
@@ -921,12 +942,12 @@ const BuyerAdminDash: React.FC = () => {
                             <th>Organization</th>
                             <th>Delivery Location</th>
                             <th>Closing Date</th>
-                            <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
                           {allRfqsList.map((rfq: any, idx: number) => (
-                            <tr key={rfq.rfqId || idx}>
+                            <tr key={rfq.rfqId || idx}
+                            onClick={()=> handleViewRfqDetailsFullPage(rfq.rfqId)}>
                               <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
                               <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
                               <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
@@ -936,14 +957,6 @@ const BuyerAdminDash: React.FC = () => {
                                 {rfq.endDate
                                   ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
                                   : "—"}
-                              </td>
-                              <td>
-                                <button
-                                  className="bad-btn bad-btn-outline"
-                                  onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                                >
-                                  View RFQ Details
-                                </button>
                               </td>
                             </tr>
                           ))}
@@ -976,262 +989,272 @@ const BuyerAdminDash: React.FC = () => {
                     </div>
                   </div>
                 )}
+              </div>
               </>
             ) : rfqPageView === "rfqDetail" ? (
-              <>
-                <div className="bad-modal bad-rfq-fullpage">
-                  <div className="bad-modal-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                      <span className="bad-modal-badge">
-                        <IconFile /> RFQ Specification
-                      </span>
-                      {fullPageRfq && (
-                        <button
-                          type="button"
-                          className="bad-modal-badge"
-                          style={{ border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,0.18)', color: '#ffffff' }}
-                          onClick={handleOpenQsAns}
-                        >
-                          <IconFile /> RFQ Question Answers
-                        </button>
-                      )}
-                    </div>
-                    <button className="bad-modal-close" onClick={handleBackToAllRfqs}>
-                      <IconClose />
-                    </button>
-                    <h2 className="bad-modal-name">
-                      {loadingFullPageRfq ? "Loading RFQ Details..." : fullPageRfq?.title || "RFQ Details"}
-                    </h2>
-                    {fullPageRfq && (
-                      <div className="bad-modal-meta">
-                        <span><IconCalendar /> Closes: {new Date(fullPageRfq.endDate).toLocaleDateString()}</span>
-                        <span><IconPin /> Delivery: {fullPageRfq.deliveryLocation}</span>
-                        <div className="bad-rfq-header-actions">
-                          <button
-                            className="bad-btn bad-btn-outline"
-                            onClick={() => handleOpenQuotationComparison(fullPageRfq)}
-                            title="View Supplier Quotations"
-                          >
-                            <IconBidCompare /> Bid Comparison
-                          </button>
-                          <button
-                            type="button"
-                            className="bad-btn bad-btn-freeze"
-                            onClick={handleFreezeBid}
-                            disabled={freezingBid || fullPageRfq.status === "Freezing"}
-                            title={fullPageRfq.status === "Freezing" ? "This RFQ's bid has already been frozen" : "Freeze the bid to stop accepting new quotations"}
-                          >
-                            <IconFreezeLock />
-                            {freezingBid ? "Freezing..." : fullPageRfq.status === "Freezing" ? "Bid Frozen" : "Freeze Bid"}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+              // <>
+              //   <div className="bad-modal bad-rfq-fullpage">
+              //     <div className="bad-modal-header">
+              //       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              //         <span className="bad-modal-badge">
+              //           <IconFile /> RFQ Specification
+              //         </span>
+              //         {fullPageRfq && (
+              //           <button
+              //             type="button"
+              //             className="bad-modal-badge"
+              //             style={{ border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,0.18)', color: '#ffffff' }}
+              //             onClick={handleOpenQsAns}
+              //           >
+              //             <IconFile /> RFQ Question Answers
+              //           </button>
+              //         )}
+              //       </div>
+              //       <button className="bad-modal-close" onClick={handleBackToAllRfqs}>
+              //         <IconClose />
+              //       </button>
+              //       <h2 className="bad-modal-name">
+              //         {loadingFullPageRfq ? "Loading RFQ Details..." : fullPageRfq?.title || "RFQ Details"}
+              //       </h2>
+              //       {fullPageRfq && (
+              //         <div className="bad-modal-meta">
+              //           <span><IconCalendar /> Closes: {new Date(fullPageRfq.endDate).toLocaleDateString()}</span>
+              //           <span><IconPin /> Delivery: {fullPageRfq.deliveryLocation}</span>
+              //           <div className="bad-rfq-header-actions">
+              //             <button
+              //               className="bad-btn bad-btn-outline"
+              //               onClick={() => handleOpenQuotationComparison(fullPageRfq)}
+              //               title="View Supplier Quotations"
+              //             >
+              //               <IconBidCompare /> Bid Comparison
+              //             </button>
+              //             <button
+              //               type="button"
+              //               className="bad-btn bad-btn-freeze"
+              //               onClick={handleFreezeBid}
+              //               disabled={freezingBid || fullPageRfq.status === "Freezing"}
+              //               title={fullPageRfq.status === "Freezing" ? "This RFQ's bid has already been frozen" : "Freeze the bid to stop accepting new quotations"}
+              //             >
+              //               <IconFreezeLock />
+              //               {freezingBid ? "Freezing..." : fullPageRfq.status === "Freezing" ? "Bid Frozen" : "Freeze Bid"}
+              //             </button>
+              //           </div>
+              //         </div>
+              //       )}
+              //     </div>
 
-                  <div className="bad-modal-body">
-                    {loadingFullPageRfq ? (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
-                        <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                          <div className="bad-spinner" style={{ width: '32px', height: '32px' }} />
-                          <span>Fetching RFQ specification details...</span>
-                        </div>
-                      </div>
-                    ) : fullPageRfqError && !fullPageRfq ? (
-                      <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
-                        {fullPageRfqError}
-                      </div>
-                    ) : fullPageRfq ? (
-                      <div className="bad-active-rfq-content-wrapper">
-                          <div>
-                            <div className="bad-modal-section-title">Description</div>
-                            <p className="bad-modal-desc" style={{ whiteSpace: 'pre-wrap', fontSize: '13.5px', color: '#334155', lineHeight: '1.6' }}>
-                              {fullPageRfq.description || "No description provided."}
-                            </p>
+              //     <div className="bad-modal-body">
+              //       {loadingFullPageRfq ? (
+              //         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+              //           <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              //             <div className="bad-spinner" style={{ width: '32px', height: '32px' }} />
+              //             <span>Fetching RFQ specification details...</span>
+              //           </div>
+              //         </div>
+              //       ) : fullPageRfqError && !fullPageRfq ? (
+              //         <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
+              //           {fullPageRfqError}
+              //         </div>
+              //       ) : fullPageRfq ? (
+              //         <div className="bad-active-rfq-content-wrapper">
+              //             <div>
+              //               <div className="bad-modal-section-title">Description</div>
+              //               <p className="bad-modal-desc" style={{ whiteSpace: 'pre-wrap', fontSize: '13.5px', color: '#334155', lineHeight: '1.6' }}>
+              //                 {fullPageRfq.description || "No description provided."}
+              //               </p>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px 18px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
-                              <div>
-                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
-                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                                  {new Date(fullPageRfq.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                                </div>
-                              </div>
-                              <div>
-                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>End Date</div>
-                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                                  {new Date(fullPageRfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                                </div>
-                              </div>
-                              <div>
-                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Add Lot Option</div>
-                                <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                                  {fullPageRfq.addLotOption ? "Allowed" : "Not Allowed"}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+              //               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px 18px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
+              //                 <div>
+              //                   <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
+              //                   <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+              //                     {new Date(fullPageRfq.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+              //                   </div>
+              //                 </div>
+              //                 <div>
+              //                   <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>End Date</div>
+              //                   <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+              //                     {new Date(fullPageRfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+              //                   </div>
+              //                 </div>
+              //                 <div>
+              //                   <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Add Lot Option</div>
+              //                   <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+              //                     {fullPageRfq.addLotOption ? "Allowed" : "Not Allowed"}
+              //                   </div>
+              //                 </div>
+              //               </div>
+              //             </div>
 
-                          {/* Items table */}
-                          <QuotationSummaryTable rfq={fullPageRfq} />
+              //             {/* Items table */}
+              //             <QuotationSummaryTable rfq={fullPageRfq} />
 
-                          {/* Attached Documents */}
-                          {((fullPageRfq.technicalSpecificationDocuments && fullPageRfq.technicalSpecificationDocuments.length > 0) ||
-                            (fullPageRfq.termsConditionDocuments && fullPageRfq.termsConditionDocuments.length > 0)) && (
-                              <div>
-                                <div className="bad-modal-section-title" style={{ marginBottom: '10px' }}>Specifications & Terms Documents</div>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
-                                  {fullPageRfq.technicalSpecificationDocuments?.map((doc: any, i: number) => (
-                                    <div key={`tech-${i}`} className="bad-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
-                                        <div className="bad-rfq-doc-icon"><IconFile /></div>
-                                        <div style={{ overflow: 'hidden' }}>
-                                          <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                          <div className="bad-rfq-doc-type">Tech Spec Doc</div>
-                                        </div>
-                                      </div>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
-                                        <button
-                                          type="button"
-                                          title="Preview document"
-                                          onClick={() => handleDocumentAction(doc, 'preview')}
-                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
-                                        >
-                                          <IconEye />
-                                        </button>
-                                        <button
-                                          type="button"
-                                          title="Download document"
-                                          onClick={() => handleDocumentAction(doc, 'download')}
-                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
-                                        >
-                                          <IconDownload />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                  {fullPageRfq.termsConditionDocuments?.map((doc: any, i: number) => (
-                                    <div key={`terms-${i}`} className="bad-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
-                                        <div className="bad-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></div>
-                                        <div style={{ overflow: 'hidden' }}>
-                                          <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-                                          <div className="bad-rfq-doc-type">Terms & Conditions</div>
-                                        </div>
-                                      </div>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
-                                        <button
-                                          type="button"
-                                          title="Preview document"
-                                          onClick={() => handleDocumentAction(doc, 'preview')}
-                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
-                                        >
-                                          <IconEye />
-                                        </button>
-                                        <button
-                                          type="button"
-                                          title="Download document"
-                                          onClick={() => handleDocumentAction(doc, 'download')}
-                                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
-                                        >
-                                          <IconDownload />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+              //             {/* Attached Documents */}
+              //             {((fullPageRfq.technicalSpecificationDocuments && fullPageRfq.technicalSpecificationDocuments.length > 0) ||
+              //               (fullPageRfq.termsConditionDocuments && fullPageRfq.termsConditionDocuments.length > 0)) && (
+              //                 <div>
+              //                   <div className="bad-modal-section-title" style={{ marginBottom: '10px' }}>Specifications & Terms Documents</div>
+              //                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+              //                     {fullPageRfq.technicalSpecificationDocuments?.map((doc: any, i: number) => (
+              //                       <div key={`tech-${i}`} className="bad-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+              //                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
+              //                           <div className="bad-rfq-doc-icon"><IconFile /></div>
+              //                           <div style={{ overflow: 'hidden' }}>
+              //                             <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+              //                             <div className="bad-rfq-doc-type">Tech Spec Doc</div>
+              //                           </div>
+              //                         </div>
+              //                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+              //                           <button
+              //                             type="button"
+              //                             title="Preview document"
+              //                             onClick={() => handleDocumentAction(doc, 'preview')}
+              //                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+              //                           >
+              //                             <IconEye />
+              //                           </button>
+              //                           <button
+              //                             type="button"
+              //                             title="Download document"
+              //                             onClick={() => handleDocumentAction(doc, 'download')}
+              //                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+              //                           >
+              //                             <IconDownload />
+              //                           </button>
+              //                         </div>
+              //                       </div>
+              //                     ))}
+              //                     {fullPageRfq.termsConditionDocuments?.map((doc: any, i: number) => (
+              //                       <div key={`terms-${i}`} className="bad-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+              //                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
+              //                           <div className="bad-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></div>
+              //                           <div style={{ overflow: 'hidden' }}>
+              //                             <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+              //                             <div className="bad-rfq-doc-type">Terms & Conditions</div>
+              //                           </div>
+              //                         </div>
+              //                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+              //                           <button
+              //                             type="button"
+              //                             title="Preview document"
+              //                             onClick={() => handleDocumentAction(doc, 'preview')}
+              //                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+              //                           >
+              //                             <IconEye />
+              //                           </button>
+              //                           <button
+              //                             type="button"
+              //                             title="Download document"
+              //                             onClick={() => handleDocumentAction(doc, 'download')}
+              //                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+              //                           >
+              //                             <IconDownload />
+              //                           </button>
+              //                         </div>
+              //                       </div>
+              //                     ))}
+              //                   </div>
+              //                 </div>
+              //               )}
 
-                          {/* Supplier Quotations Received
-                          {fullPageRfq.addLotOption && (
-                          <div>
-                            <div className="bad-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                              <IconSparkles /> Supplier Quotations Received
-                            </div>
-                            {fullPageRfq.supplierQuotation &&
-                              fullPageRfq.supplierQuotation.filter((q: any) => q.quotationId || q.totalPrice !== null).length > 0 ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '480px', overflowY: 'auto' }}>
-                                {fullPageRfq.supplierQuotation
-                                  .filter((q: any) => q.quotationId || q.totalPrice !== null)
-                                  .map((quote: any, index: number) => (
-                                    <div
-                                      key={index}
-                                      style={{
-                                        background: '#ffffff',
-                                        border: '1px solid #cbd5e1',
-                                        borderRadius: '10px',
-                                        padding: '16px',
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                                        transition: 'border-color 0.2s ease'
-                                      }}
-                                    >
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
-                                            Quote ID: {quote.quotationId ? `${quote.quotationId.substring(0, 8)}...` : `Quote #${index + 1}`}
-                                          </span>
-                                          <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                            Delivery: {quote.deliveryType || "Standard"}
-                                          </span>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                          {renderQuoteStatusBadges(quote)}
-                                        </div>
-                                      </div>
+              //             {/* Supplier Quotations Received
+              //             {fullPageRfq.addLotOption && (
+              //             <div>
+              //               <div className="bad-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              //                 <IconSparkles /> Supplier Quotations Received
+              //               </div>
+              //               {fullPageRfq.supplierQuotation &&
+              //                 fullPageRfq.supplierQuotation.filter((q: any) => q.quotationId || q.totalPrice !== null).length > 0 ? (
+              //                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '480px', overflowY: 'auto' }}>
+              //                   {fullPageRfq.supplierQuotation
+              //                     .filter((q: any) => q.quotationId || q.totalPrice !== null)
+              //                     .map((quote: any, index: number) => (
+              //                       <div
+              //                         key={index}
+              //                         style={{
+              //                           background: '#ffffff',
+              //                           border: '1px solid #cbd5e1',
+              //                           borderRadius: '10px',
+              //                           padding: '16px',
+              //                           boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+              //                           transition: 'border-color 0.2s ease'
+              //                         }}
+              //                       >
+              //                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+              //                           <div style={{ display: 'flex', flexDirection: 'column' }}>
+              //                             <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
+              //                               Quote ID: {quote.quotationId ? `${quote.quotationId.substring(0, 8)}...` : `Quote #${index + 1}`}
+              //                             </span>
+              //                             <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+              //                               Delivery: {quote.deliveryType || "Standard"}
+              //                             </span>
+              //                           </div>
+              //                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              //                             {renderQuoteStatusBadges(quote)}
+              //                           </div>
+              //                         </div>
 
-                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #f1f5f9', marginBottom: '12px', fontSize: '12px' }}>
-                                        <div>
-                                          <span style={{ color: '#64748b' }}>Delivery Charge:</span>
-                                          <div style={{ fontWeight: 600, color: '#334155', marginTop: '2px' }}>${quote.deliveryCharge ?? 0}</div>
-                                        </div>
-                                        <div>
-                                          <span style={{ color: '#64748b' }}>Tax:</span>
-                                          <div style={{ fontWeight: 600, color: '#334155', marginTop: '2px' }}>${quote.tax ?? 0}</div>
-                                        </div>
-                                        <div>
-                                          <span style={{ color: '#64748b' }}>Discount:</span>
-                                          <div style={{ fontWeight: 600, color: '#dc2626', marginTop: '2px' }}>-${quote.discount ?? 0}</div>
-                                        </div>
-                                        <div>
-                                          <span style={{ color: '#64748b' }}>Total Quote:</span>
-                                          <div style={{ fontWeight: 700, color: '#16a34a', marginTop: '2px', fontSize: '13px' }}>${quote.totalPrice ?? 0}</div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                              </div>
-                            ) : (
-                              <div className="bad-rfq-no-quote-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 20px' }}>
-                                <IconMail />
-                                <div style={{ fontWeight: 600, color: '#475569', marginTop: '12px' }}>No Quotations Received Yet</div>
-                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', lineHeight: '1.5', maxWidth: '240px' }}>
-                                  When suppliers submit commercial bids, they will populate here in real-time.
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          )} */}
+              //                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #f1f5f9', marginBottom: '12px', fontSize: '12px' }}>
+              //                           <div>
+              //                             <span style={{ color: '#64748b' }}>Delivery Charge:</span>
+              //                             <div style={{ fontWeight: 600, color: '#334155', marginTop: '2px' }}>${quote.deliveryCharge ?? 0}</div>
+              //                           </div>
+              //                           <div>
+              //                             <span style={{ color: '#64748b' }}>Tax:</span>
+              //                             <div style={{ fontWeight: 600, color: '#334155', marginTop: '2px' }}>${quote.tax ?? 0}</div>
+              //                           </div>
+              //                           <div>
+              //                             <span style={{ color: '#64748b' }}>Discount:</span>
+              //                             <div style={{ fontWeight: 600, color: '#dc2626', marginTop: '2px' }}>-${quote.discount ?? 0}</div>
+              //                           </div>
+              //                           <div>
+              //                             <span style={{ color: '#64748b' }}>Total Quote:</span>
+              //                             <div style={{ fontWeight: 700, color: '#16a34a', marginTop: '2px', fontSize: '13px' }}>${quote.totalPrice ?? 0}</div>
+              //                           </div>
+              //                         </div>
+              //                       </div>
+              //                     ))}
+              //                 </div>
+              //               ) : (
+              //                 <div className="bad-rfq-no-quote-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 20px' }}>
+              //                   <IconMail />
+              //                   <div style={{ fontWeight: 600, color: '#475569', marginTop: '12px' }}>No Quotations Received Yet</div>
+              //                   <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', lineHeight: '1.5', maxWidth: '240px' }}>
+              //                     When suppliers submit commercial bids, they will populate here in real-time.
+              //                   </div>
+              //                 </div>
+              //               )}
+              //             </div>
+              //             )} */}
 
-                      </div>
-                    ) : null}
-                  </div>
+              //         </div>
+              //       ) : null}
+              //     </div>
 
-                  {fullPageRfq && (
-                    <div className="bad-modal-footer">
-                      <button
-                        className="bad-btn bad-btn-outline"
-                        onClick={handleBackToAllRfqs}
-                        style={{ marginRight: '10px' }}
-                      >
-                        Close
-                      </button>
-                      <button className="bad-btn bad-btn-message" style={{ background: '#2563eb', color: '#ffffff' }}>
-                        Evaluate Quotations
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
+              //     {fullPageRfq && (
+              //       <div className="bad-modal-footer">
+              //         <button
+              //           className="bad-btn bad-btn-outline"
+              //           onClick={handleBackToAllRfqs}
+              //           style={{ marginRight: '10px' }}
+              //         >
+              //           Close
+              //         </button>
+              //         <button className="bad-btn bad-btn-message" style={{ background: '#2563eb', color: '#ffffff' }}>
+              //           Evaluate Quotations
+              //         </button>
+              //       </div>
+              //     )}
+              //   </div>
+              // </>
+              <BidComparisonAwardView
+                rfq={fullPageRfq}
+                loading={loadingFullPageRfq}
+                error={fullPageRfqError}
+                freezingBid={freezingBid}
+                onFreeze={handleFreezeBid}
+                onBack={handleBackToAllRfqs}
+                onQsAns={handleOpenQsAns}
+              />
             ) : rfqPageView === "quotationComparison" ? (
               <>
                 <div className="bad-modal bad-rfq-fullpage">
@@ -1271,8 +1294,10 @@ const BuyerAdminDash: React.FC = () => {
               />
             ) : (
               <>
+              <div>
                 <h1 className="bad-title" style={{ fontSize: '20px', fontWeight: 500 }}>Buyer Admin Command Center</h1>
                 <p className="bad-subtitle">Manage buyers, track procurement activities, and oversee operations.</p>
+              </div>
 
                 <div className="bad-stats-grid">
                   {statCards.map((stat) => (
@@ -1280,7 +1305,12 @@ const BuyerAdminDash: React.FC = () => {
                       <div className={`bad-stat-icon ${stat.colorClass}`}>{stat.icon}</div>
                       <div className="bad-stat-label">{stat.label}</div>
                       <div className="bad-stat-value">{stat.value}</div>
-                      <div className="bad-stat-link">{stat.linkText}</div>
+                      <a className="bad-stat-link" href="#" onClick={(e) => {
+                            e.preventDefault();
+                            handleCardClick(stat.navKey,stat.label);
+                          }}> 
+                        {stat.linkText}
+                      </a>
                     </div>
                   ))}
                 </div>
@@ -1525,6 +1555,17 @@ const BuyerAdminDash: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {isChatOpen && fullPageRfqId && (
+          <BuyerRFQChat
+            onClose={() => setIsChatOpen(false)}
+            rfqId={fullPageRfqId}
+            rfqNumber={fullPageRfq?.rfqNumber}
+            rfqTitle={fullPageRfq?.title}
+            supplierIds={fullPageRfq?.supplierIds || []}
+            supplierNames={chatSupplierNames}
+          />
         )}
       </div>
     </div>

@@ -111,24 +111,32 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
-    background: #edeff0;
-    padding: 1.5rem 2.5rem;
+    padding: 1rem;
 }
 
 .sad-content {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 0.625rem;
+    
+}
+
+.sad-border{
+    border-radius: 12px;
+    padding: 0.75rem 1.75rem 1.5rem;
+    background-color:#ffffff;
+    border: 0.0625rem solid #e6e8ec;
+    box-shadow: rgba(0, 0, 0, 0.03) 0px 1px 3px 0px;
 }
 
 .sad-title {
     font-family: 'Segoe UI', sans-serif;
     font-size: 1.4375rem;
-    font-weight: 500;
+    font-weight: 700;
     color: #424649 !important;
-    letter-spacing: -0.02em;
-    padding: 0.5rem 0;
+    letter-spacing:0; 
+    padding: 0 0 0.25rem 0;
 }
 
 .sad-subtitle {
@@ -274,7 +282,7 @@
     border: 1px solid #cbd5e1;
     border-radius: 0.5rem;
     padding: 1.25rem;
-    box-shadow: 0 0.0625rem 0.1875rem 0 rgba(0, 0, 0, 0.05);
+    box-shadow: 0 0.0625rem 0.1875rem 0 rgba(0, 0, 0, 0.05);  
 }
 
 .sad-panel-header {
@@ -921,6 +929,13 @@
     height: 35rem;
 }
 
+.pud-rfq-fullpage {
+    max-width: 100%;
+    max-height: none;
+    overflow: visible;
+    box-shadow: 0 0.25rem 1.25rem rgba(15, 23, 42, 0.35);
+}
+
 .pud-modal-header {
     position: relative;
     background: linear-gradient(120deg, #3b82f6 0%, #2f6feb 60%, #2563eb 100%);
@@ -1017,6 +1032,26 @@
 
 .pud-btn-outline:hover {
     background: #eff6ff;
+}
+
+/* Used on RFQ header action buttons (e.g. Chat) that sit against the blue
+   modal-header gradient — explicit so it never washes out against that background. */
+.pud-btn-chat {
+    background: #ffffff !important;
+    border: 0.0625rem solid #2f6feb !important;
+    color: #2f6feb !important;
+    font-weight: 600 !important;
+}
+
+.pud-btn-chat:hover {
+    background: #eff6ff !important;
+    border-color: #255bcc !important;
+    color: #255bcc !important;
+}
+
+.pud-btn-chat:focus-visible {
+    outline: 0.125rem solid #ffffff;
+    outline-offset: 0.125rem;
 }
 
 .pud-btn-flex {
@@ -1168,6 +1203,9 @@
 
 .ua-table {
     background-color: white;
+}
+.ua-table-body tr{
+    cursor: pointer;
 }
 
 @media (max-width: 64rem) {
