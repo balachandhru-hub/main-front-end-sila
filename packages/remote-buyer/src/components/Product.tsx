@@ -12,7 +12,8 @@ import {
   fetchBuyerAsset,
   fetchBuyerCatalogDetail} from "../api/Buyerapi";
 import type { BuyerCatalogResponse as BuyerCatalogResponseType } from "../api/Buyerapi";
-import { isErrorResponse } from "@vosox/shared-ui";
+import { isErrorResponse, Dropdown } from "@vosox/shared-ui";
+import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from "@vosox/shared-ui";
 
 /* ============================== Icons ============================== */
 
@@ -96,10 +97,6 @@ const Product: React.FC = () => {
   const [commodityOptions, setCommodityOptions] = useState<Array<{ commodity: number; commodityTitle: string }>>([]);
 
   // ---- Loading States ----
-  const [loadingSegments, setLoadingSegments] = useState(false);
-  const [loadingFamilies, setLoadingFamilies] = useState(false);
-  const [loadingClasses, setLoadingClasses] = useState(false);
-  const [loadingCommodities, setLoadingCommodities] = useState(false);
   const [loadingResults, setLoadingResults] = useState(false);
 
   // ---- Results State ----
@@ -129,7 +126,6 @@ const Product: React.FC = () => {
   const [punchOutIframeBlocked, setPunchOutIframeBlocked] = useState(false);
 
   useEffect(() => {
-    loadSegments();
     fetchProducts({
       segment: "",
       family: "",
@@ -141,17 +137,112 @@ const Product: React.FC = () => {
     });
   }, []);
 
-  const loadSegments = async () => {
-    setLoadingSegments(true);
-    try {
-      const segments = await fetchSegments();
-      if (Array.isArray(segments)) {
-        setSegmentOptions(segments);
-      }
-    } catch (err) {
-    } finally {
-      setLoadingSegments(false);
+  const SEGMENT_PAGE_SIZE = 40;
+
+  // ---- Async paginated loader for the Segment Dropdown ----
+  const loadSegmentOptions = async ({
+    page,
+  }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+    const pageIndex = page + 1; // Dropdown pages are 0-based; the API is 1-based
+    const segments = await fetchSegments(pageIndex, SEGMENT_PAGE_SIZE);
+
+    if (!Array.isArray(segments)) {
+      return { options: [], hasMore: false };
     }
+
+    setSegmentOptions((prev) => (page === 0 ? segments : [...prev, ...segments]));
+
+    return {
+      options: segments.map((seg) => ({
+        name: `${seg.segment} - ${seg.title}`,
+        value: String(seg.segment),
+      })),
+      hasMore: segments.length === SEGMENT_PAGE_SIZE,
+    };
+  };
+
+  const FAMILY_PAGE_SIZE = 40;
+
+  // ---- Async paginated loader for the Family Dropdown ----
+  const loadFamilyOptions = async ({
+    page,
+  }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+    if (!filters.segment) {
+      return { options: [], hasMore: false };
+    }
+
+    const pageIndex = page + 1; // Dropdown pages are 0-based; the API is 1-based
+    const families = await fetchFamilies(filters.segment, { pageIndex, pageSize: FAMILY_PAGE_SIZE });
+
+    if (!Array.isArray(families)) {
+      return { options: [], hasMore: false };
+    }
+
+    setFamilyOptions((prev) => (page === 0 ? families : [...prev, ...families]));
+
+    return {
+      options: families.map((fam) => ({
+        name: `${fam.family} - ${fam.title}`,
+        value: String(fam.family),
+      })),
+      hasMore: families.length === FAMILY_PAGE_SIZE,
+    };
+  };
+
+  const CLASS_PAGE_SIZE = 40;
+
+  // ---- Async paginated loader for the Class Dropdown ----
+  const loadClassOptions = async ({
+    page,
+  }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+    if (!filters.family) {
+      return { options: [], hasMore: false };
+    }
+
+    const pageIndex = page + 1; // Dropdown pages are 0-based; the API is 1-based
+    const classes = await fetchClassifications(filters.family, { pageIndex, pageSize: CLASS_PAGE_SIZE });
+
+    if (!Array.isArray(classes)) {
+      return { options: [], hasMore: false };
+    }
+
+    setClassOptions((prev) => (page === 0 ? classes : [...prev, ...classes]));
+
+    return {
+      options: classes.map((cls) => ({
+        name: `${cls.class} - ${cls.classTitle}`,
+        value: String(cls.class),
+      })),
+      hasMore: classes.length === CLASS_PAGE_SIZE,
+    };
+  };
+
+  const COMMODITY_PAGE_SIZE = 40;
+
+  // ---- Async paginated loader for the Commodity Dropdown ----
+  const loadCommodityOptions = async ({
+    page,
+  }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+    if (!filters.class) {
+      return { options: [], hasMore: false };
+    }
+
+    const pageIndex = page + 1; // Dropdown pages are 0-based; the API is 1-based
+    const commodities = await fetchCommodities(filters.class, { pageIndex, pageSize: COMMODITY_PAGE_SIZE });
+
+    if (!Array.isArray(commodities)) {
+      return { options: [], hasMore: false };
+    }
+
+    setCommodityOptions((prev) => (page === 0 ? commodities : [...prev, ...commodities]));
+
+    return {
+      options: commodities.map((com) => ({
+        name: `${com.commodity} - ${com.commodityTitle}`,
+        value: String(com.commodity),
+      })),
+      hasMore: commodities.length === COMMODITY_PAGE_SIZE,
+    };
   };
 
   // ---- Handle Segment Selection ----
@@ -169,19 +260,6 @@ const Product: React.FC = () => {
     setFamilyOptions([]);
     setClassOptions([]);
     setCommodityOptions([]);
-
-    if (segmentNum) {
-      setLoadingFamilies(true);
-      try {
-        const families = await fetchFamilies(segmentNum);
-        if (Array.isArray(families)) {
-          setFamilyOptions(families);
-        }
-      } catch (err) {
-      } finally {
-        setLoadingFamilies(false);
-      }
-    }
   };
 
   // ---- Handle Family Selection ----
@@ -197,19 +275,6 @@ const Product: React.FC = () => {
 
     setClassOptions([]);
     setCommodityOptions([]);
-
-    if (familyNum) {
-      setLoadingClasses(true);
-      try {
-        const classes = await fetchClassifications(familyNum);
-        if (Array.isArray(classes)) {
-          setClassOptions(classes);
-        }
-      } catch (err) {
-      } finally {
-        setLoadingClasses(false);
-      }
-    }
   };
 
   // ---- Handle Class Selection ----
@@ -223,19 +288,6 @@ const Product: React.FC = () => {
     }));
 
     setCommodityOptions([]);
-
-    if (classNum) {
-      setLoadingCommodities(true);
-      try {
-        const commodities = await fetchCommodities(classNum);
-        if (Array.isArray(commodities)) {
-          setCommodityOptions(commodities);
-        }
-      } catch (err) {
-      } finally {
-        setLoadingCommodities(false);
-      }
-    }
   };
 
   // ---- Handle Commodity Selection ----
@@ -679,93 +731,92 @@ const Product: React.FC = () => {
           <div className="pud-product-filter-grid">
             {/* Segment */}
             <div className="pud-product-filter-field">
-              <label className="pud-product-filter-label">Segment</label>
-              <select
-                className="pud-product-filter-select"
-                value={filters.segment}
-                onChange={(e) => handleSegmentChange(e.target.value)}
-              >
-                <option value="">
-                  {loadingSegments ? "Loading..." : "Select Segment"}
-                </option>
-                {segmentOptions.map((seg) => (
-                  <option key={seg.segment} value={seg.segment}>
-                    {seg.segment} - {seg.title}
-                  </option>
-                ))}
-              </select>
+              <Dropdown
+                label="Segment"
+                placeholder="Select Segment"
+                isAsync
+                loadOptions={loadSegmentOptions}
+                value={
+                  filters.segment
+                    ? {
+                        name: `${filters.segment} - ${
+                          segmentOptions.find((seg) => seg.segment === filters.segment)?.title ?? ""
+                        }`,
+                        value: String(filters.segment),
+                      }
+                    : null
+                }
+                onChange={(val: DropdownValue | null) => handleSegmentChange(val?.value ?? "")}
+              />
             </div>
 
             {/* Family */}
             <div className="pud-product-filter-field">
-              <label className="pud-product-filter-label">Family</label>
-              <select
-                className="pud-product-filter-select"
-                value={filters.family}
-                onChange={(e) => handleFamilyChange(e.target.value)}
-                disabled={!filters.segment}
-              >
-                <option value="">
-                  {!filters.segment
-                    ? "Select Segment first"
-                    : loadingFamilies
-                      ? "Loading..."
-                      : "Select Family"}
-                </option>
-                {familyOptions.map((fam) => (
-                  <option key={fam.family} value={fam.family}>
-                    {fam.family} - {fam.title}
-                  </option>
-                ))}
-              </select>
+              <Dropdown
+                label="Family"
+                placeholder={!filters.segment ? "Select Segment first" : "Select Family"}
+                isDisable={!filters.segment}
+                isAsync
+                loadOptions={loadFamilyOptions}
+                cacheUniques={[filters.segment]}
+                value={
+                  filters.family
+                    ? {
+                        name: `${filters.family} - ${
+                          familyOptions.find((fam) => fam.family === filters.family)?.title ?? ""
+                        }`,
+                        value: String(filters.family),
+                      }
+                    : null
+                }
+                onChange={(val: DropdownValue | null) => handleFamilyChange(val?.value ?? "")}
+              />
             </div>
 
             {/* Class */}
             <div className="pud-product-filter-field">
-              <label className="pud-product-filter-label">Class</label>
-              <select
-                className="pud-product-filter-select"
-                value={filters.class}
-                onChange={(e) => handleClassChange(e.target.value)}
-                disabled={!filters.family}
-              >
-                <option value="">
-                  {!filters.family
-                    ? "Select Family first"
-                    : loadingClasses
-                      ? "Loading..."
-                      : "Select Class"}
-                </option>
-                {classOptions.map((cls) => (
-                  <option key={cls.class} value={cls.class}>
-                    {cls.class} - {cls.classTitle}
-                  </option>
-                ))}
-              </select>
+              <Dropdown
+                label="Class"
+                placeholder={!filters.family ? "Select Family first" : "Select Class"}
+                isDisable={!filters.family}
+                isAsync
+                loadOptions={loadClassOptions}
+                cacheUniques={[filters.family]}
+                value={
+                  filters.class
+                    ? {
+                        name: `${filters.class} - ${
+                          classOptions.find((cls) => cls.class === filters.class)?.classTitle ?? ""
+                        }`,
+                        value: String(filters.class),
+                      }
+                    : null
+                }
+                onChange={(val: DropdownValue | null) => handleClassChange(val?.value ?? "")}
+              />
             </div>
 
             {/* Commodity */}
             <div className="pud-product-filter-field">
-              <label className="pud-product-filter-label">Commodity</label>
-              <select
-                className="pud-product-filter-select"
-                value={filters.commodity}
-                onChange={(e) => handleCommodityChange(e.target.value)}
-                disabled={!filters.class}
-              >
-                <option value="">
-                  {!filters.class
-                    ? "Select Class first"
-                    : loadingCommodities
-                      ? "Loading..."
-                      : "Select Commodity"}
-                </option>
-                {commodityOptions.map((com) => (
-                  <option key={com.commodity} value={com.commodity}>
-                    {com.commodity} - {com.commodityTitle}
-                  </option>
-                ))}
-              </select>
+              <Dropdown
+                label="Commodity"
+                placeholder={!filters.class ? "Select Class first" : "Select Commodity"}
+                isDisable={!filters.class}
+                isAsync
+                loadOptions={loadCommodityOptions}
+                cacheUniques={[filters.class]}
+                value={
+                  filters.commodity
+                    ? {
+                        name: `${filters.commodity} - ${
+                          commodityOptions.find((com) => com.commodity === filters.commodity)?.commodityTitle ?? ""
+                        }`,
+                        value: String(filters.commodity),
+                      }
+                    : null
+                }
+                onChange={(val: DropdownValue | null) => handleCommodityChange(val?.value ?? "")}
+              />
             </div>
           </div>
 

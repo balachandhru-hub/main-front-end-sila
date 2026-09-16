@@ -1,4 +1,6 @@
 export * from './components/Button';
+export { default as Dropdown } from './components/DropDown/DropDown';
+export * from './components/DropDown/DropDown.types';
 export * from './components/Loader';
 export * from './components/DateTimePicker/DateTimePicker';
 export { default as ToastContainer } from './ToastContainer/ToastContainer';
