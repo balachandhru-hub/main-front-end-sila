@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
-import { createPortal } from "react-dom";
+import React, { useState, useEffect, useMemo } from "react";
 import "./BuyerAdminDash.css";
 import Header from "./Header";
 import UserAdmin from "../UserAdmin";
@@ -25,13 +24,6 @@ import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
 import QuotationComparisonCard from "./QuotationComparisonCard";
 import BidComparisonAwardView from "./BidComparisonAwardView";
 import BuyerRFQChat from "../../../remote-buyer/src/components/BuyerRFQChat/BuyerRFQChat";
-import type { PendingMaterialApproval, MaterialApprovalKpi } from "./Material/materialApi";
-import { fetchPendingMaterialApprovals, fetchMaterialApprovalKpi } from "./Material/materialApi";
-import MaterialTable from "./Material/MaterialTable";
-import MaterialApprovalDetail from "./Material/MaterialApprovalDetail";
-import type { ContractRecord } from "./Contract/contractApi";
-import { fetchContracts } from "./Contract/contractApi";
-import ContractTable from "./Contract/ContractTable";
 import ItemMasterCatalog from "../../../remote-buyer/src/components/ItemMasterCatalog";
 
 interface StatCard {
@@ -253,17 +245,13 @@ const IconChevronRight = () => (
   </svg>
 );
 
-const IconChevronDown = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="6 9 12 15 18 9" />
+const IconMore = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="1" />
+    <circle cx="19" cy="12" r="1" />
+    <circle cx="5" cy="12" r="1" />
   </svg>
 );
-
-const NavIconMore = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="5" cy="12" r="1.5" />
-    <circle cx="12" cy="12" r="1.5" />
-    <circle cx="19" cy="12" r="1.5" />
 
 const IconGlobe = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -294,27 +282,7 @@ const NavIconFilePlus = () => (
   </svg>
 );
 
-// A dropdown's subItems can be a flat, clickable leaf (like Configuration's
-// Templates) or a non-clickable group label with its own nested leaves
-// (like More's "Approval" grouping Material + Contract). Structuring it
-// this way lets More grow additional top-level entries or additional groups
-// later without changing the rendering logic.
-interface NavLeaf {
-  key: string;
-  label: string;
-}
-interface NavGroup {
-  label: string;
-  items: NavLeaf[];
-}
-type NavSubEntry = NavLeaf | NavGroup;
-
-const isNavGroup = (entry: NavSubEntry): entry is NavGroup => 'items' in entry;
-
-const collectSubEntryKeys = (entries: NavSubEntry[]): string[] =>
-  entries.flatMap((entry) => (isNavGroup(entry) ? collectSubEntryKeys(entry.items) : [entry.key]));
-
-const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number; subItems?: NavSubEntry[]; chevronIcon?: React.ReactNode }[] = [
+const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number; subItems?: { key: string; label: string }[] }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard", section: "MAIN" },
   { key: "invitations", icon: <IconMail />, label: "Invitations", section: "SOURCING & ORDERS" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
@@ -331,19 +299,11 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
   },
   {
     key: "more",
-    icon: <NavIconMore />,
+    icon: <IconMore />,
     label: "More",
-    chevronIcon: <IconChevronDown />,
     subItems: [
-      {
-        label: "Approval",
-        items: [
-          { key: "material", label: "Material" },
-          { key: "contract", label: "Contract" }
-        ]
-      }
-        { key: "material & service", label: "material & service" },
-    ]
+      { key: "material", label: "Material" },
+    ],
   },
 ];
 
@@ -461,36 +421,6 @@ const BuyerAdminDash: React.FC = () => {
   const RFQ_INITIAL_VISIBLE = 3;
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
-  // The "More" flyout is portaled to document.body (see render below) because
-  // .bad-sidebar has overflow-y: auto, which — per the CSS spec — forces
-  // overflow-x to clip too, silently hiding an absolutely-positioned dropdown
-  // that would otherwise extend past the sidebar's edge (as the nested
-  // Approval -> Material/Contract flyout does). Portaling escapes that.
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
-  const [moreMenuPos, setMoreMenuPos] = useState<{ top: number; left: number } | null>(null);
-  const moreTriggerRef = useRef<HTMLDivElement>(null);
-
-  const closeMoreMenu = () => setMoreMenuOpen(false);
-
-  const toggleMoreMenu = () => {
-    if (!moreMenuOpen && moreTriggerRef.current) {
-      const rect = moreTriggerRef.current.getBoundingClientRect();
-      setMoreMenuPos({ top: rect.bottom + 4, left: rect.left });
-    }
-    setMoreMenuOpen((prev) => !prev);
-  };
-
-  useEffect(() => {
-    if (!moreMenuOpen) return;
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (moreTriggerRef.current && !moreTriggerRef.current.contains(e.target as Node)) {
-        closeMoreMenu();
-      }
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [moreMenuOpen]);
-
   const [templates, setTemplates] = useState<VerificationTemplate[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
@@ -599,85 +529,6 @@ const refreshRfqs = async () => {
     }
   }, [activeNav]);
 
-  const currentUserId = currentUser?.userId || currentUser?.id || null;
-
-  const [materialRecords, setMaterialRecords] = useState<PendingMaterialApproval[]>([]);
-  const [loadingMaterial, setLoadingMaterial] = useState(false);
-  const [materialError, setMaterialError] = useState<string | null>(null);
-  const [selectedMaterial, setSelectedMaterial] = useState<PendingMaterialApproval | null>(null);
-
-  const [materialStatusFilter, setMaterialStatusFilter] = useState("");
-  // Raw input updates every keystroke; materialSearchTerm is the debounced
-  // value that actually drives the API call (and Enter fast-forwards it).
-  const [materialSearchInput, setMaterialSearchInput] = useState("");
-  const [materialSearchTerm, setMaterialSearchTerm] = useState("");
-
-  const [materialKpi, setMaterialKpi] = useState<MaterialApprovalKpi | null>(null);
-  const [loadingMaterialKpi, setLoadingMaterialKpi] = useState(false);
-
-  useEffect(() => {
-    const handle = setTimeout(() => setMaterialSearchTerm(materialSearchInput), 400);
-    return () => clearTimeout(handle);
-  }, [materialSearchInput]);
-
-  const loadMaterialApprovals = () => {
-    setLoadingMaterial(true);
-    setMaterialError(null);
-    fetchPendingMaterialApprovals({ status: materialStatusFilter, searchTerm: materialSearchTerm })
-      .then(setMaterialRecords)
-      .catch((err: any) => {
-        setMaterialError(err.message || "Failed to load material approvals.");
-        setMaterialRecords([]);
-      })
-      .finally(() => setLoadingMaterial(false));
-  };
-
-  // Loaded independently from the list/search/status so typing in the
-  // search box (or switching the status filter) never triggers a KPI refetch.
-  const loadMaterialKpi = () => {
-    setLoadingMaterialKpi(true);
-    fetchMaterialApprovalKpi()
-      .then(setMaterialKpi)
-      .catch((err: any) => toastService.error(err.message || "Failed to load approval summary counts."))
-      .finally(() => setLoadingMaterialKpi(false));
-  };
-
-  useEffect(() => {
-    if (activeNav !== "material") return;
-    setSelectedMaterial(null);
-    loadMaterialKpi();
-  }, [activeNav]);
-
-  useEffect(() => {
-    if (activeNav !== "material") return;
-    loadMaterialApprovals();
-  }, [activeNav, materialStatusFilter, materialSearchTerm]);
-
-  // After a successful Approve/Reject the record generally no longer belongs
-  // in the pending list, so return to the (refreshed) list rather than show
-  // a now-stale detail page; KPI counts shift too, so refresh those as well.
-  const handleMaterialApprovalSubmitted = () => {
-    setSelectedMaterial(null);
-    loadMaterialApprovals();
-    loadMaterialKpi();
-  };
-
-  const [contractRecords, setContractRecords] = useState<ContractRecord[]>([]);
-  const [loadingContract, setLoadingContract] = useState(false);
-  const [contractError, setContractError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (activeNav !== "contract") return;
-    setLoadingContract(true);
-    setContractError(null);
-    fetchContracts()
-      .then(setContractRecords)
-      .catch((err: any) => {
-        setContractError(err.message || "Failed to load contract approvals.");
-        setContractRecords([]);
-      })
-      .finally(() => setLoadingContract(false));
-  }, [activeNav]);
 
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail" | "qsAns" | "quotationComparison">("dashboard");
 
@@ -895,93 +746,27 @@ const refreshRfqs = async () => {
                 {item.section && (
                   <div className="bad-nav-section-title">{item.section}</div>
                 )}
-                {item.subItems && item.key === "more" ? (
-                  <div className="bad-nav-flyout-trigger" ref={moreTriggerRef}>
-                    <div
-                      className={`bad-nav-item${activeNav === item.key || collectSubEntryKeys(item.subItems).includes(activeNav) || moreMenuOpen ? " bad-nav-item-active" : ""}`}
-                      onClick={toggleMoreMenu}
-                    >
-                      <span className="bad-nav-icon">{item.icon}</span>
-                      <span className="bad-nav-label">{item.label}</span>
-                      <span className="bad-nav-chevron">
-                        {item.chevronIcon || <IconChevronRight />}
-                      </span>
-                    </div>
-                    {moreMenuOpen && moreMenuPos && createPortal(
-                      <div
-                        className="bad-nav-flyout-menu bad-nav-flyout-menu-portal"
-                        style={{ top: moreMenuPos.top, left: moreMenuPos.left }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                      >
-                        {item.subItems.map((entry, entryIdx) =>
-                          isNavGroup(entry) ? (
-                            <div key={`${item.key}-group-${entryIdx}`} className="bad-nav-flyout-trigger">
-                              <div className="bad-nav-flyout-item bad-nav-flyout-item-parent">
-                                <span>{entry.label}</span>
-                                <span className="bad-nav-flyout-arrow"><IconChevronRight /></span>
-                              </div>
-                              <div className="bad-nav-flyout-menu bad-nav-flyout-menu-nested">
-                                {entry.items.map(leaf => (
-                                  <div
-                                    key={leaf.key}
-                                    onClick={() => { handleNavClick(leaf.key); closeMoreMenu(); }}
-                                    className={`bad-nav-flyout-item${activeNav === leaf.key ? " bad-nav-flyout-item-active" : ""}`}
-                                  >
-                                    {leaf.label}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : (
-                            <div
-                              key={entry.key}
-                              onClick={() => { handleNavClick(entry.key); closeMoreMenu(); }}
-                              className={`bad-nav-flyout-item${activeNav === entry.key ? " bad-nav-flyout-item-active" : ""}`}
-                            >
-                              {entry.label}
-                            </div>
-                          )
-                        )}
-                      </div>,
-                      document.body
-                    )}
-                  </div>
-                ) : item.subItems ? (
+                {item.subItems ? (
                   <div className="bad-nav-dropdown-container">
                     <div
-                      className={`bad-nav-item${activeNav === item.key || collectSubEntryKeys(item.subItems).includes(activeNav) ? " bad-nav-item-active" : ""}`}
+                      className={`bad-nav-item${activeNav === item.key || item.subItems.some(sub => sub.key === activeNav) ? " bad-nav-item-active" : ""}`}
                     >
                       <span className="bad-nav-icon">{item.icon}</span>
                       <span className="bad-nav-label">{item.label}</span>
                       <span className="bad-nav-chevron">
-                        {item.chevronIcon || <IconChevronRight />}
+                        <IconChevronRight />
                       </span>
                     </div>
                     <div className="bad-nav-dropdown-menu">
-                      {item.subItems.map((entry, entryIdx) =>
-                        isNavGroup(entry) ? (
-                          <div key={`${item.key}-group-${entryIdx}`} className="bad-nav-subgroup">
-                            <div className="bad-nav-subgroup-title">{entry.label}</div>
-                            {entry.items.map(leaf => (
-                              <div
-                                key={leaf.key}
-                                onClick={() => handleNavClick(leaf.key)}
-                                className={`bad-nav-subitem bad-nav-subitem-nested${activeNav === leaf.key ? " bad-nav-subitem-active" : ""}`}
-                              >
-                                {leaf.label}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div
-                            key={entry.key}
-                            onClick={() => handleNavClick(entry.key)}
-                            className={`bad-nav-subitem${activeNav === entry.key ? " bad-nav-subitem-active" : ""}`}
-                          >
-                            {entry.label}
-                          </div>
-                        )
-                      )}
+                      {item.subItems.map(subItem => (
+                        <div
+                          key={subItem.key}
+                          onClick={() => handleNavClick(subItem.key)}
+                          className={`bad-nav-subitem${activeNav === subItem.key ? " bad-nav-subitem-active" : ""}`}
+                        >
+                          {subItem.label}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ) : (
@@ -1046,36 +831,7 @@ const refreshRfqs = async () => {
             ) : activeNav === "approvalManagement" ? (
               <ApprovalManagement />
             ) : activeNav === "material" ? (
-              selectedMaterial ? (
-                <MaterialApprovalDetail
-                  material={selectedMaterial}
-                  currentUserId={currentUserId}
-                  onBack={() => setSelectedMaterial(null)}
-                  onApprovalSubmitted={handleMaterialApprovalSubmitted}
-                />
-              ) : (
-                <MaterialTable
-                  records={materialRecords}
-                  loading={loadingMaterial}
-                  error={materialError}
-                  onRowClick={setSelectedMaterial}
-                  kpi={materialKpi}
-                  loadingKpi={loadingMaterialKpi}
-                  statusFilter={materialStatusFilter}
-                  onStatusFilterChange={setMaterialStatusFilter}
-                  searchInput={materialSearchInput}
-                  onSearchInputChange={setMaterialSearchInput}
-                  onSearchSubmit={() => setMaterialSearchTerm(materialSearchInput)}
-                />
-              )
-            ) : activeNav === "material & service" ? (
-               <ItemMasterCatalog buyerId={buyerId || ""} />
-             ): activeNav === "contract" ? (
-              <ContractTable
-                records={contractRecords}
-                loading={loadingContract}
-                error={contractError}
-              />
+              <ItemMasterCatalog buyerId={buyerId || ""} />
             ) : activeNav === "createRFQ" ? (
               <CreateRFQ onNavClick={handleNavClick} onRfqCreated={refreshRfqs}/>
             ) : activeNav === "product" ? (
