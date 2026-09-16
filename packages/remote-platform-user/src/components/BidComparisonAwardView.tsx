@@ -1,18 +1,71 @@
 import React, { useState, useMemo, useEffect } from "react";
 import "./BidComparisonAward.css";
 import { Button } from "@vosox/shared-ui";
+import { fetchBuyerAsset } from "../../../remote-buyer/src/api/Buyerapi";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, LabelList
 } from "recharts";
-
-
 
 const IconMessageSquare = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   </svg>
 );
+
+const IconEye = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+const IconDownload = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+
+const IconFile = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <path d="M14 2v6h6" />
+    <path d="M8 13h8M8 17h8M8 9h2" />
+  </svg>
+);
+
+const IconClose = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const getInitials = (name: string) =>
+  (name || "?")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() || "")
+    .join("") || "?";
+
+const formatQuestionType = (type?: string) => {
+  if (!type) return "Text";
+  const normalized = String(type).toLowerCase();
+  const labels: Record<string, string> = {
+    text: "Text",
+    textarea: "Long text",
+    checkbox: "Checkbox",
+    radio: "Single choice",
+    select: "Dropdown",
+    file: "File",
+    number: "Number",
+    date: "Date",
+  };
+  return labels[normalized] || normalized.charAt(0).toUpperCase() + normalized.slice(1);
+};
 
 const ChartTooltip = ({ active, payload }: any) => {
   if (!active || !payload || !payload.length) return null;
@@ -52,6 +105,87 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [autoSelected, setAutoSelected] = useState(false);
   const [expandedSuppliers, setExpandedSuppliers] = useState<Record<string, boolean>>({});
+  const [viewingDoc, setViewingDoc] = useState<{ fileName: string; url: string; contentType: string } | null>(null);
+  const [loadingDocId, setLoadingDocId] = useState<string | null>(null);
+
+  const questions: any[] = useMemo(() => Array.isArray(rfq?.questions) ? rfq.questions : [], [rfq]);
+
+  const qaSuppliers: any[] = useMemo(() => {
+    if (Array.isArray(rfq?.supplierAnswers?.suppliers) && rfq.supplierAnswers.suppliers.length > 0) {
+      return rfq.supplierAnswers.suppliers;
+    }
+    if (Array.isArray(rfq?.supplierQuotation)) {
+      return rfq.supplierQuotation;
+    }
+    return [];
+  }, [rfq]);
+
+  const getAnswerForQuestion = (supplier: any, question: any) => {
+    const questionId = question?.id ?? question?.rfqQuestionId;
+    const answerList = Array.isArray(supplier?.answers) ? supplier.answers : Array.isArray(supplier?.supplierAnswers) ? supplier.supplierAnswers : [];
+    return answerList.find((a: any) => a?.rfqQuestionId === questionId || a?.questionId === questionId) || null;
+  };
+
+  const handleDocumentAction = async (doc: any, action: 'preview' | 'download') => {
+    const assetId = doc.id || doc.assetId;
+    if (!assetId) {
+      alert("Document asset ID is missing.");
+      return;
+    }
+    try {
+      setLoadingDocId(assetId);
+      const data: any = await fetchBuyerAsset(assetId);
+      if (data && 'statusCode' in data && data.statusCode) {
+        throw new Error(data.message || 'Failed to fetch document.');
+      }
+
+      const fileBytes = data.fileBytes;
+      const fileName = data.fileName || doc.fileName || doc.assetName || "document";
+      const rawType = (data.contentType || data.fileType || doc.fileType || "pdf").toLowerCase();
+
+      let mimeType = "application/pdf";
+      if (rawType.includes("pdf")) mimeType = "application/pdf";
+      else if (rawType.includes("png")) mimeType = "image/png";
+      else if (rawType.includes("jpg") || rawType.includes("jpeg")) mimeType = "image/jpeg";
+      else if (rawType.includes("txt")) mimeType = "text/plain";
+      else if (rawType.includes("doc")) mimeType = "application/msword";
+
+      let url = data.url || data.fileUrl;
+      let createdBlobUrl = "";
+
+      if (fileBytes) {
+        const cleanBase64 = fileBytes.replace(/^data:.*?;base64,/, '');
+        const byteCharacters = atob(cleanBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mimeType });
+        createdBlobUrl = URL.createObjectURL(blob);
+        url = createdBlobUrl;
+      }
+
+      if (!url) {
+        throw new Error("Document content not available.");
+      }
+
+      if (action === 'preview') {
+        setViewingDoc({ fileName, url, contentType: mimeType });
+      } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (err: any) {
+      alert(err?.message || "Could not access document.");
+    } finally {
+      setLoadingDocId(null);
+    }
+  };
   const isBidFrozen = rfq?.status === "Freezing" || rfq?.status === "Frozen";
   const isLotOption = !!rfq?.addLotOption;
   const quotations: any[] = useMemo(() => {
@@ -875,6 +1009,222 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           );
         })()}
       </div>
+
+      {/* RFQ Documents Section */}
+      {((rfq?.technicalSpecificationDocuments && rfq.technicalSpecificationDocuments.length > 0) ||
+        (rfq?.termsConditionDocuments && rfq.termsConditionDocuments.length > 0)) && (
+        <div className="bca-section-card">
+          <div className="bca-section-header">
+            <h3 className="bca-section-title">RFQ Documents</h3>
+            <p className="bca-section-sub">Technical specifications, requirements, and Terms &amp; Conditions documents attached to this RFQ.</p>
+          </div>
+
+          {/* Technical Specification Documents */}
+          {rfq?.technicalSpecificationDocuments && rfq.technicalSpecificationDocuments.length > 0 && (
+            <div style={{ marginBottom: rfq?.termsConditionDocuments && rfq.termsConditionDocuments.length > 0 ? '24px' : '0' }}>
+              <div className="bca-doc-group-title">
+                <span className="bca-doc-icon bca-doc-icon-blue" style={{ width: '28px', height: '28px' }}><IconFile /></span>
+                Technical Specification Documents
+              </div>
+              <div className="bca-docs-grid" style={{ marginTop: '12px' }}>
+                {rfq.technicalSpecificationDocuments.map((doc: any, i: number) => (
+                  <div key={`tech-${i}`} className="bca-doc-card">
+                    <div className="bca-doc-info">
+                      <div className="bca-doc-icon bca-doc-icon-blue"><IconFile /></div>
+                      <div style={{ overflow: 'hidden' }}>
+                        <div className="bca-doc-name" title={doc.fileName || doc.assetName}>{doc.fileName || doc.assetName || `Tech Spec Document ${i + 1}`}</div>
+                        <div className="bca-doc-type">Tech Spec Doc</div>
+                      </div>
+                    </div>
+                    <div className="bca-doc-actions">
+                      <button
+                        type="button"
+                        className="bca-doc-action-btn bca-doc-eye"
+                        title="Preview document"
+                        disabled={loadingDocId === (doc.id || doc.assetId)}
+                        onClick={() => handleDocumentAction(doc, 'preview')}
+                      >
+                        <IconEye />
+                      </button>
+                      <button
+                        type="button"
+                        className="bca-doc-action-btn bca-doc-download"
+                        title="Download document"
+                        disabled={loadingDocId === (doc.id || doc.assetId)}
+                        onClick={() => handleDocumentAction(doc, 'download')}
+                      >
+                        <IconDownload />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Terms & Conditions Documents */}
+          {rfq?.termsConditionDocuments && rfq.termsConditionDocuments.length > 0 && (
+            <div>
+              <div className="bca-doc-group-title">
+                <span className="bca-doc-icon bca-doc-icon-amber" style={{ width: '28px', height: '28px' }}><IconFile /></span>
+                Terms &amp; Conditions Documents
+              </div>
+              <div className="bca-docs-grid" style={{ marginTop: '12px' }}>
+                {rfq.termsConditionDocuments.map((doc: any, i: number) => (
+                  <div key={`terms-${i}`} className="bca-doc-card">
+                    <div className="bca-doc-info">
+                      <div className="bca-doc-icon bca-doc-icon-amber"><IconFile /></div>
+                      <div style={{ overflow: 'hidden' }}>
+                        <div className="bca-doc-name" title={doc.fileName || doc.assetName}>{doc.fileName || doc.assetName || `Terms Document ${i + 1}`}</div>
+                        <div className="bca-doc-type">Terms &amp; Conditions</div>
+                      </div>
+                    </div>
+                    <div className="bca-doc-actions">
+                      <button
+                        type="button"
+                        className="bca-doc-action-btn bca-doc-eye"
+                        title="Preview document"
+                        disabled={loadingDocId === (doc.id || doc.assetId)}
+                        onClick={() => handleDocumentAction(doc, 'preview')}
+                      >
+                        <IconEye />
+                      </button>
+                      <button
+                        type="button"
+                        className="bca-doc-action-btn bca-doc-download"
+                        title="Download document"
+                        disabled={loadingDocId === (doc.id || doc.assetId)}
+                        onClick={() => handleDocumentAction(doc, 'download')}
+                      >
+                        <IconDownload />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Evaluation Questions & Answers Section */}
+      {questions.length > 0 && qaSuppliers.length > 0 && (
+        <div className="bca-section-card">
+          <div className="bca-section-header">
+            <h3 className="bca-section-title">Evaluation Questions &amp; Answers</h3>
+            <p className="bca-section-sub">Responses submitted by each supplier for this RFQ.</p>
+          </div>
+
+          <div className="bca-qa-suppliers">
+            {qaSuppliers.map((supplier: any, sIdx: number) => {
+              const displayName = supplier?.supplierName || supplier?.organizationName || `Supplier ${sIdx + 1}`;
+              const answeredCount = questions.filter((q: any) => {
+                const match = getAnswerForQuestion(supplier, q);
+                return Boolean(
+                  (match?.answer && String(match.answer).trim() !== "") || match?.attachment?.fileName || match?.attachment?.id
+                );
+              }).length;
+
+              return (
+                <div
+                  className="bca-qa-supplier-card"
+                  key={supplier?.supplierRFQId ? `${supplier.supplierRFQId}-${sIdx}` : sIdx}
+                >
+                  <div className="bca-qa-supplier-header">
+                    <div className="bca-qa-supplier-left">
+                      <span className="bca-qa-supplier-avatar">{getInitials(displayName)}</span>
+                      <span className="bca-qa-supplier-name">{displayName}</span>
+                    </div>
+                    <span className="bca-qa-supplier-badge">
+                      {answeredCount}/{questions.length} answered
+                    </span>
+                  </div>
+
+                  <div className="bca-qa-list">
+                    {questions.map((q: any, qIdx: number) => {
+                      const match = getAnswerForQuestion(supplier, q);
+                      const display =
+                        match?.answer && String(match.answer).trim() !== ""
+                          ? match.answer
+                          : match?.attachment?.fileName || "";
+
+                      return (
+                        <div className="bca-qa-item" key={q.id || qIdx}>
+                          <div className="bca-qa-question-row">
+                            <div className="bca-qa-question-left">
+                              <span className="bca-qa-index">Q{qIdx + 1}</span>
+                              <span className="bca-qa-question-text">{q.question}</span>
+                            </div>
+                            <div className="bca-qa-tags">
+                              {q.isRequired && <span className="bca-qa-req-badge">Required</span>}
+                              <span className="bca-qa-type-badge">{formatQuestionType(q.questionType)}</span>
+                            </div>
+                          </div>
+
+                          {display || match?.attachment ? (
+                            <div className="bca-qa-answer-box">
+                              <span>{display}</span>
+                              {match?.attachment && (
+                                <div className="bca-doc-actions">
+                                  <button
+                                    type="button"
+                                    className="bca-doc-action-btn bca-doc-eye"
+                                    title="Preview attachment"
+                                    onClick={() => handleDocumentAction(match.attachment, 'preview')}
+                                  >
+                                    <IconEye />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="bca-doc-action-btn bca-doc-download"
+                                    title="Download attachment"
+                                    onClick={() => handleDocumentAction(match.attachment, 'download')}
+                                  >
+                                    <IconDownload />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="bca-qa-empty-text">No response yet.</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Document Preview Overlay Modal */}
+      {viewingDoc && (
+        <div className="bca-modal-overlay">
+          <div className="bca-doc-viewer-modal">
+            <div className="bca-doc-viewer-header">
+              <span className="bca-doc-viewer-title">{viewingDoc.fileName}</span>
+              <button
+                className="bca-back-circle-btn"
+                onClick={() => {
+                  if (viewingDoc.url.startsWith('blob:')) {
+                    URL.revokeObjectURL(viewingDoc.url);
+                  }
+                  setViewingDoc(null);
+                }}
+              >
+                <IconClose />
+              </button>
+            </div>
+            <iframe
+              src={viewingDoc.url}
+              title={viewingDoc.fileName}
+              className="bca-doc-viewer-iframe"
+            />
+          </div>
+        </div>
+      )}
 
       <div className="bca-bottom-bar">
         <div className="bca-bottom-left">
