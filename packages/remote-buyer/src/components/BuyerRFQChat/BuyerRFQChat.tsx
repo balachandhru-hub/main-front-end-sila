@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./BuyerRFQChat.css";
 import type { RfqSupplierRefDto } from "../../dto/rfqDto";
 import type { ChatMessageDto, ChatThreadDto } from "../../dto/chatDto";
@@ -17,6 +17,7 @@ import ChatDetails from "./ChatDetails";
 import type { ChatSupplier, ObservedParticipant } from "./types";
 import { downloadBase64File, fileToBase64, formatThreadTime, getInitials } from "./chatUtils";
 import { IconClose, IconMessageSquare } from "./ChatIcons";
+import { startRfqChatHub, stopRfqChatHub } from "../../signalr/rfqChatHub";
 
 const HISTORY_PAGE_LIMIT = 20;
 
@@ -62,6 +63,10 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
 
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<string | null>(null);
+
+  // Read inside the SignalR handler (registered once per rfqId) so it always
+  // sees the currently open thread without reconnecting on every supplier switch.
+  const selectedThreadIdRef = useRef<string | null>(null);
 
   // One chat thread per supplier. `supplierIds` from the RFQ is the ONLY
   // source for which suppliers appear here — a matching thread (if any) is
@@ -145,6 +150,82 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
     return () => {
       cancelled = true;
     };
+  }, [rfqId]);
+
+  useEffect(() => {
+    selectedThreadIdRef.current = currentSupplier?.thread?.threadId || null;
+  }, [currentSupplier]);
+
+  // Routes a live SignalR message into the open conversation (if it belongs to
+  // the thread currently on screen) and/or the supplier list preview/unread
+  // count. Uses a ref for the selected thread instead of a dependency so the
+  // hub connection below doesn't need to be recreated every time the buyer
+  // switches suppliers.
+  const handleIncomingMessages = (payload: ChatMessageDto | ChatMessageDto[]) => {
+    const incoming = Array.isArray(payload) ? payload : [payload];
+    if (incoming.length === 0) return;
+
+    const openThreadId = selectedThreadIdRef.current;
+    console.log("[BuyerRFQChat] Incoming SignalR payload:", {
+      incomingCount: incoming.length,
+      openThreadId,
+      incomingThreadIds: incoming.map((m) => m.threadId),
+    });
+
+    setMessages((prev) => {
+      const existingIds = new Set(prev.map((m) => m.id));
+      const forOpenThread = incoming.filter(
+        (m) => m.threadId === openThreadId && !existingIds.has(m.id)
+      );
+      return forOpenThread.length > 0 ? [...prev, ...forOpenThread] : prev;
+    });
+
+    if (incoming.some((m) => m.threadId === openThreadId)) {
+      setScrollTick((t) => t + 1);
+    }
+
+    let hasUnknownThread = false;
+    setThreads((prev) => {
+      const next = [...prev];
+      incoming.forEach((message) => {
+        const idx = next.findIndex((t) => t.threadId === message.threadId);
+        if (idx === -1) {
+          hasUnknownThread = true;
+          return;
+        }
+        const isOpenThread = message.threadId === openThreadId;
+        next[idx] = {
+          ...next[idx],
+          lastMessageBody: message.body || (message.attachments?.length ? "Sent an attachment" : ""),
+          lastMessageAt: message.dateCreated,
+          unreadCount: isOpenThread ? 0 : next[idx].unreadCount + 1,
+        };
+      });
+      return next;
+    });
+
+    // A message for a thread this panel hasn't seen yet (e.g. a supplier's
+    // first reply) — refresh the thread list from the existing REST endpoint
+    // rather than guessing at a new ChatThreadDto's fields.
+    if (hasUnknownThread) {
+      fetchBuyerMessageThreads(rfqId)
+        .then((data) => setThreads(data))
+        .catch((err) => {
+          console.error("[BuyerRFQChat] Failed to refresh threads after an unrecognized SignalR message:", err);
+        });
+    }
+  };
+
+  useEffect(() => {
+    startRfqChatHub({ rfqId }, handleIncomingMessages).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error("[BuyerRFQChat] SignalR connection failed:", err);
+    });
+
+    return () => {
+      stopRfqChatHub();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rfqId]);
 
   useEffect(() => {
@@ -256,7 +337,9 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
         attachments,
       });
 
-      setMessages((prev) => [...prev, response]);
+      // The SignalR broadcast for this same message can arrive before this
+      // REST response does — dedup by id so it isn't appended twice.
+      setMessages((prev) => (prev.some((m) => m.id === response.id) ? prev : [...prev, response]));
 
       setThreads((prev) => {
         const idx = prev.findIndex((t) => t.supplierId === selectedSupplierId);
