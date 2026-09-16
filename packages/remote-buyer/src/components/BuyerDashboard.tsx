@@ -3,6 +3,7 @@ import "./BuyerDashBoard.css";
 import CreateRFQ from "./Create_RFQ.tsx";
 import Product from "./Product.tsx";
 import Models from "./Models.tsx";
+import ItemMasterCatalog from "./ItemMasterCatalog.tsx";
 import Header from "./Header";
 import QsAns from "./Qsans.tsx";
 import QuotationSummaryTable from "./QuotationSummaryTable.tsx";
@@ -123,6 +124,14 @@ const NavIconModels = () => (
     <rect x="14" y="3" width="7" height="7" rx="1" />
     <rect x="3" y="14" width="7" height="7" rx="1" />
     <rect x="14" y="14" width="7" height="7" rx="1" />
+  </svg>
+);
+
+const NavIconMore = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="1" />
+    <circle cx="19" cy="12" r="1" />
+    <circle cx="5" cy="12" r="1" />
   </svg>
 );
 
@@ -257,11 +266,19 @@ const NavIconFileCheck = () => (
 
 /* ---------------------------------- Static data ---------------------------------- */
 
-const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number }[] = [
+const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number; subItems?: { key: string; label: string }[] }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard", section: "MAIN" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ", section: "SOURCING & ORDERS" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog", section: "DIRECTORY & CATALOG" },
   { key: "models", icon: <NavIconModels />, label: "Models" },
+  {
+    key: "more",
+    icon: <NavIconMore />,
+    label: "More",
+    subItems: [
+      { key: "material", label: "Material" },
+    ],
+  },
 ];
 
 interface StatCard {
@@ -785,14 +802,39 @@ const BuyersDashboard: React.FC = () => {
                 {item.section && (
                   <div className="pud-nav-section-title">{item.section}</div>
                 )}
-                <div
-                  className={`pud-nav-item${activeNav === item.key ? " pud-nav-item-active" : ""}`}
-                  onClick={() => handleNavClick(item.key)}
-                >
-                  <span className="pud-nav-icon">{item.icon}</span>
-                  <span className="pud-nav-label">{item.label}</span>
-                  {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
-                </div>
+                {item.subItems ? (
+                  <div className="pud-nav-dropdown-container">
+                    <div
+                      className={`pud-nav-item${activeNav === item.key || item.subItems.some((sub) => sub.key === activeNav) ? " pud-nav-item-active" : ""}`}
+                    >
+                      <span className="pud-nav-icon">{item.icon}</span>
+                      <span className="pud-nav-label">{item.label}</span>
+                      <span className="pud-nav-chevron">
+                        <IconChevronRight />
+                      </span>
+                    </div>
+                    <div className="pud-nav-dropdown-menu">
+                      {item.subItems.map((subItem) => (
+                        <div
+                          key={subItem.key}
+                          onClick={() => handleNavClick(subItem.key)}
+                          className={`pud-nav-subitem${activeNav === subItem.key ? " pud-nav-subitem-active" : ""}`}
+                        >
+                          {subItem.label}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={`pud-nav-item${activeNav === item.key ? " pud-nav-item-active" : ""}`}
+                    onClick={() => handleNavClick(item.key)}
+                  >
+                    <span className="pud-nav-icon">{item.icon}</span>
+                    <span className="pud-nav-label">{item.label}</span>
+                    {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
+                  </div>
+                )}
               </React.Fragment>
             ))}
             <div
@@ -826,6 +868,8 @@ const BuyersDashboard: React.FC = () => {
               <Models />
             ) : activeNav === "template" ? (
               <UserTemplate />
+            ) : activeNav === "material" ? (
+              <ItemMasterCatalog buyerId={buyerId || ""} />
             ) : rfqPageView === "allRfqs" ? (
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.03)' }}>
                 <div style={{ marginBottom: '20px' }}>

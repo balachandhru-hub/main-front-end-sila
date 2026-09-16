@@ -46,11 +46,18 @@ const IconLogOut = () => (
   </svg>
 );
 
+const IconChevronDown = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
 export interface HeaderNavItem {
   key: string;
   icon?: React.ReactNode;
   label: string;
   badge?: number;
+  subItems?: { key: string; label: string }[];
 }
 
 export interface HeaderProps {
@@ -107,6 +114,39 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
   }, []);
 
   const firstLetter = userName ? userName.trim().charAt(0).toUpperCase() : '';
+
+  const [openNavDropdown, setOpenNavDropdown] = useState<string | null>(null);
+  const [navDropdownPos, setNavDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const navItemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const closeDropdownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearCloseDropdownTimeout = () => {
+    if (closeDropdownTimeoutRef.current) {
+      clearTimeout(closeDropdownTimeoutRef.current);
+      closeDropdownTimeoutRef.current = null;
+    }
+  };
+
+  const handleNavDropdownEnter = (key: string) => {
+    clearCloseDropdownTimeout();
+    const el = navItemRefs.current[key];
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      setNavDropdownPos({ top: rect.bottom, left: rect.left });
+    }
+    setOpenNavDropdown(key);
+  };
+
+  const handleNavDropdownLeave = () => {
+    clearCloseDropdownTimeout();
+    closeDropdownTimeoutRef.current = setTimeout(() => {
+      setOpenNavDropdown(null);
+    }, 150);
+  };
+
+  useEffect(() => {
+    return () => clearCloseDropdownTimeout();
+  }, []);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -169,17 +209,59 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
 
       {navItems && navItems.length > 0 && (
         <nav className="vsx-header-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`vsx-header-nav-item${activeNav === item.key ? " vsx-header-nav-item-active" : ""}`}
-              onClick={() => onNavClick && onNavClick(item.key)}
-            >
-              <span className="vsx-header-nav-label">{item.label}</span>
-              {item.badge ? <span className="vsx-header-nav-badge">{item.badge}</span> : null}
-            </button>
-          ))}
+          {navItems.map((item) =>
+            item.subItems && item.subItems.length > 0 ? (
+              <div
+                key={item.key}
+                ref={(el) => { navItemRefs.current[item.key] = el; }}
+                className="vsx-header-nav-dropdown"
+                onMouseEnter={() => handleNavDropdownEnter(item.key)}
+                onMouseLeave={handleNavDropdownLeave}
+              >
+                <button
+                  type="button"
+                  className={`vsx-header-nav-item${activeNav === item.key || item.subItems.some((sub) => sub.key === activeNav) ? " vsx-header-nav-item-active" : ""}`}
+                  onClick={() => onNavClick && onNavClick(item.key)}
+                >
+                  <span className="vsx-header-nav-label">{item.label}</span>
+                  <span className="vsx-header-nav-chevron"><IconChevronDown /></span>
+                </button>
+
+                {openNavDropdown === item.key && navDropdownPos && (
+                  <div
+                    className="vsx-header-nav-dropdown-menu"
+                    style={{ top: navDropdownPos.top, left: navDropdownPos.left }}
+                    onMouseEnter={() => handleNavDropdownEnter(item.key)}
+                    onMouseLeave={handleNavDropdownLeave}
+                  >
+                    {item.subItems.map((subItem) => (
+                      <button
+                        key={subItem.key}
+                        type="button"
+                        className={`vsx-header-nav-subitem${activeNav === subItem.key ? " vsx-header-nav-subitem-active" : ""}`}
+                        onClick={() => {
+                          setOpenNavDropdown(null);
+                          onNavClick && onNavClick(subItem.key);
+                        }}
+                      >
+                        {subItem.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                key={item.key}
+                type="button"
+                className={`vsx-header-nav-item${activeNav === item.key ? " vsx-header-nav-item-active" : ""}`}
+                onClick={() => onNavClick && onNavClick(item.key)}
+              >
+                <span className="vsx-header-nav-label">{item.label}</span>
+                {item.badge ? <span className="vsx-header-nav-badge">{item.badge}</span> : null}
+              </button>
+            )
+          )}
         </nav>
       )}
 
