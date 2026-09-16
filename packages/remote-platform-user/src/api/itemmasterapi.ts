@@ -7,6 +7,16 @@ export interface ItemMasterDto {
   description: string;
   materialCode: string;
   materialGroup: string;
+  productType?: string;
+  baseUnitOfMeasure?: string;
+  orderUnitOfMeasure?: string;
+  alternateUnitOfMeasure?: string;
+  valuationClass?: string;
+  unitOfMeasureMapping?: string;
+  subUnit?: string;
+  microUnit?: string;
+  approvalFlowId?: string;
+  comment?: string;
 }
 
 export interface CreateItemMasterRequestDto {
@@ -14,7 +24,54 @@ export interface CreateItemMasterRequestDto {
   description: string;
   materialCode: string;
   materialGroup: string;
+  productType?: string;
+  baseUnitOfMeasure?: string;
+  orderUnitOfMeasure?: string;
+  alternateUnitOfMeasure?: string;
+  valuationClass?: string;
+  unitOfMeasureMapping?: string;
+  subUnit?: string;
+  microUnit?: string;
+  approvalFlowId?: string;
+  comment?: string;
 }
+
+export interface MasterApprovalFlowDto {
+  id: string;
+  approvalCode: string;
+  approvalName: string;
+  buyerId: string;
+}
+
+// ─── Get Master Approval Flows ───
+export const getMasterApprovalFlows = async (
+  buyerId: string,
+  index: number = 0,
+  limit: number = 10
+): Promise<MasterApprovalFlowDto[]> => {
+  try {
+    const response = await platformInstance.get('/api/v1/buyer/master-approval-flow', {
+      params: { buyerId, index, limit },
+    });
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+
+    let errMsg = 'Failed to fetch approval flows.';
+    if (typeof responseData === 'string') {
+      errMsg = responseData;
+    } else if (responseData?.message) {
+      errMsg = responseData.message;
+    } else if (responseData?.description) {
+      errMsg = responseData.description;
+    } else if (error.message) {
+      errMsg = error.message;
+    }
+
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
 
 // ─── Get Item Master by Buyer ───
 export const getItemMastersByBuyer = async (
