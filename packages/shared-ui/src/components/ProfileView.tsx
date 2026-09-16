@@ -58,10 +58,9 @@ const IconGlobe = () => (
   </svg>
 );
 
-const IconArrowLeft = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ filter: 'drop-shadow(0px 2px 6px rgba(0,0,0,0.08))' }}>
-    <circle cx="16" cy="16" r="15" fill="#ffffff" />
-    <path d="M18 10L12 16L18 22" stroke="#334155" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+const IconBack = () => (
+<svg width="35" height="35" viewBox="0 0 24 24" fill="#ffffff" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <path d="M13.5 8l-4 4 4 4"/>
   </svg>
 );
 
@@ -136,12 +135,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   return (
     <div className="profile-page">
       <button className="profile-back-btn" onClick={onBack} type="button">
-        <IconArrowLeft />
+        <IconBack />
       </button>
-
-      <div className="profile-section-card">
-        <div className="profile-banner">
-          <div className="profile-banner-left">
+      <div className="profile-banner">
+        <div className="profile-banner-left">
+          <div className="profile-banner-name">
             <div className="profile-avatar">{initial}</div>
             <div>
               <div className="profile-hero-name">{personDetail.name}</div>
@@ -150,10 +148,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
             </div>
           </div>
-          <div>
+
+          <div className="edit-button">
             {!isEditing ? (
               <button className="profile-edit-btn" onClick={handleEditClick} type="button">
-                <IconEdit /> Edit
+                <IconEdit/>Edit
               </button>
             ) : (
               <div className="profile-edit-actions">
@@ -177,32 +176,37 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             )}
           </div>
         </div>
-        <div className="profile-section-header">
-          <div>
-            <h2>Personal Information</h2>
-            <p>Manage your name, contact details, and account identifiers.</p>
+        <div className="profile-section-card">
+          <div className="profile-section-header">
+            <div>
+              <h2>Personal Information</h2>
+              <p>Manage your name, contact details, and account identifiers.</p>
+            </div>
+
           </div>
 
-        </div>
-
-        <div className="profile-fields-grid">
-          {EDITABLE_FIELDS.map(({ key, label, icon }) => (
-            <div className={`profile-field ${isEditing ? 'is-editing' : ''}`} key={key}>
-              <label>
-                <span className="profile-field-icon">{icon}</span>
-                {label}
-              </label>
-              <input
-                type="text"
-                value={(formData[key as keyof PersonDetailUpdate] as string) ?? ''}
-                onChange={(e) => handleChange(key, e.target.value)}
-                readOnly={!isEditing}
-                disabled={!isEditing}
-              />
-            </div>
-          ))}
+          <div className="profile-fields-grid">
+            {EDITABLE_FIELDS.map(({ key, label, icon }) => (
+              <div className={`profile-field ${isEditing ? 'is-editing' : ''}`} key={key}>
+                <label>
+                  <span className="profile-field-icon">{icon}</span>
+                  {label}
+                </label>
+                <input
+                  type="text"
+                  value={(formData[key as keyof PersonDetailUpdate] as string) ?? ''}
+                  onChange={(e) => handleChange(key, e.target.value)}
+                  readOnly={!isEditing}
+                  disabled={!isEditing}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
+
+
     </div>
+
   );
 };
