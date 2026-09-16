@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import "./BuyerAdminDash.css";
 import Header from "./Header";
 import UserAdmin from "../UserAdmin";
@@ -21,10 +22,18 @@ import UserTemplate from "./usertemplate"
 import ApprovalManagement from "./ApprovalManagement/ApprovalManagement";
 import { ToastContainer } from "@vosox/shared-ui";
 import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
+// import QuotationSummaryTable from "../../../remote-buyer/src/components/QuotationSummaryTable";
 import QuotationComparisonCard from "./QuotationComparisonCard";
-import BidComparisonAwardView from "./BidComparisonAwardView";
 import BuyerRFQChat from "../../../remote-buyer/src/components/BuyerRFQChat/BuyerRFQChat";
 import ItemMasterCatalog from "../../../remote-buyer/src/components/ItemMasterCatalog";
+import type { PendingMaterialApproval, MaterialApprovalKpi } from "./Material/materialApi";
+import { fetchPendingMaterialApprovals, fetchMaterialApprovalKpi } from "./Material/materialApi";
+import MaterialTable from "./Material/MaterialTable";
+import MaterialApprovalDetail from "./Material/MaterialApprovalDetail";
+import type { ContractRecord } from "./Contract/contractApi";
+import { fetchContracts } from "./Contract/contractApi";
+import ContractTable from "./Contract/ContractTable";
+import BidComparisonAwardView from "./BidComparisonAwardView";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -253,6 +262,12 @@ const IconMore = () => (
   </svg>
 );
 
+const IconChevronDown = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
 const IconGlobe = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
@@ -282,15 +297,31 @@ const NavIconFilePlus = () => (
   </svg>
 );
 
-const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number; subItems?: { key: string; label: string }[] }[] = [
+// subItems can be a flat leaf or a non-clickable group with nested leaves.
+interface NavLeaf {
+  key: string;
+  label: string;
+}
+interface NavGroup {
+  label: string;
+  items: NavLeaf[];
+}
+type NavSubEntry = NavLeaf | NavGroup;
+
+const isNavGroup = (entry: NavSubEntry): entry is NavGroup => 'items' in entry;
+
+const collectSubEntryKeys = (entries: NavSubEntry[]): string[] =>
+  entries.flatMap((entry) => (isNavGroup(entry) ? collectSubEntryKeys(entry.items) : [entry.key]));
+
+const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number; subItems?: NavSubEntry[]; chevronIcon?: React.ReactNode }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard", section: "MAIN" },
   { key: "invitations", icon: <IconMail />, label: "Invitations", section: "SOURCING & ORDERS" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog", section: "DIRECTORY & CATALOG" },
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
-  {
-    key: "configuration",
-    icon: <NavIconTemplate />,
+  { 
+    key: "configuration", 
+    icon: <NavIconTemplate />, 
     label: "Configuration",
     subItems: [
       { key: "template", label: "Templates" },
@@ -301,9 +332,17 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
     key: "more",
     icon: <IconMore />,
     label: "More",
+    chevronIcon: <IconChevronDown />,
     subItems: [
-      { key: "material", label: "Material" },
-    ],
+      {
+        label: "Approval",
+        items: [
+          { key: "material", label: "Material" },
+          { key: "contract", label: "Contract" }
+        ]
+      },
+      { key: "materialService", label: "Material & Service" }
+    ]
   },
 ];
 
@@ -421,6 +460,32 @@ const BuyerAdminDash: React.FC = () => {
   const RFQ_INITIAL_VISIBLE = 3;
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  // Portaled to document.body — .bad-sidebar's overflow-y:auto would clip it otherwise.
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [moreMenuPos, setMoreMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const moreTriggerRef = useRef<HTMLDivElement>(null);
+
+  const closeMoreMenu = () => setMoreMenuOpen(false);
+
+  const toggleMoreMenu = () => {
+    if (!moreMenuOpen && moreTriggerRef.current) {
+      const rect = moreTriggerRef.current.getBoundingClientRect();
+      setMoreMenuPos({ top: rect.bottom + 4, left: rect.left });
+    }
+    setMoreMenuOpen((prev) => !prev);
+  };
+
+  useEffect(() => {
+    if (!moreMenuOpen) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (moreTriggerRef.current && !moreTriggerRef.current.contains(e.target as Node)) {
+        closeMoreMenu();
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [moreMenuOpen]);
+
   const [templates, setTemplates] = useState<VerificationTemplate[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
@@ -529,6 +594,80 @@ const refreshRfqs = async () => {
     }
   }, [activeNav]);
 
+  const currentUserId = currentUser?.userId || currentUser?.id || null;
+
+  const [materialRecords, setMaterialRecords] = useState<PendingMaterialApproval[]>([]);
+  const [loadingMaterial, setLoadingMaterial] = useState(false);
+  const [materialError, setMaterialError] = useState<string | null>(null);
+  const [selectedMaterial, setSelectedMaterial] = useState<PendingMaterialApproval | null>(null);
+
+  const [materialStatusFilter, setMaterialStatusFilter] = useState("");
+  // materialSearchTerm is the debounced value that drives the API call.
+  const [materialSearchInput, setMaterialSearchInput] = useState("");
+  const [materialSearchTerm, setMaterialSearchTerm] = useState("");
+
+  const [materialKpi, setMaterialKpi] = useState<MaterialApprovalKpi | null>(null);
+  const [loadingMaterialKpi, setLoadingMaterialKpi] = useState(false);
+
+  useEffect(() => {
+    const handle = setTimeout(() => setMaterialSearchTerm(materialSearchInput), 400);
+    return () => clearTimeout(handle);
+  }, [materialSearchInput]);
+
+  const loadMaterialApprovals = () => {
+    setLoadingMaterial(true);
+    setMaterialError(null);
+    fetchPendingMaterialApprovals({ status: materialStatusFilter, searchTerm: materialSearchTerm })
+      .then(setMaterialRecords)
+      .catch((err: any) => {
+        setMaterialError(err.message || "Failed to load material approvals.");
+        setMaterialRecords([]);
+      })
+      .finally(() => setLoadingMaterial(false));
+  };
+
+  // Loaded independently so search/status changes don't refetch KPI.
+  const loadMaterialKpi = () => {
+    setLoadingMaterialKpi(true);
+    fetchMaterialApprovalKpi()
+      .then(setMaterialKpi)
+      .catch((err: any) => toastService.error(err.message || "Failed to load approval summary counts."))
+      .finally(() => setLoadingMaterialKpi(false));
+  };
+
+  useEffect(() => {
+    if (activeNav !== "material") return;
+    setSelectedMaterial(null);
+    loadMaterialKpi();
+  }, [activeNav]);
+
+  useEffect(() => {
+    if (activeNav !== "material") return;
+    loadMaterialApprovals();
+  }, [activeNav, materialStatusFilter, materialSearchTerm]);
+
+  const handleMaterialApprovalSubmitted = () => {
+    setSelectedMaterial(null);
+    loadMaterialApprovals();
+    loadMaterialKpi();
+  };
+
+  const [contractRecords, setContractRecords] = useState<ContractRecord[]>([]);
+  const [loadingContract, setLoadingContract] = useState(false);
+  const [contractError, setContractError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeNav !== "contract") return;
+    setLoadingContract(true);
+    setContractError(null);
+    fetchContracts()
+      .then(setContractRecords)
+      .catch((err: any) => {
+        setContractError(err.message || "Failed to load contract approvals.");
+        setContractRecords([]);
+      })
+      .finally(() => setLoadingContract(false));
+  }, [activeNav]);
 
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail" | "qsAns" | "quotationComparison">("dashboard");
 
@@ -716,6 +855,99 @@ const refreshRfqs = async () => {
     }
   };
 
+  // const handleDocumentAction = async (doc: any, action: 'preview' | 'download') => {
+  //   const assetId = doc.id || doc.assetId;
+  //   if (!assetId) {
+  //     alert("Document asset ID is missing.");
+  //     return;
+  //   }
+
+  //   try {
+  //     const data = await fetchBuyerAsset(assetId);
+  //     if ('statusCode' in data && data.statusCode) {
+  //       throw new Error(data.message || 'Failed to fetch document.');
+  //     }
+
+  //     const fileBytes = (data as any).fileBytes;
+  //     const fileName = (data as any).fileName || doc.fileName || doc.assetName || "document";
+  //     const rawType = ((data as any).contentType || (data as any).fileType || doc.fileType || "pdf").toLowerCase();
+
+  //     let mimeType = "application/pdf";
+  //     if (rawType.includes("pdf")) mimeType = "application/pdf";
+  //     else if (rawType.includes("png")) mimeType = "image/png";
+  //     else if (rawType.includes("jpg") || rawType.includes("jpeg")) mimeType = "image/jpeg";
+  //     else if (rawType.includes("txt")) mimeType = "text/plain";
+  //     else if (rawType.includes("doc")) mimeType = "application/msword";
+
+  //     let url = (data as any).url || (data as any).fileUrl;
+  //     let createdBlobUrl = "";
+
+  //     if (fileBytes) {
+  //       const cleanBase64 = fileBytes.replace(/^data:.*?;base64,/, '');
+  //       const byteCharacters = atob(cleanBase64);
+  //       const byteNumbers = new Array(byteCharacters.length);
+  //       for (let i = 0; i < byteCharacters.length; i++) {
+  //         byteNumbers[i] = byteCharacters.charCodeAt(i);
+  //       }
+  //       const byteArray = new Uint8Array(byteNumbers);
+  //       const blob = new Blob([byteArray], { type: mimeType });
+  //       createdBlobUrl = URL.createObjectURL(blob);
+  //       url = createdBlobUrl;
+  //     }
+
+  //     if (!url) {
+  //       throw new Error("Document content not available.");
+  //     }
+
+  //     if (action === 'preview') {
+  //       window.open(url, '_blank');
+  //     } else {
+  //       const a = document.createElement('a');
+  //       a.href = url;
+  //       a.download = fileName;
+  //       document.body.appendChild(a);
+  //       a.click();
+  //       document.body.removeChild(a);
+  //     }
+  //   } catch (err: any) {
+  //     alert(err?.message || "Could not access document.");
+  //   }
+  // };
+
+  // const renderQuoteStatusBadges = (quote: any) => (
+  //   <>
+  //     {quote.isLead && (
+  //       <span
+  //         className="bad-status-badge"
+  //         style={{
+  //           background: '#fef3c7',
+  //           color: '#b45309',
+  //           border: '1px solid #fde68a',
+  //           padding: '3px 8px',
+  //           borderRadius: '6px',
+  //           fontSize: '11px',
+  //           fontWeight: 600
+  //         }}
+  //       >
+  //         Leading
+  //       </span>
+  //     )}
+  //     <span
+  //       className="bad-status-badge"
+  //       style={{
+  //         background: quote.status === 'SUBMITTED' ? '#dcfce7' : '#f1f5f9',
+  //         color: quote.status === 'SUBMITTED' ? '#15803d' : '#475569',
+  //         padding: '3px 8px',
+  //         borderRadius: '6px',
+  //         fontSize: '11px',
+  //         fontWeight: 600
+  //       }}
+  //     >
+  //       {quote.status || "RECEIVED"}
+  //     </span>
+  //   </>
+  // );
+
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#edeff0", paddingTop: "5.25rem" }}>
       <ToastContainer />
@@ -746,27 +978,93 @@ const refreshRfqs = async () => {
                 {item.section && (
                   <div className="bad-nav-section-title">{item.section}</div>
                 )}
-                {item.subItems ? (
-                  <div className="bad-nav-dropdown-container">
+                {item.subItems && item.key === "more" ? (
+                  <div className="bad-nav-flyout-trigger" ref={moreTriggerRef}>
                     <div
-                      className={`bad-nav-item${activeNav === item.key || item.subItems.some(sub => sub.key === activeNav) ? " bad-nav-item-active" : ""}`}
+                      className={`bad-nav-item${activeNav === item.key || collectSubEntryKeys(item.subItems).includes(activeNav) || moreMenuOpen ? " bad-nav-item-active" : ""}`}
+                      onClick={toggleMoreMenu}
                     >
                       <span className="bad-nav-icon">{item.icon}</span>
                       <span className="bad-nav-label">{item.label}</span>
                       <span className="bad-nav-chevron">
-                        <IconChevronRight />
+                        {item.chevronIcon || <IconChevronRight />}
+                      </span>
+                    </div>
+                    {moreMenuOpen && moreMenuPos && createPortal(
+                      <div
+                        className="bad-nav-flyout-menu bad-nav-flyout-menu-portal"
+                        style={{ top: moreMenuPos.top, left: moreMenuPos.left }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        {item.subItems.map((entry, entryIdx) =>
+                          isNavGroup(entry) ? (
+                            <div key={`${item.key}-group-${entryIdx}`} className="bad-nav-flyout-trigger">
+                              <div className="bad-nav-flyout-item bad-nav-flyout-item-parent">
+                                <span>{entry.label}</span>
+                                <span className="bad-nav-flyout-arrow"><IconChevronRight /></span>
+                              </div>
+                              <div className="bad-nav-flyout-menu bad-nav-flyout-menu-nested">
+                                {entry.items.map(leaf => (
+                                  <div
+                                    key={leaf.key}
+                                    onClick={() => { handleNavClick(leaf.key); closeMoreMenu(); }}
+                                    className={`bad-nav-flyout-item${activeNav === leaf.key ? " bad-nav-flyout-item-active" : ""}`}
+                                  >
+                                    {leaf.label}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <div
+                              key={entry.key}
+                              onClick={() => { handleNavClick(entry.key); closeMoreMenu(); }}
+                              className={`bad-nav-flyout-item${activeNav === entry.key ? " bad-nav-flyout-item-active" : ""}`}
+                            >
+                              {entry.label}
+                            </div>
+                          )
+                        )}
+                      </div>,
+                      document.body
+                    )}
+                  </div>
+                ) : item.subItems ? (
+                  <div className="bad-nav-dropdown-container">
+                    <div
+                      className={`bad-nav-item${activeNav === item.key || collectSubEntryKeys(item.subItems).includes(activeNav) ? " bad-nav-item-active" : ""}`}
+                    >
+                      <span className="bad-nav-icon">{item.icon}</span>
+                      <span className="bad-nav-label">{item.label}</span>
+                      <span className="bad-nav-chevron">
+                        {item.chevronIcon || <IconChevronRight />}
                       </span>
                     </div>
                     <div className="bad-nav-dropdown-menu">
-                      {item.subItems.map(subItem => (
-                        <div
-                          key={subItem.key}
-                          onClick={() => handleNavClick(subItem.key)}
-                          className={`bad-nav-subitem${activeNav === subItem.key ? " bad-nav-subitem-active" : ""}`}
-                        >
-                          {subItem.label}
-                        </div>
-                      ))}
+                      {item.subItems.map((entry, entryIdx) =>
+                        isNavGroup(entry) ? (
+                          <div key={`${item.key}-group-${entryIdx}`} className="bad-nav-subgroup">
+                            <div className="bad-nav-subgroup-title">{entry.label}</div>
+                            {entry.items.map(leaf => (
+                              <div
+                                key={leaf.key}
+                                onClick={() => handleNavClick(leaf.key)}
+                                className={`bad-nav-subitem bad-nav-subitem-nested${activeNav === leaf.key ? " bad-nav-subitem-active" : ""}`}
+                              >
+                                {leaf.label}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div
+                            key={entry.key}
+                            onClick={() => handleNavClick(entry.key)}
+                            className={`bad-nav-subitem${activeNav === entry.key ? " bad-nav-subitem-active" : ""}`}
+                          >
+                            {entry.label}
+                          </div>
+                        )
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -831,6 +1129,35 @@ const refreshRfqs = async () => {
             ) : activeNav === "approvalManagement" ? (
               <ApprovalManagement />
             ) : activeNav === "material" ? (
+              selectedMaterial ? (
+                <MaterialApprovalDetail
+                  material={selectedMaterial}
+                  currentUserId={currentUserId}
+                  onBack={() => setSelectedMaterial(null)}
+                  onApprovalSubmitted={handleMaterialApprovalSubmitted}
+                />
+              ) : (
+                <MaterialTable
+                  records={materialRecords}
+                  loading={loadingMaterial}
+                  error={materialError}
+                  onRowClick={setSelectedMaterial}
+                  kpi={materialKpi}
+                  loadingKpi={loadingMaterialKpi}
+                  statusFilter={materialStatusFilter}
+                  onStatusFilterChange={setMaterialStatusFilter}
+                  searchInput={materialSearchInput}
+                  onSearchInputChange={setMaterialSearchInput}
+                  onSearchSubmit={() => setMaterialSearchTerm(materialSearchInput)}
+                />
+              )
+            ) : activeNav === "contract" ? (
+              <ContractTable
+                records={contractRecords}
+                loading={loadingContract}
+                error={contractError}
+              />
+            ) : activeNav === "materialService" ? (
               <ItemMasterCatalog buyerId={buyerId || ""} />
             ) : activeNav === "createRFQ" ? (
               <CreateRFQ onNavClick={handleNavClick} onRfqCreated={refreshRfqs}/>
@@ -923,7 +1250,271 @@ const refreshRfqs = async () => {
               </div>
               </>
             ) : rfqPageView === "rfqDetail" ? (
-              <BidComparisonAwardView
+              // <>
+              //   <div className="bad-modal bad-rfq-fullpage">
+              //     <div className="bad-modal-header">
+              //       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              //         <span className="bad-modal-badge">
+              //           <IconFile /> RFQ Specification
+              //         </span>
+              //         {fullPageRfq && (
+              //           <button
+              //             type="button"
+              //             className="bad-modal-badge"
+              //             style={{ border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,0.18)', color: '#ffffff' }}
+              //             onClick={handleOpenQsAns}
+              //           >
+              //             <IconFile /> RFQ Question Answers
+              //           </button>
+              //         )}
+              //       </div>
+              //       <button className="bad-modal-close" onClick={handleBackToAllRfqs}>
+              //         <IconClose />
+              //       </button>
+              //       <h2 className="bad-modal-name">
+              //         {loadingFullPageRfq ? "Loading RFQ Details..." : fullPageRfq?.title || "RFQ Details"}
+              //       </h2>
+              //       {fullPageRfq && (
+              //         <div className="bad-modal-meta">
+              //           <span><IconCalendar /> Closes: {new Date(fullPageRfq.endDate).toLocaleDateString()}</span>
+              //           <span><IconPin /> Delivery: {fullPageRfq.deliveryLocation}</span>
+              //           <div className="bad-rfq-header-actions">
+              //             {Array.isArray(fullPageRfq.supplierIds) && fullPageRfq.supplierIds.length > 0 && (
+              //               <button
+              //                 type="button"
+              //                 className="bad-btn bad-btn-outline bad-btn-chat"
+              //                 onClick={() => setIsChatOpen(true)}
+              //                 title="Chat with invited suppliers"
+              //               >
+              //                 <IconMessageSquare /> Chat
+              //               </button>
+              //             )}
+              //             <button
+              //               className="bad-btn bad-btn-outline"
+              //               onClick={() => handleOpenQuotationComparison(fullPageRfq)}
+              //               title="View Supplier Quotations"
+              //             >
+              //               <IconBidCompare /> Bid Comparison
+              //             </button>
+              //             <button
+              //               type="button"
+              //               className="bad-btn bad-btn-freeze"
+              //               onClick={handleFreezeBid}
+              //               disabled={freezingBid || fullPageRfq.status === "Freezing"}
+              //               title={fullPageRfq.status === "Freezing" ? "This RFQ's bid has already been frozen" : "Freeze the bid to stop accepting new quotations"}
+              //             >
+              //               <IconFreezeLock />
+              //               {freezingBid ? "Freezing..." : fullPageRfq.status === "Freezing" ? "Bid Frozen" : "Freeze Bid"}
+              //             </button>
+              //           </div>
+              //         </div>
+              //       )}
+              //     </div>
+
+              //     <div className="bad-modal-body">
+              //       {loadingFullPageRfq ? (
+              //         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+              //           <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              //             <div className="bad-spinner" style={{ width: '32px', height: '32px' }} />
+              //             <span>Fetching RFQ specification details...</span>
+              //           </div>
+              //         </div>
+              //       ) : fullPageRfqError && !fullPageRfq ? (
+              //         <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
+              //           {fullPageRfqError}
+              //         </div>
+              //       ) : fullPageRfq ? (
+              //         <div className="bad-active-rfq-content-wrapper">
+              //             <div>
+              //               <div className="bad-modal-section-title">Description</div>
+              //               <p className="bad-modal-desc" style={{ whiteSpace: 'pre-wrap', fontSize: '13.5px', color: '#334155', lineHeight: '1.6' }}>
+              //                 {fullPageRfq.description || "No description provided."}
+              //               </p>
+
+              //               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px 18px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
+              //                 <div>
+              //                   <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
+              //                   <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+              //                     {new Date(fullPageRfq.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+              //                   </div>
+              //                 </div>
+              //                 <div>
+              //                   <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>End Date</div>
+              //                   <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+              //                     {new Date(fullPageRfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+              //                   </div>
+              //                 </div>
+              //                 <div>
+              //                   <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Add Lot Option</div>
+              //                   <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+              //                     {fullPageRfq.addLotOption ? "Allowed" : "Not Allowed"}
+              //                   </div>
+              //                 </div>
+              //               </div>
+              //             </div>
+
+              //             {/* Items table */}
+              //             <QuotationSummaryTable rfq={fullPageRfq} />
+
+              //             {/* Attached Documents */}
+              //             {((fullPageRfq.technicalSpecificationDocuments && fullPageRfq.technicalSpecificationDocuments.length > 0) ||
+              //               (fullPageRfq.termsConditionDocuments && fullPageRfq.termsConditionDocuments.length > 0)) && (
+              //                 <div>
+              //                   <div className="bad-modal-section-title" style={{ marginBottom: '10px' }}>Specifications & Terms Documents</div>
+              //                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+              //                     {fullPageRfq.technicalSpecificationDocuments?.map((doc: any, i: number) => (
+              //                       <div key={`tech-${i}`} className="bad-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+              //                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
+              //                           <div className="bad-rfq-doc-icon"><IconFile /></div>
+              //                           <div style={{ overflow: 'hidden' }}>
+              //                             <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+              //                             <div className="bad-rfq-doc-type">Tech Spec Doc</div>
+              //                           </div>
+              //                         </div>
+              //                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+              //                           <button
+              //                             type="button"
+              //                             title="Preview document"
+              //                             onClick={() => handleDocumentAction(doc, 'preview')}
+              //                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+              //                           >
+              //                             <IconEye />
+              //                           </button>
+              //                           <button
+              //                             type="button"
+              //                             title="Download document"
+              //                             onClick={() => handleDocumentAction(doc, 'download')}
+              //                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+              //                           >
+              //                             <IconDownload />
+              //                           </button>
+              //                         </div>
+              //                       </div>
+              //                     ))}
+              //                     {fullPageRfq.termsConditionDocuments?.map((doc: any, i: number) => (
+              //                       <div key={`terms-${i}`} className="bad-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+              //                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
+              //                           <div className="bad-rfq-doc-icon" style={{ background: '#fef3c7', color: '#d97706' }}><IconFile /></div>
+              //                           <div style={{ overflow: 'hidden' }}>
+              //                             <div className="bad-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
+              //                             <div className="bad-rfq-doc-type">Terms & Conditions</div>
+              //                           </div>
+              //                         </div>
+              //                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+              //                           <button
+              //                             type="button"
+              //                             title="Preview document"
+              //                             onClick={() => handleDocumentAction(doc, 'preview')}
+              //                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+              //                           >
+              //                             <IconEye />
+              //                           </button>
+              //                           <button
+              //                             type="button"
+              //                             title="Download document"
+              //                             onClick={() => handleDocumentAction(doc, 'download')}
+              //                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '4px', display: 'inline-flex', borderRadius: '4px' }}
+              //                           >
+              //                             <IconDownload />
+              //                           </button>
+              //                         </div>
+              //                       </div>
+              //                     ))}
+              //                   </div>
+              //                 </div>
+              //               )}
+
+              //             {/* Supplier Quotations Received
+              //             {fullPageRfq.addLotOption && (
+              //             <div>
+              //               <div className="bad-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              //                 <IconSparkles /> Supplier Quotations Received
+              //               </div>
+              //               {fullPageRfq.supplierQuotation &&
+              //                 fullPageRfq.supplierQuotation.filter((q: any) => q.quotationId || q.totalPrice !== null).length > 0 ? (
+              //                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '480px', overflowY: 'auto' }}>
+              //                   {fullPageRfq.supplierQuotation
+              //                     .filter((q: any) => q.quotationId || q.totalPrice !== null)
+              //                     .map((quote: any, index: number) => (
+              //                       <div
+              //                         key={index}
+              //                         style={{
+              //                           background: '#ffffff',
+              //                           border: '1px solid #cbd5e1',
+              //                           borderRadius: '10px',
+              //                           padding: '16px',
+              //                           boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+              //                           transition: 'border-color 0.2s ease'
+              //                         }}
+              //                       >
+              //                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+              //                           <div style={{ display: 'flex', flexDirection: 'column' }}>
+              //                             <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
+              //                               Quote ID: {quote.quotationId ? `${quote.quotationId.substring(0, 8)}...` : `Quote #${index + 1}`}
+              //                             </span>
+              //                             <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+              //                               Delivery: {quote.deliveryType || "Standard"}
+              //                             </span>
+              //                           </div>
+              //                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              //                             {renderQuoteStatusBadges(quote)}
+              //                           </div>
+              //                         </div>
+
+              //                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #f1f5f9', marginBottom: '12px', fontSize: '12px' }}>
+              //                           <div>
+              //                             <span style={{ color: '#64748b' }}>Delivery Charge:</span>
+              //                             <div style={{ fontWeight: 600, color: '#334155', marginTop: '2px' }}>${quote.deliveryCharge ?? 0}</div>
+              //                           </div>
+              //                           <div>
+              //                             <span style={{ color: '#64748b' }}>Tax:</span>
+              //                             <div style={{ fontWeight: 600, color: '#334155', marginTop: '2px' }}>${quote.tax ?? 0}</div>
+              //                           </div>
+              //                           <div>
+              //                             <span style={{ color: '#64748b' }}>Discount:</span>
+              //                             <div style={{ fontWeight: 600, color: '#dc2626', marginTop: '2px' }}>-${quote.discount ?? 0}</div>
+              //                           </div>
+              //                           <div>
+              //                             <span style={{ color: '#64748b' }}>Total Quote:</span>
+              //                             <div style={{ fontWeight: 700, color: '#16a34a', marginTop: '2px', fontSize: '13px' }}>${quote.totalPrice ?? 0}</div>
+              //                           </div>
+              //                         </div>
+              //                       </div>
+              //                     ))}
+              //                 </div>
+              //               ) : (
+              //                 <div className="bad-rfq-no-quote-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 20px' }}>
+              //                   <IconMail />
+              //                   <div style={{ fontWeight: 600, color: '#475569', marginTop: '12px' }}>No Quotations Received Yet</div>
+              //                   <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px', lineHeight: '1.5', maxWidth: '240px' }}>
+              //                     When suppliers submit commercial bids, they will populate here in real-time.
+              //                   </div>
+              //                 </div>
+              //               )}
+              //             </div>
+              //             )} */}
+
+              //         </div>
+              //       ) : null}
+              //     </div>
+
+              //     {fullPageRfq && (
+              //       <div className="bad-modal-footer">
+              //         <button
+              //           className="bad-btn bad-btn-outline"
+              //           onClick={handleBackToAllRfqs}
+              //           style={{ marginRight: '10px' }}
+              //         >
+              //           Close
+              //         </button>
+              //         <button className="bad-btn bad-btn-message" style={{ background: '#2563eb', color: '#ffffff' }}>
+              //           Evaluate Quotations
+              //         </button>
+              //       </div>
+              //     )}
+              //   </div>
+              // </>
+                    <BidComparisonAwardView
                 rfq={fullPageRfq}
                 loading={loadingFullPageRfq}
                 error={fullPageRfqError}

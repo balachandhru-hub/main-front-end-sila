@@ -260,7 +260,7 @@ const ApprovalProcessDiagram: React.FC<ApprovalProcessDiagramProps> = ({
               <span>{selectedStep.role || "—"}</span>
             </div>
             <div className="apm-details-full">
-              <span className="apm-label">User ID</span>
+              <span className="apm-label">Email</span>
               <span>{selectedStep.description}</span>
             </div>
           </div>

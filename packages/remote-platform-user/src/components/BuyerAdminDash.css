@@ -147,6 +147,158 @@
     background: rgba(255, 255, 255, 0.25);
 }
 
+.bad-nav-dropdown-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.bad-nav-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #94a3b8;
+}
+
+.bad-nav-dropdown-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.0625rem;
+    padding: 0.1875rem 0 0.3125rem 2.375rem;
+}
+
+.bad-nav-subitem {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    color: #64748b;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bad-nav-subitem:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.bad-nav-subitem-active {
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 700;
+}
+
+.bad-nav-subgroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.0625rem;
+}
+
+.bad-nav-subgroup-title {
+    padding: 0.375rem 0.75rem 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+}
+
+.bad-nav-subitem-nested {
+    padding-left: 1.5rem;
+}
+
+/* Cascading flyout for "More" — boxed panel, second box flies out for groups. */
+.bad-nav-flyout-trigger {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Bumped for contrast vs the shared, fainter .bad-nav-chevron color. */
+.bad-nav-flyout-trigger > .bad-nav-item .bad-nav-chevron {
+    color: #475569;
+}
+
+.bad-nav-flyout-trigger > .bad-nav-item-active .bad-nav-chevron {
+    color: #1d4ed8;
+}
+
+.bad-nav-flyout-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 11rem;
+    background: #ffffff;
+    border: 0.0625rem solid #e2e8f0;
+    border-radius: 0;
+    box-shadow: 0 0.5rem 1.5rem rgba(15, 23, 42, 0.1), 0 0.125rem 0.5rem rgba(15, 23, 42, 0.06);
+    padding: 0.3rem;
+    z-index: 2000;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, visibility 0s linear 0.15s;
+}
+
+.bad-nav-flyout-trigger:hover > .bad-nav-flyout-menu {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.15s ease, visibility 0s linear 0s;
+}
+
+/* Flush against the parent row so hover doesn't break crossing the gap. */
+.bad-nav-flyout-menu-nested {
+    top: 0;
+    left: 100%;
+}
+
+/* Portaled to document.body — .bad-sidebar's overflow-y:auto would clip it otherwise. */
+.bad-nav-flyout-menu-portal {
+    position: fixed;
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.bad-nav-flyout-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    color: #475569;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bad-nav-flyout-item:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.bad-nav-flyout-item-active {
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 700;
+}
+
+.bad-nav-flyout-arrow {
+    display: flex;
+    align-items: center;
+    color: #94a3b8;
+}
+
+@media (max-width: 30.375rem) {
+    .bad-nav-flyout-menu {
+        min-width: 9rem;
+    }
+}
+
 .bad-main {
     flex: 1;
     display: flex;
@@ -1329,7 +1481,6 @@
     max-width: 100%;
     overflow-x: auto;
     border: 0.0625rem solid #e2e8f0;
-    border-radius: 0.5rem;
     background: #ffffff;
 }
 
