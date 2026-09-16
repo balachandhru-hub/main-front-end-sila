@@ -70,10 +70,11 @@ const formatQuestionType = (type?: string) => {
 const ChartTooltip = ({ active, payload }: any) => {
   if (!active || !payload || !payload.length) return null;
   const d = payload[0].payload;
+  const price = typeof d.price === 'number' ? d.price : 0;
   return (
     <div className="bca-chart-tooltip">
       <div className="bca-chart-tooltip-name">{d.fullName}</div>
-      <div className="bca-chart-tooltip-price">₹{d.price.toLocaleString('en-IN')}</div>
+      <div className="bca-chart-tooltip-price">₹{price.toLocaleString('en-IN')}</div>
       {d.isLowest && <div className="bca-chart-tooltip-badge">✓ Lowest Price</div>}
     </div>
   );
@@ -383,7 +384,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
             </span>
             <span>{freezingBid ? "Freezing..." : isBidFrozen ? "Bid Frozen" : "Freeze Bid"}</span>
           </Button>
-          {Array.isArray(rfq?.supplierIds) && rfq.supplierIds.length > 0 && (
+          {Array.isArray(rfq?.supplierIds) && rfq?.supplierIds?.length > 0 && (
             <Button
               type="button"
               variant="outline"
@@ -489,14 +490,14 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
               >
                 <option value="all">All Items (Total Price)</option>
                 {lineItems.map((m: any) => (
-                  <option key={m.id || m.itemId || m._id} value={m.id || m.itemId || m._id}>
-                    {m.description || m.name || `Item ${m.id}`}
+                  <option key={m?.id || m?.itemId || m?._id} value={m?.id || m?.itemId || m?._id}>
+                    {m?.description || m?.name || `Item ${m?.id}`}
                   </option>
                 ))}
               </select>
             </div>
             <div className="bca-chart-body">
-              <ResponsiveContainer width="100%" height={Math.max(220, chartData.length * 56)}>
+              <ResponsiveContainer width="100%" height={Math.max(220, chartData?.length * 56)}>
                 <BarChart
                   layout="vertical"
                   data={chartData}
@@ -520,18 +521,21 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                     width={130}
                   />
                   <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(37,99,235,0.04)' }} />
-                  <Bar dataKey="price" radius={[0, 6, 6, 0] as any} maxBarSize={32}>
+                  <Bar dataKey="price" radius={6} maxBarSize={32}>
                     <LabelList
                       dataKey="price"
                       position="right"
-                      formatter={(v: any) => v > 0 ? (v >= 1000 ? `₹${(v/1000).toFixed(1)}k` : `₹${v}`) : ''}
+                      formatter={(v: any) => {
+                        const num = typeof v === 'number' ? v : 0;
+                        return num > 0 ? (num >= 1000 ? `₹${(num / 1000).toFixed(1)}k` : `₹${num}`) : '';
+                      }}
                       style={{ fontSize: 11, fontWeight: 600, fill: '#374151' }}
                     />
-                    {chartData.map((entry, index) => (
+                    {chartData?.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
-                        fill={entry.isLowest ? '#059669' : entry.color}
-                        opacity={entry.isLowest ? 1 : 0.82}
+                        fill={entry?.isLowest ? '#059669' : entry.color}
+                        opacity={entry?.isLowest ? 1 : 0.82}
                       />
                     ))}
                   </Bar>
@@ -539,13 +543,13 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
               </ResponsiveContainer>
             </div>
             <div className="bca-chart-legend">
-              {chartSuppliers.map((s, i) => {
+              {chartSuppliers?.map((s, i) => {
                 const isLow = chartData[i]?.isLowest;
                 return (
-                  <div key={s.id} className="bca-chart-legend-item">
+                  <div key={s?.id} className="bca-chart-legend-item">
                     <span className="bca-chart-legend-dot" style={{ background: isLow ? '#059669' : s.color }} />
                     <span style={{ color: isLow ? '#059669' : undefined, fontWeight: isLow ? 600 : undefined }}>
-                      {s.name}{isLow ? ' ✓ Lowest' : ''}
+                      {s?.name}{isLow ? ' ✓ Lowest' : ''}
                     </span>
                   </div>
                 );
@@ -1108,7 +1112,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
       )}
 
       {/* Evaluation Questions & Answers Section */}
-      {questions.length > 0 && qaSuppliers.length > 0 && (
+      {questions?.length > 0 && qaSuppliers?.length > 0 && (
         <div className="bca-section-card">
           <div className="bca-section-header">
             <h3 className="bca-section-title">Evaluation Questions &amp; Answers</h3>
@@ -1116,9 +1120,9 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           </div>
 
           <div className="bca-qa-suppliers">
-            {qaSuppliers.map((supplier: any, sIdx: number) => {
+            {qaSuppliers?.map((supplier: any, sIdx: number) => {
               const displayName = supplier?.supplierName || supplier?.organizationName || `Supplier ${sIdx + 1}`;
-              const answeredCount = questions.filter((q: any) => {
+              const answeredCount = questions?.filter((q: any) => {
                 const match = getAnswerForQuestion(supplier, q);
                 return Boolean(
                   (match?.answer && String(match.answer).trim() !== "") || match?.attachment?.fileName || match?.attachment?.id
@@ -1128,7 +1132,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
               return (
                 <div
                   className="bca-qa-supplier-card"
-                  key={supplier?.supplierRFQId ? `${supplier.supplierRFQId}-${sIdx}` : sIdx}
+                  key={supplier?.supplierRFQId ? `${supplier?.supplierRFQId}-${sIdx}` : sIdx}
                 >
                   <div className="bca-qa-supplier-header">
                     <div className="bca-qa-supplier-left">
@@ -1136,28 +1140,28 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                       <span className="bca-qa-supplier-name">{displayName}</span>
                     </div>
                     <span className="bca-qa-supplier-badge">
-                      {answeredCount}/{questions.length} answered
+                      {answeredCount}/{questions?.length} answered
                     </span>
                   </div>
 
                   <div className="bca-qa-list">
-                    {questions.map((q: any, qIdx: number) => {
+                    {questions?.map((q: any, qIdx: number) => {
                       const match = getAnswerForQuestion(supplier, q);
                       const display =
-                        match?.answer && String(match.answer).trim() !== ""
-                          ? match.answer
+                        match?.answer && String(match?.answer).trim() !== ""
+                          ? match?.answer
                           : match?.attachment?.fileName || "";
 
                       return (
-                        <div className="bca-qa-item" key={q.id || qIdx}>
+                        <div className="bca-qa-item" key={q?.id || qIdx}>
                           <div className="bca-qa-question-row">
                             <div className="bca-qa-question-left">
                               <span className="bca-qa-index">Q{qIdx + 1}</span>
-                              <span className="bca-qa-question-text">{q.question}</span>
+                              <span className="bca-qa-question-text">{q?.question}</span>
                             </div>
                             <div className="bca-qa-tags">
-                              {q.isRequired && <span className="bca-qa-req-badge">Required</span>}
-                              <span className="bca-qa-type-badge">{formatQuestionType(q.questionType)}</span>
+                              {q?.isRequired && <span className="bca-qa-req-badge">Required</span>}
+                              <span className="bca-qa-type-badge">{formatQuestionType(q?.questionType)}</span>
                             </div>
                           </div>
 
@@ -1170,7 +1174,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                                     type="button"
                                     className="bca-doc-action-btn bca-doc-eye"
                                     title="Preview attachment"
-                                    onClick={() => handleDocumentAction(match.attachment, 'preview')}
+                                    onClick={() => handleDocumentAction(match?.attachment, 'preview')}
                                   >
                                     <IconEye />
                                   </button>
@@ -1178,7 +1182,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                                     type="button"
                                     className="bca-doc-action-btn bca-doc-download"
                                     title="Download attachment"
-                                    onClick={() => handleDocumentAction(match.attachment, 'download')}
+                                    onClick={() => handleDocumentAction(match?.attachment, 'download')}
                                   >
                                     <IconDownload />
                                   </button>
@@ -1204,11 +1208,11 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         <div className="bca-modal-overlay">
           <div className="bca-doc-viewer-modal">
             <div className="bca-doc-viewer-header">
-              <span className="bca-doc-viewer-title">{viewingDoc.fileName}</span>
+              <span className="bca-doc-viewer-title">{viewingDoc?.fileName}</span>
               <button
                 className="bca-back-circle-btn"
                 onClick={() => {
-                  if (viewingDoc.url.startsWith('blob:')) {
+                  if (viewingDoc?.url?.startsWith('blob:')) {
                     URL.revokeObjectURL(viewingDoc.url);
                   }
                   setViewingDoc(null);
@@ -1218,8 +1222,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
               </button>
             </div>
             <iframe
-              src={viewingDoc.url}
-              title={viewingDoc.fileName}
+              src={viewingDoc?.url}
+              title={viewingDoc?.fileName}
               className="bca-doc-viewer-iframe"
             />
           </div>
