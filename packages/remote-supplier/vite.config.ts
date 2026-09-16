@@ -1,7 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import federation from '@originjs/vite-plugin-federation';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import fs from 'fs';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const rootNodeModules = path.resolve(__dirname, '../../node_modules');
 
 export default defineConfig({
   plugins: [
@@ -20,6 +25,17 @@ export default defineConfig({
       ],
     }),
   ],
+  resolve: {
+    dedupe: ['react', 'react-dom', 'react-router-dom'],
+    alias: {
+      react: path.resolve(rootNodeModules, 'react'),
+      'react-dom': path.resolve(rootNodeModules, 'react-dom'),
+      'react-router-dom': path.resolve(rootNodeModules, 'react-router-dom'),
+    },
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom'],
+  },
   server: {
     port: 6003,
     strictPort: true,
