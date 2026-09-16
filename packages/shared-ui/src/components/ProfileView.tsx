@@ -10,6 +10,11 @@ interface ProfileViewProps {
   onSave: (updates: PersonDetailUpdate) => Promise<void> | void;
   onBack: () => void;
 }
+const IconEdit = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+  </svg>
+);
 
 const IconUser = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -53,22 +58,9 @@ const IconGlobe = () => (
   </svg>
 );
 
-// const IconArrowLeft = () => (
-//   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-//     <line x1="19" y1="12" x2="5" y2="12" />
-//     <polyline points="12 19 5 12 12 5" />
-//   </svg>
-// );
-
 const IconBack = () => (
 <svg width="35" height="35" viewBox="0 0 24 24" fill="#ffffff" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
   <path d="M13.5 8l-4 4 4 4"/>
-  </svg>
-);
-
-const IconEdit = () => (
-<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
   </svg>
 );
 
