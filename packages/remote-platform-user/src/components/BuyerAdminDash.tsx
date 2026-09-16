@@ -456,8 +456,7 @@ const BuyerAdminDash: React.FC = () => {
     loadBuyerProfile();
   }, [buyerId]);
 
-  useEffect(() => {
-    const loadRfqs = async () => {
+  const loadRfqs = async () => {
       if (!buyerId) {
         setRfqs(mockRfqs);
         setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, mockRfqs.length));
@@ -495,8 +494,14 @@ const BuyerAdminDash: React.FC = () => {
       }
     };
 
+  useEffect(() => {
     loadRfqs();
   }, [buyerId]);
+
+const refreshRfqs = async () => {
+  await loadRfqs();
+  await loadAllRfqsPage(1);
+}
 
   useEffect(() => {
     const loadTemplates = async () => {
@@ -828,7 +833,7 @@ const BuyerAdminDash: React.FC = () => {
             ) : activeNav === "material" ? (
               <ItemMasterCatalog buyerId={buyerId || ""} />
             ) : activeNav === "createRFQ" ? (
-              <CreateRFQ />
+              <CreateRFQ onNavClick={handleNavClick} onRfqCreated={refreshRfqs}/>
             ) : activeNav === "product" ? (
               <Product />
             ) : rfqPageView === "allRfqs" ? (
