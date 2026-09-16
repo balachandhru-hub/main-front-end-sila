@@ -10,6 +10,11 @@ interface ProfileViewProps {
   onSave: (updates: PersonDetailUpdate) => Promise<void> | void;
   onBack: () => void;
 }
+const IconEdit = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+  </svg>
+);
 
 const IconUser = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -54,9 +59,9 @@ const IconGlobe = () => (
 );
 
 const IconArrowLeft = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="19" y1="12" x2="5" y2="12" />
-    <polyline points="12 19 5 12 12 5" />
+  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ filter: 'drop-shadow(0px 2px 6px rgba(0,0,0,0.08))' }}>
+    <circle cx="16" cy="16" r="15" fill="#ffffff" />
+    <path d="M18 10L12 16L18 22" stroke="#334155" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
@@ -131,51 +136,53 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   return (
     <div className="profile-page">
       <button className="profile-back-btn" onClick={onBack} type="button">
-        <IconArrowLeft /> Back
+        <IconArrowLeft />
       </button>
 
-      <div className="profile-banner">
-        <div className="profile-banner-left">
-          <div className="profile-avatar">{initial}</div>
-          <div>
-            <div className="profile-hero-name">{personDetail.name}</div>
-            <div className="profile-hero-sub">
-              <span className="profile-role-pill">{personDetail.roleName}</span>
+      <div className="profile-section-card">
+        <div className="profile-banner">
+          <div className="profile-banner-left">
+            <div className="profile-avatar">{initial}</div>
+            <div>
+              <div className="profile-hero-name">{personDetail.name}</div>
+              <div className="profile-hero-sub">
+                <span className="profile-role-pill">{personDetail.roleName}</span>
+              </div>
             </div>
           </div>
+          <div>
+            {!isEditing ? (
+              <button className="profile-edit-btn" onClick={handleEditClick} type="button">
+                <IconEdit /> Edit
+              </button>
+            ) : (
+              <div className="profile-edit-actions">
+                <button
+                  className="profile-cancel-btn"
+                  onClick={handleCancel}
+                  disabled={saving}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button
+                  className="profile-update-btn"
+                  onClick={handleUpdate}
+                  disabled={saving}
+                  type="button"
+                >
+                  {saving ? 'Updating…' : 'Update'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-
-      <div className="profile-section-card">
         <div className="profile-section-header">
           <div>
             <h2>Personal Information</h2>
             <p>Manage your name, contact details, and account identifiers.</p>
           </div>
-          {!isEditing ? (
-            <button className="profile-edit-btn" onClick={handleEditClick} type="button">
-              Edit
-            </button>
-          ) : (
-            <div className="profile-edit-actions">
-              <button
-                className="profile-cancel-btn"
-                onClick={handleCancel}
-                disabled={saving}
-                type="button"
-              >
-                Cancel
-              </button>
-              <button
-                className="profile-update-btn"
-                onClick={handleUpdate}
-                disabled={saving}
-                type="button"
-              >
-                {saving ? 'Updating…' : 'Update'}
-              </button>
-            </div>
-          )}
+
         </div>
 
         <div className="profile-fields-grid">

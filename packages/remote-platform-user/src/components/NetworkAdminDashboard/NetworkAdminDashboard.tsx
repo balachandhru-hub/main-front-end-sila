@@ -6,7 +6,7 @@ import UserListTable from '../UserListTable/UserListTable';
 import CreateUserModal from '../CreateUserModal/CreateUserModal';
 import { ToastContainer, toastService } from '@vosox/shared-ui';
 import CompanyProfile from '../CompanyProfile/CompanyProfile';
-import Header from '../Header'; 
+import Header from '../Header';
 import {
   getOrganizationUsers,
   createPerson,
@@ -62,7 +62,7 @@ const navItems: { key: string; icon: React.ReactNode; label: string }[] = [
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   manageUsers: {
-    title: 'Network Admin Dashboard',
+    title: 'Network buyer Admin Dashboard',
     subtitle: 'Manage your network users and settings',
   },
   companyProfile: {
@@ -278,53 +278,6 @@ const NetworkAdminDashboard: React.FC = () => {
       <Header />
 
       <div className={`nad-shell${isMobileSidebarOpen ? ' nad-sidebar-open-mobile' : ''}`}>
-        <button
-          type="button"
-          className="nad-mobile-sidebar-toggle"
-          onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
-          aria-label={isMobileSidebarOpen ? "Close menu" : "Open menu"}
-          aria-expanded={isMobileSidebarOpen}
-        >
-          {isMobileSidebarOpen ? <IconClose /> : <IconMenu />}
-        </button>
-
-        <div
-          className="nad-sidebar-backdrop"
-          onClick={() => setIsMobileSidebarOpen(false)}
-          aria-hidden="true"
-        />
-
-        <aside className="nad-sidebar">
-          <nav className="nad-nav">
-            {navItems.map((item) => (
-              <div
-                key={item.key}
-                className={`nad-nav-item${activeNav === item.key ? ' nad-nav-item-active' : ''}`}
-                onClick={() => handleNavClick(item.key)}
-                role="button"
-                tabIndex={0}
-                title={item.label}
-              >
-                <span className="nad-nav-icon">{item.icon}</span>
-                <span className="nad-nav-label">{item.label}</span>
-              </div>
-            ))}
-
-            <div
-              className={`nad-nav-item nad-nav-item-logout${loggingOut ? ' nad-nav-item-disabled' : ''}`}
-              onClick={handleLogout}
-              role="button"
-              tabIndex={0}
-              aria-disabled={loggingOut}
-              title="Log out"
-            >
-              <span className="nad-nav-icon">
-                <LogoutIcon />
-              </span>
-              <span className="nad-nav-label">{loggingOut ? 'Logging out...' : 'Log Out'}</span>
-            </div>
-          </nav>
-        </aside>
 
         <div className="nad-main">
           <main className="nad-content">
