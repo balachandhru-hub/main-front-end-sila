@@ -74,6 +74,9 @@
 }
 
 .item-master-modal-form {
+  max-width: 600px;
+  margin: 0 auto;
+
   padding: 24px 28px 28px;
 }
 
@@ -179,6 +182,11 @@
   cursor: not-allowed;
 }
 
+.item-master-field select.item-master-input-error,
+.item-master-field textarea.item-master-input-error {
+  border-color: #ef4444;
+}
+
 .item-master-field-hint {
   margin-top: 6px;
 
@@ -206,18 +214,14 @@
 
 .item-master-fields-row {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr 1fr;
 
-  gap: 16px;
-}
-
-.item-master-fields-row.item-master-fields-row-3 {
-  grid-template-columns: repeat(3, 1fr);
+  column-gap: 1.5rem;
+  row-gap: 1.5rem;
 }
 
 @media (max-width: 600px) {
-  .item-master-fields-row,
-  .item-master-fields-row.item-master-fields-row-3 {
+  .item-master-fields-row {
     grid-template-columns: 1fr;
   }
 }
