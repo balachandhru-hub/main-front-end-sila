@@ -14,6 +14,18 @@ interface ItemMasterModalProps {
     onSuccess?: () => void;
 }
 
+const clearFieldError = (
+    setErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>,
+    field: string
+) => {
+    setErrors((prev) => {
+        if (!(field in prev)) return prev;
+        const next = { ...prev };
+        delete next[field];
+        return next;
+    });
+};
+
 const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
     isOpen,
     onClose,
@@ -104,22 +116,30 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
         onClose();
     };
 
+    const validateForm = () => {
+        const newErrors: Record<string, string> = {};
+
+        if (!materialCode.trim()) newErrors.materialCode = "Please enter material code";
+        if (!materialGroup.trim()) newErrors.materialGroup = "Please enter material group";
+        if (!productType.trim()) newErrors.productType = "Please enter product type";
+        if (!description.trim()) newErrors.description = "Please enter description";
+        if (!baseUnitOfMeasure.trim()) newErrors.baseUnitOfMeasure = "Please enter base unit of measure";
+        if (!orderUnitOfMeasure.trim()) newErrors.orderUnitOfMeasure = "Please enter order unit of measure";
+        if (!alternateUnitOfMeasure.trim()) newErrors.alternateUnitOfMeasure = "Please enter alternate unit of measure";
+        if (!valuationClass.trim()) newErrors.valuationClass = "Please enter valuation class";
+        if (!unitOfMeasureMapping.trim()) newErrors.unitOfMeasureMapping = "Please enter unit of measure mapping";
+        if (!approvalFlowId) newErrors.approvalFlowId = "Please select an approval flow";
+        if (!comment.trim()) newErrors.comment = "Please add a comment";
+
+        // Sub Unit and Micro Unit are optional - no validation needed
+
+        return newErrors;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const newErrors: Record<string, string> = {};
-
-        if (!description.trim()) {
-            newErrors.description = "Please enter description";
-        }
-
-        if (!materialCode.trim()) {
-            newErrors.materialCode = "Please enter material code";
-        }
-
-        if (!materialGroup.trim()) {
-            newErrors.materialGroup = "Please enter material group";
-        }
+        const newErrors = validateForm();
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
@@ -139,16 +159,16 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                 description: description.trim(),
                 materialCode: materialCode.trim(),
                 materialGroup: materialGroup.trim(),
-                productType: productType.trim() || undefined,
-                baseUnitOfMeasure: baseUnitOfMeasure.trim() || undefined,
-                orderUnitOfMeasure: orderUnitOfMeasure.trim() || undefined,
-                alternateUnitOfMeasure: alternateUnitOfMeasure.trim() || undefined,
-                valuationClass: valuationClass.trim() || undefined,
-                unitOfMeasureMapping: unitOfMeasureMapping.trim() || undefined,
+                productType: productType.trim(),
+                baseUnitOfMeasure: baseUnitOfMeasure.trim(),
+                orderUnitOfMeasure: orderUnitOfMeasure.trim(),
+                alternateUnitOfMeasure: alternateUnitOfMeasure.trim(),
+                valuationClass: valuationClass.trim(),
+                unitOfMeasureMapping: unitOfMeasureMapping.trim(),
                 subUnit: subUnit.trim() || undefined,
                 microUnit: microUnit.trim() || undefined,
-                approvalFlowId: approvalFlowId || undefined,
-                comment: comment.trim() || undefined,
+                approvalFlowId,
+                comment: comment.trim(),
             });
 
             toastService.success("Item Master created successfully.");
@@ -200,41 +220,37 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     className="item-master-modal-form"
                     onSubmit={handleSubmit}
                 >
-                    {/* Row 1: Material Code, Material Group, Product Type */}
-                    <div className="item-master-fields-row item-master-fields-row-3">
-                        <div className="item-master-field">
-                            <label htmlFor="item-master-material-code">
-                                MATERIAL CODE <span>*</span>
-                            </label>
+                    {/* Material Code */}
+                    <div className="item-master-field">
+                        <label htmlFor="item-master-material-code">
+                            MATERIAL CODE <span>*</span>
+                        </label>
 
-                            <input
-                                id="item-master-material-code"
-                                type="text"
-                                placeholder="Enter material code"
-                                value={materialCode}
-                                className={
-                                    errors.materialCode
-                                        ? "item-master-input-error"
-                                        : ""
-                                }
-                                onChange={(e) => {
-                                    setMaterialCode(e.target.value);
+                        <input
+                            id="item-master-material-code"
+                            type="text"
+                            placeholder="Enter material code"
+                            value={materialCode}
+                            className={
+                                errors.materialCode
+                                    ? "item-master-input-error"
+                                    : ""
+                            }
+                            onChange={(e) => {
+                                setMaterialCode(e.target.value);
+                                clearFieldError(setErrors, "materialCode");
+                            }}
+                        />
 
-                                    setErrors((prev) => {
-                                        const next = { ...prev };
-                                        delete next.materialCode;
-                                        return next;
-                                    });
-                                }}
-                            />
+                        {errors.materialCode && (
+                            <div className="item-master-error">
+                                {errors.materialCode}
+                            </div>
+                        )}
+                    </div>
 
-                            {errors.materialCode && (
-                                <div className="item-master-error">
-                                    {errors.materialCode}
-                                </div>
-                            )}
-                        </div>
-
+                    {/* Material Group, Product Type */}
+                    <div className="item-master-fields-row">
                         <div className="item-master-field">
                             <label htmlFor="item-master-material-group">
                                 MATERIAL GROUP <span>*</span>
@@ -252,12 +268,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                 }
                                 onChange={(e) => {
                                     setMaterialGroup(e.target.value);
-
-                                    setErrors((prev) => {
-                                        const next = { ...prev };
-                                        delete next.materialGroup;
-                                        return next;
-                                    });
+                                    clearFieldError(setErrors, "materialGroup");
                                 }}
                             />
 
@@ -270,7 +281,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
 
                         <div className="item-master-field">
                             <label htmlFor="item-master-product-type">
-                                PRODUCT TYPE
+                                PRODUCT TYPE <span>*</span>
                             </label>
 
                             <input
@@ -278,12 +289,26 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                 type="text"
                                 placeholder="Enter product type"
                                 value={productType}
-                                onChange={(e) => setProductType(e.target.value)}
+                                className={
+                                    errors.productType
+                                        ? "item-master-input-error"
+                                        : ""
+                                }
+                                onChange={(e) => {
+                                    setProductType(e.target.value);
+                                    clearFieldError(setErrors, "productType");
+                                }}
                             />
+
+                            {errors.productType && (
+                                <div className="item-master-error">
+                                    {errors.productType}
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* Row 2: Description */}
+                    {/* Description */}
                     <div className="item-master-field">
                         <label htmlFor="item-master-description">
                             DESCRIPTION <span>*</span>
@@ -301,12 +326,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             }
                             onChange={(e) => {
                                 setDescription(e.target.value);
-
-                                setErrors((prev) => {
-                                    const next = { ...prev };
-                                    delete next.description;
-                                    return next;
-                                });
+                                clearFieldError(setErrors, "description");
                             }}
                         />
 
@@ -319,11 +339,11 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
 
                     <hr className="item-master-section-divider" />
 
-                    {/* Row 3: Base UOM, Order UOM, Alternate UOM */}
-                    <div className="item-master-fields-row item-master-fields-row-3">
+                    {/* Base UOM, Order UOM */}
+                    <div className="item-master-fields-row">
                         <div className="item-master-field">
                             <label htmlFor="item-master-base-uom">
-                                BASE UNIT OF MEASURE
+                                BASE UNIT OF MEASURE <span>*</span>
                             </label>
 
                             <input
@@ -331,13 +351,27 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                 type="text"
                                 placeholder="e.g., KG, L, M"
                                 value={baseUnitOfMeasure}
-                                onChange={(e) => setBaseUnitOfMeasure(e.target.value)}
+                                className={
+                                    errors.baseUnitOfMeasure
+                                        ? "item-master-input-error"
+                                        : ""
+                                }
+                                onChange={(e) => {
+                                    setBaseUnitOfMeasure(e.target.value);
+                                    clearFieldError(setErrors, "baseUnitOfMeasure");
+                                }}
                             />
+
+                            {errors.baseUnitOfMeasure && (
+                                <div className="item-master-error">
+                                    {errors.baseUnitOfMeasure}
+                                </div>
+                            )}
                         </div>
 
                         <div className="item-master-field">
                             <label htmlFor="item-master-order-uom">
-                                ORDER UNIT OF MEASURE
+                                ORDER UNIT OF MEASURE <span>*</span>
                             </label>
 
                             <input
@@ -345,30 +379,58 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                 type="text"
                                 placeholder="e.g., BOX, CASE, PACK"
                                 value={orderUnitOfMeasure}
-                                onChange={(e) => setOrderUnitOfMeasure(e.target.value)}
+                                className={
+                                    errors.orderUnitOfMeasure
+                                        ? "item-master-input-error"
+                                        : ""
+                                }
+                                onChange={(e) => {
+                                    setOrderUnitOfMeasure(e.target.value);
+                                    clearFieldError(setErrors, "orderUnitOfMeasure");
+                                }}
                             />
-                        </div>
 
+                            {errors.orderUnitOfMeasure && (
+                                <div className="item-master-error">
+                                    {errors.orderUnitOfMeasure}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Alternate UOM, Valuation Class */}
+                    <div className="item-master-fields-row">
                         <div className="item-master-field">
                             <label htmlFor="item-master-alternate-uom">
-                                ALTERNATE UNIT OF MEASURE
+                                ALTERNATE UNIT OF MEASURE <span>*</span>
                             </label>
 
                             <input
                                 id="item-master-alternate-uom"
                                 type="text"
-                                placeholder="Alternate UOM"
+                                placeholder="e.g., PCS"
                                 value={alternateUnitOfMeasure}
-                                onChange={(e) => setAlternateUnitOfMeasure(e.target.value)}
+                                className={
+                                    errors.alternateUnitOfMeasure
+                                        ? "item-master-input-error"
+                                        : ""
+                                }
+                                onChange={(e) => {
+                                    setAlternateUnitOfMeasure(e.target.value);
+                                    clearFieldError(setErrors, "alternateUnitOfMeasure");
+                                }}
                             />
-                        </div>
-                    </div>
 
-                    {/* Row 4: Valuation Class, UOM Mapping */}
-                    <div className="item-master-fields-row">
+                            {errors.alternateUnitOfMeasure && (
+                                <div className="item-master-error">
+                                    {errors.alternateUnitOfMeasure}
+                                </div>
+                            )}
+                        </div>
+
                         <div className="item-master-field">
                             <label htmlFor="item-master-valuation-class">
-                                VALUATION CLASS
+                                VALUATION CLASS <span>*</span>
                             </label>
 
                             <input
@@ -376,26 +438,55 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                 type="text"
                                 placeholder="Enter valuation class"
                                 value={valuationClass}
-                                onChange={(e) => setValuationClass(e.target.value)}
+                                className={
+                                    errors.valuationClass
+                                        ? "item-master-input-error"
+                                        : ""
+                                }
+                                onChange={(e) => {
+                                    setValuationClass(e.target.value);
+                                    clearFieldError(setErrors, "valuationClass");
+                                }}
                             />
-                        </div>
 
-                        <div className="item-master-field">
-                            <label htmlFor="item-master-uom-mapping">
-                                UNIT OF MEASURE MAPPING
-                            </label>
-
-                            <input
-                                id="item-master-uom-mapping"
-                                type="text"
-                                placeholder="e.g., 1KG=10UNITS"
-                                value={unitOfMeasureMapping}
-                                onChange={(e) => setUnitOfMeasureMapping(e.target.value)}
-                            />
+                            {errors.valuationClass && (
+                                <div className="item-master-error">
+                                    {errors.valuationClass}
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* Row 5: Sub Unit, Micro Unit */}
+                    {/* Unit of Measure Mapping */}
+                    <div className="item-master-field">
+                        <label htmlFor="item-master-uom-mapping">
+                            UNIT OF MEASURE MAPPING <span>*</span>
+                        </label>
+
+                        <input
+                            id="item-master-uom-mapping"
+                            type="text"
+                            placeholder="e.g., 1 BOX = 400PCS"
+                            value={unitOfMeasureMapping}
+                            className={
+                                errors.unitOfMeasureMapping
+                                    ? "item-master-input-error"
+                                    : ""
+                            }
+                            onChange={(e) => {
+                                setUnitOfMeasureMapping(e.target.value);
+                                clearFieldError(setErrors, "unitOfMeasureMapping");
+                            }}
+                        />
+
+                        {errors.unitOfMeasureMapping && (
+                            <div className="item-master-error">
+                                {errors.unitOfMeasureMapping}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Sub Unit, Micro Unit (optional) */}
                     <div className="item-master-fields-row">
                         <div className="item-master-field">
                             <label htmlFor="item-master-sub-unit">
@@ -405,7 +496,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             <input
                                 id="item-master-sub-unit"
                                 type="text"
-                                placeholder="Enter sub unit"
+                                placeholder="Enter sub unit (optional)"
                                 value={subUnit}
                                 onChange={(e) => setSubUnit(e.target.value)}
                             />
@@ -419,7 +510,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             <input
                                 id="item-master-micro-unit"
                                 type="text"
-                                placeholder="Enter micro unit"
+                                placeholder="Enter micro unit (optional)"
                                 value={microUnit}
                                 onChange={(e) => setMicroUnit(e.target.value)}
                             />
@@ -428,17 +519,25 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
 
                     <hr className="item-master-section-divider" />
 
-                    {/* Row 6: Approval Flow */}
+                    {/* Approval Flow */}
                     <div className="item-master-field">
                         <label htmlFor="item-master-approval-flow">
-                            APPROVAL FLOW
+                            APPROVAL FLOW <span>*</span>
                         </label>
 
                         <select
                             id="item-master-approval-flow"
                             value={approvalFlowId}
                             disabled={approvalFlowLoading}
-                            onChange={(e) => setApprovalFlowId(e.target.value)}
+                            className={
+                                errors.approvalFlowId
+                                    ? "item-master-input-error"
+                                    : ""
+                            }
+                            onChange={(e) => {
+                                setApprovalFlowId(e.target.value);
+                                clearFieldError(setErrors, "approvalFlowId");
+                            }}
                         >
                             <option value="">
                                 {approvalFlowLoading
@@ -453,6 +552,12 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             ))}
                         </select>
 
+                        {errors.approvalFlowId && (
+                            <div className="item-master-error">
+                                {errors.approvalFlowId}
+                            </div>
+                        )}
+
                         {approvalFlowError && (
                             <div className="item-master-field-hint item-master-field-hint-error">
                                 {approvalFlowError}
@@ -460,10 +565,10 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                         )}
                     </div>
 
-                    {/* Row 7: Comment */}
+                    {/* Comment */}
                     <div className="item-master-field">
                         <label htmlFor="item-master-comment">
-                            COMMENT
+                            COMMENT <span>*</span>
                         </label>
 
                         <textarea
@@ -471,8 +576,22 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             rows={3}
                             placeholder="Add comments or notes"
                             value={comment}
-                            onChange={(e) => setComment(e.target.value)}
+                            className={
+                                errors.comment
+                                    ? "item-master-input-error"
+                                    : ""
+                            }
+                            onChange={(e) => {
+                                setComment(e.target.value);
+                                clearFieldError(setErrors, "comment");
+                            }}
                         />
+
+                        {errors.comment && (
+                            <div className="item-master-error">
+                                {errors.comment}
+                            </div>
+                        )}
                     </div>
 
                     {/* Footer */}
