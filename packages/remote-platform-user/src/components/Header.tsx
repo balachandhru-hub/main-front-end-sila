@@ -48,12 +48,29 @@ const IconLogOut = () => (
   </svg>
 );
 
+export interface HeaderNavLeaf {
+  key: string;
+  label: string;
+}
+// A dropdown's subItems can be a flat, clickable leaf (existing behavior,
+// used by every other dashboard's nav) or a non-clickable group label with
+// its own nested leaves (e.g. Buyer Admin's More -> Approval -> Material/
+// Contract). Existing callers that only ever pass flat leaves are
+// unaffected — the group case is purely additive.
+export interface HeaderNavGroup {
+  label: string;
+  items: HeaderNavLeaf[];
+}
+export type HeaderNavSubEntry = HeaderNavLeaf | HeaderNavGroup;
+
+const isHeaderNavGroup = (entry: HeaderNavSubEntry): entry is HeaderNavGroup => 'items' in entry;
+
 export interface HeaderNavItem {
   key: string;
   icon?: React.ReactNode;
   label: string;
   badge?: number;
-  subItems?: { key: string; label: string }[];
+  subItems?: HeaderNavSubEntry[];
 }
 
 export interface HeaderProps {
@@ -237,23 +254,43 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
               >
                 <button
                   type="button"
-                  className={`vsx-header-nav-item${activeNav === item.key || item.subItems.some(s => s.key === activeNav) ? " vsx-header-nav-item-active" : ""}`}
+                  className={`vsx-header-nav-item${activeNav === item.key || item.subItems.some(s => isHeaderNavGroup(s) ? s.items.some(leaf => leaf.key === activeNav) : s.key === activeNav) ? " vsx-header-nav-item-active" : ""}`}
                 >
                   <span className="vsx-header-nav-label">{item.label}</span>
                 </button>
                 <div
-                  className="bad-header-dropdown-menu"
+                  className={`bad-header-dropdown-menu${item.subItems.some(isHeaderNavGroup) ? " bad-header-dropdown-menu-grouped" : ""}`}
                   style={openDropdownKey === item.key ? { visibility: 'visible', opacity: 1, pointerEvents: 'auto' } : {}}
                 >
-                  {item.subItems.map((sub) => (
-                    <div
-                      key={sub.key}
-                      className={`bad-header-subitem${activeNav === sub.key ? " bad-header-subitem-active" : ""}`}
-                      onClick={() => { onNavClick && onNavClick(sub.key); setOpenDropdownKey(null); }}
-                    >
-                      {sub.label}
-                    </div>
-                  ))}
+                  {item.subItems.map((sub, subIdx) =>
+                    isHeaderNavGroup(sub) ? (
+                      <div key={`${item.key}-group-${subIdx}`} className="bad-header-subitem-group">
+                        <div className="bad-header-subitem bad-header-subitem-parent">
+                          <span>{sub.label}</span>
+                          <span className="bad-header-subitem-arrow">›</span>
+                        </div>
+                        <div className="bad-header-subitem-submenu">
+                          {sub.items.map(leaf => (
+                            <div
+                              key={leaf.key}
+                              className={`bad-header-subitem${activeNav === leaf.key ? " bad-header-subitem-active" : ""}`}
+                              onClick={() => { onNavClick && onNavClick(leaf.key); setOpenDropdownKey(null); }}
+                            >
+                              {leaf.label}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        key={sub.key}
+                        className={`bad-header-subitem${activeNav === sub.key ? " bad-header-subitem-active" : ""}`}
+                        onClick={() => { onNavClick && onNavClick(sub.key); setOpenDropdownKey(null); }}
+                      >
+                        {sub.label}
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             ) : (
