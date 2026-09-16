@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import "./BidComparisonAward.css";
 import { Button } from "@vosox/shared-ui";
-import { fetchBuyerAsset } from "../../../remote-buyer/src/api/Buyerapi";
+import { fetchBuyerAsset } from "../api/platformApi";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, LabelList
