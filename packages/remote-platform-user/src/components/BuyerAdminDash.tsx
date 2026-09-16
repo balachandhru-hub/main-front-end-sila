@@ -24,6 +24,7 @@ import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
 import QuotationSummaryTable from "../../../remote-buyer/src/components/QuotationSummaryTable";
 import QuotationComparisonCard from "./QuotationComparisonCard";
 import BuyerRFQChat from "../../../remote-buyer/src/components/BuyerRFQChat/BuyerRFQChat";
+import ItemMasterCatalog from "../../../remote-buyer/src/components/ItemMasterCatalog";
 
 interface StatCard {
   icon: React.ReactNode;
@@ -244,6 +245,14 @@ const IconChevronRight = () => (
   </svg>
 );
 
+const IconMore = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="1" />
+    <circle cx="19" cy="12" r="1" />
+    <circle cx="5" cy="12" r="1" />
+  </svg>
+);
+
 const IconGlobe = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
@@ -279,14 +288,22 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog", section: "DIRECTORY & CATALOG" },
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
-  { 
-    key: "configuration", 
-    icon: <NavIconTemplate />, 
+  {
+    key: "configuration",
+    icon: <NavIconTemplate />,
     label: "Configuration",
     subItems: [
       { key: "template", label: "Templates" },
       { key: "approvalManagement", label: "Approval Management" }
     ]
+  },
+  {
+    key: "more",
+    icon: <IconMore />,
+    label: "More",
+    subItems: [
+      { key: "material", label: "Material" },
+    ],
   },
 ];
 
@@ -904,6 +921,8 @@ const BuyerAdminDash: React.FC = () => {
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#0f172a' }}>Approval Management</h2>
                 <p style={{ paddingTop: '1rem', color: '#64748b' }}>Approval management functionality will be displayed here.</p>
               </div>
+            ) : activeNav === "material" ? (
+              <ItemMasterCatalog buyerId={buyerId || ""} />
             ) : activeNav === "createRFQ" ? (
               <CreateRFQ />
             ) : activeNav === "product" ? (
