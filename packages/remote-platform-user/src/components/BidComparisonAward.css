@@ -140,6 +140,7 @@
 .bca-btn-ghost:hover { background: #e2e8f0; }
 .bca-btn-selected { background: #2563eb; color: #ffffff; }
 .bca-btn-block { width: 100%; justify-content: center; }
+.bca-btn-icon-gap { gap: 0.4375rem; }
 
 /* RFQ Details Card */
 .bca-details-card {
