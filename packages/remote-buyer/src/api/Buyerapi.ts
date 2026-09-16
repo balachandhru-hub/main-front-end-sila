@@ -328,6 +328,16 @@ export interface ItemMasterDto {
   description: string;
   materialCode: string;
   materialGroup: string;
+  productType?: string;
+  baseUnitOfMeasure?: string;
+  orderUnitOfMeasure?: string;
+  alternateUnitOfMeasure?: string;
+  valuationClass?: string;
+  unitOfMeasureMapping?: string;
+  subUnit?: string;
+  microUnit?: string;
+  approvalFlowId?: string;
+  comment?: string;
 }
 
 export interface CreateItemMasterRequestDto {
@@ -335,7 +345,26 @@ export interface CreateItemMasterRequestDto {
   description: string;
   materialCode: string;
   materialGroup: string;
+  productType?: string;
+  baseUnitOfMeasure?: string;
+  orderUnitOfMeasure?: string;
+  alternateUnitOfMeasure?: string;
+  valuationClass?: string;
+  unitOfMeasureMapping?: string;
+  subUnit?: string;
+  microUnit?: string;
+  approvalFlowId?: string;
+  comment?: string;
 }
+
+export interface MasterApprovalFlowDto {
+  id: string;
+  approvalCode: string;
+  approvalName: string;
+  buyerId: string;
+}
+
+export interface ItemMasterDetailDto extends ItemMasterDto {}
 
 export const getBuyerProfile = async (): Promise<BuyerProfileResponse | null> => {
   try {
@@ -463,7 +492,7 @@ export const getAllCostCenters = async (departmentId: string, index = 0, limit =
     throw new Error('Could not reach the server. Please check your connection and try again.');
   }
 };
-
+ 
 
 export const getAllItemMasters = async (buyerId: string, index = 0, limit = 10, searchTerm?: string): Promise<any> => {
   try {
@@ -479,6 +508,61 @@ export const getAllItemMasters = async (buyerId: string, index = 0, limit = 10, 
       throw new Error(data?.message || data?.description || `Failed to fetch item masters (${error.response.status}).`);
     }
     throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+
+export const getMasterApprovalFlows = async (
+  buyerId: string,
+  index: number = 0,
+  limit: number = 10
+): Promise<MasterApprovalFlowDto[]> => {
+  try {
+    const response = await axiosInstance.get<MasterApprovalFlowDto[]>(
+      '/api/v1/buyer/master-approval-flow',
+      { params: { buyerId, index, limit } }
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to fetch approval flows (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+
+export const getItemMasterById = async (
+  id: string
+): Promise<ItemMasterDetailDto | ErrorResponseDto> => {
+  try {
+    const response = await axiosInstance.get<ItemMasterDetailDto>(`/api/v1/buyer/item-master/${id}`);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch item master details',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching item master details.',
+    };
   }
 };
 
