@@ -8,7 +8,7 @@ import fs from 'fs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootNodeModules = path.resolve(__dirname, '../../node_modules');
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     federation({
@@ -26,11 +26,11 @@ export default defineConfig({
   ],
   resolve: {
     dedupe: ['react', 'react-dom', 'react-router-dom'],
-    alias: {
+    alias: command === 'serve' ? {
       react: path.resolve(rootNodeModules, 'react'),
       'react-dom': path.resolve(rootNodeModules, 'react-dom'),
       'react-router-dom': path.resolve(rootNodeModules, 'react-router-dom'),
-    },
+    } : undefined,
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],
@@ -55,4 +55,4 @@ export default defineConfig({
     target: 'esnext',
     cssCodeSplit: false,
   },
-});
+}));

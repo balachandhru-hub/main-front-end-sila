@@ -29,17 +29,15 @@ export default defineConfig(({ command, mode }) => {
     ],
     resolve: {
       dedupe: ['react', 'react-dom', 'react-router-dom'],
-      alias: {
+      alias: command === 'serve' ? {
         react: path.resolve(rootNodeModules, 'react'),
         'react-dom': path.resolve(rootNodeModules, 'react-dom'),
         'react-router-dom': path.resolve(rootNodeModules, 'react-router-dom'),
-        ...(command === 'serve' ? {
-          'remoteBuyer/BuyerApp': path.resolve(__dirname, '../remote-buyer/src/BuyerApp.tsx'),
-          'remoteSupplier/SupplierApp': path.resolve(__dirname, '../remote-supplier/src/SupplierApp.tsx'),
-          'remoteSupplier/ExternalSupplierBid': path.resolve(__dirname, '../remote-supplier/src/pages/ExternalSupplierBid.tsx'),
-          'remotePlatformUser/PlatformUserApp': path.resolve(__dirname, '../remote-platform-user/src/PlatformUserApp.tsx'),
-        } : {}),
-      },
+        'remoteBuyer/BuyerApp': path.resolve(__dirname, '../remote-buyer/src/BuyerApp.tsx'),
+        'remoteSupplier/SupplierApp': path.resolve(__dirname, '../remote-supplier/src/SupplierApp.tsx'),
+        'remoteSupplier/ExternalSupplierBid': path.resolve(__dirname, '../remote-supplier/src/pages/ExternalSupplierBid.tsx'),
+        'remotePlatformUser/PlatformUserApp': path.resolve(__dirname, '../remote-platform-user/src/PlatformUserApp.tsx'),
+      } : undefined,
     },
     optimizeDeps: {
       include: ['react', 'react-dom', 'react-router-dom'],
