@@ -25,11 +25,17 @@ const DETAIL_FIELDS: { key: keyof ItemMasterDetailDto; label: string }[] = [
     { key: "microUnit", label: "Micro Unit" },
 ];
 
+const IconChevronLeft = () => (
+    <svg className="back-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="15 18 9 12 15 6" />
+    </svg>
+);
+
 const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose }) => {
     const [itemMasters, setItemMasters] = useState<ItemMasterDto[]>([]);
+    const [showListView, setShowListView] = useState(true);
     const [selectedItemDetail, setSelectedItemDetail] = useState<ItemMasterDetailDto | null>(null);
     const [showItemMasterModal, setShowItemMasterModal] = useState(false);
-    const [showDetailView, setShowDetailView] = useState(false);
     const [loading, setLoading] = useState(false);
     const [detailLoading, setDetailLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -59,8 +65,8 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [buyerId]);
 
-    const handleCardClick = async (id: string) => {
-        setShowDetailView(true);
+    const handleRowClick = async (id: string) => {
+        setShowListView(false);
         setDetailLoading(true);
         setDetailError(null);
 
@@ -80,36 +86,17 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
     };
 
     const handleBackToList = () => {
-        setShowDetailView(false);
+        setShowListView(true);
         setSelectedItemDetail(null);
         setDetailError(null);
     };
 
+    const handleAddItemMasterClick = () => {
+        setShowItemMasterModal(true);
+    };
+
     return (
         <div className="imc-container">
-            <div className="imc-header">
-                <div>
-                    <h1 className="imc-title">Material Master</h1>
-                    <p className="imc-subtitle">Browse and manage item masters for your organization.</p>
-                </div>
-
-                <div className="imc-header-actions">
-                    <button
-                        type="button"
-                        className="imc-btn-primary"
-                        onClick={() => setShowItemMasterModal(true)}
-                    >
-                        + Add Item Master
-                    </button>
-
-                    {onClose && (
-                        <button type="button" className="imc-btn-secondary" onClick={onClose}>
-                            Close
-                        </button>
-                    )}
-                </div>
-            </div>
-
             {error && (
                 <div className="imc-error-banner">
                     <span>{error}</span>
@@ -119,11 +106,27 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
                 </div>
             )}
 
-            {showDetailView ? (
-                <div className="imc-detail-panel">
-                    <button type="button" className="imc-btn-back" onClick={handleBackToList}>
-                        ← Back to list
-                    </button>
+            {!showListView ? (
+                <div className="imc-page">
+                    <div className="detail-header">
+                        <button
+                            type="button"
+                            className="back-button"
+                            onClick={handleBackToList}
+                            title="Go back to list"
+                            aria-label="Go back"
+                        >
+                            <IconChevronLeft />
+                        </button>
+
+                        <div className="detail-header-title">
+                            <h2 className="imc-title">{selectedItemDetail?.materialCode || "Material Details"}</h2>
+                        </div>
+
+                        <button type="button" className="imc-btn-primary" onClick={handleAddItemMasterClick}>
+                            + Add Item Master
+                        </button>
+                    </div>
 
                     {detailLoading ? (
                         <div className="imc-loading-state">
@@ -135,63 +138,78 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
                             <span>{detailError}</span>
                         </div>
                     ) : selectedItemDetail ? (
-                        <div className="imc-detail-card">
-                            <h2 className="imc-detail-heading">Item Master Details</h2>
-
-                            <div className="imc-detail-grid">
-                                {DETAIL_FIELDS.map(({ key, label }) => {
-                                    const value = selectedItemDetail[key];
-                                    return (
-                                        <div className="imc-detail-field" key={String(key)}>
-                                            <div className="imc-detail-label">{label}</div>
-                                            <div className={`imc-detail-value${value ? "" : " imc-detail-value-empty"}`}>
-                                                {value ? String(value) : "—"}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                        <div className="detail-card">
+                            {DETAIL_FIELDS.map(({ key, label }) => {
+                                const value = selectedItemDetail[key];
+                                return (
+                                    <div className="detail-field" key={String(key)}>
+                                        <span className="label">{label}</span>
+                                        <span className={`value${value ? "" : " value-empty"}`}>
+                                            {value ? String(value) : "—"}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
                     ) : null}
                 </div>
-            ) : loading ? (
-                <div className="imc-loading-state">
-                    <div className="imc-spinner" />
-                    <span>Loading item masters...</span>
-                </div>
-            ) : itemMasters.length === 0 ? (
-                <div className="imc-empty-state">
-                    <p>No item masters found.</p>
-                    <button
-                        type="button"
-                        className="imc-btn-primary"
-                        onClick={() => setShowItemMasterModal(true)}
-                    >
-                        + Add Item Master
-                    </button>
-                </div>
             ) : (
-                <div className="imc-card-grid">
-                    {itemMasters.map((item) => (
-                        <div
-                            key={item.id}
-                            className="imc-card"
-                            onClick={() => handleCardClick(item.id)}
-                        >
-                            <div className="imc-card-row">
-                                <span className="imc-card-label">Material:</span>
-                                <span className="imc-card-value">{item.materialCode}</span>
-                            </div>
-                            <div className="imc-card-row">
-                                <span className="imc-card-label">Description:</span>
-                                <span className="imc-card-value">{item.description}</span>
-                            </div>
-                            <div className="imc-card-row">
-                                <span className="imc-card-label">Group:</span>
-                                <span className="imc-card-value">{item.materialGroup}</span>
-                            </div>
+                <div className="imc-page">
+                    <div className="imc-header">
+                        <div>
+                            <h1 className="imc-title">Material Master</h1>
+                            <p className="imc-subtitle">Browse and manage item masters for your organization.</p>
                         </div>
-                    ))}
+
+                        <div className="imc-header-actions">
+                            <button type="button" className="imc-btn-primary" onClick={handleAddItemMasterClick}>
+                                + Add Item Master
+                            </button>
+
+                            {onClose && (
+                                <button type="button" className="imc-btn-secondary" onClick={onClose}>
+                                    Close
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {loading ? (
+                        <div className="imc-loading-state">
+                            <div className="imc-spinner" />
+                            <span>Loading item masters...</span>
+                        </div>
+                    ) : itemMasters.length === 0 ? (
+                        <div className="imc-empty-state">
+                            <p>No item masters found.</p>
+                            <button type="button" className="imc-btn-primary" onClick={handleAddItemMasterClick}>
+                                + Add Item Master
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="item-master-table-container">
+                            <table className="item-master-table">
+                                <thead>
+                                    <tr>
+                                        <th style={{ width: "64px" }}>S.NO</th>
+                                        <th>MATERIAL</th>
+                                        <th>DESCRIPTION</th>
+                                        <th>GROUP</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {itemMasters.map((item, index) => (
+                                        <tr key={item.id} onClick={() => handleRowClick(item.id)}>
+                                            <td>{index + 1}</td>
+                                            <td>{item.materialCode}</td>
+                                            <td>{item.description}</td>
+                                            <td>{item.materialGroup}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -201,6 +219,7 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
                 buyerId={buyerId}
                 onSuccess={() => {
                     fetchItemMasters();
+                    handleBackToList();
                 }}
             />
         </div>
