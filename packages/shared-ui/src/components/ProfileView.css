@@ -1,7 +1,7 @@
 .profile-page {
   width: 100%;
   min-height: 100%;
-  background: #ffffff;
+  background: var(--bg-color);
   padding: 1.75rem 3rem 4rem;
   box-sizing: border-box;
 }
@@ -16,29 +16,50 @@
   font-weight: 500;
   color: #475569;
   cursor: pointer;
-  padding: 0.375rem 0;
   margin-bottom: 1.25rem;
+  border-radius: 50%;
+  background-color: #ffffff;
+  transition: 0.3s ease-in-out;
+  border: 0.5px solid #ffffff;
+  box-shadow: 0 0 0.3rem 0.01rem #cecfd0;
 }
 
 .profile-back-btn:hover {
   color: #1e293b;
+  /* border: 0.5px solid rgb(200, 200, 200); */
+
 }
+
 
 .profile-banner {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  flex-direction: column;
   background: #ffffff;
   border: 0.0625rem solid #e6eaf2;
   border-radius: 1rem;
-  padding: 2rem 2.5rem;
-  margin-bottom: 1.5rem;
+  gap: 2rem;
 }
 
 .profile-banner-left {
   display: flex;
   align-items: center;
   gap: 1.25rem;
+  justify-content: space-between;
+  padding: 2rem 2.5rem;
+  border-bottom: 1px solid #edeff0;
+}
+
+.profile-banner-name {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.edit-button {
+  border: none;
+  display: flex;
+  align-items: center;
 }
 
 .profile-avatar {
@@ -46,7 +67,7 @@
   height: 4.75rem;
   min-width: 4.75rem;
   border-radius: 50%;
-  background: linear-gradient(135deg, #f7b267, #4f8ef7);
+  background: #5994fa;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -87,11 +108,13 @@
   color: #64748b;
 }
 
+
+
 .profile-section-card {
   background: #ffffff;
-  border: 0.0625rem solid #e6eaf2;
-  border-radius: 1rem;
+  border-radius: 0rem 0rem 1rem 1rem;
   overflow: hidden;
+  padding: 0rem 2.5rem;
 }
 
 .profile-section-header {
@@ -99,8 +122,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1.5rem 2.5rem;
-  border-bottom: 0.0625rem solid #eef1f6;
+  /* padding: 0rem 2.5rem; */
 }
 
 .profile-section-header h2 {
@@ -118,11 +140,14 @@
 
 .profile-edit-btn,
 .profile-update-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   background: #2563eb;
   color: #fff;
   border: none;
   border-radius: 0.5rem;
-  padding: 0.5625rem 1.375rem;
+  padding: 0.5625rem 0.7rem;
   font-size: 0.84375rem;
   font-weight: 600;
   cursor: pointer;
@@ -168,7 +193,7 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1.375rem 2rem;
-  padding: 2rem 2.5rem 2.5rem;
+  padding: 2rem 0rem;
 }
 
 .profile-field label {
@@ -189,11 +214,11 @@
 .profile-field input {
   width: 100%;
   padding: 0.75rem 0.875rem;
-  border: 0.0625rem solid #e2e8f0;
+  border: 0.0625rem solid #cbd5e1;
   border-radius: 0.5625rem;
   font-size: 0.90625rem;
   color: #1e293b;
-  background: #f8fafc;
+  background: #ffffff;
   box-sizing: border-box;
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
@@ -201,6 +226,7 @@
 .profile-field input:disabled {
   color: #475569;
   cursor: default;
+
 }
 
 .profile-field.is-editing input {
@@ -227,13 +253,13 @@
     padding: 1.5rem 2rem 3rem;
   }
 
-  .profile-banner {
-    padding: 1.75rem 2rem;
-  }
-
   .profile-fields-grid {
     gap: 1.25rem 1.5rem;
     padding: 1.75rem 2rem 2rem;
+  }
+
+  .profile-section-card {
+    padding: 0;
   }
 
   .profile-section-header {
@@ -253,11 +279,11 @@
   .profile-banner {
     flex-direction: column;
     align-items: flex-start;
-    padding: 1.5rem;
   }
 
   .profile-banner-left {
     padding-bottom: 0.5rem;
+    width: 100%;
   }
 
   .profile-avatar {
@@ -269,6 +295,10 @@
 
   .profile-hero-name {
     font-size: 1.25rem;
+  }
+
+  .profile-section-card {
+    width: 100%;
   }
 
   .profile-section-header {
@@ -287,7 +317,7 @@
   }
 
   .profile-fields-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
     padding: 1.5rem;
   }
@@ -304,8 +334,16 @@
   }
 
   .profile-banner {
-    padding: 1.25rem;
+    gap: 0.5rem;
     border-radius: 0.875rem;
+  }
+
+  .profile-banner-left {
+    padding: 0.5rem;
+  }
+
+  .profile-banner-name {
+    gap: 0.5rem;
   }
 
   .profile-avatar {
@@ -353,6 +391,7 @@
   .profile-fields-grid {
     padding: 1.25rem;
     gap: 0.875rem;
+    grid-template-columns: 1fr;
   }
 
   .profile-field label {
