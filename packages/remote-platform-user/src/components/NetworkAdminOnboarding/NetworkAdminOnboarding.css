@@ -25,9 +25,37 @@
 /* ---------------------------- header ---------------------------- */
 
 .bp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     background: var(--bp-white);
     border-bottom: 1px solid var(--bp-border);
     padding: 18px 40px;
+}
+
+.bp-header-logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--bp-border);
+    border-radius: var(--bp-radius);
+    color: #dc2626;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bp-header-logout-btn:hover:not(:disabled) {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.bp-header-logout-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .bp-logo {

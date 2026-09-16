@@ -73,7 +73,7 @@ const NetworkAdminProfilePage: React.FC = () => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#ffffff' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg-color)' }}>
       <Header />
       <div style={{ marginTop: '4rem' }}>
         <ProfileView

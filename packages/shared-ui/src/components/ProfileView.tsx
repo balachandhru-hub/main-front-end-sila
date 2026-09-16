@@ -53,10 +53,22 @@ const IconGlobe = () => (
   </svg>
 );
 
-const IconArrowLeft = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="19" y1="12" x2="5" y2="12" />
-    <polyline points="12 19 5 12 12 5" />
+// const IconArrowLeft = () => (
+//   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <line x1="19" y1="12" x2="5" y2="12" />
+//     <polyline points="12 19 5 12 12 5" />
+//   </svg>
+// );
+
+const IconBack = () => (
+<svg width="35" height="35" viewBox="0 0 24 24" fill="#ffffff" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <path d="M13.5 8l-4 4 4 4"/>
+  </svg>
+);
+
+const IconEdit = () => (
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
   </svg>
 );
 
@@ -131,71 +143,78 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   return (
     <div className="profile-page">
       <button className="profile-back-btn" onClick={onBack} type="button">
-        <IconArrowLeft /> Back
+        <IconBack />
       </button>
-
       <div className="profile-banner">
         <div className="profile-banner-left">
-          <div className="profile-avatar">{initial}</div>
-          <div>
-            <div className="profile-hero-name">{personDetail.name}</div>
-            <div className="profile-hero-sub">
-              <span className="profile-role-pill">{personDetail.roleName}</span>
+          <div className="profile-banner-name">
+            <div className="profile-avatar">{initial}</div>
+            <div>
+              <div className="profile-hero-name">{personDetail.name}</div>
+              <div className="profile-hero-sub">
+                <span className="profile-role-pill">{personDetail.roleName}</span>
+              </div>
             </div>
+          </div>
+
+          <div className="edit-button">
+            {!isEditing ? (
+              <button className="profile-edit-btn" onClick={handleEditClick} type="button">
+                <IconEdit/>Edit
+              </button>
+            ) : (
+              <div className="profile-edit-actions">
+                <button
+                  className="profile-cancel-btn"
+                  onClick={handleCancel}
+                  disabled={saving}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button
+                  className="profile-update-btn"
+                  onClick={handleUpdate}
+                  disabled={saving}
+                  type="button"
+                >
+                  {saving ? 'Updating…' : 'Update'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="profile-section-card">
+          <div className="profile-section-header">
+            <div>
+              <h2>Personal Information</h2>
+              <p>Manage your name, contact details, and account identifiers.</p>
+            </div>
+
+          </div>
+
+          <div className="profile-fields-grid">
+            {EDITABLE_FIELDS.map(({ key, label, icon }) => (
+              <div className={`profile-field ${isEditing ? 'is-editing' : ''}`} key={key}>
+                <label>
+                  <span className="profile-field-icon">{icon}</span>
+                  {label}
+                </label>
+                <input
+                  type="text"
+                  value={(formData[key as keyof PersonDetailUpdate] as string) ?? ''}
+                  onChange={(e) => handleChange(key, e.target.value)}
+                  readOnly={!isEditing}
+                  disabled={!isEditing}
+                />
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="profile-section-card">
-        <div className="profile-section-header">
-          <div>
-            <h2>Personal Information</h2>
-            <p>Manage your name, contact details, and account identifiers.</p>
-          </div>
-          {!isEditing ? (
-            <button className="profile-edit-btn" onClick={handleEditClick} type="button">
-              Edit
-            </button>
-          ) : (
-            <div className="profile-edit-actions">
-              <button
-                className="profile-cancel-btn"
-                onClick={handleCancel}
-                disabled={saving}
-                type="button"
-              >
-                Cancel
-              </button>
-              <button
-                className="profile-update-btn"
-                onClick={handleUpdate}
-                disabled={saving}
-                type="button"
-              >
-                {saving ? 'Updating…' : 'Update'}
-              </button>
-            </div>
-          )}
-        </div>
 
-        <div className="profile-fields-grid">
-          {EDITABLE_FIELDS.map(({ key, label, icon }) => (
-            <div className={`profile-field ${isEditing ? 'is-editing' : ''}`} key={key}>
-              <label>
-                <span className="profile-field-icon">{icon}</span>
-                {label}
-              </label>
-              <input
-                type="text"
-                value={(formData[key as keyof PersonDetailUpdate] as string) ?? ''}
-                onChange={(e) => handleChange(key, e.target.value)}
-                readOnly={!isEditing}
-                disabled={!isEditing}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
+
   );
 };
