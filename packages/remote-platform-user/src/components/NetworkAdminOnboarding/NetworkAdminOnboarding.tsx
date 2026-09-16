@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Country, State, City } from "country-state-city";
@@ -7,6 +7,8 @@ import { fetchSegments, fetchClasses, fetchReferenceList } from "../../api/maste
 import type { SelectedProduct, SelectedSubProduct } from "../../api/masterdataApi";
 import type { NetworkAdminProfileResponse } from "../../dto/networkAdminDto";
 import { useNetworkAdminAuthStore } from "../../store/useAuthStore";
+import { logoutNetworkAdmin } from "../../api/networkAdminApi";
+import { ToastContainer, toastService } from "@vosox/shared-ui";
 
 interface BusinessInfo {
     industry: string;
@@ -150,6 +152,14 @@ const emptyLocationDraft = {
     contactPhone: "",
     isDefault: false,
 };
+
+const LogoutIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+        <polyline points="16 17 21 12 16 7" />
+        <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+);
 
 function makeId(): string {
     return Math.random().toString(36).slice(2, 10);
@@ -343,12 +353,31 @@ function SubProductDropdown({
 export default function NetworkAdminOnboarding({ onComplete, onboardingData, rejectedProfile }: NetworkAdminOnboardingProps) {
     const navigate = useNavigate();
     const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
+    const logout = useNetworkAdminAuthStore((state) => state.logout);
     const networkAdminHome =
       currentUser?.userRole === 'SUPPLIER_NETWORK_ADMIN'
         ? '/platform-user/supplier-network-admin'
         : '/platform-user/buyer-network-admin';
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [furthestStep, setFurthestStep] = useState<number>(1);
+    const [loggingOut, setLoggingOut] = useState(false);
+
+    const handleLogout = useCallback(async () => {
+        if (loggingOut) return;
+        setLoggingOut(true);
+        try {
+            await logoutNetworkAdmin();
+            toastService.success('Logged out successfully!');
+        } catch (err) {
+            toastService.info('Logging out...');
+        } finally {
+            logout();
+            sessionStorage.clear();
+            setLoggingOut(false);
+            window.dispatchEvent(new CustomEvent('session:expired'));
+            navigate('/login');
+        }
+    }, [loggingOut, logout, navigate]);
 
     const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(emptyBusinessInfo);
     const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
@@ -1038,6 +1067,9 @@ if (Array.isArray(data)) {
                 </div>
                 {renderCompanyInfo()}
                 <div className="bp-actions bp-actions-right" style={{ marginTop: '20px' }}>
+                    <button type="button" className="bp-btn bp-btn-secondary" onClick={() => navigate('/login')}>
+                        Back
+                    </button>
                     <button type="button" className="bp-btn bp-btn-primary" onClick={handleNext}>
                         Next
                     </button>
@@ -1756,11 +1788,22 @@ if (Array.isArray(data)) {
     if (submitted) {
         return (
             <div className="bp-page">
+                <ToastContainer />
                 <header className="bp-header">
                     <div className="bp-logo">
                         V<span className="bp-logo-accent">◎</span>SX
                         <div className="bp-logo-tagline">Vendor Sourcing &amp; Onboarding Suite</div>
                     </div>
+                    <button
+                        type="button"
+                        className="bp-header-logout-btn"
+                        onClick={handleLogout}
+                        disabled={loggingOut}
+                        title="Log out"
+                    >
+                        <LogoutIcon />
+                        {loggingOut ? 'Logging out...' : 'Log Out'}
+                    </button>
                 </header>
                 <main className="bp-main bp-main-centered">
                     <div className="bp-success-card">
@@ -1782,11 +1825,22 @@ if (Array.isArray(data)) {
 
     return (
         <div className="bp-page">
+            <ToastContainer />
             <header className="bp-header">
                 <div className="bp-logo">
                     V<span className="bp-logo-accent">◎</span>SX
                     <div className="bp-logo-tagline">Vendor Sourcing &amp; Onboarding Suite</div>
                 </div>
+                <button
+                    type="button"
+                    className="bp-header-logout-btn"
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                    title="Log out"
+                >
+                    <LogoutIcon />
+                    {loggingOut ? 'Logging out...' : 'Log Out'}
+                </button>
             </header>
             <main className="bp-main">
                 <aside className="bp-sidebar-wrap">{renderStepIndicator()}</aside>

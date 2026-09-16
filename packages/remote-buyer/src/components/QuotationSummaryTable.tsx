@@ -47,6 +47,13 @@ export interface QuotationSummarySupplierQuotation {
   isLead?: boolean;
   status?: string | null;
   currency?: string | null;
+  rank?: string | null;
+  tax?: number | null;
+  taxType?: string | null;
+  discount?: number | null;
+  discountType?: string | null;
+  deliveryCharge?: number | null;
+  deliveryType?: string | null;
   supplierQuotationItems?: QuotationSummaryQuotationItem[] | null;
 }
 
@@ -104,6 +111,7 @@ const formatTypedDiscount = (
 
 const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) => {
   const [expandedRfqItems, setExpandedRfqItems] = useState<Set<string>>(new Set());
+  const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
   const toggleRfqItemExpanded = (rowKey: string) => {
     setExpandedRfqItems((prev) => {
@@ -116,6 +124,8 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
       return next;
     });
   };
+
+  const toggleSummaryExpanded = () => setIsSummaryExpanded((prev) => !prev);
 
   if (!rfq.items || rfq.items.length === 0) {
     return null;
@@ -144,7 +154,8 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
         return lnA - lnB;
       })
     : rfq.items;
-  const showLLColumn = rfq.addLotOption === false;
+  const isLotEnabled = rfq.addLotOption === true;
+  const showLLColumn = !isLotEnabled;
   const supplierGroupColSpan = showLLColumn ? 3 : 2;
   // Base columns: Expand, Material Info, LN, Code, Qty.
   const BASE_COLUMN_COUNT = 5;
@@ -193,6 +204,16 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
                     </th>
                   ))}
                 </tr>
+                {isLotEnabled && (
+                  <tr>
+                    <th colSpan={BASE_COLUMN_COUNT} className="qst-supplier-name-label">Rank</th>
+                    {quotedSuppliers.map((quote, sIdx) => (
+                      <th key={quote.quotationId || sIdx} colSpan={supplierGroupColSpan} className="qst-supplier-rank-header">
+                        <span className="qst-supplier-rank-badge">{formatRank(quote.rank)}</span>
+                      </th>
+                    ))}
+                  </tr>
+                )}
                 <tr>
                   <th className="qst-expand-header"></th>
                   <th>Material Info</th>
@@ -203,7 +224,7 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
                     <React.Fragment key={quote.quotationId || sIdx}>
                       <th className="qst-sub-header">Rate</th>
                       <th className="qst-sub-header">Amount</th>
-                      {showLLColumn && <th className="qst-sub-header">LL</th>}
+                      {showLLColumn && <th className="qst-sub-header">Rank</th>}
                     </React.Fragment>
                   ))}
                 </tr>
@@ -297,17 +318,61 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
               );
             })}
           </tbody>
-          {showSupplierColumns && (
+          {showSupplierColumns && isLotEnabled && (
             <tfoot>
               <tr className="qst-total-quote-row">
-                <td></td>
-                <td>{rfq.addLotOption === true ? "FL" : ""}</td>
-                <td></td>
-                <td></td>
-                <td></td>
+                <td className="qst-expand-cell">
+                  <button
+                    type="button"
+                    className="qst-expand-toggle"
+                    onClick={toggleSummaryExpanded}
+                    aria-expanded={isSummaryExpanded}
+                    aria-label={isSummaryExpanded ? "Collapse summary" : "Expand summary"}
+                  >
+                    {isSummaryExpanded ? "-" : "+"}
+                  </button>
+                </td>
+                <td colSpan={BASE_COLUMN_COUNT - 1}></td>
                 {quotedSuppliers.map((quote, sIdx) => (
-                  <td key={quote.quotationId || sIdx} colSpan={supplierGroupColSpan}>
-                    Total Quote: {formatMoney(quote.totalPrice ?? 0, quote.currency)}
+                  <td key={quote.quotationId || sIdx} colSpan={supplierGroupColSpan} className="qst-total-quote-cell">
+                    <span className="qst-total-quote-label">Total Quote</span>
+                    <span className="qst-total-quote-amount">{formatMoney(quote.totalPrice ?? 0, quote.currency)}</span>
+                  </td>
+                ))}
+              </tr>
+              {isSummaryExpanded && (
+                <tr className="qst-summary-row">
+                  <td colSpan={BASE_COLUMN_COUNT}></td>
+                  {quotedSuppliers.map((quote, sIdx) => (
+                    <td key={quote.quotationId || sIdx} colSpan={supplierGroupColSpan} className="qst-summary-cell">
+                      <div className="qst-summary-grid">
+                        <span className="qst-summary-item-label">Subtotal:</span>
+                        <span className="qst-summary-item-value">{formatMoney(quote.totalPrice, quote.currency)}</span>
+                        <span className="qst-summary-item-label">Discount:</span>
+                        <span className="qst-summary-item-value qst-summary-item-negative">
+                          {formatTypedDiscount(quote.discount, quote.discountType, quote.currency)}
+                        </span>
+                        <span className="qst-summary-item-label">Tax:</span>
+                        <span className="qst-summary-item-value">{formatTypedValue(quote.tax, quote.taxType, quote.currency)}</span>
+                        <span className="qst-summary-item-label">Delivery Charge:</span>
+                        <span className="qst-summary-item-value">
+                          {formatTypedValue(quote.deliveryCharge, quote.deliveryType, quote.currency)}
+                        </span>
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              )}
+            </tfoot>
+          )}
+          {showSupplierColumns && !isLotEnabled && (
+            <tfoot>
+              <tr className="qst-total-quote-row">
+                <td colSpan={BASE_COLUMN_COUNT}></td>
+                {quotedSuppliers.map((quote, sIdx) => (
+                  <td key={quote.quotationId || sIdx} colSpan={supplierGroupColSpan} className="qst-total-quote-cell">
+                    <span className="qst-total-quote-label">Total Quote</span>
+                    <span className="qst-total-quote-amount">{formatMoney(quote.totalPrice ?? 0, quote.currency)}</span>
                   </td>
                 ))}
               </tr>
