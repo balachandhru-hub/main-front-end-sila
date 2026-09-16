@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "../../../../remote-buyer/src/components/BuyerRFQChat/BuyerRFQChat.css";
 import { isErrorResponse } from "@vosox/shared-ui";
 import type { ChatMessageDto, ChatThreadDto } from "../../api/supplierApi";
@@ -14,6 +14,7 @@ import type { PersonDetailDto } from "../../api/supplierApi";
 import { toastService } from "@vosox/shared-ui";
 import SupplierChatConversation from "./SupplierChatConversation";
 import SupplierChatDetails from "./SupplierChatDetails";
+import type { ObservedParticipant } from "./types";
 import {
   downloadBase64File,
   fileToBase64,
@@ -71,6 +72,19 @@ const SupplierRFQChat: React.FC<SupplierRFQChatProps> = ({
   // the Buyer's identity — the threads API's counterpartyName is only a
   // fallback for when buyerName is unavailable.
   const counterpartyName = buyerName || thread?.counterpartyName || "Buyer";
+
+  // Other supplier-side people are only knowable from who has actually sent
+  // a message in this thread — not from any invited-users list.
+  const observedParticipants = useMemo<ObservedParticipant[]>(() => {
+    const seen = new Map<string, string>();
+    for (const message of messages) {
+      if (message.senderOrganizationType?.toLowerCase() !== "supplier") continue;
+      if (!message.senderUserId || !message.senderName) continue;
+      if (message.senderUserId === myProfile?.userId) continue;
+      if (!seen.has(message.senderUserId)) seen.set(message.senderUserId, message.senderName);
+    }
+    return Array.from(seen.entries()).map(([userId, name]) => ({ userId, name }));
+  }, [messages, myProfile?.userId]);
 
   const loadInitialHistory = async (threadId: string, unreadCount: number) => {
     setLoadingMessages(true);
@@ -314,11 +328,13 @@ const SupplierRFQChat: React.FC<SupplierRFQChatProps> = ({
               counterpartyName={counterpartyName}
               myProfile={myProfile}
               isLoadingMyProfile={isLoadingMyProfile}
+              observedParticipants={observedParticipants}
               onBack={() => setIsChatDetailsOpen(false)}
             />
           ) : (
             <SupplierChatConversation
               counterpartyName={counterpartyName}
+              currentUserId={myProfile?.userId}
               hasThread={!!thread}
               messages={messages}
               isLoadingMessages={loadingMessages}

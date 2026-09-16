@@ -1,11 +1,18 @@
 import React, { useState, useMemo, useEffect } from "react";
 import "./BidComparisonAward.css";
+import { Button } from "@vosox/shared-ui";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, LabelList
 } from "recharts";
 
 
+
+const IconMessageSquare = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
 
 const ChartTooltip = ({ active, payload }: any) => {
   if (!active || !payload || !payload.length) return null;
@@ -27,6 +34,7 @@ interface BidComparisonAwardViewProps {
   onFreeze: () => void;
   onBack: () => void;
   onQsAns: () => void;
+  onChatClick: () => void;
 }
 
 function fmtINR(val: number) {
@@ -35,7 +43,7 @@ function fmtINR(val: number) {
 }
 
 const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
-  rfq, loading, error, freezingBid, onFreeze, onBack
+  rfq, loading, error, freezingBid, onFreeze, onBack, onChatClick
 }) => {
   const [viewMode, setViewMode] = useState<"summary" | "comparison" | "by-supplier">("summary");
   const [showFreezeModal, setShowFreezeModal] = useState(false);
@@ -234,13 +242,24 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           <span className={`bca-status-badge ${isBidFrozen ? "bca-status-frozen" : "bca-status-active"}`}>
             &#9679; {isBidFrozen ? "BID FROZEN" : "BIDDING ACTIVE"}
           </span>
-          <button className={`bca-btn ${isBidFrozen ? "bca-btn-disabled" : "bca-btn-primary"}`} onClick={() => setShowFreezeModal(true)} disabled={freezingBid || isBidFrozen}>
+          <Button variant="primary" className="bca-btn-icon-gap" onClick={() => setShowFreezeModal(true)} disabled={freezingBid || isBidFrozen}>
             <span className="bca-icon-lock">
               <span className="bca-icon-lock-shackle"></span>
               <span className="bca-icon-lock-body"></span>
             </span>
             <span>{freezingBid ? "Freezing..." : isBidFrozen ? "Bid Frozen" : "Freeze Bid"}</span>
-          </button>
+          </Button>
+          {Array.isArray(rfq?.supplierIds) && rfq.supplierIds.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              className="bca-btn-icon-gap"
+              onClick={onChatClick}
+              title="Chat with invited suppliers"
+            >
+              <IconMessageSquare /> Chat
+            </Button>
+          )}
         </div>
       </div>
 
