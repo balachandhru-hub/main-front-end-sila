@@ -63,6 +63,8 @@ export interface ApprovalFlowUser {
   id?: string;
   userId: string;
   order: number;
+  name?: string;
+  email?: string;
 }
 
 // Returns the approvers of an approval flow, sorted by approval order.
@@ -79,6 +81,8 @@ export const fetchApprovalFlowUsers = async (approvalId: string): Promise<Approv
               id: typeof item?.id === 'string' ? item.id : undefined,
               userId: item?.userId,
               order: typeof item?.order === 'number' ? item.order : index + 1,
+              name: item?.name,
+              email: item?.email,
             }
       )
       .filter((item) => typeof item.userId === 'string' && !!item.userId)
