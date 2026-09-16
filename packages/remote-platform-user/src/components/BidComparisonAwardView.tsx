@@ -2,10 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import "./BidComparisonAward.css";
 import { Button } from "@vosox/shared-ui";
 import { fetchBuyerAsset } from "../api/platformApi";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell, LabelList
-} from "recharts";
+
 
 const IconMessageSquare = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -67,18 +64,6 @@ const formatQuestionType = (type?: string) => {
   return labels[normalized] || normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
-const ChartTooltip = ({ active, payload }: any) => {
-  if (!active || !payload || !payload.length) return null;
-  const d = payload[0].payload;
-  const price = typeof d.price === 'number' ? d.price : 0;
-  return (
-    <div className="bca-chart-tooltip">
-      <div className="bca-chart-tooltip-name">{d.fullName}</div>
-      <div className="bca-chart-tooltip-price">₹{price.toLocaleString('en-IN')}</div>
-      {d.isLowest && <div className="bca-chart-tooltip-badge">✓ Lowest Price</div>}
-    </div>
-  );
-};
 
 interface BidComparisonAwardViewProps {
   rfq: any;
@@ -496,51 +481,45 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                 ))}
               </select>
             </div>
-            <div className="bca-chart-body">
-              <ResponsiveContainer width="100%" height={Math.max(220, chartData?.length * 56)}>
-                <BarChart
-                  layout="vertical"
-                  data={chartData}
-                  margin={{ top: 12, right: 64, left: 16, bottom: 12 }}
-                  barCategoryGap="25%"
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                  <XAxis
-                    type="number"
-                    tickFormatter={(v: number) => v >= 1000 ? `₹${(v/1000).toFixed(0)}k` : `₹${v}`}
-                    tick={{ fontSize: 11, fill: '#9ca3af' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    tick={{ fontSize: 12, fill: '#6b7280', fontWeight: 500 }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={130}
-                  />
-                  <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(37,99,235,0.04)' }} />
-                  <Bar dataKey="price" radius={6} maxBarSize={32}>
-                    <LabelList
-                      dataKey="price"
-                      position="right"
-                      formatter={(v: any) => {
-                        const num = typeof v === 'number' ? v : 0;
-                        return num > 0 ? (num >= 1000 ? `₹${(num / 1000).toFixed(1)}k` : `₹${num}`) : '';
-                      }}
-                      style={{ fontSize: 11, fontWeight: 600, fill: '#374151' }}
-                    />
-                    {chartData?.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry?.isLowest ? '#059669' : entry.color}
-                        opacity={entry?.isLowest ? 1 : 0.82}
+            <div className="bca-chart-body" style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {chartData?.map((item: any, idx: number) => {
+                const maxVal = Math.max(...(chartData?.map((d: any) => d?.price || 0) || []), 1);
+                const percentage = item?.price > 0 ? Math.max((item.price / maxVal) * 100, 3) : 0;
+                const formattedPrice = item?.price > 0 
+                  ? `₹${item.price.toLocaleString('en-IN')}` 
+                  : 'No Quote';
+
+                return (
+                  <div key={item?.id || idx} style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div 
+                      style={{ width: '130px', minWidth: '130px', fontSize: '12px', fontWeight: 600, color: '#475569', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} 
+                      title={item?.fullName}
+                    >
+                      {item?.name}
+                    </div>
+                    <div style={{ flex: 1, position: 'relative', background: '#f1f5f9', borderRadius: '6px', height: '32px', display: 'flex', alignItems: 'center', padding: '0 4px', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          width: `${percentage}%`,
+                          height: '100%',
+                          background: item?.isLowest ? 'linear-gradient(90deg, #10b981, #059669)' : item?.color || '#2563eb',
+                          borderRadius: '6px',
+                          transition: 'width 0.4s ease-in-out',
+                          opacity: item?.isLowest ? 1 : 0.85,
+                        }}
                       />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+                      <span style={{ marginLeft: '10px', fontSize: '12px', fontWeight: 700, color: item?.isLowest ? '#047857' : '#1e293b', whiteSpace: 'nowrap', zIndex: 1 }}>
+                        {formattedPrice}
+                        {item?.isLowest && (
+                          <span style={{ marginLeft: '8px', fontSize: '11px', background: '#d1fae5', color: '#065f46', padding: '2px 8px', borderRadius: '12px', fontWeight: 700 }}>
+                            ✓ Lowest Bid
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             <div className="bca-chart-legend">
               {chartSuppliers?.map((s, i) => {
