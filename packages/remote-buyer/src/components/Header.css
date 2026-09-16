@@ -95,6 +95,66 @@
     justify-content: center;
 }
 
+.vsx-header-nav-dropdown {
+    display: flex;
+    align-items: stretch;
+    position: relative;
+}
+
+.vsx-header-nav-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px;
+}
+
+.vsx-header-nav-dropdown-menu {
+    position: fixed;
+    z-index: 1200;
+
+    display: flex;
+    flex-direction: column;
+
+    min-width: 180px;
+    padding: 6px;
+    margin-top: 2px;
+
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+}
+
+.vsx-header-nav-subitem {
+    display: block;
+    width: 100%;
+
+    padding: 8px 12px;
+
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #475569;
+    text-align: left;
+
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.vsx-header-nav-subitem:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.vsx-header-nav-subitem-active {
+    background: #eff6ff;
+    color: #2f6feb;
+    font-weight: 600;
+}
+
 .vsx-header-nav-badge {
     background: #ef4444;
     color: #ffffff;
@@ -193,8 +253,15 @@
 }
 
 @keyframes vsx-dropdown-in {
-    from { opacity: 0; transform: translateY(-0.375rem); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-0.375rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .vsx-dropdown-item {
@@ -238,14 +305,17 @@
         padding: 0 1rem;
         height: 4rem;
     }
+
     .vsx-header-logo {
-        height: 2.5rem;
+        height: 4.5rem;
     }
+
     .vsx-header-portal-tag,
     .vsx-header-account-name,
     .vsx-header-account-email {
         display: none;
     }
+
     .vsx-header-right {
         gap: 0.75rem;
     }
