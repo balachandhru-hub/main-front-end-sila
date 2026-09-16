@@ -398,3 +398,62 @@ export const getTokenClaims = async (skipRefresh = false) => {
   });
   return response.data;
 };
+
+export interface BuyerAssetDto {
+  fileName?: string;
+  fileType?: string;
+  contentType?: string;
+  fileBytes?: string;
+  url?: string;
+  fileUrl?: string;
+}
+
+export interface AssetErrorDto {
+  statusCode: number;
+  message: string;
+  description: string;
+}
+
+export const fetchBuyerAsset = async (
+  assetId: string
+): Promise<BuyerAssetDto | AssetErrorDto> => {
+  try {
+    try {
+      const response = await platformInstance.get<BuyerAssetDto>(
+        `/api/v1/buyer/asset/${assetId}`
+      );
+      if (response.data) return response.data;
+    } catch (e) {
+      // fallback to supplier asset endpoint
+    }
+
+    const response = await platformInstance.get<BuyerAssetDto>(
+      `/api/v1/supplier/asset/${assetId}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch asset',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching the asset.',
+    };
+  }
+};

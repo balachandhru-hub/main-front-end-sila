@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '../../../host-app/src/store/useAuthStore';
 const baseURL = import.meta.env.VITE_AUTH_API_BASE;
-const apiKey = 'N8qX2LmP7vRa5HdK9sWy4JcTf1AzNgEuXm6BpLr3YvCi0FoMsZaDhUk8QtGeXwPnV';
+export const apiKey = 'N8qX2LmP7vRa5HdK9sWy4JcTf1AzNgEuXm6BpLr3YvCi0FoMsZaDhUk8QtGeXwPnV';
 
 const supplierInstance = axios.create({
   baseURL,
