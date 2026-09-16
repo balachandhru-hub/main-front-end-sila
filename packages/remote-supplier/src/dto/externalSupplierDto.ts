@@ -29,6 +29,7 @@ export interface ExternalSupplierQuotationItem {
   quotedAmount?: number;
   subTotal?: number;
   lineNumber?: number;
+  rank?: string | number | null;
 }
 
 export interface ExternalRFQDetailResponse {
