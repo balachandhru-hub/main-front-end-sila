@@ -1,17 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { User, UserRole } from '../../types';
 import { useNetworkAdminAuthStore } from '../../store/useAuthStore';
 import UserListTable from '../UserListTable/UserListTable';
 import CreateUserModal from '../CreateUserModal/CreateUserModal';
 import { ToastContainer, toastService } from '@vosox/shared-ui';
-import CompanyProfile from '../CompanyProfile/CompanyProfile';
-import Header from '../Header'; 
+import Header from '../Header';
 import {
   getOrganizationUsers,
   createPerson,
   deleteUser,
-  logoutNetworkAdmin,
 } from '../../api/networkAdminApi';
 
 import {
@@ -24,55 +22,9 @@ import {
 } from 'react-icons/fa';
 import './NetworkAdminDashboard.css';
 
-const NavIconUsers = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-);
-
-const LogoutIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-    <polyline points="16 17 21 12 16 7" />
-    <line x1="21" y1="12" x2="9" y2="12" />
-  </svg>
-);
-
-const IconClose = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
-
-const IconMenu = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="3" y1="6" x2="21" y2="6" />
-    <line x1="3" y1="12" x2="21" y2="12" />
-    <line x1="3" y1="18" x2="21" y2="18" />
-  </svg>
-);
-
-const navItems: { key: string; icon: React.ReactNode; label: string }[] = [
-  { key: 'manageUsers', icon: <NavIconUsers />, label: 'Manage Users' },
-];
-
-const sectionTitles: Record<string, { title: string; subtitle: string }> = {
-  manageUsers: {
-    title: 'Network Admin Dashboard',
-    subtitle: 'Manage your network users and settings',
-  },
-  companyProfile: {
-    title: 'Company Details',
-    subtitle: 'View and manage your company information',
-  },
-  settings: {
-    title: 'Settings',
-    subtitle: 'Configure your preferences and settings',
-  },
+const sectionInfo = {
+  title: 'Network Admin Dashboard',
+  subtitle: 'Manage your network users and settings',
 };
 
 const NetworkAdminDashboard: React.FC = () => {
@@ -80,15 +32,12 @@ const NetworkAdminDashboard: React.FC = () => {
 
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const isLoading = useNetworkAdminAuthStore((state) => state.isLoading);
-  const logout = useNetworkAdminAuthStore((state) => state.logout);
 
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success] = useState<string | null>(null);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
@@ -100,9 +49,6 @@ const NetworkAdminDashboard: React.FC = () => {
       : 'SUPPLIER_ADMINISTRATOR'
   );
 
-  const [activeNav, setActiveNav] = useState<string>('manageUsers');
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-
   useEffect(() => {
     if (!currentUser?.organizationId) return;
 
@@ -113,7 +59,7 @@ const NetworkAdminDashboard: React.FC = () => {
       try {
         const users = await getOrganizationUsers(currentUser.organizationId!);
         setAllUsers(users);
-      } catch (err: any) {
+      } catch {
         setError('Failed to load users');
         setAllUsers([]);
       } finally {
@@ -144,7 +90,7 @@ const NetworkAdminDashboard: React.FC = () => {
 
       toastService.success('User created successfully!');
       setIsModalOpen(false);
-    } catch (err: any) {
+    } catch {
       const errorMessage = 'Failed to create user';
 
       if (errorMessage.includes('Username already exists')) {
@@ -189,27 +135,6 @@ const NetworkAdminDashboard: React.FC = () => {
       setIsDeletingUser(false);
     }
   };
-
-  const handleNavClick = (key: string) => {
-    setIsMobileSidebarOpen(false);
-    setActiveNav(key);
-  };
-
-  const handleLogout = useCallback(async () => {
-    if (loggingOut) return;
-    setLoggingOut(true);
-    try {
-      await logoutNetworkAdmin();
-      toastService.success('Logged out successfully!');
-    } catch (err) {
-      toastService.info('Logging out...');
-    } finally {
-      logout();
-      sessionStorage.clear();
-      setLoggingOut(false);
-      window.dispatchEvent(new CustomEvent('session:expired'));
-    }
-  }, [loggingOut, logout]);
 
   const filterUsers = (list: User[]) => {
     const query = searchQuery.toLowerCase();
@@ -268,192 +193,130 @@ const NetworkAdminDashboard: React.FC = () => {
   const filteredUsers = filterUsers(regularUsers);
   const allFilteredUsers = [...filteredAdministrators, ...filteredUsers];
 
-  const showUsersView = activeNav === 'manageUsers';
-  const currentSectionInfo = sectionTitles[activeNav] || sectionTitles.manageUsers;
-
   return (
     <div className="nad-page" style={{ paddingTop: "5.25rem" }}>
       <ToastContainer />
 
       <Header />
 
-      <div className={`nad-shell${isMobileSidebarOpen ? ' nad-sidebar-open-mobile' : ''}`}>
-        {/* <button
-          type="button"
-          className="nad-mobile-sidebar-toggle"
-          onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
-          aria-label={isMobileSidebarOpen ? "Close menu" : "Open menu"}
-          aria-expanded={isMobileSidebarOpen}
-        >
-          {isMobileSidebarOpen ? <IconClose /> : <IconMenu />}
-        </button> */}
-
-        {/* <div
-          className="nad-sidebar-backdrop"
-          onClick={() => setIsMobileSidebarOpen(false)}
-          aria-hidden="true"
-        /> */}
-
-        {/* <aside className="nad-sidebar">
-          <nav className="nad-nav">
-            {navItems.map((item) => (
-              <div
-                key={item.key}
-                className={`nad-nav-item${activeNav === item.key ? ' nad-nav-item-active' : ''}`}
-                onClick={() => handleNavClick(item.key)}
-                role="button"
-                tabIndex={0}
-                title={item.label}
-              >
-                <span className="nad-nav-icon">{item.icon}</span>
-                <span className="nad-nav-label">{item.label}</span>
-              </div>
-            ))}
-
-            <div
-              className={`nad-nav-item nad-nav-item-logout${loggingOut ? ' nad-nav-item-disabled' : ''}`}
-              onClick={handleLogout}
-              role="button"
-              tabIndex={0}
-              aria-disabled={loggingOut}
-              title="Log out"
-            >
-              <span className="nad-nav-icon">
-                <LogoutIcon />
-              </span>
-              <span className="nad-nav-label">{loggingOut ? 'Logging out...' : 'Log Out'}</span>
-            </div>
-          </nav>
-       </aside> */}
-
+      <div className="nad-shell">
         <div className="nad-main">
           <main className="nad-content">
             <header className="nad-content-header">
-              <h1 className="nad-title">{currentSectionInfo.title}</h1>
-              <p className="nad-subtitle">{currentSectionInfo.subtitle}</p>
+              <h1 className="nad-title">{sectionInfo.title}</h1>
+              <p className="nad-subtitle">{sectionInfo.subtitle}</p>
             </header>
 
-            {showUsersView ? (
-              <>
-                <section className="nad-stats-grid">
-                  <div className="nad-stat-card">
-                    <div className="nad-stat-icon-wrapper nad-stat-icon-blue">
-                      <FaUserShield />
-                    </div>
-                    <div className="nad-stat-info">
-                      <span className="nad-stat-value">{administrators.length}</span>
-                      <span className="nad-stat-label">{adminLabel}</span>
-                    </div>
-                  </div>
-
-                  <div className="nad-stat-card">
-                    <div className="nad-stat-icon-wrapper nad-stat-icon-indigo">
-                      <FaUsers />
-                    </div>
-                    <div className="nad-stat-info">
-                      <span className="nad-stat-value">{regularUsers.length}</span>
-                      <span className="nad-stat-label">{userLabel}</span>
-                    </div>
-                  </div>
-
-                  <div className="nad-stat-card">
-                    <div className="nad-stat-icon-wrapper nad-stat-icon-green">
-                      <FaUserCheck />
-                    </div>
-                    <div className="nad-stat-info">
-                      <span className="nad-stat-value">{activeCount}</span>
-                      <span className="nad-stat-label">Active Users</span>
-                    </div>
-                  </div>
-
-                  <div className="nad-stat-card">
-                    <div className="nad-stat-icon-wrapper nad-stat-icon-orange">
-                      <FaLayerGroup />
-                    </div>
-                    <div className="nad-stat-info">
-                      <span className="nad-stat-value">{allUsers.length}</span>
-                      <span className="nad-stat-label">Total Users</span>
-                    </div>
-                  </div>
-                </section>
-
-                <div className="nad-controls-bar">
-                  <div className="nad-search-wrapper">
-                    <FaSearch className="nad-search-icon" />
-                    <input
-                      type="text"
-                      placeholder="Search by name, email or username..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="nad-search-input"
-                      aria-label="Search users"
-                    />
-                  </div>
-
-                  <div className="nad-action-buttons">
-                    <button
-                      className="nad-create-btn"
-                      onClick={() => {
-                        setModalCreateRole(
-                          currentUser.userRole === 'BUYER_NETWORK_ADMIN'
-                            ? 'BUYER_ADMINISTRATOR'
-                            : 'SUPPLIER_ADMINISTRATOR'
-                        );
-                        setIsModalOpen(true);
-                      }}
-                      disabled={isCreatingUser}
-                      title="Create a new administrator user"
-                    >
-                      <FaPlus />
-                      Create {adminLabel.slice(0, -1)}
-                    </button>
-
-                    <button
-                      className="nad-create-btn nad-create-user-btn"
-                      onClick={() => {
-                        setModalCreateRole(
-                          currentUser.userRole === 'BUYER_NETWORK_ADMIN'
-                            ? 'BUYER_USER'
-                            : 'SUPPLIER_USER'
-                        );
-                        setIsModalOpen(true);
-                      }}
-                      disabled={isCreatingUser}
-                      title="Create a new regular user"
-                    >
-                      <FaPlus />
-                      Create {userLabel.slice(0, -1)}
-                    </button>
-                  </div>
+            <section className="nad-stats-grid">
+              <div className="nad-stat-card">
+                <div className="nad-stat-icon-wrapper nad-stat-icon-blue">
+                  <FaUserShield />
                 </div>
+                <div className="nad-stat-info">
+                  <span className="nad-stat-value">{administrators.length}</span>
+                  <span className="nad-stat-label">{adminLabel}</span>
+                </div>
+              </div>
 
-                {error && (
-                  <div className="nad-alert-error">
-                    <strong>Error:</strong> {error}
-                  </div>
-                )}
-                {success && <div className="nad-alert-success">{success}</div>}
+              <div className="nad-stat-card">
+                <div className="nad-stat-icon-wrapper nad-stat-icon-indigo">
+                  <FaUsers />
+                </div>
+                <div className="nad-stat-info">
+                  <span className="nad-stat-value">{regularUsers.length}</span>
+                  <span className="nad-stat-label">{userLabel}</span>
+                </div>
+              </div>
 
-                {isLoadingData ? (
-                  <div className="nad-loading-data">
-                    <div className="nad-spinner"></div>
-                    <p>Please wait...</p>
-                  </div>
-                ) : (
-                  <div className="nad-lists-section">
-                    <UserListTable
-                      users={allFilteredUsers}
-                      title="All Users"
-                      onDelete={handleDeleteUser}
-                    />
-                  </div>
-                )}
-              </>
-            ) : activeNav === 'companyProfile' ? (
-              <CompanyProfile mode="network-admin" showHeader={false} />
+              <div className="nad-stat-card">
+                <div className="nad-stat-icon-wrapper nad-stat-icon-green">
+                  <FaUserCheck />
+                </div>
+                <div className="nad-stat-info">
+                  <span className="nad-stat-value">{activeCount}</span>
+                  <span className="nad-stat-label">Active Users</span>
+                </div>
+              </div>
+
+              <div className="nad-stat-card">
+                <div className="nad-stat-icon-wrapper nad-stat-icon-orange">
+                  <FaLayerGroup />
+                </div>
+                <div className="nad-stat-info">
+                  <span className="nad-stat-value">{allUsers.length}</span>
+                  <span className="nad-stat-label">Total Users</span>
+                </div>
+              </div>
+            </section>
+
+            <div className="nad-controls-bar">
+              <div className="nad-search-wrapper">
+                <FaSearch className="nad-search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search by name, email or username..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="nad-search-input"
+                  aria-label="Search users"
+                />
+              </div>
+
+              <div className="nad-action-buttons">
+                <button
+                  className="nad-create-btn"
+                  onClick={() => {
+                    setModalCreateRole(
+                      currentUser.userRole === 'BUYER_NETWORK_ADMIN'
+                        ? 'BUYER_ADMINISTRATOR'
+                        : 'SUPPLIER_ADMINISTRATOR'
+                    );
+                    setIsModalOpen(true);
+                  }}
+                  disabled={isCreatingUser}
+                  title="Create a new administrator user"
+                >
+                  <FaPlus />
+                  Create {adminLabel.slice(0, -1)}
+                </button>
+
+                <button
+                  className="nad-create-btn nad-create-user-btn"
+                  onClick={() => {
+                    setModalCreateRole(
+                      currentUser.userRole === 'BUYER_NETWORK_ADMIN'
+                        ? 'BUYER_USER'
+                        : 'SUPPLIER_USER'
+                    );
+                    setIsModalOpen(true);
+                  }}
+                  disabled={isCreatingUser}
+                  title="Create a new regular user"
+                >
+                  <FaPlus />
+                  Create {userLabel.slice(0, -1)}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="nad-alert-error">
+                <strong>Error:</strong> {error}
+              </div>
+            )}
+
+            {isLoadingData ? (
+              <div className="nad-loading-data">
+                <div className="nad-spinner"></div>
+                <p>Please wait...</p>
+              </div>
             ) : (
-              <div className="nad-empty-state">
-                <p>This section is coming soon. Check back later for more features.</p>
+              <div className="nad-lists-section">
+                <UserListTable
+                  users={allFilteredUsers}
+                  title="All Users"
+                  onDelete={handleDeleteUser}
+                />
               </div>
             )}
           </main>
