@@ -51,10 +51,10 @@ const ApprovalFlowDetail: React.FC<ApprovalFlowDetailProps> = ({ flow: initialFl
 
   const steps: ApprovalStep[] = useMemo(
     () =>
-      approvers.map((approver, i) => ({
+      approvers.map((approver) => ({
         id: `${approver.userId}-${approver.id ?? ""}`,
-        title: `Approver ${i + 1}`,
-        description: approver.userId,
+        title: approver.name || "Unknown user",
+        description: approver.email || approver.userId,
       })),
     [approvers]
   );
