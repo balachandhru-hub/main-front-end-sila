@@ -183,7 +183,7 @@ const buildDocumentAsset = async (
         fileBytes,
         fileName: file.name,
         contentType: file.type || "application/octet-stream",
-        isSingletonAsset: true,
+        isSingletonAsset: false,
     };
 };
 
@@ -386,7 +386,7 @@ function SearchableSelect<T,>({
 
 /* ---------------------------------- Component ---------------------------------- */
 
-const CreateRFQ: React.FC = () => {
+const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: () => Promise<void>;}> = ({ onNavClick,onRfqCreated })=> {
     const [activeStep, setActiveStep] = useState<StepKey>("details");
 
     const [buyerProfileId, setBuyerProfileId] = useState<string>("");
@@ -874,11 +874,11 @@ if (Array.isArray(data)) {
 
         try {
             const technicalSpecificationDocuments: RfqDocumentAssetDto[] = await Promise.all(
-                techSpecFiles.map((file) => buildDocumentAsset(file, buyerProfileId, "TechnicalSpecification"))
+                techSpecFiles.map((file) => buildDocumentAsset(file, buyerProfileId, "TECHNICAL_SPECIFICATION"))
             );
 
             const termsConditionDocuments: RfqDocumentAssetDto[] = await Promise.all(
-                termsFiles.map((file) => buildDocumentAsset(file, buyerProfileId, "TermsAndConditions"))
+                termsFiles.map((file) => buildDocumentAsset(file, buyerProfileId, "TERMS_CONDITION"))
             );
 
             const questionTypeLegacyMap: Record<string, string> = {
@@ -934,6 +934,7 @@ if (Array.isArray(data)) {
 
             const response = await createRFQ(payload);
             setRfqNumber(response.id);
+            await onRfqCreated();
             setActiveStep("summary");
         } catch (err: any) {
             setSubmitError(err?.message || "Failed to submit RFQ. Please try again.");
@@ -942,9 +943,9 @@ if (Array.isArray(data)) {
         }
     };
 
-    const handleReset = () => {
-        setActiveStep("details");
-    };
+    // const handleReset = () => {
+    //     setActiveStep("details");
+    // };
 
     return (
         <div className="bd-rfq-card">
@@ -2002,15 +2003,23 @@ if (Array.isArray(data)) {
                             </tbody>
                         </table>
                     </div>
+<div className="bd-success-footer">
+    <button
+        className="bd-btn-dark"
+        onClick={() => onNavClick("activeRFQs")}
+        type="button"
+    >
+        View RFQs List
+    </button>
 
-                    <div className="bd-success-footer">
-                        <button className="bd-btn-dark" onClick={handleReset} type="button">
-                            View RFQs List
-                        </button>
-                        <button className="bd-btn-back" onClick={handleReset} type="button">
-                            Back to Dashboard
-                        </button>
-                    </div>
+    <button
+        className="bd-btn-back"
+        onClick={() => onNavClick("dashboard")}
+        type="button"
+    >
+        Back to Dashboard
+    </button>
+</div>
                 </div>
             )}
 
