@@ -5,7 +5,7 @@
 .eauction-floating-bar {
   position: fixed;
   bottom: 1.5rem;
-  right: 1.5rem;
+  left: 2.5rem;
   z-index: 9990;
   display: flex;
   flex-direction: column;
@@ -52,10 +52,12 @@
     transform: scale(0.95);
     box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
   }
+
   70% {
     transform: scale(1);
     box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
   }
+
   100% {
     transform: scale(0.95);
     box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
@@ -93,6 +95,7 @@
     opacity: 0;
     transform: translateY(10px) scale(0.97);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -210,8 +213,13 @@
 }
 
 @keyframes eauction-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .eauction-portal-container {
@@ -233,7 +241,8 @@
 /* SAP Ariba Top Navigation Header Bar */
 .eauction-portal-header {
   height: 3.75rem;
-  background: #0057b8; /* Signature SAP Ariba Blue Header */
+  background: #0057b8;
+  /* Signature SAP Ariba Blue Header */
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -260,7 +269,7 @@
   justify-content: center;
   font-weight: 900;
   font-size: 1.25rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .eauction-portal-title {
@@ -452,10 +461,25 @@
   font-size: 0.8125rem;
 }
 
-.rank-1 { background: #047857; color: #ffffff; }
-.rank-2 { background: #d97706; color: #ffffff; }
-.rank-3 { background: #64748b; color: #ffffff; }
-.rank-4 { background: #475569; color: #ffffff; }
+.rank-1 {
+  background: #047857;
+  color: #ffffff;
+}
+
+.rank-2 {
+  background: #d97706;
+  color: #ffffff;
+}
+
+.rank-3 {
+  background: #64748b;
+  color: #ffffff;
+}
+
+.rank-4 {
+  background: #475569;
+  color: #ffffff;
+}
 
 .eauction-action-btn {
   padding: 0.35rem 0.75rem;
@@ -533,10 +557,21 @@
   flex-shrink: 0;
 }
 
-.avatar-red { background: #ef4444; }
-.avatar-gold { background: #f59e0b; }
-.avatar-teal { background: #0d9488; }
-.avatar-blue { background: #0057b8; }
+.avatar-red {
+  background: #ef4444;
+}
+
+.avatar-gold {
+  background: #f59e0b;
+}
+
+.avatar-teal {
+  background: #0d9488;
+}
+
+.avatar-blue {
+  background: #0057b8;
+}
 
 /* Awarding Panel */
 .eauction-award-box {

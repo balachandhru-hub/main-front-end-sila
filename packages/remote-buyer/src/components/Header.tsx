@@ -52,12 +52,28 @@ const IconChevronDown = () => (
   </svg>
 );
 
+export interface HeaderNavLeaf {
+  key: string;
+  label: string;
+}
+// subItems can be a flat leaf (existing) or a non-clickable group with nested leaves.
+export interface HeaderNavGroup {
+  label: string;
+  items: HeaderNavLeaf[];
+}
+export type HeaderNavSubEntry = HeaderNavLeaf | HeaderNavGroup;
+
+const isHeaderNavGroup = (entry: HeaderNavSubEntry): entry is HeaderNavGroup => 'items' in entry;
+
+const collectHeaderSubEntryKeys = (entries: HeaderNavSubEntry[]): string[] =>
+  entries.flatMap((entry) => (isHeaderNavGroup(entry) ? collectHeaderSubEntryKeys(entry.items) : [entry.key]));
+
 export interface HeaderNavItem {
   key: string;
   icon?: React.ReactNode;
   label: string;
   badge?: number;
-  subItems?: { key: string; label: string }[];
+  subItems?: HeaderNavSubEntry[];
 }
 
 export interface HeaderProps {
@@ -220,7 +236,7 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
               >
                 <button
                   type="button"
-                  className={`vsx-header-nav-item${activeNav === item.key || item.subItems.some((sub) => sub.key === activeNav) ? " vsx-header-nav-item-active" : ""}`}
+                  className={`vsx-header-nav-item${activeNav === item.key || collectHeaderSubEntryKeys(item.subItems).includes(activeNav || "") ? " vsx-header-nav-item-active" : ""}`}
                   onClick={() => onNavClick && onNavClick(item.key)}
                 >
                   <span className="vsx-header-nav-label">{item.label}</span>
@@ -234,19 +250,45 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
                     onMouseEnter={() => handleNavDropdownEnter(item.key)}
                     onMouseLeave={handleNavDropdownLeave}
                   >
-                    {item.subItems.map((subItem) => (
-                      <button
-                        key={subItem.key}
-                        type="button"
-                        className={`vsx-header-nav-subitem${activeNav === subItem.key ? " vsx-header-nav-subitem-active" : ""}`}
-                        onClick={() => {
-                          setOpenNavDropdown(null);
-                          onNavClick && onNavClick(subItem.key);
-                        }}
-                      >
-                        {subItem.label}
-                      </button>
-                    ))}
+                    {item.subItems.map((entry, entryIdx) =>
+                      isHeaderNavGroup(entry) ? (
+                        <div key={`${item.key}-group-${entryIdx}`} className="vsx-header-nav-subitem-group">
+                          <div
+                            className={`vsx-header-nav-subitem vsx-header-nav-subitem-parent${entry.items.some((leaf) => leaf.key === activeNav) ? " vsx-header-nav-subitem-active" : ""}`}
+                          >
+                            <span>{entry.label}</span>
+                            <span className="vsx-header-nav-subitem-arrow">&rsaquo;</span>
+                          </div>
+                          <div className="vsx-header-nav-subitem-submenu">
+                            {entry.items.map((leaf) => (
+                              <button
+                                key={leaf.key}
+                                type="button"
+                                className={`vsx-header-nav-subitem${activeNav === leaf.key ? " vsx-header-nav-subitem-active" : ""}`}
+                                onClick={() => {
+                                  setOpenNavDropdown(null);
+                                  onNavClick && onNavClick(leaf.key);
+                                }}
+                              >
+                                {leaf.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          key={entry.key}
+                          type="button"
+                          className={`vsx-header-nav-subitem${activeNav === entry.key ? " vsx-header-nav-subitem-active" : ""}`}
+                          onClick={() => {
+                            setOpenNavDropdown(null);
+                            onNavClick && onNavClick(entry.key);
+                          }}
+                        >
+                          {entry.label}
+                        </button>
+                      )
+                    )}
                   </div>
                 )}
               </div>

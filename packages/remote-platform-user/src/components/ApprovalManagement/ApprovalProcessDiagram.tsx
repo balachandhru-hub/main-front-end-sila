@@ -35,19 +35,11 @@ const GripIcon = () => (
   </svg>
 );
 
-const EditIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M12 20h9" />
-    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
-  </svg>
-);
-
 const ApprovalProcessDiagram: React.FC<ApprovalProcessDiagramProps> = ({
   steps,
   loading,
   error,
   onReorder,
-  onEdit,
   disabled,
 }) => {
   const [expanded, setExpanded] = useState(true);
@@ -195,21 +187,6 @@ const ApprovalProcessDiagram: React.FC<ApprovalProcessDiagramProps> = ({
                             {step.title}
                           </span>
                           <span className="apm-node-order">{i + 1}</span>
-                          {onEdit && (
-                            <button
-                              type="button"
-                              className="apm-node-edit"
-                              title="Edit"
-                              aria-label={`Edit ${step.title}`}
-                              disabled={disabled}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEdit(i);
-                              }}
-                            >
-                              <EditIcon />
-                            </button>
-                          )}
                         </div>
                         <div className="apm-node-body" title={step.description}>
                           {step.description}
@@ -254,10 +231,6 @@ const ApprovalProcessDiagram: React.FC<ApprovalProcessDiagramProps> = ({
               <span>
                 {currentSteps.indexOf(selectedStep) + 1} of {currentSteps.length}
               </span>
-            </div>
-            <div>
-              <span className="apm-label">Role</span>
-              <span>{selectedStep.role || "—"}</span>
             </div>
             <div className="apm-details-full">
               <span className="apm-label">Email</span>
