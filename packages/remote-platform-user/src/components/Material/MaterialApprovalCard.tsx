@@ -23,7 +23,6 @@ interface MaterialApprovalCardProps {
   canAct: boolean;
   submitting: boolean;
   onDecision: (action: 'APPROVE' | 'REJECT', comment: string) => void;
-  // No per-approver status available, so every card shares the record's tone.
   statusTone: StatusTone;
 }
 

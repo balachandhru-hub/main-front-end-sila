@@ -7,12 +7,19 @@ import ItemMasterCatalog from "./ItemMasterCatalog.tsx";
 import Header from "./Header";
 import QsAns from "./Qsans.tsx";
 // import QuotationSummaryTable from "./QuotationSummaryTable.tsx";
-import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, updateRfqStatus } from "../api/Buyerapi";
+import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, updateRfqStatus, getPersonDetailCached } from "../api/Buyerapi";
 import BuyerRFQChat from "./BuyerRFQChat/BuyerRFQChat";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
 import QuotationComparisonCard from "../../../remote-platform-user/src/components/QuotationComparisonCard.tsx";
 import BidComparisonAwardView from "../../../remote-platform-user/src/components/BidComparisonAwardView.tsx";
-import { CompanyProfile, toastService } from '@vosox/shared-ui';
+import type { PendingMaterialApproval, MaterialApprovalKpi } from "../../../remote-platform-user/src/components/Material/materialApi";
+import { fetchPendingMaterialApprovals, fetchMaterialApprovalKpi } from "../../../remote-platform-user/src/components/Material/materialApi";
+import MaterialTable from "../../../remote-platform-user/src/components/Material/MaterialTable";
+import MaterialApprovalDetail from "../../../remote-platform-user/src/components/Material/MaterialApprovalDetail";
+import type { ContractRecord } from "../../../remote-platform-user/src/components/Contract/contractApi";
+import { fetchContracts } from "../../../remote-platform-user/src/components/Contract/contractApi";
+import ContractTable from "../../../remote-platform-user/src/components/Contract/ContractTable";
+import { CompanyProfile, toastService, isErrorResponse } from '@vosox/shared-ui';
 import { useAuth } from '../../../host-app/src/AuthContext.tsx';
 import ApprovalManagement from "../../../remote-platform-user/src/components/ApprovalManagement/ApprovalManagement.tsx";
 
@@ -276,7 +283,23 @@ const NavIconTemplate = () => (
 
 /* ---------------------------------- Static data ---------------------------------- */
 
-const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number; subItems?: { key: string; label: string }[] }[] = [
+// subItems can be a flat leaf or a non-clickable group with nested leaves.
+interface NavLeaf {
+  key: string;
+  label: string;
+}
+interface NavGroup {
+  label: string;
+  items: NavLeaf[];
+}
+type NavSubEntry = NavLeaf | NavGroup;
+
+const isNavGroup = (entry: NavSubEntry): entry is NavGroup => 'items' in entry;
+
+const collectSubEntryKeys = (entries: NavSubEntry[]): string[] =>
+  entries.flatMap((entry) => (isNavGroup(entry) ? collectSubEntryKeys(entry.items) : [entry.key]));
+
+const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number; subItems?: NavSubEntry[] }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard", section: "MAIN" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ", section: "SOURCING & ORDERS" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog", section: "DIRECTORY & CATALOG" },
@@ -295,7 +318,14 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
     icon: <NavIconMore />,
     label: "More",
     subItems: [
-      { key: "material", label: "Material" },
+      {
+        label: "Approval",
+        items: [
+          { key: "material", label: "Material" },
+          { key: "contract", label: "Contract" },
+        ],
+      },
+      { key: "materialService", label: "Material & Service" },
     ],
   },
 ];
@@ -588,6 +618,92 @@ const BuyersDashboard: React.FC = () => {
     setActiveNav("dashboard");
   };
 
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPersonDetailCached().then((result) => {
+      if (cancelled) return;
+      if (!isErrorResponse(result)) {
+        setCurrentUserId(result.userId || null);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const [materialRecords, setMaterialRecords] = useState<PendingMaterialApproval[]>([]);
+  const [loadingMaterial, setLoadingMaterial] = useState(false);
+  const [materialError, setMaterialError] = useState<string | null>(null);
+  const [selectedMaterial, setSelectedMaterial] = useState<PendingMaterialApproval | null>(null);
+
+  const [materialStatusFilter, setMaterialStatusFilter] = useState("");
+  // materialSearchTerm is the debounced value that drives the API call.
+  const [materialSearchInput, setMaterialSearchInput] = useState("");
+  const [materialSearchTerm, setMaterialSearchTerm] = useState("");
+
+  const [materialKpi, setMaterialKpi] = useState<MaterialApprovalKpi | null>(null);
+  const [loadingMaterialKpi, setLoadingMaterialKpi] = useState(false);
+
+  useEffect(() => {
+    const handle = setTimeout(() => setMaterialSearchTerm(materialSearchInput), 400);
+    return () => clearTimeout(handle);
+  }, [materialSearchInput]);
+
+  const loadMaterialApprovals = () => {
+    setLoadingMaterial(true);
+    setMaterialError(null);
+    fetchPendingMaterialApprovals({ status: materialStatusFilter, searchTerm: materialSearchTerm })
+      .then(setMaterialRecords)
+      .catch((err: any) => {
+        setMaterialError(err.message || "Failed to load material approvals.");
+        setMaterialRecords([]);
+      })
+      .finally(() => setLoadingMaterial(false));
+  };
+
+  // Loaded independently so search/status changes don't refetch KPI.
+  const loadMaterialKpi = () => {
+    setLoadingMaterialKpi(true);
+    fetchMaterialApprovalKpi()
+      .then(setMaterialKpi)
+      .catch((err: any) => toastService.error(err.message || "Failed to load approval summary counts."))
+      .finally(() => setLoadingMaterialKpi(false));
+  };
+
+  useEffect(() => {
+    if (activeNav !== "material") return;
+    setSelectedMaterial(null);
+    loadMaterialKpi();
+  }, [activeNav]);
+
+  useEffect(() => {
+    if (activeNav !== "material") return;
+    loadMaterialApprovals();
+  }, [activeNav, materialStatusFilter, materialSearchTerm]);
+
+  const handleMaterialApprovalSubmitted = () => {
+    setSelectedMaterial(null);
+    loadMaterialApprovals();
+    loadMaterialKpi();
+  };
+
+  const [contractRecords, setContractRecords] = useState<ContractRecord[]>([]);
+  const [loadingContract, setLoadingContract] = useState(false);
+  const [contractError, setContractError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeNav !== "contract") return;
+    setLoadingContract(true);
+    setContractError(null);
+    fetchContracts()
+      .then(setContractRecords)
+      .catch((err: any) => {
+        setContractError(err.message || "Failed to load contract approvals.");
+        setContractRecords([]);
+      })
+      .finally(() => setLoadingContract(false));
+  }, [activeNav]);
+
   const handleNavClick = (key: string) => {
     setIsMobileSidebarOpen(false);
     if (key === "activeRFQs" || key === "allRfqs") {
@@ -829,7 +945,7 @@ const BuyersDashboard: React.FC = () => {
                 {item.subItems ? (
                   <div className="pud-nav-dropdown-container">
                     <div
-                      className={`pud-nav-item${activeNav === item.key || item.subItems.some((sub) => sub.key === activeNav) ? " pud-nav-item-active" : ""}`}
+                      className={`pud-nav-item${activeNav === item.key || collectSubEntryKeys(item.subItems).includes(activeNav) ? " pud-nav-item-active" : ""}`}
                     >
                       <span className="pud-nav-icon">{item.icon}</span>
                       <span className="pud-nav-label">{item.label}</span>
@@ -838,15 +954,30 @@ const BuyersDashboard: React.FC = () => {
                       </span>
                     </div>
                     <div className="pud-nav-dropdown-menu">
-                      {item.subItems.map((subItem) => (
-                        <div
-                          key={subItem.key}
-                          onClick={() => handleNavClick(subItem.key)}
-                          className={`pud-nav-subitem${activeNav === subItem.key ? " pud-nav-subitem-active" : ""}`}
-                        >
-                          {subItem.label}
-                        </div>
-                      ))}
+                      {item.subItems.map((entry, entryIdx) =>
+                        isNavGroup(entry) ? (
+                          <div key={`${item.key}-group-${entryIdx}`} className="pud-nav-subgroup">
+                            <div className="pud-nav-subgroup-title">{entry.label}</div>
+                            {entry.items.map((leaf) => (
+                              <div
+                                key={leaf.key}
+                                onClick={() => handleNavClick(leaf.key)}
+                                className={`pud-nav-subitem pud-nav-subitem-nested${activeNav === leaf.key ? " pud-nav-subitem-active" : ""}`}
+                              >
+                                {leaf.label}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div
+                            key={entry.key}
+                            onClick={() => handleNavClick(entry.key)}
+                            className={`pud-nav-subitem${activeNav === entry.key ? " pud-nav-subitem-active" : ""}`}
+                          >
+                            {entry.label}
+                          </div>
+                        )
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -892,8 +1023,37 @@ const BuyersDashboard: React.FC = () => {
               <Models />
             ) : activeNav === "template" ? (
               <UserTemplate />
-            ) : activeNav === "material" ? (
+            ) : activeNav === "materialService" ? (
               <ItemMasterCatalog buyerId={buyerId || ""} />
+            ) : activeNav === "material" ? (
+              selectedMaterial ? (
+                <MaterialApprovalDetail
+                  material={selectedMaterial}
+                  currentUserId={currentUserId}
+                  onBack={() => setSelectedMaterial(null)}
+                  onApprovalSubmitted={handleMaterialApprovalSubmitted}
+                />
+              ) : (
+                <MaterialTable
+                  records={materialRecords}
+                  loading={loadingMaterial}
+                  error={materialError}
+                  onRowClick={setSelectedMaterial}
+                  kpi={materialKpi}
+                  loadingKpi={loadingMaterialKpi}
+                  statusFilter={materialStatusFilter}
+                  onStatusFilterChange={setMaterialStatusFilter}
+                  searchInput={materialSearchInput}
+                  onSearchInputChange={setMaterialSearchInput}
+                  onSearchSubmit={() => setMaterialSearchTerm(materialSearchInput)}
+                />
+              )
+            ) : activeNav === "contract" ? (
+              <ContractTable
+                records={contractRecords}
+                loading={loadingContract}
+                error={contractError}
+              />
             ) : activeNav === "approvalManagement" ? (
               <ApprovalManagement canCreate={false}/>
             ) : rfqPageView === "allRfqs" ? (
