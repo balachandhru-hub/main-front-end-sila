@@ -22,13 +22,20 @@ const IconBack = () => (
   </svg>
 );
 
+const EditIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+  </svg>
+);
+
 const ApprovalFlowDetail: React.FC<ApprovalFlowDetailProps> = ({ flow: initialFlow, onBack, onFlowUpdated }) => {
   const [flow, setFlow] = useState(initialFlow);
   const [approvers, setApprovers] = useState<ApprovalFlowUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+ const [isEditing, setIsEditing] = useState(false);
   // Prevents the request from firing twice for the same approval (e.g. React StrictMode re-running effects).
   const fetchedIdRef = useRef<string | null>(null);
 
@@ -95,7 +102,7 @@ const ApprovalFlowDetail: React.FC<ApprovalFlowDetailProps> = ({ flow: initialFl
     }
   };
 
-  const editingApprover = editingIndex !== null ? approvers[editingIndex] : null;
+  //const editingApprover = editingIndex !== null ? approvers[editingIndex] : null;
 
   return (
     <div className="afd-page">
@@ -104,7 +111,18 @@ const ApprovalFlowDetail: React.FC<ApprovalFlowDetailProps> = ({ flow: initialFl
           <IconBack />
         </button>
         <div className="afd-heading">
+          <div className="afd-title-edit">
           <h1 className="afd-title">{flow.approvalName || "Approval Flow"}</h1>
+          <button
+              type="button"
+              className="afd-edit-btn"
+              title="Edit Approval Flow"
+              aria-label="Edit Approval Flow"
+              onClick={() => setIsEditing(true)}
+            >
+              <EditIcon />
+            </button>
+          </div>
           <div className="afd-meta">
             <span className="afd-code">{flow.approvalCode || "—"}</span>
             {!loading && !error && (
@@ -121,22 +139,21 @@ const ApprovalFlowDetail: React.FC<ApprovalFlowDetailProps> = ({ flow: initialFl
         loading={loading}
         error={error}
         onReorder={handleReorder}
-        onEdit={setEditingIndex}
         disabled={savingOrder}
       />
 
-      {editingApprover && (
+      {isEditing && (
         <EditApprovalModal
-          mappingId={getMappingId(editingApprover)}
+          mappingId={approvers[0]?.id || flow.id}
           approvalCode={flow.approvalCode}
           approvalName={flow.approvalName}
-          order={editingApprover.order}
-          onClose={() => setEditingIndex(null)}
+          order={approvers[0]?.order??flow.orderNumber?? flow.order?? 1}
+          onClose={() => setIsEditing(false)}
           onSaved={(values) => {
             const updated = { ...flow, ...values };
             setFlow(updated);
             onFlowUpdated(updated);
-            setEditingIndex(null);
+            setIsEditing(false);
           }}
         />
       )}

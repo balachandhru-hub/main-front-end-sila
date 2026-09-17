@@ -14,6 +14,34 @@
   border-radius: 0.75rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
+.afd-title-edit{
+  display:flex;
+  flex-direction: row;
+}
+
+.afd-edit-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: none;
+  border: none;
+  border-radius: 0.25rem;
+  color: #0a6ed1;
+  cursor: pointer;
+}
+
+.afd-edit-btn:hover:not(:disabled) {
+  background: #eff6ff;
+  color: #084f96;
+}
+
+.afd-edit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 .afd-back {
   flex: 0 0 2.25rem;

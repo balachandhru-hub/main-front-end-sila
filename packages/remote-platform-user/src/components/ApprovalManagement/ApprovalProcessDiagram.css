@@ -152,30 +152,6 @@
   cursor: not-allowed;
 }
 
-.apm-node-edit {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  background: none;
-  border: none;
-  border-radius: 0.25rem;
-  color: #0a6ed1;
-  cursor: pointer;
-}
-
-.apm-node-edit:hover:not(:disabled) {
-  background: #eff6ff;
-  color: #084f96;
-}
-
-.apm-node-edit:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 .apm-node-dragging {
   opacity: 0.35;
   border-style: dashed;
