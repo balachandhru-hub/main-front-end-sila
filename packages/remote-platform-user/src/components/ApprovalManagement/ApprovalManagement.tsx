@@ -21,7 +21,11 @@ const sortByOrderNumber = (flows: MasterApprovalFlow[]) =>
     })
     .map(({ flow }) => flow);
 
-const ApprovalManagement: React.FC = () => {
+interface ApprovalManagementProps {
+  canCreate?: boolean;
+}
+
+const ApprovalManagement: React.FC<ApprovalManagementProps> = ({ canCreate = true }) => {
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const [buyerId, setBuyerId] = useState<string | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(currentUser?.organizationId || null);
@@ -105,9 +109,11 @@ const ApprovalManagement: React.FC = () => {
             Master approval flows configured for your organization. Click a row to view its approvers.
           </p>
         </div>
-        <button type="button" className="apl-create-btn" onClick={() => setShowCreate(true)}>
-          <span className="apl-create-plus">+</span> Create Approval
-        </button>
+        {canCreate && (
+          <button type="button" className="apl-create-btn" onClick={() => setShowCreate(true)}>
+            <span className="apl-create-plus">+</span> Create Approval
+          </button>
+        )}
       </div>
 
       {claimsError ? (
