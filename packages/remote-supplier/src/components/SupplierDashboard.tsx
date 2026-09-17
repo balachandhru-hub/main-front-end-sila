@@ -599,6 +599,28 @@ const SupplierDashboard: React.FC = () => {
   };
 
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
+  const [previousRfqPageView, setPreviousRfqPageView] = useState<"dashboard" | "allRfqs">("dashboard");
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (rfqPageView === "rfqDetail") {
+        const targetView = previousRfqPageView || "allRfqs";
+        setRfqPageView(targetView);
+        if (targetView === "dashboard") {
+          setActiveNav("dashboard");
+        } else {
+          setActiveNav("rfqs");
+        }
+        setSelectedRfqId(null);
+        setSelectedRfq(null);
+        setRfqDetailError(null);
+        setOwnQuotation(null);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [rfqPageView, previousRfqPageView]);
+
   const RFQ_PAGE_SIZE = 10;
   const [allRfqsList, setAllRfqsList] = useState<RFQMasterDataItem[]>([]);
   const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
@@ -777,13 +799,21 @@ const SupplierDashboard: React.FC = () => {
   };
 
   const handleViewRfqDetailsFullPage = (rfqId: string) => {
+    if (rfqPageView === "dashboard" || rfqPageView === "allRfqs") {
+      setPreviousRfqPageView(rfqPageView);
+    }
+    window.history.pushState({ rfqPageView: "rfqDetail" }, "");
     setRfqPageView("rfqDetail");
     handleViewRfqDetails(rfqId);
   };
 
   const closeRfqDetail = () => {
-    if (rfqPageView === "rfqDetail") {
-      setRfqPageView("allRfqs");
+    const targetView = previousRfqPageView || "allRfqs";
+    setRfqPageView(targetView);
+    if (targetView === "dashboard") {
+      setActiveNav("dashboard");
+    } else {
+      setActiveNav("rfqs");
     }
     setSelectedRfqId(null);
     setSelectedRfq(null);
@@ -1462,7 +1492,7 @@ const SupplierDashboard: React.FC = () => {
                 {((selectedRfq.technicalSpecificationDocuments?.length ?? 0) > 0 ||
                   (selectedRfq.termsConditionDocuments?.length ?? 0) > 0) && (
                     <div>
-                      <div className="pud-modal-section-title">Reference Documents</div>
+                      <div className="pud-modal-section-title">Reference Documents123</div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginTop: '8px' }}>
 
                         {selectedRfq.technicalSpecificationDocuments?.map((doc) => (
@@ -2164,7 +2194,7 @@ const SupplierDashboard: React.FC = () => {
       <div
         className={`pud-shell${isMobileSidebarOpen ? " pud-sidebar-open-mobile" : ""}`}
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
-       >
+      >
         {/* <button
           type="button"
           className="pud-mobile-sidebar-toggle"

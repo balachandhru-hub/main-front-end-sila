@@ -41,8 +41,8 @@ interface StatCard {
   value: number;
   linkText: string;
   colorClass: string;
-  isClickable?: boolean; 
-  navKey?:string;
+  isClickable?: boolean;
+  navKey?: string;
 }
 
 interface POItem {
@@ -123,13 +123,13 @@ const IconBell = () => (
   </svg>
 );
 
-const IconMenu = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="3" y1="6" x2="21" y2="6" />
-    <line x1="3" y1="12" x2="21" y2="12" />
-    <line x1="3" y1="18" x2="21" y2="18" />
-  </svg>
-);
+// const IconMenu = () => (
+//   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <line x1="3" y1="6" x2="21" y2="6" />
+//     <line x1="3" y1="12" x2="21" y2="12" />
+//     <line x1="3" y1="18" x2="21" y2="18" />
+//   </svg>
+// );
 
 const NavIconHome = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -319,9 +319,9 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog", section: "DIRECTORY & CATALOG" },
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
-  { 
-    key: "configuration", 
-    icon: <NavIconTemplate />, 
+  {
+    key: "configuration",
+    icon: <NavIconTemplate />,
     label: "Configuration",
     subItems: [
       { key: "template", label: "Templates" },
@@ -522,51 +522,51 @@ const BuyerAdminDash: React.FC = () => {
   }, [buyerId]);
 
   const loadRfqs = async () => {
-      if (!buyerId) {
-        setRfqs(mockRfqs);
-        setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, mockRfqs.length));
-        return;
-      }
+    if (!buyerId) {
+      setRfqs(mockRfqs);
+      setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, mockRfqs.length));
+      return;
+    }
 
-      setLoadingRfqs(true);
-      setRfqsError(null);
+    setLoadingRfqs(true);
+    setRfqsError(null);
 
-      try {
-        const data = await fetchBuyerRFQs({
-          buyerId,
-          index: 0,
-          limit: RFQ_INITIAL_VISIBLE,
-        });
+    try {
+      const data = await fetchBuyerRFQs({
+        buyerId,
+        index: 0,
+        limit: RFQ_INITIAL_VISIBLE,
+      });
 
-        const finalData = data.length > 0 ? data : mockRfqs;
+      const finalData = data.length > 0 ? data : mockRfqs;
 
-        setRfqs(finalData);
-        setVisibleRfqCount(
-          Math.min(RFQ_INITIAL_VISIBLE, finalData.length)
-        );
-      } catch (err: any) {
+      setRfqs(finalData);
+      setVisibleRfqCount(
+        Math.min(RFQ_INITIAL_VISIBLE, finalData.length)
+      );
+    } catch (err: any) {
 
-        setRfqsError(
-          err?.message || "Failed to load sourcing opportunities."
-        );
+      setRfqsError(
+        err?.message || "Failed to load sourcing opportunities."
+      );
 
-        setRfqs(mockRfqs);
-        setVisibleRfqCount(
-          Math.min(RFQ_INITIAL_VISIBLE, mockRfqs.length)
-        );
-      } finally {
-        setLoadingRfqs(false);
-      }
-    };
+      setRfqs(mockRfqs);
+      setVisibleRfqCount(
+        Math.min(RFQ_INITIAL_VISIBLE, mockRfqs.length)
+      );
+    } finally {
+      setLoadingRfqs(false);
+    }
+  };
 
   useEffect(() => {
     loadRfqs();
   }, [buyerId]);
 
-const refreshRfqs = async () => {
-  await loadRfqs();
-  await loadAllRfqsPage(1);
-}
+  const refreshRfqs = async () => {
+    await loadRfqs();
+    await loadAllRfqsPage(1);
+  }
 
   useEffect(() => {
     const loadTemplates = async () => {
@@ -670,6 +670,7 @@ const refreshRfqs = async () => {
   }, [activeNav]);
 
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail" | "qsAns" | "quotationComparison">("dashboard");
+  const [previousRfqPageView, setPreviousRfqPageView] = useState<"dashboard" | "allRfqs">("dashboard");
 
   const [allRfqsList, setAllRfqsList] = useState<any[]>([]);
   const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
@@ -685,6 +686,22 @@ const refreshRfqs = async () => {
   const [fullPageRfqError, setFullPageRfqError] = useState<string | null>(null);
   const [freezingBid, setFreezingBid] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (rfqPageView === "rfqDetail" || rfqPageView === "qsAns" || rfqPageView === "quotationComparison") {
+        setRfqPageView(previousRfqPageView || "allRfqs");
+        if ((previousRfqPageView || "allRfqs") === "dashboard") {
+          setActiveNav("dashboard");
+        }
+        setFullPageRfq(null);
+        setFullPageRfqId(null);
+        setFullPageRfqError(null);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [rfqPageView, previousRfqPageView]);
   // Known supplier org names from quotation data, used to give the chat a
   // real supplier name instead of an individual invited user's name.
   const chatSupplierNames = useMemo(() => {
@@ -769,8 +786,8 @@ const refreshRfqs = async () => {
       handleNavClick("createRFQ"); // Redirects to Create RFQ form
     } else if (navKey) {
       handleNavClick(navKey);
-  }
-};
+    }
+  };
 
   // const handleBackToDashboard = () => {
   //   setRfqPageView("dashboard");
@@ -778,6 +795,10 @@ const refreshRfqs = async () => {
   // };
 
   const handleViewRfqDetailsFullPage = async (rfqId: string) => {
+    if (rfqPageView === "dashboard" || rfqPageView === "allRfqs") {
+      setPreviousRfqPageView(rfqPageView);
+    }
+    window.history.pushState({ rfqPageView: "rfqDetail" }, "");
     setRfqPageView("rfqDetail");
     setFullPageRfqId(rfqId);
     setLoadingFullPageRfq(true);
@@ -799,7 +820,11 @@ const refreshRfqs = async () => {
   };
 
   const handleBackToAllRfqs = () => {
-    setRfqPageView("allRfqs");
+    const targetView = previousRfqPageView || "allRfqs";
+    setRfqPageView(targetView);
+    if (targetView === "dashboard") {
+      setActiveNav("dashboard");
+    }
     setFullPageRfq(null);
     setFullPageRfqId(null);
     setFullPageRfqError(null);
@@ -956,15 +981,7 @@ const refreshRfqs = async () => {
         className={`bad-shell${isMobileSidebarOpen ? " bad-sidebar-open-mobile" : ""}`}
         style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
       >
-        <button
-          type="button"
-          className="bad-mobile-sidebar-toggle"
-          onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
-          aria-label={isMobileSidebarOpen ? "Close menu" : "Open menu"}
-          aria-expanded={isMobileSidebarOpen}
-        >
-          {isMobileSidebarOpen ? <IconClose /> : <IconMenu />}
-        </button>
+
 
         <div
           className="bad-sidebar-backdrop"
@@ -1160,94 +1177,94 @@ const refreshRfqs = async () => {
             ) : activeNav === "materialService" ? (
               <ItemMasterCatalog buyerId={buyerId || ""} />
             ) : activeNav === "createRFQ" ? (
-              <CreateRFQ onNavClick={handleNavClick} onRfqCreated={refreshRfqs}/>
+              <CreateRFQ onNavClick={handleNavClick} onRfqCreated={refreshRfqs} />
             ) : activeNav === "product" ? (
               <Product />
             ) : rfqPageView === "allRfqs" ? (
               <>
-              <div className="bad-table">
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '1.25rem', }}>
-                  <div>
-                    <h1 className="bad-title">All RFQs</h1>
-                    <p className="bad-subtitle" style={{ marginBottom: 0 }}>
-                      RFQs posted across your organization, awaiting supplier quotations.
-                    </p>
-                  </div>
-                </div>
-
-                {loadingAllRfqs ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
-                    <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                      <div className="bad-spinner" />
-                      <span>Loading all sourcing opportunities...</span>
+                <div className="bad-table">
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '1.25rem', }}>
+                    <div>
+                      <h1 className="bad-title">All RFQs</h1>
+                      <p className="bad-subtitle" style={{ marginBottom: 0 }}>
+                        RFQs posted across your organization, awaiting supplier quotations.
+                      </p>
                     </div>
                   </div>
-                ) : allRfqsError && allRfqsList.length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>{allRfqsError}</div>
-                ) : allRfqsList.length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
-                    No RFQs found.
-                  </div>
-                ) : (
-                  <div>
-                    <div className="bad-rfq-table-container">
-                      <table className="bad-rfq-items-table bad-allrfqs-table">
-                        <thead>
-                          <tr>
-                            <th style={{ width: '48px' }}>S.No</th>
-                            <th>RFQ Number</th>
-                            <th>Title</th>
-                            <th>Organization</th>
-                            <th>Delivery Location</th>
-                            <th>Closing Date</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {allRfqsList.map((rfq: any, idx: number) => (
-                            <tr key={rfq.rfqId || idx}
-                            onClick={()=> handleViewRfqDetailsFullPage(rfq.rfqId)}>
-                              <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
-                              <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
-                              <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
-                              <td>{rfq.organizationName}</td>
-                              <td>{rfq.deliveryLocation}</td>
-                              <td>
-                                {rfq.endDate
-                                  ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-                                  : "—"}
-                              </td>
+
+                  {loadingAllRfqs ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
+                      <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                        <div className="bad-spinner" />
+                        <span>Loading all sourcing opportunities...</span>
+                      </div>
+                    </div>
+                  ) : allRfqsError && allRfqsList.length === 0 ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>{allRfqsError}</div>
+                  ) : allRfqsList.length === 0 ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                      No RFQs found.
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="bad-rfq-table-container">
+                        <table className="bad-rfq-items-table bad-allrfqs-table">
+                          <thead>
+                            <tr>
+                              <th style={{ width: '48px' }}>S.No</th>
+                              <th>RFQ Number</th>
+                              <th>Title</th>
+                              <th>Organization</th>
+                              <th>Delivery Location</th>
+                              <th>Closing Date</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {allRfqsList.map((rfq: any, idx: number) => (
+                              <tr key={rfq.rfqId || idx}
+                                onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}>
+                                <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
+                                <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
+                                <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                                <td>{rfq.organizationName}</td>
+                                <td>{rfq.deliveryLocation}</td>
+                                <td>
+                                  {rfq.endDate
+                                    ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                    : "—"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="badp-pagination badp-allrfqs-pagination">
+                        <button
+                          type="button"
+                          className={`badp-page-btn${allRfqsPage === 1 || loadingAllRfqs ? " badp-page-btn-disabled" : ""}`}
+                          onClick={handleAllRfqsPrevPage}
+                          disabled={allRfqsPage <= 1 || loadingAllRfqs}
+                          aria-label="Previous RFQ page"
+                        >
+                          <IconChevronLeft />
+                        </button>
+
+                        <span className="badp-page-number">Page {allRfqsPage}</span>
+
+                        <button
+                          type="button"
+                          className={`badp-page-btn${!allRfqsHasMore || loadingAllRfqs ? " badp-page-btn-disabled" : ""}`}
+                          onClick={handleAllRfqsNextPage}
+                          disabled={!allRfqsHasMore || loadingAllRfqs}
+                          aria-label="Next RFQ page"
+                        >
+                          <IconChevronRight />
+                        </button>
+                      </div>
                     </div>
-
-                    <div className="badp-pagination badp-allrfqs-pagination">
-                      <button
-                        type="button"
-                        className={`badp-page-btn${allRfqsPage === 1 || loadingAllRfqs ? " badp-page-btn-disabled" : ""}`}
-                        onClick={handleAllRfqsPrevPage}
-                        disabled={allRfqsPage <= 1 || loadingAllRfqs}
-                        aria-label="Previous RFQ page"
-                      >
-                        <IconChevronLeft />
-                      </button>
-
-                      <span className="badp-page-number">Page {allRfqsPage}</span>
-
-                      <button
-                        type="button"
-                        className={`badp-page-btn${!allRfqsHasMore || loadingAllRfqs ? " badp-page-btn-disabled" : ""}`}
-                        onClick={handleAllRfqsNextPage}
-                        disabled={!allRfqsHasMore || loadingAllRfqs}
-                        aria-label="Next RFQ page"
-                      >
-                        <IconChevronRight />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
               </>
             ) : rfqPageView === "rfqDetail" ? (
               // <>
@@ -1514,7 +1531,7 @@ const refreshRfqs = async () => {
               //     )}
               //   </div>
               // </>
-                    <BidComparisonAwardView
+              <BidComparisonAwardView
                 rfq={fullPageRfq}
                 loading={loadingFullPageRfq}
                 error={fullPageRfqError}
@@ -1563,10 +1580,10 @@ const refreshRfqs = async () => {
               />
             ) : (
               <>
-              <div>
-                <h1 className="bad-title" style={{ fontSize: '20px', fontWeight: 500 }}>Buyer Admin Command Center</h1>
-                <p className="bad-subtitle">Manage buyers, track procurement activities, and oversee operations.</p>
-              </div>
+                <div>
+                  <h1 className="bad-title" style={{ fontSize: '20px', fontWeight: 500 }}>Buyer Admin Command Center</h1>
+                  <p className="bad-subtitle">Manage buyers, track procurement activities, and oversee operations.</p>
+                </div>
 
                 <div className="bad-stats-grid">
                   {statCards.map((stat) => (
@@ -1575,9 +1592,9 @@ const refreshRfqs = async () => {
                       <div className="bad-stat-label">{stat.label}</div>
                       <div className="bad-stat-value">{stat.value}</div>
                       <a className="bad-stat-link" href="#" onClick={(e) => {
-                            e.preventDefault();
-                            handleCardClick(stat.navKey,stat.label);
-                          }}> 
+                        e.preventDefault();
+                        handleCardClick(stat.navKey, stat.label);
+                      }}>
                         {stat.linkText}
                       </a>
                     </div>

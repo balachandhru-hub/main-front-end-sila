@@ -452,39 +452,40 @@ const BuyersDashboard: React.FC = () => {
   }, [buyerId]);
 
   const loadRfqs = async () => {
-      if (!buyerId) return;
-      setLoadingRfqs(true);
-      setRfqsError(null);
-      try {
-        const data = await fetchBuyerRFQs({
-          buyerId,
-          index: 0,
-          limit: RFQ_INITIAL_VISIBLE,
-        });
-        if (data.length > 0) {
-          setRfqs(data);
-          setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
-        } else {
-          setRfqs(mockRfqs);
-          setVisibleRfqCount(mockRfqs.length);
-        }
-      } catch (err: any) {
-        setRfqsError(err.message || "Failed to load sourcing opportunities.");
-      } finally {
-        setLoadingRfqs(false);
+    if (!buyerId) return;
+    setLoadingRfqs(true);
+    setRfqsError(null);
+    try {
+      const data = await fetchBuyerRFQs({
+        buyerId,
+        index: 0,
+        limit: RFQ_INITIAL_VISIBLE,
+      });
+      if (data.length > 0) {
+        setRfqs(data);
+        setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
+      } else {
+        setRfqs(mockRfqs);
+        setVisibleRfqCount(mockRfqs.length);
       }
-    };
+    } catch (err: any) {
+      setRfqsError(err.message || "Failed to load sourcing opportunities.");
+    } finally {
+      setLoadingRfqs(false);
+    }
+  };
 
   useEffect(() => {
     loadRfqs();
   }, [buyerId]);
 
   const refreshRfqs = async () => {
-  await loadRfqs();
-  await loadAllRfqsPage(1);
-}
+    await loadRfqs();
+    await loadAllRfqsPage(1);
+  }
 
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail" | "qsAns" | "quotationComparison">("dashboard");
+  const [previousRfqPageView, setPreviousRfqPageView] = useState<"dashboard" | "allRfqs">("dashboard");
 
   const [allRfqsList, setAllRfqsList] = useState<any[]>([]);
   const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
@@ -500,6 +501,21 @@ const BuyersDashboard: React.FC = () => {
   const [fullPageRfqError, setFullPageRfqError] = useState<string | null>(null);
   const [freezingBid, setFreezingBid] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (rfqPageView === "rfqDetail" || rfqPageView === "qsAns" || rfqPageView === "quotationComparison") {
+        const targetView = previousRfqPageView || "allRfqs";
+        setRfqPageView(targetView);
+        setActiveNav(targetView);
+        setFullPageRfq(null);
+        setFullPageRfqId(null);
+        setFullPageRfqError(null);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [rfqPageView, previousRfqPageView]);
   // Known supplier org names from quotation data, used to give the chat a
   // real supplier name instead of an individual invited user's name.
   const chatSupplierNames = useMemo(() => {
@@ -586,6 +602,10 @@ const BuyersDashboard: React.FC = () => {
   };
 
   const handleViewRfqDetailsFullPage = async (rfqId: string) => {
+    if (rfqPageView === "dashboard" || rfqPageView === "allRfqs") {
+      setPreviousRfqPageView(rfqPageView);
+    }
+    window.history.pushState({ rfqPageView: "rfqDetail" }, "");
     setRfqPageView("rfqDetail");
     setActiveNav("rfqDetail");
     setFullPageRfqId(rfqId);
@@ -666,14 +686,16 @@ const BuyersDashboard: React.FC = () => {
   // };
 
   const handleBackToAllRfqs = async () => {
-    setRfqPageView("allRfqs");
+    const targetView = previousRfqPageView || "allRfqs";
+    setRfqPageView(targetView);
+    setActiveNav(targetView);
     setFullPageRfq(null);
     setFullPageRfqId(null);
     setFullPageRfqError(null);
 
-    if (allRfqsLoaded || loadingAllRfqs) return;
-
-    await loadAllRfqsPage(1);
+    if (targetView === "allRfqs" && !allRfqsLoaded && !loadingAllRfqs) {
+      await loadAllRfqsPage(1);
+    }
   };
 
   const handleFreezeBid = async () => {
@@ -1248,7 +1270,7 @@ const BuyersDashboard: React.FC = () => {
               //     )}
               //   </div>
               // </>
-                <BidComparisonAwardView
+              <BidComparisonAwardView
                 rfq={fullPageRfq}
                 loading={loadingFullPageRfq}
                 error={fullPageRfqError}
