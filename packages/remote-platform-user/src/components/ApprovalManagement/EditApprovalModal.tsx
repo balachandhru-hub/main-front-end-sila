@@ -56,7 +56,7 @@ const EditApprovalModal: React.FC<EditApprovalModalProps> = ({
         <div className="aem-header">
           <div>
             <h2 className="aem-title">Edit Approval</h2>
-            <p className="aem-subtitle">Update the approval name. Order: {order}</p>
+            <p className="aem-subtitle">Update the approval name.</p>
           </div>
           <button type="button" className="aem-close" onClick={onClose} disabled={saving} aria-label="Close">
             ✕

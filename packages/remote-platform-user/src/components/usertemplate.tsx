@@ -13,6 +13,7 @@ import {
   type VerificationTemplateQuestionDto,
 } from '../../../remote-buyer/src/api/Buyerapi';
 import { fetchDropdownReferenceList, type ReferenceListItemDto } from '../../../remote-buyer/src/api/masterdataApi';
+import { useNetworkAdminAuthStore } from '../store/useAuthStore';
 
 interface TemplateQuestion {
   questionId: string;
@@ -56,6 +57,7 @@ interface TemplateFormData {
 }
 
 export default function UserTemplate({ templates = [], organizationId }: UserTemplateProps) {
+  const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const [apiTemplates, setApiTemplates] = useState<VerificationTemplate[]>(templates);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -429,14 +431,14 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
   };
 
   const handleSaveFieldForEdit = () => {
-      if (!editFieldForm.label.trim()) {
-        toastService.error('Please enter a question label');
-        return;
-      }
-      if (!editFieldForm.type) {
-        toastService.error('Please select a field type');
-        return;
-      }
+    if (!editFieldForm.label.trim()) {
+      toastService.error('Please enter a question label');
+      return;
+    }
+    if (!editFieldForm.type) {
+      toastService.error('Please select a field type');
+      return;
+    }
     const originalField =
       editingFieldIdForEdit !== null
         ? editFormData.fields.find((f) => f.id === editingFieldIdForEdit)
@@ -682,21 +684,21 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
                 <div className="ut-inline-form-container">
                   <div className="ut-form-group">
                     <label>Field Type</label>
-                      <select
-                        value={fieldForm.type}
-                        onChange={(e) => setFieldForm({ ...fieldForm, type: e.target.value })}
-                        disabled={loadingQuestionTypes}
-                      >
-                        <option value="" disabled>
-                          {loadingQuestionTypes ? 'Loading...' : 'Select a field type'}
-                        </option>
-                        {questionTypes.map((qt) => (
-                          <option key={qt.id} value={qt.key}>{qt.description}</option>
-                        ))}
-                      </select>
-                      {questionTypesError && (
-                        <div className="ut-error-message">{questionTypesError}</div>
-                      )}
+                    <select
+                      value={fieldForm.type}
+                      onChange={(e) => setFieldForm({ ...fieldForm, type: e.target.value })}
+                      disabled={loadingQuestionTypes}
+                    >
+                      <option value="" disabled>
+                        {loadingQuestionTypes ? 'Loading...' : 'Select a field type'}
+                      </option>
+                      {questionTypes.map((qt) => (
+                        <option key={qt.id} value={qt.key}>{qt.description}</option>
+                      ))}
+                    </select>
+                    {questionTypesError && (
+                      <div className="ut-error-message">{questionTypesError}</div>
+                    )}
                   </div>
 
                   <div className="ut-form-group">
@@ -820,9 +822,11 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
           <h1>Onboarding Registration Templates</h1>
           <p>Configure compliance checks, required physical files, and document parameters for unverified vendor groups.</p>
         </div>
-        <button className="ut-btn-create" onClick={handleCreateTemplate}>
-          + Create Template
-        </button>
+        {currentUser?.userRole === "BUYER_ADMINISTRATOR" && (
+          <button className="ut-btn-create" onClick={handleCreateTemplate}>
+            + Create Template
+          </button>
+        )}
       </div>
 
       {viewError && (
@@ -879,6 +883,8 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
                         <Eye size={18} />
                         {loadingViewId === template.templateId ? 'Loading...' : 'View'}
                       </button>
+                      {currentUser?.userRole === "BUYER_ADMINISTRATOR" && (
+                        <>
                       <button
                         className="ut-btn-action ut-btn-edit"
                         title="Edit"
@@ -896,6 +902,8 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
                         <Trash2 size={18} />
                         {deletingTemplateId === template.templateId ? 'Deleting...' : ''}
                       </button>
+                      </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -1021,21 +1029,21 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
                 <div className="ut-inline-form-container">
                   <div className="ut-form-group">
                     <label>Field Type</label>
-                      <select
-                        value={editFieldForm.type}
-                        onChange={(e) => setEditFieldForm({ ...editFieldForm, type: e.target.value })}
-                        disabled={loadingQuestionTypes}
-                      >
-                        <option value="" disabled>
-                          {loadingQuestionTypes ? 'Loading...' : 'Select a field type'}
-                        </option>
-                        {questionTypes.map((qt) => (
-                          <option key={qt.id} value={qt.key}>{qt.description}</option>
-                        ))}
-                      </select>
-                      {questionTypesError && (
-                        <div className="ut-error-message">{questionTypesError}</div>
-                      )}
+                    <select
+                      value={editFieldForm.type}
+                      onChange={(e) => setEditFieldForm({ ...editFieldForm, type: e.target.value })}
+                      disabled={loadingQuestionTypes}
+                    >
+                      <option value="" disabled>
+                        {loadingQuestionTypes ? 'Loading...' : 'Select a field type'}
+                      </option>
+                      {questionTypes.map((qt) => (
+                        <option key={qt.id} value={qt.key}>{qt.description}</option>
+                      ))}
+                    </select>
+                    {questionTypesError && (
+                      <div className="ut-error-message">{questionTypesError}</div>
+                    )}
                   </div>
 
                   <div className="ut-form-group">

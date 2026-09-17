@@ -21,6 +21,7 @@ import { fetchContracts } from "../../../remote-platform-user/src/components/Con
 import ContractTable from "../../../remote-platform-user/src/components/Contract/ContractTable";
 import { CompanyProfile, toastService } from '@vosox/shared-ui';
 import { useAuth } from '../../../host-app/src/AuthContext.tsx';
+import ApprovalManagement from "../../../remote-platform-user/src/components/ApprovalManagement/ApprovalManagement.tsx";
 
 /* ---------------------------------- Icons ---------------------------------- */
 
@@ -272,6 +273,14 @@ const NavIconFileCheck = () => (
   </svg>
 );
 
+const NavIconTemplate = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M3 9h18" />
+    <path d="M9 3v18" />
+  </svg>
+);
+
 /* ---------------------------------- Static data ---------------------------------- */
 
 // subItems can be a flat leaf or a non-clickable group with nested leaves.
@@ -295,6 +304,15 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ", section: "SOURCING & ORDERS" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog", section: "DIRECTORY & CATALOG" },
   { key: "models", icon: <NavIconModels />, label: "Models" },
+  { 
+    key: "configuration", 
+    icon: <NavIconTemplate />, 
+    label: "Configuration",
+    subItems: [
+      { key: "template", label: "Templates" },
+      { key: "approvalManagement", label: "Approval Management" }
+    ]
+  },
   {
     key: "more",
     icon: <NavIconMore />,
@@ -1023,6 +1041,8 @@ const BuyersDashboard: React.FC = () => {
                 loading={loadingContract}
                 error={contractError}
               />
+            ) : activeNav === "approvalManagement" ? (
+              <ApprovalManagement canCreate={false}/>
             ) : rfqPageView === "allRfqs" ? (
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.03)' }}>
                 <div style={{ marginBottom: '20px' }}>
