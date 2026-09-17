@@ -3,11 +3,9 @@ import { toastService } from '@vosox/shared-ui';
 import type {
   PendingMaterialApproval,
   MaterialApprovalDetail as MaterialApprovalDetailDto,
-  MaterialApprovalFlowUser,
 } from './materialApi';
 import {
   fetchMaterialApprovalDetail,
-  fetchMaterialApprovalFlowUsers,
   submitMaterialApprovalAction,
   classifyStatusText,
   MATERIAL_APPROVAL_STATUS,
@@ -43,7 +41,6 @@ const MaterialApprovalDetail: React.FC<MaterialApprovalDetailProps> = ({
   onApprovalSubmitted,
 }) => {
   const [detail, setDetail] = useState<MaterialApprovalDetailDto | null>(null);
-  const [flowUsers, setFlowUsers] = useState<MaterialApprovalFlowUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -53,31 +50,22 @@ const MaterialApprovalDetail: React.FC<MaterialApprovalDetailProps> = ({
     setLoading(true);
     setError(null);
     setDetail(null);
-    setFlowUsers([]);
 
-    Promise.allSettled([
-      fetchMaterialApprovalDetail(material.predefinedMaterialId),
-      fetchMaterialApprovalFlowUsers(material.approvalId),
-    ]).then(([detailResult, flowResult]) => {
-      if (cancelled) return;
-
-      if (detailResult.status === 'fulfilled') {
-        setDetail(detailResult.value);
-      } else {
-        setError(detailResult.reason?.message || 'Failed to load material approval details.');
-      }
-
-      if (flowResult.status === 'fulfilled') {
-        setFlowUsers(flowResult.value);
-      } else {
-        toastService.error(flowResult.reason?.message || 'Failed to load the approval flow.');
-      }
-
-      setLoading(false);
-    });
+    fetchMaterialApprovalDetail(material.predefinedMaterialId)
+      .then((data) => {
+        if (cancelled) return;
+        setDetail(data);
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        setError(err.message || 'Failed to load material approval details.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
     return () => { cancelled = true; };
-  }, [material.predefinedMaterialId, material.approvalId]);
+  }, [material.predefinedMaterialId]);
 
   const handleDecision = async (action: 'APPROVE' | 'REJECT', comment: string) => {
     if (submitting) return;
@@ -96,6 +84,8 @@ const MaterialApprovalDetail: React.FC<MaterialApprovalDetailProps> = ({
 
   const overallTone = detail ? classifyStatusText(detail.status) : 'neutral';
   const isDecided = overallTone === 'approved' || overallTone === 'rejected';
+
+  const approvers = [...(detail?.approvalUsers || [])].sort((a, b) => a.order - b.order);
 
   return (
     <div className="bad-modal bad-rfq-fullpage matap-detail">
@@ -143,27 +133,30 @@ const MaterialApprovalDetail: React.FC<MaterialApprovalDetailProps> = ({
 
             <div className="bad-modal-section-title">Approval Chain</div>
 
-            {flowUsers.length === 0 ? (
+            {approvers.length === 0 ? (
               <div className="matap-state-message">No approvers assigned to this material yet.</div>
             ) : (
               <div className="matap-strip">
-                {flowUsers.map((approver, idx) => (
-                  <React.Fragment key={approver.id}>
-                    <MaterialApprovalCard
-                      approverName={approver.name}
-                      approverEmail={approver.email}
-                      position={approver.order}
-                      isCurrentUser={!!currentUserId && approver.userId === currentUserId}
-                      canAct={!!currentUserId && approver.userId === currentUserId && !isDecided}
-                      submitting={submitting}
-                      onDecision={handleDecision}
-                      statusTone={overallTone}
-                    />
-                    {idx < flowUsers.length - 1 && (
-                      <span className="matap-connector" aria-hidden="true" />
-                    )}
-                  </React.Fragment>
-                ))}
+                {approvers.map((approver, idx) => {
+                  const cardTone = classifyStatusText(approver.status);
+                  return (
+                    <React.Fragment key={approver.userId}>
+                      <MaterialApprovalCard
+                        approverName={approver.userName}
+                        approverEmail={approver.email}
+                        position={approver.order}
+                        isCurrentUser={!!currentUserId && approver.userId === currentUserId}
+                        canAct={!!currentUserId && approver.userId === currentUserId && !isDecided && cardTone === 'pending'}
+                        submitting={submitting}
+                        onDecision={handleDecision}
+                        statusTone={cardTone}
+                      />
+                      {idx < approvers.length - 1 && (
+                        <span className="matap-connector" aria-hidden="true" />
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </div>
             )}
           </div>
