@@ -14,6 +14,7 @@ import QuotationComparisonCard from "../../../remote-platform-user/src/component
 import BidComparisonAwardView from "../../../remote-platform-user/src/components/BidComparisonAwardView.tsx";
 import { CompanyProfile, toastService } from '@vosox/shared-ui';
 import { useAuth } from '../../../host-app/src/AuthContext.tsx';
+import ApprovalManagement from "../../../remote-platform-user/src/components/ApprovalManagement/ApprovalManagement.tsx";
 
 /* ---------------------------------- Icons ---------------------------------- */
 
@@ -280,6 +281,15 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ", section: "SOURCING & ORDERS" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog", section: "DIRECTORY & CATALOG" },
   { key: "models", icon: <NavIconModels />, label: "Models" },
+  { 
+    key: "configuration", 
+    icon: <NavIconTemplate />, 
+    label: "Configuration",
+    subItems: [
+      { key: "template", label: "Templates" },
+      { key: "approvalManagement", label: "Approval Management" }
+    ]
+  },
   {
     key: "more",
     icon: <NavIconMore />,
@@ -287,14 +297,6 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
     subItems: [
       { key: "material", label: "Material" },
     ],
-  },
-  { 
-    key: "configuration", 
-    icon: <NavIconTemplate />, 
-    label: "Configuration",
-    subItems: [
-      { key: "template", label: "Templates" },
-    ]
   },
 ];
 
@@ -892,6 +894,8 @@ const BuyersDashboard: React.FC = () => {
               <UserTemplate />
             ) : activeNav === "material" ? (
               <ItemMasterCatalog buyerId={buyerId || ""} />
+            ) : activeNav === "approvalManagement" ? (
+              <ApprovalManagement canCreate={false}/>
             ) : rfqPageView === "allRfqs" ? (
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.03)' }}>
                 <div style={{ marginBottom: '20px' }}>
