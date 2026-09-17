@@ -18,7 +18,6 @@ import type {
   SupplierQuotationBySupplierIdResponse,
 } from '../dto/supplierDto';
 import type { ErrorResponseDto } from '@vosox/shared-ui';
-import { isErrorResponse } from '@vosox/shared-ui';
 import type {
   ChatMessageDto,
   ChatThreadDto,
@@ -365,8 +364,6 @@ export const logoutSupplier = async (): Promise<void | ErrorResponseDto> => {
       message: 'Unexpected Error',
       description: 'Something went wrong while logging out.',
     };
-  } finally {
-    invalidatePersonDetailCache();
   }
 };
 
@@ -970,47 +967,6 @@ export const updatePersonDetail = async (
 };
 
 
-export const PERSON_DETAIL_UPDATED_EVENT = 'person-detail:updated';
-
-let personDetailCacheGeneration = 0;
-let personDetailCache: PersonDetailDto | null = null;
-let personDetailInFlight: Promise<PersonDetailDto | ErrorResponseDto> | null = null;
-
-export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorResponseDto> => {
-  if (personDetailCache) return personDetailCache;
-  if (personDetailInFlight) return personDetailInFlight;
-
-  const generation = personDetailCacheGeneration;
-
-  personDetailInFlight = getPersonDetail().then((result) => {
-    if (generation !== personDetailCacheGeneration) {
-      return result;
-    }
-    if (!isErrorResponse(result)) {
-      personDetailCache = result;
-    }
-    personDetailInFlight = null;
-    return result;
-  });
-
-  return personDetailInFlight;
-};
-
-export const invalidatePersonDetailCache = (updated?: PersonDetailDto) => {
-  // Only reseed the cache from a response that carries the full record; a
-  // partial payload would leave consumers reading missing fields.
-  const fresh = updated && updated.personId ? updated : null;
-
-  personDetailCacheGeneration += 1;
-  personDetailCache = fresh;
-  personDetailInFlight = null;
-
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent<PersonDetailDto | null>(PERSON_DETAIL_UPDATED_EVENT, { detail: fresh })
-    );
-  }
-};
 
 export interface UnitItem {
   id: string;

@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import type { User, UserRole } from '../types';
 import { ROLE_ID_MAPPING } from '../constants/roleMapping';
 import { getTokenClaims } from '../api/platformApi'
+import { getPersonDetail, type PersonDetailDto } from '../api/networkAdminApi';
+import { isErrorResponse } from '@vosox/shared-ui';
 
 function notifySessionInvalid() {
   if (typeof window !== 'undefined') {
@@ -25,19 +27,39 @@ export interface AuthState {
   claims: TokenClaims | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  personDetail: PersonDetailDto | null;
+  personDetailLoading: boolean;
   initializeFromSession: () => Promise<void>;
   setCurrentUser: (user: User) => void;
   setClaims: (claims: TokenClaims) => void;
+  setPersonDetail: (detail: PersonDetailDto) => void;
   logout: () => void;
 }
+
+// Fetches the logged-in person's profile once per session and hands it out via
+// the store, so every consumer (Header, ProfileView, chat, ...) reads the same
+// value instead of each re-fetching (and racing) independently.
+const loadPersonDetail = async (
+  set: (partial: Partial<AuthState>) => void
+) => {
+  set({ personDetailLoading: true });
+  const detail = await getPersonDetail();
+  if (!isErrorResponse(detail)) {
+    set({ personDetail: detail, personDetailLoading: false });
+  } else {
+    set({ personDetailLoading: false });
+  }
+};
 
 export const useNetworkAdminAuthStore = create<AuthState>((set) => ({
   currentUser: null,
   claims: null,
   isAuthenticated: false,
   isLoading: true,
+  personDetail: null,
+  personDetailLoading: false,
   initializeFromSession: async () => {
-    
+
     let claims;
 
     try {
@@ -49,6 +71,7 @@ export const useNetworkAdminAuthStore = create<AuthState>((set) => ({
         currentUser: null,
         isLoading: false,
         isAuthenticated: false,
+        personDetail: null,
       });
       notifySessionInvalid();
       return;
@@ -77,16 +100,23 @@ export const useNetworkAdminAuthStore = create<AuthState>((set) => ({
           isAuthenticated: true,
           isLoading: false,
         });
+
+        // Runs once here: this action fires right after login (first mount of
+        // the remote app) and again on a full page reload (same mount path) -
+        // never on every render, and never re-triggered by Header/ProfileView.
+        loadPersonDetail(set);
       } else {
         set({
           claims: null,
           currentUser: null,
           isLoading: false,
-          isAuthenticated: false });
+          isAuthenticated: false,
+          personDetail: null,
+        });
         notifySessionInvalid();
       }
     } else {
-      set({ isLoading: false, isAuthenticated: false,claims: null, currentUser: null, });
+      set({ isLoading: false, isAuthenticated: false, claims: null, currentUser: null, personDetail: null });
       notifySessionInvalid();
     }
   },
@@ -104,12 +134,18 @@ export const useNetworkAdminAuthStore = create<AuthState>((set) => ({
   set({ claims });
   },
 
+  setPersonDetail: (detail: PersonDetailDto) => {
+    set({ personDetail: detail });
+  },
+
   logout: () => {
     set({
       currentUser: null,
       claims: null,
       isAuthenticated: false,
       isLoading: true,
+      personDetail: null,
+      personDetailLoading: false,
     });
   },
 }));

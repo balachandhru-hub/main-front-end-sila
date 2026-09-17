@@ -47,7 +47,6 @@ export interface BuyerCatalogResponse {
   asset: BuyerCatalogAssetItem[];
 }
 import type { ErrorResponseDto } from "@vosox/shared-ui";
-import { isErrorResponse } from "@vosox/shared-ui";
 
 export interface BuyerProfileResponse {
   id: string;
@@ -452,8 +451,6 @@ export const logoutBuyer = async (): Promise<void> => {
     const responseData = error.response?.data;
     const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
     throw new Error(`${errMsg} (${status})`);
-  } finally {
-    invalidatePersonDetailCache();
   }
 };
 
@@ -808,48 +805,6 @@ export const updatePersonDetail = async (
   }
 };
 
-
-export const PERSON_DETAIL_UPDATED_EVENT = 'person-detail:updated';
-
-let personDetailCacheGeneration = 0;
-let personDetailCache: PersonDetailDto | null = null;
-let personDetailInFlight: Promise<PersonDetailDto | ErrorResponseDto> | null = null;
-
-export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorResponseDto> => {
-  if (personDetailCache) return personDetailCache;
-  if (personDetailInFlight) return personDetailInFlight;
-
-  const generation = personDetailCacheGeneration;
-
-  personDetailInFlight = getPersonDetail().then((result) => {
-    if (generation !== personDetailCacheGeneration) {
-      return result;
-    }
-    if (!isErrorResponse(result)) {
-      personDetailCache = result;
-    }
-    personDetailInFlight = null;
-    return result;
-  });
-
-  return personDetailInFlight;
-};
-
-export const invalidatePersonDetailCache = (updated?: PersonDetailDto) => {
-  // Only reseed the cache from a response that carries the full record; a
-  // partial payload would leave consumers reading missing fields.
-  const fresh = updated && updated.personId ? updated : null;
-
-  personDetailCacheGeneration += 1;
-  personDetailCache = fresh;
-  personDetailInFlight = null;
-
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent<PersonDetailDto | null>(PERSON_DETAIL_UPDATED_EVENT, { detail: fresh })
-    );
-  }
-};
 
 export interface BuyerAssetDownloadResponse {
   assetId: string;

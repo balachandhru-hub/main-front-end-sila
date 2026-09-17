@@ -1,7 +1,5 @@
 import platformInstance from '../../api/platformInstance';
 
-// approvalId maps to GET /master-approval-flow/{approvalId} — not
-// approvalFlowPredefinedMaterialId or approvalMappingId.
 export interface PendingMaterialApproval {
   predefinedMaterialId: string;
   approvalId: string;
@@ -16,6 +14,14 @@ export interface PendingMaterialApproval {
   status: string;
 }
 
+export interface MaterialApprovalUserStatus {
+  userId: string;
+  userName: string;
+  email: string;
+  order: number;
+  status: string;
+}
+
 export interface MaterialApprovalDetail {
   id: string;
   buyerId: string;
@@ -27,7 +33,7 @@ export interface MaterialApprovalDetail {
   subUnit: string;
   microUnit: string;
   status: string;
-  approvalUserIds: string[];
+  approvalUsers: MaterialApprovalUserStatus[];
 }
 
 export interface MaterialApprovalKpi {
@@ -35,15 +41,6 @@ export interface MaterialApprovalKpi {
   pendingCount: number;
   approvedCount: number;
   rejectedCount: number;
-}
-
-// No per-approver status in this response — only id/userId/order/name/email.
-export interface MaterialApprovalFlowUser {
-  id: string;
-  userId: string;
-  order: number;
-  name: string;
-  email: string;
 }
 
 export const MATERIAL_APPROVAL_STATUS = {
@@ -111,18 +108,6 @@ export const fetchMaterialApprovalKpi = async (): Promise<MaterialApprovalKpi> =
     return response.data;
   } catch (error: any) {
     throw toError(error, 'Failed to load approval summary counts');
-  }
-};
-
-export const fetchMaterialApprovalFlowUsers = async (approvalId: string): Promise<MaterialApprovalFlowUser[]> => {
-  try {
-    const response = await platformInstance.get<MaterialApprovalFlowUser[]>(
-      `/api/v1/buyer/master-approval-flow/${approvalId}`
-    );
-    const data = Array.isArray(response.data) ? response.data : [];
-    return [...data].sort((a, b) => a.order - b.order);
-  } catch (error: any) {
-    throw toError(error, 'Failed to load the approval flow');
   }
 };
 

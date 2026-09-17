@@ -4,30 +4,30 @@
   background: #edeff0;
   padding: 1.75rem 3rem 4rem;
   box-sizing: border-box;
+  margin-top: 70px;
 }
 
 .profile-back-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  background: none;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ffffff;
   border: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #475569;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  color: #1e293b;
   cursor: pointer;
-  padding: 0.25rem 0;
+  padding: 0;
   margin-bottom: 1rem;
   transition: all 0.2s ease;
 }
 
 .profile-back-btn:hover {
-  color: #1e293b;
-  /* border: 0.5px solid rgb(200, 200, 200); */
-
-}
-
-.profile-back-btn:hover svg {
+  color: #0f172a;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
   transform: scale(1.05);
 }
 
@@ -287,9 +287,7 @@
     padding: 4.25rem 1.25rem 3rem;
   }
 
-  .profile-back-btn {
-    padding: 0.625rem 0 0.625rem;
-  }
+
 
   /* .profile-banner {
     flex-direction: column;
@@ -344,10 +342,7 @@
     padding: 4.25rem 1rem 2.5rem;
   }
 
-  .profile-back-btn {
-    font-size: 0.8125rem;
-    padding: 0.5rem 0;
-  }
+
 
 
   .profile-banner {
