@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SilaLogo from "../../../host-app/public/assets/SILA_Logo.png";
-import { getPersonDetailCached, PERSON_DETAIL_UPDATED_EVENT } from '../api/Buyerapi';
-import type { PersonDetailDto } from '../api/Buyerapi';
-import { isErrorResponse } from '@vosox/shared-ui';
+import { useBuyerAuthStore } from '../store/useBuyerAuthStore';
 import "./Header.css";
 
 const IconEdit = () => (
@@ -85,49 +83,11 @@ export interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogout }) => {
   const navigate = useNavigate();
-  const hasLoadedRef = useRef(false);
-
-  const [userName, setUserName] = useState<string>('');
-  const [userEmail, setUserEmail] = useState<string>('');
-
-  useEffect(() => {
-    if (hasLoadedRef.current) return;
-    hasLoadedRef.current = true;
-
-    const loadPersonDetail = async () => {
-      const result = await getPersonDetailCached();
-
-      if (isErrorResponse(result)) {
-        return;
-      }
-
-      setUserName(result.name || '');
-      setUserEmail(result.email || '');
-    };
-
-    loadPersonDetail();
-  }, []);
-
-  useEffect(() => {
-    const handlePersonDetailUpdated = (event: Event) => {
-      const updated = (event as CustomEvent<PersonDetailDto | null>).detail;
-
-      if (updated) {
-        setUserName(updated.name || '');
-        setUserEmail(updated.email || '');
-        return;
-      }
-
-      getPersonDetailCached().then((result) => {
-        if (isErrorResponse(result)) return;
-        setUserName(result.name || '');
-        setUserEmail(result.email || '');
-      });
-    };
-
-    window.addEventListener(PERSON_DETAIL_UPDATED_EVENT, handlePersonDetailUpdated);
-    return () => window.removeEventListener(PERSON_DETAIL_UPDATED_EVENT, handlePersonDetailUpdated);
-  }, []);
+  // Sourced from the store, which fetches it once (on login and on reload) via
+  // BuyerApp's mount effect - no per-component fetch, no local cache.
+  const personDetail = useBuyerAuthStore((state) => state.personDetail);
+  const userName = personDetail?.name || '';
+  const userEmail = personDetail?.email || '';
 
   const firstLetter = userName ? userName.trim().charAt(0).toUpperCase() : '';
 

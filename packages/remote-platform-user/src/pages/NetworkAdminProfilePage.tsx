@@ -1,9 +1,9 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProfileView } from '@vosox/shared-ui';
 import type { PersonDetail, PersonDetailUpdate } from '@vosox/shared-ui';
 import { isErrorResponse } from '@vosox/shared-ui';
-import { getPersonDetailCached, updatePersonDetail, invalidatePersonDetailCache } from '../api/networkAdminApi';
+import { updatePersonDetail } from '../api/networkAdminApi';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
 import Header from '../components/Header';
 
@@ -11,46 +11,18 @@ const NetworkAdminProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const authLoading = useNetworkAdminAuthStore((state) => state.isLoading);
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
-  const initializeFromSession = useNetworkAdminAuthStore((state) => state.initializeFromSession);
+  // Sourced from the store, which fetches it once (on login and on reload) via
+  // initializeFromSession - no per-page fetch, no local cache.
+  const personDetail = useNetworkAdminAuthStore((state) => state.personDetail);
+  const personDetailLoading = useNetworkAdminAuthStore((state) => state.personDetailLoading);
+  const setPersonDetail = useNetworkAdminAuthStore((state) => state.setPersonDetail);
   const networkAdminHome =
     currentUser?.userRole === 'SUPPLIER_NETWORK_ADMIN'
       ? '/platform-user/supplier-network-admin'
       : '/platform-user/buyer-network-admin';
-  const hasLoadedRef = useRef(false);
 
-  const [personDetail, setPersonDetail] = useState<PersonDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    initializeFromSession();
-  }, [initializeFromSession]);
-
-  const loadProfile = useCallback(async () => {
-    if (hasLoadedRef.current) return;
-    hasLoadedRef.current = true;
-
-    setLoading(true);
-    setError(null);
-
-    const result = await getPersonDetailCached();
-
-    if (isErrorResponse(result)) {
-      setError(result.message || 'Failed to load profile.');
-      setPersonDetail(null);
-    } else {
-      setPersonDetail(result as unknown as PersonDetail);
-    }
-
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    if (!authLoading) {
-      loadProfile();
-    }
-  }, [authLoading, loadProfile]);
 
   const handleSave = async (updates: PersonDetailUpdate) => {
     setSaving(true);
@@ -61,8 +33,7 @@ const NetworkAdminProfilePage: React.FC = () => {
     if (isErrorResponse(result)) {
       setError(result.message || 'Failed to update profile.');
     } else {
-      invalidatePersonDetailCache(result);
-      setPersonDetail(result as unknown as PersonDetail);
+      setPersonDetail(result);
     }
 
     setSaving(false);
@@ -76,8 +47,8 @@ const NetworkAdminProfilePage: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg-color)' }}>
       <Header />
       <ProfileView
-        personDetail={personDetail}
-        loading={loading}
+        personDetail={personDetail as unknown as PersonDetail | null}
+        loading={personDetailLoading}
         saving={saving}
         error={error}
         onSave={handleSave}
