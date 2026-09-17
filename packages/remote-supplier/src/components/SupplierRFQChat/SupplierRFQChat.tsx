@@ -8,9 +8,8 @@ import {
   markSupplierThreadAsRead,
   sendSupplierMessage,
   downloadSupplierMessageAttachment,
-  getPersonDetailCached,
 } from "../../api/supplierApi";
-import type { PersonDetailDto } from "../../api/supplierApi";
+import { useSupplierAuthStore } from "../../store/useSupplierAuthStore";
 import { toastService } from "@vosox/shared-ui";
 import SupplierChatConversation from "./SupplierChatConversation";
 import SupplierChatDetails from "./SupplierChatDetails";
@@ -56,8 +55,10 @@ const SupplierRFQChat: React.FC<SupplierRFQChatProps> = ({
   const [mobileView, setMobileView] = useState<"list" | "conversation">("list");
   const [isChatDetailsOpen, setIsChatDetailsOpen] = useState(false);
 
-  const [myProfile, setMyProfile] = useState<PersonDetailDto | null>(null);
-  const [isLoadingMyProfile, setIsLoadingMyProfile] = useState(false);
+  // Sourced from the store, which fetches it once (on login and on reload) via
+  // SupplierApp's mount effect - no per-component fetch, no local cache.
+  const myProfile = useSupplierAuthStore((state) => state.personDetail);
+  const isLoadingMyProfile = useSupplierAuthStore((state) => state.personDetailLoading);
 
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -229,26 +230,6 @@ const SupplierRFQChat: React.FC<SupplierRFQChatProps> = ({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rfqId, supplierId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadMyProfile = async () => {
-      setIsLoadingMyProfile(true);
-      try {
-        const result = await getPersonDetailCached();
-        if (cancelled) return;
-        if (!isErrorResponse(result)) {
-          setMyProfile(result);
-        }
-      } finally {
-        if (!cancelled) setIsLoadingMyProfile(false);
-      }
-    };
-    loadMyProfile();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const handleSelectThread = () => setMobileView("conversation");
   const handleBackToList = () => setMobileView("list");
