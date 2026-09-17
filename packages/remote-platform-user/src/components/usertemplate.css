@@ -296,8 +296,9 @@ body {
 }
 
 .ut-col-action {
-  width: 20%;
   text-align: right;
+  display: flex;
+  justify-content: center;
 }
 
 .ut-template-name-wrapper {
@@ -322,7 +323,7 @@ body {
   display: flex;
   gap: 0.5rem;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
 }
 
 .ut-empty-state-container {

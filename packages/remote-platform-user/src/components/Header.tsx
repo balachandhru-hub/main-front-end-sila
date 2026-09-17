@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
-import { getPersonDetailCached, PERSON_DETAIL_UPDATED_EVENT } from '../api/networkAdminApi';
-import type { PersonDetailDto } from '../api/networkAdminApi';
-import { isErrorResponse } from '@vosox/shared-ui';
 import './Header.css';
 
 const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;
@@ -79,7 +76,7 @@ export interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogout }) => {
   const navigate = useNavigate();
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
-  const hasLoadedRef = useRef(false);
+  const personDetail = useNetworkAdminAuthStore((state) => state.personDetail);
   const [openDropdownKey, setOpenDropdownKey] = useState<string | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -94,49 +91,8 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
     }, 400);
   };
 
-  const [userName, setUserName] = useState<string>('');
-  const [userEmail, setUserEmail] = useState<string>('');
-
-  useEffect(() => {
-    if (!currentUser) return;
-    if (hasLoadedRef.current) return;
-    hasLoadedRef.current = true;
-
-    const loadPersonDetail = async () => {
-      const result = await getPersonDetailCached();
-
-      if (isErrorResponse(result)) {
-        return;
-      }
-
-      setUserName(result.name || '');
-      setUserEmail(result.email || '');
-    };
-
-    loadPersonDetail();
-  }, [currentUser]);
-
-  useEffect(() => {
-    const handlePersonDetailUpdated = (event: Event) => {
-      const updated = (event as CustomEvent<PersonDetailDto | null>).detail;
-
-      if (updated) {
-        setUserName(updated.name || '');
-        setUserEmail(updated.email || '');
-        return;
-      }
-
-      getPersonDetailCached().then((result) => {
-        if (isErrorResponse(result)) return;
-        setUserName(result.name || '');
-        setUserEmail(result.email || '');
-      });
-    };
-
-    window.addEventListener(PERSON_DETAIL_UPDATED_EVENT, handlePersonDetailUpdated);
-    return () => window.removeEventListener(PERSON_DETAIL_UPDATED_EVENT, handlePersonDetailUpdated);
-  }, []);
-
+  const userName = personDetail?.name || '';
+  const userEmail = personDetail?.email || '';
   const firstLetter = userName ? userName.trim().charAt(0).toUpperCase() : '';
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);

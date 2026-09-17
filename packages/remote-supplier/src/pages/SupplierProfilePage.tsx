@@ -1,41 +1,22 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProfileView } from '@vosox/shared-ui';
 import type { PersonDetail, PersonDetailUpdate } from '@vosox/shared-ui';
 import { isErrorResponse } from '@vosox/shared-ui';
-import { getPersonDetailCached, updatePersonDetail, invalidatePersonDetailCache } from '../api/supplierApi';
+import { updatePersonDetail } from '../api/supplierApi';
+import { useSupplierAuthStore } from '../store/useSupplierAuthStore';
 import Header from '../components/Header';
 
 const SupplierProfilePage: React.FC = () => {
   const navigate = useNavigate();
-  const hasLoadedRef = useRef(false);
+  // Sourced from the store, which fetches it once (on login and on reload) via
+  // SupplierApp's mount effect - no per-page fetch, no local cache.
+  const personDetail = useSupplierAuthStore((state) => state.personDetail);
+  const loading = useSupplierAuthStore((state) => state.personDetailLoading);
+  const setPersonDetail = useSupplierAuthStore((state) => state.setPersonDetail);
 
-  const [personDetail, setPersonDetail] = useState<PersonDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const loadProfile = useCallback(async () => {
-    if (hasLoadedRef.current) return;
-    hasLoadedRef.current = true;
-
-    setLoading(true);
-    setError(null);
-
-    const result = await getPersonDetailCached();
-
-    if (isErrorResponse(result)) {
-      setError(result.message || 'Failed to load profile.');
-    } else {
-      setPersonDetail(result as unknown as PersonDetail);
-    }
-
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
 
   const handleSave = async (updates: PersonDetailUpdate) => {
     setSaving(true);
@@ -46,8 +27,7 @@ const SupplierProfilePage: React.FC = () => {
     if (isErrorResponse(result)) {
       setError(result.message || 'Failed to update profile.');
     } else {
-      invalidatePersonDetailCache(result);
-      setPersonDetail(result as unknown as PersonDetail);
+      setPersonDetail(result);
     }
 
     setSaving(false);
@@ -57,7 +37,7 @@ const SupplierProfilePage: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#ffffff' }}>
       <Header />
       <ProfileView
-        personDetail={personDetail}
+        personDetail={personDetail as unknown as PersonDetail | null}
         loading={loading}
         saving={saving}
         error={error}
