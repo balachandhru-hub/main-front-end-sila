@@ -7,7 +7,7 @@ import ItemMasterCatalog from "./ItemMasterCatalog.tsx";
 import Header from "./Header";
 import QsAns from "./Qsans.tsx";
 // import QuotationSummaryTable from "./QuotationSummaryTable.tsx";
-import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, updateRfqStatus } from "../api/Buyerapi";
+import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, updateRfqStatus, getPersonDetailCached } from "../api/Buyerapi";
 import BuyerRFQChat from "./BuyerRFQChat/BuyerRFQChat";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
 import QuotationComparisonCard from "../../../remote-platform-user/src/components/QuotationComparisonCard.tsx";
@@ -19,7 +19,7 @@ import MaterialApprovalDetail from "../../../remote-platform-user/src/components
 import type { ContractRecord } from "../../../remote-platform-user/src/components/Contract/contractApi";
 import { fetchContracts } from "../../../remote-platform-user/src/components/Contract/contractApi";
 import ContractTable from "../../../remote-platform-user/src/components/Contract/ContractTable";
-import { CompanyProfile, toastService } from '@vosox/shared-ui';
+import { CompanyProfile, toastService, isErrorResponse } from '@vosox/shared-ui';
 import { useAuth } from '../../../host-app/src/AuthContext.tsx';
 import ApprovalManagement from "../../../remote-platform-user/src/components/ApprovalManagement/ApprovalManagement.tsx";
 
@@ -618,6 +618,19 @@ const BuyersDashboard: React.FC = () => {
     setActiveNav("dashboard");
   };
 
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPersonDetailCached().then((result) => {
+      if (cancelled) return;
+      if (!isErrorResponse(result)) {
+        setCurrentUserId(result.userId || null);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   const [materialRecords, setMaterialRecords] = useState<PendingMaterialApproval[]>([]);
   const [loadingMaterial, setLoadingMaterial] = useState(false);
   const [materialError, setMaterialError] = useState<string | null>(null);
@@ -1016,7 +1029,7 @@ const BuyersDashboard: React.FC = () => {
               selectedMaterial ? (
                 <MaterialApprovalDetail
                   material={selectedMaterial}
-                  currentUserId={buyerId}
+                  currentUserId={currentUserId}
                   onBack={() => setSelectedMaterial(null)}
                   onApprovalSubmitted={handleMaterialApprovalSubmitted}
                 />
