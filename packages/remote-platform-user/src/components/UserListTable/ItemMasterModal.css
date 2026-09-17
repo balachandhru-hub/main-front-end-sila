@@ -13,10 +13,13 @@
 }
 
 .item-master-modal {
+  display: flex;
+  flex-direction: column;
+
   width: min(720px, 100%);
   max-height: calc(100vh - 48px);
 
-  overflow-y: auto;
+  overflow: hidden;
 
   background: #ffffff;
   border: 1px solid #dbe3ec;
@@ -29,6 +32,8 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+
+  flex-shrink: 0;
 
   padding: 24px 28px 20px;
 
@@ -74,10 +79,17 @@
 }
 
 .item-master-modal-form {
-  max-width: 600px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
 
-  padding: 24px 28px 28px;
+  min-height: 0;
+  flex: 1;
+}
+
+.item-master-modal-body {
+  overflow-y: auto;
+
+  padding: 24px;
 }
 
 .item-master-field {
@@ -230,9 +242,13 @@
   display: flex;
   justify-content: flex-end;
 
+  flex-shrink: 0;
+
   gap: 12px;
 
-  padding-top: 8px;
+  padding: 16px 24px;
+
+  border-top: 1px solid #e5e7eb;
 }
 
 .item-master-cancel-btn,
@@ -315,12 +331,13 @@
     padding: 20px;
   }
 
-  .item-master-modal-form {
+  .item-master-modal-body {
     padding: 20px;
   }
 
   .item-master-modal-footer {
     flex-direction: column-reverse;
+    padding: 16px 20px;
   }
 
   .item-master-cancel-btn,

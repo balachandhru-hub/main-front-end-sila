@@ -220,6 +220,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     className="item-master-modal-form"
                     onSubmit={handleSubmit}
                 >
+                    <div className="item-master-modal-body">
                     {/* Material Code */}
                     <div className="item-master-field">
                         <label htmlFor="item-master-material-code">
@@ -592,6 +593,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                 {errors.comment}
                             </div>
                         )}
+                    </div>
                     </div>
 
                     {/* Footer */}
