@@ -6,7 +6,7 @@ import UserAdmin from "../UserAdmin";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import Catalog from "../../../remote-supplier/src/components/Catalog";
 import Invitations from "../../../remote-supplier/src/components/Invitations";
-import SupplierRfqQuotationSummary from "./SupplierRfqQuotationSummary";
+import SupplierRfqQuotationSummary from "../../../remote-supplier/src/components/SupplierRfqQuotationSummary";
 import { useNetworkAdminAuthStore } from "../store/useAuthStore";
 import {
   fetchRFQMasterData,

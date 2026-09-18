@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./SupplierRfqQuotationSummary.css";
-import SupplierRFQChat from "../../../remote-supplier/src/components/SupplierRFQChat/SupplierRFQChat";
+import SupplierRFQChat from "./SupplierRFQChat/SupplierRFQChat";
 import {
   fetchRFQById,
   fetchSupplierQuotationBySupplierId,
@@ -15,7 +15,7 @@ import {
   type RfqDocumentAssetDto,
   type SupplierQuotationByIdItem,
   fetchBuyerAsset,
-} from "../../../remote-supplier/src/api/supplierApi";
+} from "../api/supplierApi";
 import { Button, isErrorResponse } from "@vosox/shared-ui";
 
 const IconClose = () => (
@@ -872,14 +872,15 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                 <span><IconPin /> Delivery: {selectedRfq.deliveryLocation}</span> */}
                 {supplierId && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto', flexWrap: 'wrap' }}>
-                    <button
+                    <Button
+                      variant="primary"
                       type="button"
                       className="pud-btn pud-btn-outline pud-btn-chat"
                       onClick={() => setIsChatOpen(true)}
                       title="Chat with the buyer"
                     >
                       <IconMessageSquare /> Chat
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
