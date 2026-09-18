@@ -658,6 +658,27 @@ const SupplierAdminDash: React.FC = () => {
   };
 
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail">("dashboard");
+  const [previousRfqPageView, setPreviousRfqPageView] = useState<"dashboard" | "allRfqs">("dashboard");
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (rfqPageView === "rfqDetail") {
+        const targetView = previousRfqPageView || "allRfqs";
+        setRfqPageView(targetView);
+        if (targetView === "dashboard") {
+          setActiveNav("dashboard");
+        } else {
+          setActiveNav("rfqs");
+        }
+        setSelectedRfqId(null);
+        setSelectedRfq(null);
+        setRfqDetailError(null);
+        setOwnQuotation(null);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [rfqPageView, previousRfqPageView]);
 
   const [allRfqsList, setAllRfqsList] = useState<RFQMasterDataItem[]>([]);
   const [loadingAllRfqs, setLoadingAllRfqs] = useState(false);
@@ -760,18 +781,27 @@ const SupplierAdminDash: React.FC = () => {
   };
 
   const handleViewRfqDetailsFullPage = (rfqId: string) => {
+    if (rfqPageView === "dashboard" || rfqPageView === "allRfqs") {
+      setPreviousRfqPageView(rfqPageView);
+    }
+    window.history.pushState({ rfqPageView: "rfqDetail" }, "");
     setRfqPageView("rfqDetail");
     handleViewRfqDetails(rfqId);
   };
 
   const closeRfqDetail = () => {
-    setActiveNav("rfqs");
-    setRfqPageView("allRfqs");
+    const targetView = previousRfqPageView || "allRfqs";
+    setRfqPageView(targetView);
+    if (targetView === "dashboard") {
+      setActiveNav("dashboard");
+    } else {
+      setActiveNav("rfqs");
+    }
     setSelectedRfqId(null);
     setSelectedRfq(null);
     setRfqDetailError(null);
     setOwnQuotation(null);
-    if (!allRfqsLoaded && !loadingAllRfqs) {
+    if (targetView === "allRfqs" && !allRfqsLoaded && !loadingAllRfqs) {
       loadAllRfqsPage(1);
     }
   };
