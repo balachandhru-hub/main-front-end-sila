@@ -140,6 +140,8 @@ export interface BuyerSupplierQuotation {
   supplierId?: string | null;
   supplierName?: string | null;
   isLead?: boolean;
+  supplierRFQId?: string;
+  isAwarded?: boolean;
 }
 
 export interface InvitedUserDto {
@@ -155,6 +157,12 @@ export interface InvitedUserDto {
 export interface RfqSupplierRefDto {
   supplierId: string;
   supplierName: string;
+}
+
+export interface RfqExternalSupplierRefDto {
+  externalSupplierId: string;
+  externalSupplierName: string;
+  supplierType: string;
 }
 
 export interface BuyerRFQDetailResponse {
@@ -174,6 +182,7 @@ export interface BuyerRFQDetailResponse {
   questions: RfqQuestionDto[];
   items: RfqItemDto[];
   supplierIds: RfqSupplierRefDto[];
+  externalSupplierIds?: RfqExternalSupplierRefDto[];
   invitedUsers?: InvitedUserDto[] | null;
   rfqVerificationTemplateId: string | null;
   supplierQuotation: BuyerSupplierQuotation[];
