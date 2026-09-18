@@ -3,6 +3,7 @@ import "./BidComparisonAward.css";
 import { Button } from "@vosox/shared-ui";
 import { fetchBuyerAsset, getBidComparisonData, isBidComparisonError, awardRfq } from "../api/platformApi";
 import type { BidComparisonResponseDto } from "../api/platformApi";
+import { ContractCreationView } from "./ContractCreationView";
 
 
 const IconMessageSquare = () => (
@@ -104,6 +105,9 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   const [awardingRfq, setAwardingRfq] = useState(false);
   const [awardSuccess, setAwardSuccess] = useState(false);
   const [awardError, setAwardError] = useState<string | null>(null);
+
+  const [contractCreated, setContractCreated] = useState(false);
+  const [screen, setScreen] = useState<"award" | "contract">("award");
 
   const questions: any[] = useMemo(() => Array.isArray(rfq?.questions) ? rfq.questions : [], [rfq]);
 
@@ -554,6 +558,19 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
 
   return (
     <div className="bca-page">
+      {screen === "contract" ? (
+        <ContractCreationView
+          rfq={rfq}
+          lineItems={lineItems}
+          effectiveQuotations={effectiveQuotations}
+          displaySuppliers={displaySuppliers}
+          selections={selections}
+          distinctSelected={distinctSelected}
+          getQuoteItemForRfqItem={getQuoteItemForRfqItem}
+          onBack={() => setScreen("award")}
+        />
+      ) : (
+        <>
       <div className="bca-page-header">
         <div className="bca-header-left">
           <button className="bca-back-circle-btn" onClick={onBack} title="Back">
@@ -1504,6 +1521,68 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         })()}
       </div>
 
+      {/* Create Contract Entry Card - Right Above RFQ Documents */}
+      <div
+        className="bca-section-card bca-contract-entry-card"
+        style={{
+          marginBottom: '24px',
+          padding: '36px 24px',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#ffffff',
+          borderRadius: '12px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+        }}
+      >
+        <div
+          style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: '#ECFDF5',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '16px',
+          }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+        <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#0f172a', margin: '0 0 8px 0' }}>
+          Award Completed
+        </h2>
+        <p style={{ fontSize: '14px', color: '#475569', margin: '0 0 24px 0', maxWidth: '540px', lineHeight: '1.5' }}>
+          The RFQ has been awarded. Continue to create the supplier contract.
+        </p>
+        <button
+          type="button"
+          className="bca-btn bca-btn-primary"
+          onClick={() => {
+            setContractCreated(true);
+            setScreen("contract");
+          }}
+          style={{
+            padding: '10px 24px',
+            fontSize: '14px',
+            fontWeight: 600,
+            borderRadius: '8px',
+            background: contractCreated ? '#059669' : '#2563eb',
+            color: '#ffffff',
+            border: 'none',
+            cursor: 'pointer',
+            boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)',
+          }}
+        >
+          {contractCreated ? '✓ Contract Workspace' : 'Create Contract'}
+        </button>
+      </div>
+
       {/* RFQ Documents Section */}
       {((rfq?.technicalSpecificationDocuments && rfq.technicalSpecificationDocuments.length > 0) ||
         (rfq?.termsConditionDocuments && rfq.termsConditionDocuments.length > 0)) && (
@@ -1819,12 +1898,23 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                       <div className="bca-modal-stat-value" style={{ fontSize: '1.25rem', fontWeight: 700 }}>{selectedItemCount}</div>
                     </div>
                   </div>
-                  <div className="bca-modal-actions" style={{ justifyContent: 'center', marginTop: '1.5rem' }}>
+                  <div className="bca-modal-actions" style={{ justifyContent: 'center', marginTop: '1.5rem', gap: '12px' }}>
                     <button
-                      className="bca-btn bca-btn-primary"
+                      className="bca-btn bca-btn-ghost"
                       onClick={() => { setShowAwardModal(false); setAwardSuccess(false); }}
                     >
                       Close
+                    </button>
+                    <button
+                      className="bca-btn bca-btn-primary"
+                      onClick={() => {
+                        setShowAwardModal(false);
+                        setAwardSuccess(false);
+                        setContractCreated(true);
+                        setScreen("contract");
+                      }}
+                    >
+                      Create Contract
                     </button>
                   </div>
                 </div>
@@ -1883,6 +1973,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           </div>
         );
       })()}
+        </>
+      )}
     </div>
   );
 };
