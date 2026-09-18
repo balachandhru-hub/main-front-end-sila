@@ -90,9 +90,21 @@ const IconChevronRight = () => (
   </svg>
 );
 
+const formatRank = (val: any): string => {
+  if (val == null || val === "") return "";
+  if (typeof val === "object") return String(val.rank ?? val.value ?? "");
+  return String(val);
+};
+
+const IconBoltFilled = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </svg>
+);
+
 /* ---------------------------------- Component ---------------------------------- */
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 6;
 // The rfq-master-data endpoint returns a bare array with no total, so the count is
 // resolved with one wide fetch when the board opens.
 const TOTAL_COUNT_FETCH_LIMIT = 1000;
@@ -107,11 +119,39 @@ export const EAuctionWidget: React.FC = () => {
   const [hasNextPage, setHasNextPage] = useState<boolean>(false);
   const knownTotalRef = useRef<number>(0);
 
+  const handleCloseEauctionModal = () => {
+    setIsModalOpen(false);
+    setCurrentPage(1);
+    setSelectedLot(null);
+  };
+
   // API State for selected RFQ details & existing quotation
   const [selectedRfqDetails, setSelectedRfqDetails] = useState<RFQDetailResponse | null>(null);
   const [ownQuotation, setOwnQuotation] = useState<SupplierQuotationByIdItem | null>(null);
   const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
   const [loadingApi, setLoadingApi] = useState<boolean>(false);
+
+  // Supplier's rank on the current lot (single-lot / addLotOption bidding only)
+  const headerRank = React.useMemo(() => formatRank(
+    ownQuotation?.rank ??
+    (selectedRfqDetails?.supplierQuotation?.[0] as any)?.rank ??
+    (selectedRfqDetails as any)?.suppliers?.[0]?.rank ??
+    (selectedRfqDetails as any)?.suppliers?.rank
+  ), [ownQuotation, selectedRfqDetails]);
+
+  // Per-item ranks (line-item / non-lot bidding only)
+  const allQuotationItems = React.useMemo(() => {
+    const items: any[] = [];
+    const pushItems = (arr: any) => {
+      if (Array.isArray(arr)) items.push(...arr);
+    };
+    pushItems(ownQuotation?.supplierQuotationItems);
+    pushItems(selectedRfqDetails?.supplierQuotationItems);
+    if (Array.isArray(selectedRfqDetails?.supplierQuotation)) {
+      selectedRfqDetails.supplierQuotation.forEach((sq: any) => pushItems(sq?.supplierQuotationItems));
+    }
+    return items;
+  }, [ownQuotation, selectedRfqDetails]);
 
   // Form State for SUBMIT COMPETITIVE BID
   const [deliveryCharge, setDeliveryCharge] = useState<string>("0.00");
@@ -506,6 +546,46 @@ export const EAuctionWidget: React.FC = () => {
     });
   };
 
+  // Bulk Apply — line-item (non-lot) bidding only
+  const [bulkValue, setBulkValue] = useState<string>("");
+  const [bulkValueType, setBulkValueType] = useState<"PERCENTAGE" | "AMOUNT">("PERCENTAGE");
+  const [bulkFields, setBulkFields] = useState({
+    deliveryCharge: false,
+    discount: false,
+    tax: false,
+    quotedPrice: false,
+  });
+
+  const bulkTypeFieldMap: Partial<Record<keyof typeof bulkFields, keyof QuoteLineItem>> = {
+    deliveryCharge: "deliveryType",
+    discount: "discountType",
+    tax: "taxType",
+  };
+
+  const handleBulkFieldToggle = (field: keyof typeof bulkFields, checked: boolean) => {
+    setBulkFields((prev) => ({ ...prev, [field]: checked }));
+  };
+
+  const handleBulkApply = () => {
+    if (bulkValue === "" || !selectedRfqDetails?.items) return;
+
+    const fieldKeys = (Object.keys(bulkFields) as (keyof typeof bulkFields)[]).filter(
+      (key) => bulkFields[key]
+    );
+    if (fieldKeys.length === 0) return;
+
+    selectedRfqDetails.items.forEach((item, idx) => {
+      const itemKey = item.supplierRFQItemId || `item-${idx}`;
+      fieldKeys.forEach((field) => {
+        handleLineItemFieldChange(itemKey, field, bulkValue);
+        const typeField = bulkTypeFieldMap[field];
+        if (typeField) {
+          handleLineItemFieldChange(itemKey, typeField, bulkValueType);
+        }
+      });
+    });
+  };
+
   const executeSubmitLiveBid = async (verificationToken: string) => {
     if (!selectedLot) return;
     setSubmittingBid(true);
@@ -657,7 +737,7 @@ export const EAuctionWidget: React.FC = () => {
         <button
           className="eauction-trigger-btn"
           onClick={() => setIsModalOpen(true)}
-          title="Open SAP Ariba Live e-Auction Supplier Console"
+          title="Open Live e-Auction Bidding Console"
         >
           <span className="eauction-pulse-dot" />
           <span>⚡ Live e-Auction</span>
@@ -667,7 +747,7 @@ export const EAuctionWidget: React.FC = () => {
 
       {/* Full Live Portal Modal View */}
       {isModalOpen && (
-        <div className="eauction-modal-overlay" onClick={() => setIsModalOpen(false)}>
+        <div className="eauction-modal-overlay" onClick={handleCloseEauctionModal}>
           <div
             className="eauction-portal-container"
             onClick={(e) => e.stopPropagation()}
@@ -675,16 +755,18 @@ export const EAuctionWidget: React.FC = () => {
             {/* Top Header Bar */}
             <div className="eauction-portal-header">
               <div className="eauction-brand">
-                <div className="eauction-logo-icon">e</div>
+                <div className="eauction-logo-icon">
+                  <IconBoltFilled />
+                </div>
                 <div className="eauction-brand-text">
-                  <div className="eauction-portal-title">Supplier Live Bidding Console</div>
-                  <span className="eauction-portal-subtitle">SAP Ariba Live Sourcing v2.1</span>
+                  <div className="eauction-portal-title">Live e-Auction Bidding Console</div>
+                  <span className="eauction-portal-subtitle">SILA Procurement • Real-Time Reverse Auction</span>
                 </div>
               </div>
 
               <button
                 className="eauction-portal-close"
-                onClick={() => setIsModalOpen(false)}
+                onClick={handleCloseEauctionModal}
                 title="Close e-Auction Console"
               >
                 ✕
@@ -693,101 +775,55 @@ export const EAuctionWidget: React.FC = () => {
 
             {/* Main Portal Body */}
             <div className="eauction-portal-body">
-              {/* Main Content Workspace */}
-              <div className="eauction-main-content">
-                {/* Active Bids & Rank Grid */}
-                <div className="eauction-panel-light">
-                  <div className="eauction-panel-head">
-                    <div className="eauction-panel-title-text">MY LIVE BID STATUS & RANKS</div>
-                    <span className="eauction-live-pill">REAL-TIME BIDDING ACTIVE</span>
-                  </div>
+              {/* Left Sidebar: Live RFQ List */}
+              <aside className="eauction-sidebar">
+                <div className="eauction-sidebar-header">
+                  <div className="eauction-panel-title-text">MY LIVE BID STATUS & RANKS</div>
+                  <span className="eauction-live-pill">REAL-TIME BIDDING ACTIVE</span>
+                </div>
 
-                  <div className="eauction-table-wrap">
-                    <table className="eauction-table">
-                      <thead>
-                        <tr>
-                          <th className="eauction-col-index">#</th>
-                          <th>RFQ Title & Code</th>
-                          <th>Organization</th>
-                          <th>Delivery Location</th>
-                          <th>Closing Date & Time</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {loadingApi ? (
-                          <tr>
-                            <td colSpan={6} className="eauction-table-status">
-                              Loading live bid status...
-                            </td>
-                          </tr>
-                        ) : auctions.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="eauction-table-status">
-                              <div className="eauction-empty-state">
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <circle cx="12" cy="12" r="10" />
-                                  <line x1="12" y1="8" x2="12" />
-                                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                                </svg>
-                                <span className="eauction-empty-title">No live bids found</span>
-                                <span className="eauction-empty-subtitle">There are currently no active live auctions available for your account.</span>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : (
-                          (() => {
-                            // Rows are already paginated server-side (index / limit)
-                            return auctions.map((auc, idx) => {
-                              const globalIdx = (currentPage - 1) * PAGE_SIZE + idx + 1;
-                              const isSelected = Boolean(selectedLot && auc.id === selectedLot.id);
-                              return (
-                                <tr
-                                  key={auc.id}
-                                  className={`eauction-table-row${isSelected ? ' is-selected' : ''}`}
-                                  onClick={() => setSelectedLot(auc)}
-                                >
-                                  <td className="eauction-col-index">{globalIdx}</td>
-                                  <td>
-                                    <div className="eauction-cell-title">{auc.name}</div>
-                                    <div className="eauction-cell-subtitle">{auc.itemCode}</div>
-                                  </td>
-                                  <td className="eauction-cell-strong">{auc.organizationName}</td>
-                                  <td>{auc.deliveryLocation}</td>
-                                  <td>
-                                    <span className="eauction-timer">{auc.formattedEndDate}</span>
-                                  </td>
-                                  <td>
-                                    <button
-                                      className="eauction-action-btn"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedLot(auc);
-                                      }}
-                                    >
-                                      PLACE BID
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            });
-                          })()
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                <div className="eauction-sidebar-list">
+                  {loadingApi ? (
+                    <div className="eauction-sidebar-status">Loading live bid status...</div>
+                  ) : auctions.length === 0 ? (
+                    <div className="eauction-empty-state">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <span className="eauction-empty-title">No live bids found</span>
+                      <span className="eauction-empty-subtitle">There are currently no active live auctions available for your account.</span>
+                    </div>
+                  ) : (
+                    auctions.map((auc) => {
+                      const isSelected = Boolean(selectedLot && auc.id === selectedLot.id);
+                      return (
+                        <div
+                          key={auc.id}
+                          className={`eauction-sidebar-item${isSelected ? ' is-selected' : ''}`}
+                          onClick={() => setSelectedLot(auc)}
+                        >
+                          <div className="eauction-sidebar-item-title">{auc.name}</div>
+                          <div className="eauction-sidebar-item-code">{auc.itemCode}</div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
 
-                  {/* Pagination Bar */}
-                  {auctions.length > 0 && (() => {
-                    const startItem = (currentPage - 1) * PAGE_SIZE + 1;
-                    const endItem = (currentPage - 1) * PAGE_SIZE + auctions.length;
-                    const canGoPrev = currentPage > 1;
-                    const canGoNext = hasNextPage;
+                {/* Pagination Bar */}
+                {auctions.length > 0 && (() => {
+                  const startItem = (currentPage - 1) * PAGE_SIZE + 1;
+                  const endItem = (currentPage - 1) * PAGE_SIZE + auctions.length;
+                  const canGoPrev = currentPage > 1;
+                  const canGoNext = hasNextPage;
 
-                    return (
+                  return (
+                    <div className="eauction-sidebar-footer">
                       <div className="eauction-pagination-bar">
                         <div className="eauction-pagination-info">
-                          Showing <strong>{startItem}</strong> to <strong>{endItem}</strong> of <strong>{Math.max(totalAuctions, endItem)}</strong> live tenders
+                          <strong>{startItem}</strong>–<strong>{endItem}</strong> of <strong>{Math.max(totalAuctions, endItem)}</strong>
                         </div>
 
                         <div className="eauction-pagination-controls">
@@ -816,9 +852,13 @@ export const EAuctionWidget: React.FC = () => {
                           </button>
                         </div>
                       </div>
-                    );
-                  })()}
-                </div>
+                    </div>
+                  );
+                })()}
+              </aside>
+
+              {/* Main Content Workspace */}
+              <div className="eauction-main-content">
 
                 {/* Split Bottom Workspace */}
                 <div className={`eauction-grid-split${selectedRfqDetails?.addLotOption === false ? ' is-single-column' : ''}`}>
@@ -830,16 +870,76 @@ export const EAuctionWidget: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* RFQ Details Card from rfq-by-id API */}
+                    {selectedRfqDetails && (
+                      <div className="eauction-details-card">
+                        <div className="eauction-details-title">RFQ Details</div>
+                        <div className="eauction-details-grid">
+                          <div>
+                            <div className="eauction-detail-label">RFQ Title</div>
+                            <div className="eauction-detail-value">{selectedRfqDetails.title || "—"}</div>
+                          </div>
+
+                          <div>
+                            <div className="eauction-detail-label">Start Date &amp; Time</div>
+                            <div className="eauction-detail-value">
+                              {selectedRfqDetails.startDate
+                                ? new Date(selectedRfqDetails.startDate).toLocaleString('en-IN', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                                : "—"}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="eauction-detail-label">End Date &amp; Time</div>
+                            <div className="eauction-detail-value">
+                              {selectedRfqDetails.endDate
+                                ? new Date(selectedRfqDetails.endDate).toLocaleString('en-IN', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                                : "—"}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="eauction-detail-label">Delivery Location</div>
+                            <div className="eauction-detail-value">{selectedRfqDetails.deliveryLocation || "—"}</div>
+                          </div>
+
+                          <div className="eauction-details-span-2">
+                            <div className="eauction-detail-label">Description</div>
+                            <div className="eauction-detail-value">{selectedRfqDetails.description || "—"}</div>
+                          </div>
+
+                          <div>
+                            <div className="eauction-detail-label">Lot Option</div>
+                            {selectedRfqDetails.addLotOption ? (
+                              <span className="eauction-lot-badge">Allowed</span>
+                            ) : (
+                              <span className="eauction-lot-badge-disabled">Not Allowed</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Material Details Table from rfq-by-id API */}
                     <div className="eauction-material-details">
                       <div className="eauction-material-details-head">
                         <span className="eauction-material-details-label">
                           Material Details {selectedRfqDetails?.addLotOption ? "(Single Lot Bidding)" : "(Line Item Bidding)"}
                         </span>
-                        {selectedRfqDetails && (
-                          <span className={`eauction-material-details-badge${selectedRfqDetails.addLotOption ? ' is-lot' : ' is-line'}`}>
-                            {selectedRfqDetails.addLotOption ? "Single Lot Quote Allowed" : "Item-Wise Line Bidding Enabled"}
-                          </span>
+                        {selectedRfqDetails?.addLotOption && headerRank !== "" && (
+                          <span className="eauction-rank-badge-pill">Rank: {headerRank}</span>
                         )}
                       </div>
 
@@ -890,6 +990,103 @@ export const EAuctionWidget: React.FC = () => {
                             </table>
                           </div>
                         ) : (
+                          <>
+                            <div className="eauction-bulk-apply-panel">
+                              <div className="eauction-bulk-apply-header">
+                                <div className="eauction-bulk-apply-title">Bulk Apply</div>
+                                <p className="eauction-bulk-apply-subtitle">
+                                  Enter a value, then toggle the columns you want it applied to.
+                                </p>
+                              </div>
+
+                              <div className="eauction-bulk-apply-controls">
+                                <div className="eauction-bulk-value">
+                                  <input
+                                    type="number"
+                                    className="eauction-bulk-value-input"
+                                    value={bulkValue}
+                                    onChange={(e) => setBulkValue(e.target.value)}
+                                    placeholder="Enter value"
+                                  />
+                                </div>
+
+                                <div className="eauction-bulk-type-toggle" role="group" aria-label="Bulk value type">
+                                  <button
+                                    type="button"
+                                    className={bulkValueType === "PERCENTAGE" ? "active" : ""}
+                                    onClick={() => setBulkValueType("PERCENTAGE")}
+                                  >
+                                    Percentage
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={bulkValueType === "AMOUNT" ? "active" : ""}
+                                    onClick={() => setBulkValueType("AMOUNT")}
+                                  >
+                                    Amount
+                                  </button>
+                                </div>
+
+                                <div className="eauction-bulk-fields">
+                                  <label className="eauction-bulk-toggle">
+                                    <span>Delivery Charge</span>
+                                    <span className="eauction-switch">
+                                      <input
+                                        type="checkbox"
+                                        checked={bulkFields.deliveryCharge}
+                                        onChange={(e) => handleBulkFieldToggle("deliveryCharge", e.target.checked)}
+                                      />
+                                      <span className="eauction-slider"></span>
+                                    </span>
+                                  </label>
+
+                                  <label className="eauction-bulk-toggle">
+                                    <span>Discount</span>
+                                    <span className="eauction-switch">
+                                      <input
+                                        type="checkbox"
+                                        checked={bulkFields.discount}
+                                        onChange={(e) => handleBulkFieldToggle("discount", e.target.checked)}
+                                      />
+                                      <span className="eauction-slider"></span>
+                                    </span>
+                                  </label>
+
+                                  <label className="eauction-bulk-toggle">
+                                    <span>Tax</span>
+                                    <span className="eauction-switch">
+                                      <input
+                                        type="checkbox"
+                                        checked={bulkFields.tax}
+                                        onChange={(e) => handleBulkFieldToggle("tax", e.target.checked)}
+                                      />
+                                      <span className="eauction-slider"></span>
+                                    </span>
+                                  </label>
+
+                                  <label className="eauction-bulk-toggle">
+                                    <span>Quoted Price</span>
+                                    <span className="eauction-switch">
+                                      <input
+                                        type="checkbox"
+                                        checked={bulkFields.quotedPrice}
+                                        onChange={(e) => handleBulkFieldToggle("quotedPrice", e.target.checked)}
+                                      />
+                                      <span className="eauction-slider"></span>
+                                    </span>
+                                  </label>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  className="eauction-bulk-apply-btn"
+                                  onClick={handleBulkApply}
+                                >
+                                  Apply
+                                </button>
+                              </div>
+                            </div>
+
                           <div className="eauction-table-wrap">
                             <table className="eauction-table eauction-table--line-items">
                               <thead>
@@ -904,6 +1101,7 @@ export const EAuctionWidget: React.FC = () => {
                                   <th>Tax</th>
                                   <th>Tax Type</th>
                                   <th className="eauction-col-right">Quoted Price</th>
+                                  <th>Rank</th>
                                   <th className="eauction-col-right">Sub Total</th>
                                   <th className="eauction-col-right">Quoted Amount</th>
                                 </tr>
@@ -911,6 +1109,7 @@ export const EAuctionWidget: React.FC = () => {
                               <tbody>
                                 {selectedRfqDetails.items.map((item, idx) => {
                                   const itemKey = item.supplierRFQItemId || `item-${idx}`;
+                                  const itemId = item.id || item.buyerRFQItemId;
                                   const line = quoteLineItems[itemKey] || {
                                     deliveryCharge: 0,
                                     deliveryType: "PERCENTAGE",
@@ -922,6 +1121,13 @@ export const EAuctionWidget: React.FC = () => {
                                     subTotal: 0,
                                     quotedAmount: 0,
                                   };
+                                  const matchedItem = allQuotationItems.find(
+                                    (qi) =>
+                                      (qi.supplierRFQItemId && (qi.supplierRFQItemId === itemKey || qi.supplierRFQItemId === itemId)) ||
+                                      (qi.buyerRFQItemId && (qi.buyerRFQItemId === itemKey || qi.buyerRFQItemId === itemId)) ||
+                                      (qi.id && (qi.id === itemKey || qi.id === itemId))
+                                  ) || allQuotationItems[idx];
+                                  const itemRank = ownQuotation?.status === "SUBMITTED" ? (formatRank(matchedItem?.rank) || "--") : "-";
                                   return (
                                     <tr key={itemKey}>
                                       <td>
@@ -1012,6 +1218,9 @@ export const EAuctionWidget: React.FC = () => {
                                           className="eauction-line-input eauction-line-input--price"
                                         />
                                       </td>
+                                      <td className="eauction-cell-strong">
+                                        {itemRank}
+                                      </td>
                                       <td className="eauction-col-right eauction-cell-strong">
                                         {line.subTotal.toFixed(2)}
                                       </td>
@@ -1024,6 +1233,7 @@ export const EAuctionWidget: React.FC = () => {
                               </tbody>
                             </table>
                           </div>
+                          </>
                         )
                       ) : (
                         <div className="eauction-material-empty">
