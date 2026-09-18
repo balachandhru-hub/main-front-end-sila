@@ -1,58 +1,59 @@
-export interface ChatAttachmentInputDto {
+export interface ExternalChatAttachmentInputDto {
   fileBytes: string;
   fileName: string;
   contentType: string;
 }
 
-export interface ChatAttachmentDto {
+export interface ExternalChatAttachmentDto {
   id: string;
   fileName: string;
   contentType: string;
   fileSizeBytes: number;
 }
 
-export interface SendBuyerMessagePayload {
+export interface SendExternalSupplierMessagePayload {
   rfqId: string;
-  supplierId?: string;
-  externalSupplierId?: string;
   body: string;
-  attachments: ChatAttachmentInputDto[];
+  attachments: ExternalChatAttachmentInputDto[];
 }
 
-export interface ChatMessageDto {
+export interface ExternalChatMessageDto {
   id: string;
   threadId: string;
+  rfqId: string;
+  supplierId: string;
+  externalSupplierId: string;
   senderUserId: string;
   senderName: string;
   senderOrganizationType: string;
   body: string;
-  attachments: ChatAttachmentDto[];
+  attachments: ExternalChatAttachmentDto[];
   dateCreated: string;
   isReadByBuyer: boolean;
   isReadBySupplier: boolean;
 }
 
-export interface ChatThreadDto {
+export interface ExternalChatThreadDto {
   threadId: string;
   rfqId: string;
   rfqNumber: string;
   buyerId: string;
   supplierId: string;
-  externalSupplierId?: string;
+  externalSupplierId: string;
   counterpartyName: string;
   lastMessageBody: string;
   lastMessageAt: string;
   unreadCount: number;
 }
 
-export interface MarkThreadReadResponseDto {
+export interface ExternalChatMarkThreadReadResponseDto {
   statusCode: number;
   message: string;
   description: string;
   id: string;
 }
 
-export interface ChatAttachmentDownloadDto {
+export interface ExternalChatAttachmentDownloadDto {
   fileName: string;
   contentType: string;
   fileBytes: string;

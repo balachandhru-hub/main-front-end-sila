@@ -33,6 +33,8 @@ export interface ExternalSupplierQuotationItem {
 }
 
 export interface ExternalRFQDetailResponse {
+  buyerName?: string;
+  externalSupplierName?: string;
   title: string;
   description: string;
   deliveryLocation: string;
