@@ -492,6 +492,8 @@ const BuyerAdminDash: React.FC = () => {
 
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const [buyerId, setBuyerId] = useState<string | null>(currentUser?.buyerId || null);
+  const buyerProfile = useNetworkAdminAuthStore((state) => state.personDetail);
+  const isLoadingBuyerProfile = useNetworkAdminAuthStore((state) => state.personDetailLoading);
 
   useEffect(() => {
     if (currentUser?.buyerId) {
@@ -1852,6 +1854,9 @@ const BuyerAdminDash: React.FC = () => {
             rfqTitle={fullPageRfq?.title}
             supplierIds={fullPageRfq?.supplierIds || []}
             supplierNames={chatSupplierNames}
+            externalSupplierIds={fullPageRfq?.externalSupplierIds || []}
+            buyerProfile={buyerProfile}
+            isLoadingBuyerProfile={isLoadingBuyerProfile}
           />
         )}
       </div>
