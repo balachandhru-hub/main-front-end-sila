@@ -140,6 +140,8 @@ export interface BuyerSupplierQuotation {
   supplierId?: string | null;
   supplierName?: string | null;
   isLead?: boolean;
+  supplierRFQId?: string;
+  isAwarded?: boolean;
 }
 
 export interface InvitedUserDto {
