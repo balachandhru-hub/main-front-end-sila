@@ -107,7 +107,7 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
             )}
 
             {!showListView ? (
-                <div className="imc-page">
+                    <>
                     <div className="detail-header">
                         <button
                             type="button"
@@ -120,13 +120,12 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
                         </button>
 
                         <div className="detail-header-title">
-                            <h2 className="imc-title">{selectedItemDetail?.materialCode || "Material Details"}</h2>
+                            <h2 className="imc-title">Material Details</h2>
                         </div>
 
-                        <button type="button" className="imc-btn-primary" onClick={handleAddItemMasterClick}>
-                            + Add Item Master
-                        </button>
                     </div>
+
+                    <div className="imc-page">
 
                     {detailLoading ? (
                         <div className="imc-loading-state">
@@ -145,14 +144,15 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
                                     <div className="detail-field" key={String(key)}>
                                         <span className="label">{label}</span>
                                         <span className={`value${value ? "" : " value-empty"}`}>
-                                            {value ? String(value) : "—"}
+                                            {value ? String(value) : "-"}
                                         </span>
                                     </div>
                                 );
                             })}
                         </div>
                     ) : null}
-                </div>
+                    </div>
+                    </>
             ) : (
                 <div className="imc-page">
                     <div className="imc-header">
