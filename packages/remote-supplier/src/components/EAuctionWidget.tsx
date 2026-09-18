@@ -78,9 +78,33 @@ const deleteCookie = (name: string) => {
   document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
 };
 
+const IconChevronLeft = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="15 18 9 12 15 6" />
+  </svg>
+);
+
+const IconChevronRight = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
+const formatRank = (val: any): string => {
+  if (val == null || val === "") return "";
+  if (typeof val === "object") return String(val.rank ?? val.value ?? "");
+  return String(val);
+};
+
+const IconBoltFilled = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </svg>
+);
+
 /* ---------------------------------- Component ---------------------------------- */
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 6;
 // The rfq-master-data endpoint returns a bare array with no total, so the count is
 // resolved with one wide fetch when the board opens.
 const TOTAL_COUNT_FETCH_LIMIT = 1000;
@@ -95,11 +119,39 @@ export const EAuctionWidget: React.FC = () => {
   const [hasNextPage, setHasNextPage] = useState<boolean>(false);
   const knownTotalRef = useRef<number>(0);
 
+  const handleCloseEauctionModal = () => {
+    setIsModalOpen(false);
+    setCurrentPage(1);
+    setSelectedLot(null);
+  };
+
   // API State for selected RFQ details & existing quotation
   const [selectedRfqDetails, setSelectedRfqDetails] = useState<RFQDetailResponse | null>(null);
   const [ownQuotation, setOwnQuotation] = useState<SupplierQuotationByIdItem | null>(null);
   const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
   const [loadingApi, setLoadingApi] = useState<boolean>(false);
+
+  // Supplier's rank on the current lot (single-lot / addLotOption bidding only)
+  const headerRank = React.useMemo(() => formatRank(
+    ownQuotation?.rank ??
+    (selectedRfqDetails?.supplierQuotation?.[0] as any)?.rank ??
+    (selectedRfqDetails as any)?.suppliers?.[0]?.rank ??
+    (selectedRfqDetails as any)?.suppliers?.rank
+  ), [ownQuotation, selectedRfqDetails]);
+
+  // Per-item ranks (line-item / non-lot bidding only)
+  const allQuotationItems = React.useMemo(() => {
+    const items: any[] = [];
+    const pushItems = (arr: any) => {
+      if (Array.isArray(arr)) items.push(...arr);
+    };
+    pushItems(ownQuotation?.supplierQuotationItems);
+    pushItems(selectedRfqDetails?.supplierQuotationItems);
+    if (Array.isArray(selectedRfqDetails?.supplierQuotation)) {
+      selectedRfqDetails.supplierQuotation.forEach((sq: any) => pushItems(sq?.supplierQuotationItems));
+    }
+    return items;
+  }, [ownQuotation, selectedRfqDetails]);
 
   // Form State for SUBMIT COMPETITIVE BID
   const [deliveryCharge, setDeliveryCharge] = useState<string>("0.00");
@@ -494,6 +546,46 @@ export const EAuctionWidget: React.FC = () => {
     });
   };
 
+  // Bulk Apply — line-item (non-lot) bidding only
+  const [bulkValue, setBulkValue] = useState<string>("");
+  const [bulkValueType, setBulkValueType] = useState<"PERCENTAGE" | "AMOUNT">("PERCENTAGE");
+  const [bulkFields, setBulkFields] = useState({
+    deliveryCharge: false,
+    discount: false,
+    tax: false,
+    quotedPrice: false,
+  });
+
+  const bulkTypeFieldMap: Partial<Record<keyof typeof bulkFields, keyof QuoteLineItem>> = {
+    deliveryCharge: "deliveryType",
+    discount: "discountType",
+    tax: "taxType",
+  };
+
+  const handleBulkFieldToggle = (field: keyof typeof bulkFields, checked: boolean) => {
+    setBulkFields((prev) => ({ ...prev, [field]: checked }));
+  };
+
+  const handleBulkApply = () => {
+    if (bulkValue === "" || !selectedRfqDetails?.items) return;
+
+    const fieldKeys = (Object.keys(bulkFields) as (keyof typeof bulkFields)[]).filter(
+      (key) => bulkFields[key]
+    );
+    if (fieldKeys.length === 0) return;
+
+    selectedRfqDetails.items.forEach((item, idx) => {
+      const itemKey = item.supplierRFQItemId || `item-${idx}`;
+      fieldKeys.forEach((field) => {
+        handleLineItemFieldChange(itemKey, field, bulkValue);
+        const typeField = bulkTypeFieldMap[field];
+        if (typeField) {
+          handleLineItemFieldChange(itemKey, typeField, bulkValueType);
+        }
+      });
+    });
+  };
+
   const executeSubmitLiveBid = async (verificationToken: string) => {
     if (!selectedLot) return;
     setSubmittingBid(true);
@@ -645,7 +737,7 @@ export const EAuctionWidget: React.FC = () => {
         <button
           className="eauction-trigger-btn"
           onClick={() => setIsModalOpen(true)}
-          title="Open SAP Ariba Live e-Auction Supplier Console"
+          title="Open Live e-Auction Bidding Console"
         >
           <span className="eauction-pulse-dot" />
           <span>⚡ Live e-Auction</span>
@@ -655,7 +747,7 @@ export const EAuctionWidget: React.FC = () => {
 
       {/* Full Live Portal Modal View */}
       {isModalOpen && (
-        <div className="eauction-modal-overlay" onClick={() => setIsModalOpen(false)}>
+        <div className="eauction-modal-overlay" onClick={handleCloseEauctionModal}>
           <div
             className="eauction-portal-container"
             onClick={(e) => e.stopPropagation()}
@@ -663,255 +755,205 @@ export const EAuctionWidget: React.FC = () => {
             {/* Top Header Bar */}
             <div className="eauction-portal-header">
               <div className="eauction-brand">
-                <div className="eauction-logo-icon">e</div>
-                <div>
-                  <div className="eauction-portal-title">Supplier Live Bidding Console</div>
-                  <div style={{ fontSize: '0.71875rem', color: '#e0f2fe' }}>SAP Ariba Live Sourcing v2.1</div>
+                <div className="eauction-logo-icon">
+                  <IconBoltFilled />
+                </div>
+                <div className="eauction-brand-text">
+                  <div className="eauction-portal-title">Live e-Auction Bidding Console</div>
+                  <span className="eauction-portal-subtitle">SILA Procurement • Real-Time Reverse Auction</span>
                 </div>
               </div>
 
-              <div className="eauction-project-banner">
-                <span style={{ fontSize: '0.75rem', color: '#e0f2fe', textTransform: 'uppercase' }}>Sourcing Event:</span>
-                <span className="eauction-project-name">{selectedLot?.name || "Global IT Hardware Refresh"}</span>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <span style={{ fontSize: '0.8125rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  👤 Supplier: <strong>CompUSA Direct (Lead Bidder)</strong>
-                </span>
-                <button
-                  className="eauction-portal-close"
-                  onClick={() => setIsModalOpen(false)}
-                  title="Close e-Auction Console"
-                >
-                  ✕
-                </button>
-              </div>
+              <button
+                className="eauction-portal-close"
+                onClick={handleCloseEauctionModal}
+                title="Close e-Auction Console"
+              >
+                ✕
+              </button>
             </div>
 
             {/* Main Portal Body */}
             <div className="eauction-portal-body">
-              {/* Left Sidebar Filters */}
-              <div className="eauction-left-sidebar">
-                <div>
-                  <div className="eauction-section-header">Live Auctions</div>
-                  <div className="eauction-sidebar-menu">
-                    <div className="eauction-sidebar-item active">⚡ Active Tenders</div>
-                    <div className="eauction-sidebar-item">📦 Quick Lots</div>
-                    <div className="eauction-sidebar-item">📊 My Bidding History</div>
-                    <div className="eauction-sidebar-item">📇 Buyer Contacts</div>
-                  </div>
+              {/* Left Sidebar: Live RFQ List */}
+              <aside className="eauction-sidebar">
+                <div className="eauction-sidebar-header">
+                  <div className="eauction-panel-title-text">MY LIVE BID STATUS & RANKS</div>
+                  <span className="eauction-live-pill">REAL-TIME BIDDING ACTIVE</span>
                 </div>
 
-                <div>
-                  <div className="eauction-section-header">Filters</div>
-                  <div className="eauction-filter-group">
-                    <label className="eauction-filter-checkbox">
-                      <input type="checkbox" defaultChecked /> Closing In
-                    </label>
-                    <label className="eauction-filter-checkbox">
-                      <input type="checkbox" /> My Lead Bids
-                    </label>
-                    <label className="eauction-filter-checkbox">
-                      <input type="checkbox" /> Flashing Item
-                    </label>
-                    <label className="eauction-filter-checkbox">
-                      <input type="checkbox" /> Outbid Lots
-                    </label>
-                  </div>
+                <div className="eauction-sidebar-list">
+                  {loadingApi ? (
+                    <div className="eauction-sidebar-status">Loading live bid status...</div>
+                  ) : auctions.length === 0 ? (
+                    <div className="eauction-empty-state">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <span className="eauction-empty-title">No live bids found</span>
+                      <span className="eauction-empty-subtitle">There are currently no active live auctions available for your account.</span>
+                    </div>
+                  ) : (
+                    auctions.map((auc) => {
+                      const isSelected = Boolean(selectedLot && auc.id === selectedLot.id);
+                      return (
+                        <div
+                          key={auc.id}
+                          className={`eauction-sidebar-item${isSelected ? ' is-selected' : ''}`}
+                          onClick={() => setSelectedLot(auc)}
+                        >
+                          <div className="eauction-sidebar-item-title">{auc.name}</div>
+                          <div className="eauction-sidebar-item-code">{auc.itemCode}</div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
 
-                <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
-                  <div className="eauction-section-header">Active Tenders</div>
-                  <div style={{ fontSize: '0.78125rem', color: '#64748b' }}>
-                    {auctions.length} Live e-Auctions In Progress
-                  </div>
-                </div>
-              </div>
+                {/* Pagination Bar */}
+                {auctions.length > 0 && (() => {
+                  const startItem = (currentPage - 1) * PAGE_SIZE + 1;
+                  const endItem = (currentPage - 1) * PAGE_SIZE + auctions.length;
+                  const canGoPrev = currentPage > 1;
+                  const canGoNext = hasNextPage;
 
-              {/* Main Content Workspace */}
-              <div className="eauction-main-content">
-                {/* Active Bids & Rank Grid */}
-                <div className="eauction-panel-light">
-                  <div className="eauction-panel-head">
-                    <div className="eauction-panel-title-text">MY LIVE BID STATUS & RANKS</div>
-                    <span style={{ fontSize: '0.75rem', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '0.2rem 0.6rem', borderRadius: '0.375rem', fontWeight: 700 }}>
-                      REAL-TIME BIDDING ACTIVE
-                    </span>
-                  </div>
-
-                  <table className="eauction-table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>RFQ Title & Code</th>
-                        <th>Organization</th>
-                        <th>Delivery Location</th>
-                        <th>Closing Date & Time</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {loadingApi ? (
-                        <tr>
-                          <td colSpan={6} style={{ textAlign: 'center', padding: '1.5rem', color: '#64748b' }}>
-                            Loading live bid status...
-                          </td>
-                        </tr>
-                      ) : auctions.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} style={{ textAlign: 'center', padding: '2rem 1rem', color: '#64748b' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#94a3b8' }}>
-                                <circle cx="12" cy="12" r="10" />
-                                <line x1="12" y1="8" x2="12" />
-                                <line x1="12" y1="16" x2="12.01" y2="16" />
-                              </svg>
-                              <span style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#1e293b' }}>No live bids found</span>
-                              <span style={{ fontSize: '0.8125rem', color: '#64748b' }}>There are currently no active live auctions available for your account.</span>
-                            </div>
-                          </td>
-                        </tr>
-                      ) : (
-                        (() => {
-                          // Rows are already paginated server-side (index / limit)
-                          return auctions.map((auc, idx) => {
-                            const globalIdx = (currentPage - 1) * PAGE_SIZE + idx + 1;
-                            return (
-                              <tr
-                                key={auc.id}
-                                style={{
-                                  background: selectedLot && auc.id === selectedLot.id ? '#eff6ff' : 'transparent',
-                                  cursor: 'pointer',
-                                }}
-                                onClick={() => setSelectedLot(auc)}
-                              >
-                                <td>{globalIdx}</td>
-                                <td>
-                                  <div style={{ fontWeight: 600, color: '#0f172a' }}>{auc.name}</div>
-                                  <div style={{ fontSize: '0.71875rem', color: '#64748b' }}>{auc.itemCode}</div>
-                                </td>
-                                <td style={{ color: '#334155', fontWeight: 500 }}>{auc.organizationName}</td>
-                                <td style={{ color: '#334155' }}>{auc.deliveryLocation}</td>
-                                <td>
-                                  <span className="eauction-timer">{auc.formattedEndDate}</span>
-                                </td>
-                                <td>
-                                  <button
-                                    className="eauction-action-btn"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedLot(auc);
-                                    }}
-                                  >
-                                    PLACE BID
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          });
-                        })()
-                      )}
-                    </tbody>
-                  </table>
-
-                  {/* Pagination Bar */}
-                  {auctions.length > 0 && (() => {
-                    const startItem = (currentPage - 1) * PAGE_SIZE + 1;
-                    const endItem = (currentPage - 1) * PAGE_SIZE + auctions.length;
-                    const canGoPrev = currentPage > 1;
-                    const canGoNext = hasNextPage;
-
-                    const navBtnStyle = (enabled: boolean): React.CSSProperties => ({
-                      padding: '0.3rem 0.6rem',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '0.375rem',
-                      background: enabled ? '#ffffff' : '#f8fafc',
-                      color: enabled ? '#0f172a' : '#94a3b8',
-                      fontWeight: 600,
-                      fontSize: '0.75rem',
-                      cursor: enabled ? 'pointer' : 'not-allowed',
-                    });
-
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.875rem', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '0.78125rem', color: '#64748b' }}>
-                          Showing <strong style={{ color: '#0f172a' }}>{startItem}</strong> to <strong style={{ color: '#0f172a' }}>{endItem}</strong> of <strong style={{ color: '#0f172a' }}>{Math.max(totalAuctions, endItem)}</strong> live tenders
+                  return (
+                    <div className="eauction-sidebar-footer">
+                      <div className="eauction-pagination-bar">
+                        <div className="eauction-pagination-info">
+                          <strong>{startItem}</strong>–<strong>{endItem}</strong> of <strong>{Math.max(totalAuctions, endItem)}</strong>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                        <div className="eauction-pagination-controls">
                           <button
+                            type="button"
+                            className={`eauction-page-btn${!canGoPrev ? ' is-disabled' : ''}`}
                             onClick={() => canGoPrev && setCurrentPage((p) => Math.max(1, p - 1))}
                             disabled={!canGoPrev}
-                            style={navBtnStyle(canGoPrev)}
+                            aria-label="Previous page"
                           >
-                            &lsaquo; Prev
+                            <IconChevronLeft />
                           </button>
 
-                          <span
-                            style={{
-                              padding: '0.3rem 0.6rem',
-                              border: '1px solid #0057b8',
-                              borderRadius: '0.375rem',
-                              background: '#0057b8',
-                              color: '#ffffff',
-                              fontWeight: 700,
-                              fontSize: '0.75rem',
-                            }}
-                          >
+                          <span className="eauction-page-btn is-current" aria-current="page">
                             {currentPage}
                           </span>
 
                           <button
+                            type="button"
+                            className={`eauction-page-btn${!canGoNext ? ' is-disabled' : ''}`}
                             onClick={() => canGoNext && setCurrentPage((p) => p + 1)}
                             disabled={!canGoNext}
-                            style={navBtnStyle(canGoNext)}
+                            aria-label="Next page"
                           >
-                            Next &rsaquo;
+                            <IconChevronRight />
                           </button>
                         </div>
                       </div>
-                    );
-                  })()}
-                </div>
+                    </div>
+                  );
+                })()}
+              </aside>
+
+              {/* Main Content Workspace */}
+              <div className="eauction-main-content">
 
                 {/* Split Bottom Workspace */}
-                <div
-                  className="eauction-grid-split"
-                  style={selectedRfqDetails?.addLotOption === false ? { gridTemplateColumns: '1fr' } : undefined}
-                >
+                <div className={`eauction-grid-split${selectedRfqDetails?.addLotOption === false ? ' is-single-column' : ''}`}>
                   {/* Left Column: Live Bidding View */}
-                  <div className="eauction-panel-light" style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div className="eauction-panel-light eauction-panel-column">
                     <div className="eauction-panel-head">
                       <div className="eauction-panel-title-text">
-                        LIVE BIDDING VIEW: <span style={{ color: '#0057b8' }}>{selectedLot?.name || "No Active Tender Selected"}</span>
+                        LIVE BIDDING VIEW: <span className="eauction-live-lot-name">{selectedLot?.name || "No Active Tender Selected"}</span>
                       </div>
                     </div>
 
+                    {/* RFQ Details Card from rfq-by-id API */}
+                    {selectedRfqDetails && (
+                      <div className="eauction-details-card">
+                        <div className="eauction-details-title">RFQ Details</div>
+                        <div className="eauction-details-grid">
+                          <div>
+                            <div className="eauction-detail-label">RFQ Title</div>
+                            <div className="eauction-detail-value">{selectedRfqDetails.title || "—"}</div>
+                          </div>
+
+                          <div>
+                            <div className="eauction-detail-label">Start Date &amp; Time</div>
+                            <div className="eauction-detail-value">
+                              {selectedRfqDetails.startDate
+                                ? new Date(selectedRfqDetails.startDate).toLocaleString('en-IN', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                                : "—"}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="eauction-detail-label">End Date &amp; Time</div>
+                            <div className="eauction-detail-value">
+                              {selectedRfqDetails.endDate
+                                ? new Date(selectedRfqDetails.endDate).toLocaleString('en-IN', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                                : "—"}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="eauction-detail-label">Delivery Location</div>
+                            <div className="eauction-detail-value">{selectedRfqDetails.deliveryLocation || "—"}</div>
+                          </div>
+
+                          <div className="eauction-details-span-2">
+                            <div className="eauction-detail-label">Description</div>
+                            <div className="eauction-detail-value">{selectedRfqDetails.description || "—"}</div>
+                          </div>
+
+                          <div>
+                            <div className="eauction-detail-label">Lot Option</div>
+                            {selectedRfqDetails.addLotOption ? (
+                              <span className="eauction-lot-badge">Allowed</span>
+                            ) : (
+                              <span className="eauction-lot-badge-disabled">Not Allowed</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Material Details Table from rfq-by-id API */}
-                    <div style={{ marginBottom: '1.25rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <div className="eauction-material-details">
+                      <div className="eauction-material-details-head">
+                        <span className="eauction-material-details-label">
                           Material Details {selectedRfqDetails?.addLotOption ? "(Single Lot Bidding)" : "(Line Item Bidding)"}
                         </span>
-                        {selectedRfqDetails && (
-                          <span style={{ fontSize: '0.71875rem', color: selectedRfqDetails.addLotOption ? '#0284c7' : '#16a34a', fontWeight: 600 }}>
-                            {selectedRfqDetails.addLotOption ? "Single Lot Quote Allowed" : "Item-Wise Line Bidding Enabled"}
-                          </span>
+                        {selectedRfqDetails?.addLotOption && headerRank !== "" && (
+                          <span className="eauction-rank-badge-pill">Rank: {headerRank}</span>
                         )}
                       </div>
 
                       {loadingDetails ? (
-                        <div style={{ padding: '1rem', textAlign: 'center', color: '#64748b', fontSize: '0.8125rem' }}>
+                        <div className="eauction-inline-status">
                           Loading material specification details...
                         </div>
                       ) : selectedRfqDetails?.items && selectedRfqDetails.items.length > 0 ? (
                         selectedRfqDetails.addLotOption ? (
-                          <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '0.5rem', background: '#ffffff' }}>
-                            <table className="eauction-table" style={{ margin: 0 }}>
+                          <div className="eauction-table-wrap">
+                            <table className="eauction-table">
                               <thead>
-                                <tr style={{ background: '#f8fafc' }}>
-                                  <th style={{ width: '36px' }}>#</th>
+                                <tr>
+                                  <th className="eauction-col-index">#</th>
                                   <th>Description</th>
                                   <th>Code</th>
                                   <th>Qty / UOM</th>
@@ -923,22 +965,22 @@ export const EAuctionWidget: React.FC = () => {
                                   const itemKey = item.id || item.buyerRFQItemId || `item-${idx}`;
                                   return (
                                     <tr key={itemKey}>
-                                      <td style={{ color: '#94a3b8', fontWeight: 600 }}>{idx + 1}</td>
+                                      <td className="eauction-col-index eauction-cell-muted">{idx + 1}</td>
                                       <td>
-                                        <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '0.8125rem' }}>{item.description}</div>
+                                        <div className="eauction-cell-title">{item.description}</div>
                                         {item.materialGroup && (
-                                          <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>Group: {item.materialGroup}</div>
+                                          <div className="eauction-cell-subtitle">Group: {item.materialGroup}</div>
                                         )}
                                       </td>
                                       <td>
-                                        <span style={{ background: '#f1f5f9', color: '#334155', padding: '2px 6px', borderRadius: '4px', fontSize: '0.6875rem', fontFamily: 'monospace', fontWeight: 600 }}>
+                                        <span className="eauction-code-chip">
                                           {item.materialCode || "N/A"}
                                         </span>
                                       </td>
-                                      <td style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.8125rem' }}>
-                                        {item.quantity} <span style={{ fontSize: '0.6875rem', color: '#64748b' }}>{item.uom}</span>
+                                      <td className="eauction-cell-strong">
+                                        {item.quantity} <span className="eauction-cell-subtitle">{item.uom}</span>
                                       </td>
-                                      <td style={{ fontSize: '0.75rem', color: '#475569' }}>
+                                      <td className="eauction-cell-muted">
                                         {item.costCenterName || item.costCenter || "—"}
                                       </td>
                                     </tr>
@@ -948,27 +990,126 @@ export const EAuctionWidget: React.FC = () => {
                             </table>
                           </div>
                         ) : (
-                          <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '0.5rem', background: '#ffffff' }}>
-                            <table className="eauction-table" style={{ margin: 0 }}>
+                          <>
+                            <div className="eauction-bulk-apply-panel">
+                              <div className="eauction-bulk-apply-header">
+                                <div className="eauction-bulk-apply-title">Bulk Apply</div>
+                                <p className="eauction-bulk-apply-subtitle">
+                                  Enter a value, then toggle the columns you want it applied to.
+                                </p>
+                              </div>
+
+                              <div className="eauction-bulk-apply-controls">
+                                <div className="eauction-bulk-value">
+                                  <input
+                                    type="number"
+                                    className="eauction-bulk-value-input"
+                                    value={bulkValue}
+                                    onChange={(e) => setBulkValue(e.target.value)}
+                                    placeholder="Enter value"
+                                  />
+                                </div>
+
+                                <div className="eauction-bulk-type-toggle" role="group" aria-label="Bulk value type">
+                                  <button
+                                    type="button"
+                                    className={bulkValueType === "PERCENTAGE" ? "active" : ""}
+                                    onClick={() => setBulkValueType("PERCENTAGE")}
+                                  >
+                                    Percentage
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={bulkValueType === "AMOUNT" ? "active" : ""}
+                                    onClick={() => setBulkValueType("AMOUNT")}
+                                  >
+                                    Amount
+                                  </button>
+                                </div>
+
+                                <div className="eauction-bulk-fields">
+                                  <label className="eauction-bulk-toggle">
+                                    <span>Delivery Charge</span>
+                                    <span className="eauction-switch">
+                                      <input
+                                        type="checkbox"
+                                        checked={bulkFields.deliveryCharge}
+                                        onChange={(e) => handleBulkFieldToggle("deliveryCharge", e.target.checked)}
+                                      />
+                                      <span className="eauction-slider"></span>
+                                    </span>
+                                  </label>
+
+                                  <label className="eauction-bulk-toggle">
+                                    <span>Discount</span>
+                                    <span className="eauction-switch">
+                                      <input
+                                        type="checkbox"
+                                        checked={bulkFields.discount}
+                                        onChange={(e) => handleBulkFieldToggle("discount", e.target.checked)}
+                                      />
+                                      <span className="eauction-slider"></span>
+                                    </span>
+                                  </label>
+
+                                  <label className="eauction-bulk-toggle">
+                                    <span>Tax</span>
+                                    <span className="eauction-switch">
+                                      <input
+                                        type="checkbox"
+                                        checked={bulkFields.tax}
+                                        onChange={(e) => handleBulkFieldToggle("tax", e.target.checked)}
+                                      />
+                                      <span className="eauction-slider"></span>
+                                    </span>
+                                  </label>
+
+                                  <label className="eauction-bulk-toggle">
+                                    <span>Quoted Price</span>
+                                    <span className="eauction-switch">
+                                      <input
+                                        type="checkbox"
+                                        checked={bulkFields.quotedPrice}
+                                        onChange={(e) => handleBulkFieldToggle("quotedPrice", e.target.checked)}
+                                      />
+                                      <span className="eauction-slider"></span>
+                                    </span>
+                                  </label>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  className="eauction-bulk-apply-btn"
+                                  onClick={handleBulkApply}
+                                >
+                                  Apply
+                                </button>
+                              </div>
+                            </div>
+
+                          <div className="eauction-table-wrap">
+                            <table className="eauction-table eauction-table--line-items">
                               <thead>
-                                <tr style={{ background: '#f8fafc' }}>
+                                <tr>
                                   <th>Material Info</th>
                                   <th>Code</th>
                                   <th>Qty</th>
-                                  <th style={{ width: '100px' }}>Delivery Charge</th>
-                                  <th style={{ width: '110px' }}>Delivery Type</th>
-                                  <th style={{ width: '100px' }}>Discount</th>
-                                  <th style={{ width: '110px' }}>Discount Type</th>
-                                  <th style={{ width: '100px' }}>Tax</th>
-                                  <th style={{ width: '110px' }}>Tax Type</th>
-                                  <th style={{ width: '110px', textAlign: 'right' }}>Quoted Price</th>
-                                  <th style={{ width: '100px', textAlign: 'right' }}>Sub Total</th>
-                                  <th style={{ width: '110px', textAlign: 'right' }}>Quoted Amount</th>
+                                  <th>Delivery Charge</th>
+                                  <th>Delivery Type</th>
+                                  <th>Discount</th>
+                                  <th>Discount Type</th>
+                                  <th>Tax</th>
+                                  <th>Tax Type</th>
+                                  <th className="eauction-col-right">Quoted Price</th>
+                                  <th>Rank</th>
+                                  <th className="eauction-col-right">Sub Total</th>
+                                  <th className="eauction-col-right">Quoted Amount</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {selectedRfqDetails.items.map((item, idx) => {
                                   const itemKey = item.supplierRFQItemId || `item-${idx}`;
+                                  const itemId = item.id || item.buyerRFQItemId;
                                   const line = quoteLineItems[itemKey] || {
                                     deliveryCharge: 0,
                                     deliveryType: "PERCENTAGE",
@@ -980,21 +1121,28 @@ export const EAuctionWidget: React.FC = () => {
                                     subTotal: 0,
                                     quotedAmount: 0,
                                   };
+                                  const matchedItem = allQuotationItems.find(
+                                    (qi) =>
+                                      (qi.supplierRFQItemId && (qi.supplierRFQItemId === itemKey || qi.supplierRFQItemId === itemId)) ||
+                                      (qi.buyerRFQItemId && (qi.buyerRFQItemId === itemKey || qi.buyerRFQItemId === itemId)) ||
+                                      (qi.id && (qi.id === itemKey || qi.id === itemId))
+                                  ) || allQuotationItems[idx];
+                                  const itemRank = ownQuotation?.status === "SUBMITTED" ? (formatRank(matchedItem?.rank) || "--") : "-";
                                   return (
                                     <tr key={itemKey}>
                                       <td>
-                                        <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '0.8125rem' }}>{item.description}</div>
+                                        <div className="eauction-cell-title">{item.description}</div>
                                         {item.materialGroup && (
-                                          <div style={{ fontSize: '0.6875rem', color: '#64748b' }}>Group: {item.materialGroup}</div>
+                                          <div className="eauction-cell-subtitle">Group: {item.materialGroup}</div>
                                         )}
                                       </td>
                                       <td>
-                                        <span style={{ background: '#f1f5f9', color: '#334155', padding: '2px 6px', borderRadius: '4px', fontSize: '0.6875rem', fontFamily: 'monospace', fontWeight: 600 }}>
+                                        <span className="eauction-code-chip">
                                           {item.materialCode || "N/A"}
                                         </span>
                                       </td>
-                                      <td style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.8125rem' }}>
-                                        {item.quantity} <span style={{ fontSize: '0.6875rem', color: '#64748b' }}>{item.uom}</span>
+                                      <td className="eauction-cell-strong">
+                                        {item.quantity} <span className="eauction-cell-subtitle">{item.uom}</span>
                                       </td>
                                       <td>
                                         <input
@@ -1004,14 +1152,14 @@ export const EAuctionWidget: React.FC = () => {
                                           value={line.deliveryCharge || ""}
                                           onChange={(e) => handleLineItemFieldChange(itemKey, "deliveryCharge", e.target.value)}
                                           placeholder="0.00"
-                                          style={{ width: '90px', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem' }}
+                                          className="eauction-line-input"
                                         />
                                       </td>
                                       <td>
                                         <select
                                           value={line.deliveryType}
                                           onChange={(e) => handleLineItemFieldChange(itemKey, "deliveryType", e.target.value)}
-                                          style={{ width: '100px', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', background: '#ffffff' }}
+                                          className="eauction-line-select"
                                         >
                                           <option value="PERCENTAGE">PERCENTAGE</option>
                                           <option value="AMOUNT">AMOUNT</option>
@@ -1025,14 +1173,14 @@ export const EAuctionWidget: React.FC = () => {
                                           value={line.discount || ""}
                                           onChange={(e) => handleLineItemFieldChange(itemKey, "discount", e.target.value)}
                                           placeholder="0.00"
-                                          style={{ width: '90px', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem' }}
+                                          className="eauction-line-input"
                                         />
                                       </td>
                                       <td>
                                         <select
                                           value={line.discountType}
                                           onChange={(e) => handleLineItemFieldChange(itemKey, "discountType", e.target.value)}
-                                          style={{ width: '100px', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', background: '#ffffff' }}
+                                          className="eauction-line-select"
                                         >
                                           <option value="PERCENTAGE">PERCENTAGE</option>
                                           <option value="AMOUNT">AMOUNT</option>
@@ -1046,20 +1194,20 @@ export const EAuctionWidget: React.FC = () => {
                                           value={line.tax || ""}
                                           onChange={(e) => handleLineItemFieldChange(itemKey, "tax", e.target.value)}
                                           placeholder="0.00"
-                                          style={{ width: '90px', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem' }}
+                                          className="eauction-line-input"
                                         />
                                       </td>
                                       <td>
                                         <select
                                           value={line.taxType}
                                           onChange={(e) => handleLineItemFieldChange(itemKey, "taxType", e.target.value)}
-                                          style={{ width: '100px', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', background: '#ffffff' }}
+                                          className="eauction-line-select"
                                         >
                                           <option value="PERCENTAGE">PERCENTAGE</option>
                                           <option value="AMOUNT">AMOUNT</option>
                                         </select>
                                       </td>
-                                      <td style={{ textAlign: 'right' }}>
+                                      <td className="eauction-col-right">
                                         <input
                                           type="number"
                                           step="0.01"
@@ -1067,13 +1215,16 @@ export const EAuctionWidget: React.FC = () => {
                                           value={line.quotedPrice || ""}
                                           onChange={(e) => handleLineItemFieldChange(itemKey, "quotedPrice", e.target.value)}
                                           placeholder="0.00"
-                                          style={{ width: '100px', padding: '4px 6px', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'right', fontWeight: 700, color: '#047857', fontSize: '0.75rem', outline: 'none' }}
+                                          className="eauction-line-input eauction-line-input--price"
                                         />
                                       </td>
-                                      <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a', fontSize: '0.75rem' }}>
+                                      <td className="eauction-cell-strong">
+                                        {itemRank}
+                                      </td>
+                                      <td className="eauction-col-right eauction-cell-strong">
                                         {line.subTotal.toFixed(2)}
                                       </td>
-                                      <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a', fontSize: '0.75rem' }}>
+                                      <td className="eauction-col-right eauction-cell-strong">
                                         {line.quotedAmount.toFixed(2)}
                                       </td>
                                     </tr>
@@ -1082,24 +1233,25 @@ export const EAuctionWidget: React.FC = () => {
                               </tbody>
                             </table>
                           </div>
+                          </>
                         )
                       ) : (
-                        <div style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '0.375rem', fontSize: '0.75rem', color: '#64748b' }}>
+                        <div className="eauction-material-empty">
                           No material items listed for this tender.
                         </div>
                       )}
                     </div>
 
                     {selectedRfqDetails?.addLotOption === false && (
-                      <>
+                      <div className="eauction-bid-feedback-stack">
                         {submitBidError && (
-                          <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', padding: '0.625rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+                          <div className="eauction-alert eauction-alert--error">
                             {submitBidError}
                           </div>
                         )}
 
                         {bidSubmittedMessage && (
-                          <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', padding: '0.625rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+                          <div className="eauction-alert eauction-alert--success">
                             {bidSubmittedMessage}
                           </div>
                         )}
@@ -1111,52 +1263,42 @@ export const EAuctionWidget: React.FC = () => {
                               type="number"
                               value={totalPriceQuote}
                               onChange={(e) => setTotalPriceQuote(e.target.value)}
-                              style={{
-                                border: 'none',
-                                background: 'transparent',
-                                outline: 'none',
-                                fontSize: '1.125rem',
-                                fontWeight: 800,
-                                color: '#047857',
-                                textAlign: 'right',
-                                width: '110px',
-                              }}
+                              className="eauction-total-quote-input"
                             />
                           </div>
                           <button
-                            className="eauction-btn-submit-bid eauction-btn-submit-bid--inline"
+                            className={`eauction-btn-submit-bid eauction-btn-submit-bid--inline${submittingBid ? ' is-loading' : ''}`}
                             onClick={handleSubmitLiveBid}
                             disabled={submittingBid}
-                            style={{ opacity: submittingBid ? 0.7 : 1 }}
                           >
                             {submittingBid ? "Submitting Live Bid..." : "⚡ SUBMIT LIVE BID"}
                           </button>
                         </div>
-                      </>
+                      </div>
                     )}
                   </div>
 
                   {/* Right Column: Supplier Live Bidding Submission Panel (Single Lot Bidding only) */}
                   {selectedRfqDetails?.addLotOption !== false && (
-                    <div className="eauction-panel-light" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div className="eauction-panel-light eauction-panel-column">
                       <div className="eauction-panel-title-text">SUBMIT COMPETITIVE BID</div>
 
                       {submitBidError && (
-                        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', padding: '0.625rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                        <div className="eauction-alert eauction-alert--error">
                           {submitBidError}
                         </div>
                       )}
 
                       {bidSubmittedMessage && (
-                        <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', padding: '0.625rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                        <div className="eauction-alert eauction-alert--success">
                           {bidSubmittedMessage}
                         </div>
                       )}
 
                       {/* Quotation Details Form */}
                       <div className="eauction-supplier-bid-box">
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-                          <div>
+                        <div className="eauction-bid-field-grid">
+                          <div className="eauction-bid-field">
                             <label className="eauction-bid-field-label">Delivery Charge</label>
                             <input
                               type="number"
@@ -1166,7 +1308,7 @@ export const EAuctionWidget: React.FC = () => {
                               placeholder="0.00"
                             />
                           </div>
-                          <div>
+                          <div className="eauction-bid-field">
                             <label className="eauction-bid-field-label">Delivery Type</label>
                             <select
                               className="eauction-bid-field-input"
@@ -1177,7 +1319,7 @@ export const EAuctionWidget: React.FC = () => {
                               <option value="AMOUNT">AMOUNT</option>
                             </select>
                           </div>
-                          <div>
+                          <div className="eauction-bid-field">
                             <label className="eauction-bid-field-label">Discount</label>
                             <input
                               type="number"
@@ -1187,7 +1329,7 @@ export const EAuctionWidget: React.FC = () => {
                               placeholder="0.00"
                             />
                           </div>
-                          <div>
+                          <div className="eauction-bid-field">
                             <label className="eauction-bid-field-label">Discount Type</label>
                             <select
                               className="eauction-bid-field-input"
@@ -1198,7 +1340,7 @@ export const EAuctionWidget: React.FC = () => {
                               <option value="AMOUNT">AMOUNT</option>
                             </select>
                           </div>
-                          <div>
+                          <div className="eauction-bid-field">
                             <label className="eauction-bid-field-label">Tax</label>
                             <input
                               type="number"
@@ -1208,7 +1350,7 @@ export const EAuctionWidget: React.FC = () => {
                               placeholder="0.00"
                             />
                           </div>
-                          <div>
+                          <div className="eauction-bid-field">
                             <label className="eauction-bid-field-label">Tax Type</label>
                             <select
                               className="eauction-bid-field-input"
@@ -1224,30 +1366,20 @@ export const EAuctionWidget: React.FC = () => {
                         <div className="eauction-total-quote-row">
                           <div className="eauction-total-quote-label">Total Price Quote</div>
                           <div className="eauction-total-quote-value-box">
-                            <span style={{ fontSize: '1rem', fontWeight: 800, color: '#047857' }}>$</span>
+                            <span className="eauction-total-quote-currency">$</span>
                             <input
                               type="number"
                               value={totalPriceQuote}
                               onChange={(e) => setTotalPriceQuote(e.target.value)}
-                              style={{
-                                border: 'none',
-                                background: 'transparent',
-                                outline: 'none',
-                                fontSize: '1.125rem',
-                                fontWeight: 800,
-                                color: '#047857',
-                                textAlign: 'right',
-                                width: '110px',
-                              }}
+                              className="eauction-total-quote-input"
                             />
                           </div>
                         </div>
 
                         <button
-                          className="eauction-btn-submit-bid"
+                          className={`eauction-btn-submit-bid${submittingBid ? ' is-loading' : ''}`}
                           onClick={handleSubmitLiveBid}
                           disabled={submittingBid}
-                          style={{ opacity: submittingBid ? 0.7 : 1 }}
                         >
                           {submittingBid ? "Submitting Live Bid..." : "⚡ SUBMIT LIVE BID"}
                         </button>
