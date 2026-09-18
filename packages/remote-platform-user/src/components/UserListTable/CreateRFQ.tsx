@@ -1872,7 +1872,7 @@ if (Array.isArray(data)) {
                         </div>
                     )}
 
-                    {hasUnverifiedSelected && (
+                    {(externalSuppliers.length > 0 || hasUnverifiedSelected) && (
                         <div className="bd-onboarding-box">
                             <div className="bd-onboarding-header">
                                 <IconShieldCheck /> Supplier Onboarding Required

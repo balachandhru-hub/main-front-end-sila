@@ -8,10 +8,9 @@ import {
   markBuyerThreadAsRead,
   sendBuyerMessage,
   downloadBuyerMessageAttachment,
-  getPersonDetailCached,
 } from "../../api/Buyerapi";
-import type { PersonDetailDto } from "../../api/Buyerapi";
-import { toastService, isErrorResponse } from "@vosox/shared-ui";
+import { useBuyerAuthStore } from "../../store/useBuyerAuthStore";
+import { toastService } from "@vosox/shared-ui";
 import ChatConversation from "./ChatConversation";
 import ChatDetails from "./ChatDetails";
 import type { ChatSupplier, ObservedParticipant } from "./types";
@@ -50,8 +49,10 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
   const [mobileView, setMobileView] = useState<"list" | "conversation">("list");
   const [isChatDetailsOpen, setIsChatDetailsOpen] = useState(false);
 
-  const [buyerProfile, setBuyerProfile] = useState<PersonDetailDto | null>(null);
-  const [isLoadingBuyerProfile, setIsLoadingBuyerProfile] = useState(false);
+  // Sourced from the store, which fetches it once (on login and on reload) via
+  // BuyerApp's mount effect - no per-component fetch, no local cache.
+  const buyerProfile = useBuyerAuthStore((state) => state.personDetail);
+  const isLoadingBuyerProfile = useBuyerAuthStore((state) => state.personDetailLoading);
 
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -107,28 +108,6 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
     }
     return Array.from(seen.entries()).map(([userId, name]) => ({ userId, name }));
   }, [messages]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadBuyerProfile = async () => {
-      setIsLoadingBuyerProfile(true);
-      try {
-        // Cached/shared with the dashboard Header, so this does not trigger a
-        // duplicate network call when the profile is already loaded.
-        const result = await getPersonDetailCached();
-        if (cancelled) return;
-        if (!isErrorResponse(result)) {
-          setBuyerProfile(result);
-        }
-      } finally {
-        if (!cancelled) setIsLoadingBuyerProfile(false);
-      }
-    };
-    loadBuyerProfile();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;

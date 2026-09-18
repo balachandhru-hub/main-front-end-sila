@@ -6,7 +6,6 @@ import type {
   AssetDownloadResponseDto,
   ErrorResponseDto,
 } from '../dto/platformDto';
-import { invalidatePersonDetailCache } from './networkAdminApi';
 export interface CreateDepartmentRequestDto {
   organizationId: string;
   department: string;
@@ -136,8 +135,6 @@ export const logoutPlatformUser = async (): Promise<void> => {
     const responseData = error.response?.data;
     const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
     throw new Error(`${errMsg} (${status})`);
-  } finally {
-    invalidatePersonDetailCache();
   }
 };
 
@@ -454,6 +451,63 @@ export const fetchBuyerAsset = async (
       statusCode: 500,
       message: 'Unexpected Error',
       description: 'Something went wrong while fetching the asset.',
+    };
+  }
+};
+export interface RfqAwardSelectionDto {
+  rfqItemId: string;
+  supplierId: string;
+}
+
+export interface RfqAwardRequestDto {
+  rfqId: string;
+  // selectionMode?: string;
+  remarks?: string;
+  selections: RfqAwardSelectionDto[];
+}
+
+export interface RfqAwardResponseDto {
+  success?: boolean;
+  message?: string;
+  [key: string]: any;
+}
+
+export interface RfqAwardErrorDto {
+  statusCode?: number;
+  status_code?: number;
+  message: string;
+  description?: string;
+}
+
+export const awardRfq = async (
+  payload: RfqAwardRequestDto
+): Promise<RfqAwardResponseDto | RfqAwardErrorDto> => {
+  try {
+    const response = await platformInstance.post<RfqAwardResponseDto>(
+      '/api/v1/buyer/rfq-award',
+      payload
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to award RFQ.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Unexpected error while awarding RFQ.',
     };
   }
 };

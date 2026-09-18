@@ -315,8 +315,7 @@
     transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-/* Light status-shade background — every card in a chain shares the record's
-   one overall status (there's no per-approver status). */
+/* Light status-shade background, per approver's own status. */
 .matap-card.matap-status-pending { background: #fffbeb; border-color: #fde68a; }
 .matap-card.matap-status-approved { background: #e8f8ee; border-color: #bbf7d0; }
 .matap-card.matap-status-rejected { background: #fef2f2; border-color: #fecaca; }
