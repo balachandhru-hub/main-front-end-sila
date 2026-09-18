@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Loader, isErrorResponse } from '@vosox/shared-ui';
+import { Loader, isErrorResponse, Button } from '@vosox/shared-ui';
 import {
   FaCheckCircle,
   FaExclamationCircle,
@@ -25,6 +25,8 @@ import type {
   ExternalRFQDetailResponse,
   ExternalSubmitQuotationPayload,
 } from '../dto/externalSupplierDto';
+import ExternalSupplierChat from '../components/ExternalSupplierChat/ExternalSupplierChat';
+import { IconMessageSquare } from '../../../remote-buyer/src/components/BuyerRFQChat/ChatIcons';
 import SilaLogo from '../assets/SILA_Logo.png';
 import './ExternalSupplierBid.css';
 
@@ -142,6 +144,8 @@ const ExternalSupplierBid: React.FC = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
   const [windowTick, setWindowTick] = useState(0);
 
   useEffect(() => {
@@ -238,6 +242,12 @@ const ExternalSupplierBid: React.FC = () => {
     () => getSubmissionWindowStatus(rfq),
     [rfq, windowTick]
   );
+
+  // Both chat identity values come from the route's sessionId alone (the
+  // second /external-supplier/bid/{rfqId}/{sessionId} segment, captured above
+  // as `sessionToken`) — invitedUsers isn't a reliable source of supplierId
+  // for an external contact and must not be used here.
+  const canChat = !!(rfqId && sessionToken);
 
   const handleLineItemFieldChange = (
     supplierRFQItemId: string,
@@ -488,12 +498,27 @@ const ExternalSupplierBid: React.FC = () => {
               <span className="ebid-hero-icon"><FaFileAlt /></span>
               <h1 className="ebid-rfq-title">{rfq.title}</h1>
             </div>
-            {rfq.status && (
-              <span className={`ebid-badge ebid-badge-${getStatusTone(rfq.status)}`}>
-                <FaCircle className="ebid-badge-dot" />
-                {rfq.status}
-              </span>
-            )}
+            <div className="ebid-hero-actions">
+              {rfq.status && (
+                <span className={`ebid-badge ebid-badge-${getStatusTone(rfq.status)}`}>
+                  <FaCircle className="ebid-badge-dot" />
+                  {rfq.status}
+                </span>
+              )}
+              {canChat && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="ebid-chat-btn"
+                  style={{ ['--primary-color' as string]: '#2f6feb' } as React.CSSProperties}
+                  onClick={() => setIsChatOpen(true)}
+                  title="Chat with the buyer"
+                >
+                  <IconMessageSquare /> Chat
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="ebid-hero-meta">
@@ -983,6 +1008,15 @@ const ExternalSupplierBid: React.FC = () => {
       <main className={`ebid-main${isStatusView ? ' ebid-main-centered' : ''}`}>
         {content}
       </main>
+
+      {isChatOpen && canChat && (
+        <ExternalSupplierChat
+          onClose={() => setIsChatOpen(false)}
+          rfqId={rfqId!}
+          sessionToken={sessionToken!}
+          rfqTitle={rfq?.title}
+        />
+      )}
 
       {showConfirm && (
         <div className="ebid-modal-overlay" onClick={() => setShowConfirm(false)}>

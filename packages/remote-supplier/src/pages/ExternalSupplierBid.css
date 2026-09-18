@@ -31,6 +31,27 @@
   display: block;
 }
 
+.ebid-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-shrink: 0;
+}
+
+.ebid-chat-btn {
+  gap: 0.4375rem;
+  flex-shrink: 0;
+}
+
+.ebid-chat-btn:hover {
+  background: #eff6ff !important;
+}
+
+.ebid-chat-btn svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
 .ebid-main {
   flex: 1;
   width: 100%;
