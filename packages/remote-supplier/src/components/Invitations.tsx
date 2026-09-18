@@ -9,9 +9,9 @@ import {
 } from "../common";
 import {
     getSupplierProfileByOrgId,
-    getPersonDetailCached,
     type SupplierProfileResponse
 } from "../api/supplierApi";
+import { useSupplierAuthStore } from "../store/useSupplierAuthStore";
 import {
     fetchBuyerInvitations,
     fetchSupplierInvitations,
@@ -619,10 +619,10 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
         setProfileError(null);
 
         try {
-            const person = await getPersonDetailCached();
+            const person = useSupplierAuthStore.getState().personDetail;
 
-            if (isErrorResponse(person)) {
-                const msg = person.description || person.message || "Failed to identify organization.";
+            if (!person) {
+                const msg = "Failed to identify organization.";
                 setProfileError(msg);
                 toastService.error(msg);
                 return;

@@ -1533,6 +1533,7 @@ const BuyerAdminDash: React.FC = () => {
               // </>
               <BidComparisonAwardView
                 rfq={fullPageRfq}
+                rfqId={fullPageRfqId || fullPageRfq?.rfqId || fullPageRfq?.id || fullPageRfq?._id}
                 loading={loadingFullPageRfq}
                 error={fullPageRfqError}
                 freezingBid={freezingBid}

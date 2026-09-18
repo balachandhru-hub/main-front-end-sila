@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import "./BidComparisonAward.css";
 import { Button } from "@vosox/shared-ui";
-import { fetchBuyerAsset } from "../api/platformApi";
+import { fetchBuyerAsset, getBidComparisonData, isBidComparisonError, awardRfq } from "../api/platformApi";
+import type { BidComparisonResponseDto } from "../api/platformApi";
 
 
 const IconMessageSquare = () => (
@@ -67,6 +68,7 @@ const formatQuestionType = (type?: string) => {
 
 interface BidComparisonAwardViewProps {
   rfq: any;
+  rfqId?: string;
   loading: boolean;
   error: string | null;
   freezingBid: boolean;
@@ -82,9 +84,9 @@ function fmtINR(val: number) {
 }
 
 const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
-  rfq, loading, error, freezingBid, onFreeze, onBack, onChatClick
+  rfq, rfqId, loading, error, freezingBid, onFreeze, onBack, onChatClick
 }) => {
-  const [viewMode, setViewMode] = useState<"summary" | "comparison" | "by-supplier">("summary");
+  const [viewMode, setViewMode] = useState<"summary" | "comparison" | "by-supplier" | "bid-history">("summary");
   const [showFreezeModal, setShowFreezeModal] = useState(false);
   const [showAwardModal, setShowAwardModal] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState("all");
@@ -93,6 +95,15 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   const [expandedSuppliers, setExpandedSuppliers] = useState<Record<string, boolean>>({});
   const [viewingDoc, setViewingDoc] = useState<{ fileName: string; url: string; contentType: string } | null>(null);
   const [loadingDocId, setLoadingDocId] = useState<string | null>(null);
+
+  // Bid History API state
+  const [bidHistoryApiData, setBidHistoryApiData] = useState<BidComparisonResponseDto | null>(null);
+  const [bidHistoryLoading, setBidHistoryLoading] = useState(false);
+  const [bidHistoryError, setBidHistoryError] = useState<string | null>(null);
+
+  const [awardingRfq, setAwardingRfq] = useState(false);
+  const [awardSuccess, setAwardSuccess] = useState(false);
+  const [awardError, setAwardError] = useState<string | null>(null);
 
   const questions: any[] = useMemo(() => Array.isArray(rfq?.questions) ? rfq.questions : [], [rfq]);
 
@@ -192,15 +203,23 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   }, [quotations]);
 
   const lineItems: any[] = useMemo(() => {
+    const isUuidStr = (val?: string) => Boolean(val && val.includes('-') && val.length > 20);
     if (rfq?.items && rfq.items.length > 0) {
-      return rfq.items.map((item: any) => ({
-        id: item.id || item.itemId || item._id,
-        description: item.description || item.materialName || item.name || '—',
-        costCenter: item.costCenter || item.costCenterCode || '—',
-        quantity: item.quantity || item.qty || 1,
-        uom: item.uom || item.unit || 'PCS',
-        materialCode: item.materialCode || item.code || '',
-      }));
+      return rfq.items.map((item: any) => {
+        let cc = item.costCenterCode || item.costCenterName || item.costCenter || '—';
+        if (isUuidStr(cc)) {
+          if (item.costCenterCode && !isUuidStr(item.costCenterCode)) cc = item.costCenterCode;
+          else if (item.costCenterName && !isUuidStr(item.costCenterName)) cc = item.costCenterName;
+        }
+        return {
+          id: item.id || item.itemId || item._id,
+          description: item.description || item.materialName || item.name || '—',
+          costCenter: cc || '—',
+          quantity: item.quantity || item.qty || 1,
+          uom: item.uom || item.unit || 'PCS',
+          materialCode: item.materialCode || item.code || '',
+        };
+      });
     }
     return [];
   }, [rfq]);
@@ -319,6 +338,195 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     }
   }, [isLotOption, viewMode]);
 
+  // Fetch Bid History data from API when tab is activated
+  useEffect(() => {
+    const effectiveRfqId = rfqId || rfq?.rfqId || rfq?.id || rfq?._id;
+    if (viewMode !== 'bid-history' || !effectiveRfqId) return;
+    // Don't re-fetch if we already have data for this RFQ
+    if (bidHistoryApiData?.rfqId === effectiveRfqId) return;
+
+    let cancelled = false;
+    setBidHistoryLoading(true);
+    setBidHistoryError(null);
+
+    getBidComparisonData(effectiveRfqId)
+      .then((response) => {
+        if (cancelled) return;
+        if (isBidComparisonError(response)) {
+          setBidHistoryError(response.message || response.description || 'Failed to load bid history.');
+        } else {
+          setBidHistoryApiData(response);
+        }
+      })
+      .catch((err: any) => {
+        if (!cancelled) setBidHistoryError(err?.message || 'Failed to load bid history.');
+      })
+      .finally(() => {
+        if (!cancelled) setBidHistoryLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [viewMode, rfqId, rfq?.rfqId, rfq?.id, rfq?._id]);
+
+  // Reset bid history when rfq changes
+  useEffect(() => {
+    setBidHistoryApiData(null);
+    setBidHistoryError(null);
+  }, [rfq?.rfqId, rfq?.id, rfq?._id]);
+
+  // Handle RFQ Award API call
+  const handleConfirmAward = async () => {
+    const effectiveRfqId = rfqId || rfq?.rfqId || rfq?.id || rfq?._id;
+    if (!effectiveRfqId) {
+      setAwardError("RFQ ID is missing.");
+      return;
+    }
+
+    const selectionsArray = Object.entries(selections)
+      .filter(([_, sid]) => Boolean(sid))
+      .map(([itemId, sid]) => ({
+        rfqItemId: itemId,
+        supplierId: sid,
+      }));
+
+    if (selectionsArray.length === 0) {
+      setAwardError("Please select at least one item to award.");
+      return;
+    }
+
+    setAwardingRfq(true);
+    setAwardError(null);
+
+    try {
+      const res = await awardRfq({
+        rfqId: effectiveRfqId,
+        // selectionMode: "ITEM_WISE",
+        remarks: "", 
+        selections: selectionsArray,
+      });
+
+      if ('statusCode' in res && res.statusCode && res.statusCode >= 400) {
+        setAwardError(res.message || res.description || "Failed to award RFQ.");
+      } else {
+        setAwardSuccess(true);
+      }
+    } catch (err: any) {
+      setAwardError(err?.message || "An error occurred while awarding the RFQ.");
+    } finally {
+      setAwardingRfq(false);
+    }
+  };
+
+  const bidHistoryData = useMemo(() => {
+    if (!bidHistoryApiData) return [];
+    return (bidHistoryApiData.suppliers || []).map((supplier) => {
+      const { supplierId, supplierName, firstVersion, latestVersion } = supplier;
+
+      const firstItemMap = new Map(
+        (firstVersion?.items || []).map((qi) => [qi.buyerRFQItemId, qi])
+      );
+      const latestItemMap = new Map(
+        (latestVersion?.items || []).map((qi) => [qi.buyerRFQItemId, qi])
+      );
+
+      const isUuidStr = (val?: string) => Boolean(val && val.includes('-') && val.length > 20);
+      const resolvedItems = (bidHistoryApiData.rfqItems && bidHistoryApiData.rfqItems.length > 0)
+        ? bidHistoryApiData.rfqItems.map((apiItem: any) => {
+            const matchInLineItems = lineItems.find((li: any) =>
+              li.id === apiItem.id ||
+              (li.materialCode && apiItem.materialCode && li.materialCode === apiItem.materialCode) ||
+              (li.description && apiItem.description && li.description.toLowerCase() === apiItem.description.toLowerCase())
+            );
+
+            let cc = apiItem.costCenterCode || apiItem.costCenterName || apiItem.costCenter || '';
+            if (!cc || isUuidStr(cc)) {
+              if (matchInLineItems?.costCenter && !isUuidStr(matchInLineItems.costCenter)) {
+                cc = matchInLineItems.costCenter;
+              } else if (apiItem.costCenterCode && !isUuidStr(apiItem.costCenterCode)) {
+                cc = apiItem.costCenterCode;
+              } else if (apiItem.costCenterName && !isUuidStr(apiItem.costCenterName)) {
+                cc = apiItem.costCenterName;
+              }
+            }
+
+            return {
+              ...apiItem,
+              description: apiItem.description || apiItem.name || matchInLineItems?.description || '—',
+              costCenter: (cc && !isUuidStr(cc)) ? cc : (matchInLineItems?.costCenter || '—'),
+              materialCode: apiItem.materialCode || apiItem.code || matchInLineItems?.materialCode || '—',
+              quantity: apiItem.quantity || apiItem.qty || matchInLineItems?.quantity || 1,
+              uom: apiItem.uom || apiItem.unit || matchInLineItems?.uom || '—',
+            };
+          })
+        : lineItems.map((li: any) => ({
+            id: li.id,
+            description: li.description || li.name || '—',
+            quantity: li.quantity || li.qty || 1,
+            uom: li.uom || li.unit || '',
+            costCenter: li.costCenter || li.costCenterCode || '',
+            materialCode: li.materialCode || li.code || '',
+          }));
+
+      const itemPrices: Record<string, {
+        firstBid: number;
+        currentBid: number;
+        firstBreakdown: { discount: number; tax: number; delivery: number };
+        currentBreakdown: { discount: number; tax: number; delivery: number };
+      }> = {};
+
+      resolvedItems.forEach((rfqItem: any) => {
+        const firstQi = firstItemMap.get(rfqItem.id);
+        const latestQi = latestItemMap.get(rfqItem.id);
+
+        const effQuotation = effectiveQuotations.find(
+          (q: any) => (q.quotationId || q.supplierId || q._id) === supplierId
+        );
+        const effQi = effQuotation ? getQuoteItemForRfqItem(effQuotation, rfqItem) : null;
+
+        itemPrices[rfqItem.id] = {
+          firstBid: firstQi?.quotedAmount ?? firstQi?.quotedPrice ?? effQi?.quotedAmount ?? effQi?.quotedPrice ?? 0,
+          currentBid: latestQi?.quotedAmount ?? latestQi?.quotedPrice ?? effQi?.quotedAmount ?? effQi?.quotedPrice ?? 0,
+          firstBreakdown: {
+            discount: firstQi?.discount ?? (firstQi as any)?.discountPercentage ?? effQi?.discount ?? effQi?.discountPercentage ?? 0,
+            tax: firstQi?.tax ?? (firstQi as any)?.taxPercentage ?? (firstQi as any)?.gst ?? effQi?.tax ?? effQi?.taxPercentage ?? effQi?.gst ?? 0,
+            delivery: firstQi?.deliveryCharge ?? (firstQi as any)?.deliveryAmount ?? effQi?.deliveryCharge ?? effQi?.deliveryAmount ?? 0,
+          },
+          currentBreakdown: {
+            discount: latestQi?.discount ?? (latestQi as any)?.discountPercentage ?? effQi?.discount ?? effQi?.discountPercentage ?? 0,
+            tax: latestQi?.tax ?? (latestQi as any)?.taxPercentage ?? (latestQi as any)?.gst ?? effQi?.tax ?? effQi?.taxPercentage ?? effQi?.gst ?? 0,
+            delivery: latestQi?.deliveryCharge ?? (latestQi as any)?.deliveryAmount ?? effQi?.deliveryCharge ?? effQi?.deliveryAmount ?? 0,
+          },
+        };
+      });
+
+      return {
+        id: supplierId,
+        name: supplierName,
+        badgeType: 'external' as string,
+        itemPrices,
+        firstTotal: firstVersion?.totalPrice ?? 0,
+        currentTotal: latestVersion?.totalPrice ?? 0,
+        firstLotBreakdown: {
+          discount: firstVersion?.discount ?? 0,
+          discountType: firstVersion?.discountType || 'PERCENTAGE',
+          tax: firstVersion?.tax ?? 0,
+          taxType: firstVersion?.taxType || 'PERCENTAGE',
+          delivery: firstVersion?.deliveryCharge ?? 0,
+          deliveryType: firstVersion?.deliveryType || 'AMOUNT',
+        },
+        currentLotBreakdown: {
+          discount: latestVersion?.discount ?? 0,
+          discountType: latestVersion?.discountType || 'PERCENTAGE',
+          tax: latestVersion?.tax ?? 0,
+          taxType: latestVersion?.taxType || 'PERCENTAGE',
+          delivery: latestVersion?.deliveryCharge ?? 0,
+          deliveryType: latestVersion?.deliveryType || 'AMOUNT',
+        },
+        resolvedItems,
+      };
+    });
+  }, [bidHistoryApiData, lineItems]);
+
   const selectAllForSupplier = (suppId: string) => {
     const newSel: Record<string, string> = {};
     lineItems.forEach((item: any) => { newSel[item.id || item.itemId] = suppId; });
@@ -362,13 +570,27 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           <span className={`bca-status-badge ${isBidFrozen ? "bca-status-frozen" : "bca-status-active"}`}>
             &#9679; {isBidFrozen ? "BID FROZEN" : "BIDDING ACTIVE"}
           </span>
-          <Button variant="primary" className="bca-btn-icon-gap" onClick={() => setShowFreezeModal(true)} disabled={freezingBid || isBidFrozen}>
-            <span className="bca-icon-lock">
-              <span className="bca-icon-lock-shackle"></span>
-              <span className="bca-icon-lock-body"></span>
-            </span>
-            <span>{freezingBid ? "Freezing..." : isBidFrozen ? "Bid Frozen" : "Freeze Bid"}</span>
-          </Button>
+          {isBidFrozen ? (
+            <button
+              type="button"
+              className="bca-btn-frozen-pill"
+              disabled
+            >
+              <span className="bca-icon-lock" style={{ opacity: 0.8 }}>
+                <span className="bca-icon-lock-shackle"></span>
+                <span className="bca-icon-lock-body"></span>
+              </span>
+              <span>Bid Frozen</span>
+            </button>
+          ) : (
+            <Button variant="primary" className="bca-btn-icon-gap" onClick={() => setShowFreezeModal(true)} disabled={freezingBid}>
+              <span className="bca-icon-lock">
+                <span className="bca-icon-lock-shackle"></span>
+                <span className="bca-icon-lock-body"></span>
+              </span>
+              <span>{freezingBid ? "Freezing..." : "Freeze Bid"}</span>
+            </Button>
+          )}
           {Array.isArray(rfq?.supplierIds) && rfq?.supplierIds?.length > 0 && (
             <Button
               type="button"
@@ -543,20 +765,24 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           <h2 className="bca-award-title">
             {viewMode === "summary"
               ? "Award Selection"
-              : isLotOption
-                ? "Bid Comparison"
-                : viewMode === "comparison"
+              : viewMode === "bid-history"
+                ? "Bid History"
+                : isLotOption
                   ? "Bid Comparison"
-                  : "Select by Supplier"}
+                  : viewMode === "comparison"
+                    ? "Bid Comparison"
+                    : "Select by Supplier"}
           </h2>
           <p className="bca-award-subtitle">
             {viewMode === "summary"
               ? "Lowest-priced supplier auto-selected for every line item. Compare manually or award one supplier for all items."
-              : isLotOption
-                ? "Compare supplier quotations before awarding the RFQ."
-                : viewMode === "comparison"
-                  ? "Compare supplier quotations across each line item before awarding the RFQ."
-                  : "Award all line items to a single supplier at once."}
+              : viewMode === "bid-history"
+                ? "Track supplier bid progression — compare First Bid vs Current Bid for each line item."
+                : isLotOption
+                  ? "Compare supplier quotations before awarding the RFQ."
+                  : viewMode === "comparison"
+                    ? "Compare supplier quotations across each line item before awarding the RFQ."
+                    : "Award all line items to a single supplier at once."}
           </p>
         </div>
         <div className="bca-tabs">
@@ -580,13 +806,19 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           >
             {isLotOption ? "Bid Comparison" : "Select by Supplier"}
           </button>
+          <button
+            className={`bca-tab${viewMode === "bid-history" ? " bca-tab-active" : ""}`}
+            onClick={() => setViewMode("bid-history")}
+          >
+            Bid History
+          </button>
         </div>
       </div>
 
       <div className="bca-award-subbar">
         <div className="bca-award-chips">
           <span className="bca-award-chip">
-            {viewMode === "summary" ? "Award Selection" : viewMode === "comparison" ? "Bid Comparison" : "Select by Supplier"}
+            {viewMode === "summary" ? "Award Selection" : viewMode === "comparison" ? "Bid Comparison" : viewMode === "bid-history" ? "Bid History" : "Select by Supplier"}
           </span>
           {effectiveQuotations.length > 0 && (() => {
             const supplierItemCount: Record<string, number> = {};
@@ -694,11 +926,17 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           const cmpSuppliers = effectiveQuotations.map((q: any) => {
             const id = q.quotationId || q.supplierId || q._id || 'unknown';
             const name = q.supplierName || q.organizationName || 'Supplier';
-            const vs = (q.verificationStatus || q.status || '').toLowerCase();
+            const vs = (q.verificationStatus || q.status || '').toLowerCase().trim();
             let badgeType = 'external';
-            if (vs.includes('verified') && !vs.includes('required')) badgeType = 'verified';
-            else if (vs.includes('required') || vs.includes('pending')) badgeType = 'warning';
-            else if (vs.includes('review')) badgeType = 'review';
+            if (vs === 'verified' || (vs.includes('verified') && !vs.includes('unverified') && !vs.includes('required') && !vs.includes('not'))) {
+              badgeType = 'verified';
+            } else if (vs.includes('unverified') || vs.includes('not verified')) {
+              badgeType = 'unverified';
+            } else if (vs.includes('required') || vs.includes('pending')) {
+              badgeType = 'warning';
+            } else if (vs.includes('review')) {
+              badgeType = 'review';
+            }
             const total = (q.totalPrice !== undefined && q.totalPrice !== null)
               ? q.totalPrice
               : (q.supplierQuotationItems || []).reduce(
@@ -752,10 +990,11 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                       <th key={s.id} className={`bca-cmp-th-supp${Object.values(selections).includes(s.id) ? " bca-cmp-th-selected" : ""}`}>
                         <div className="bca-cmp-supp-name">{s.name}</div>
                         <div className="bca-cmp-supp-badge">
-                          {s.badgeType === "verified" && <span className="bca-stag bca-stag-verified">✓ VERIFIED</span>}
-                          {s.badgeType === "warning"  && <span className="bca-stag bca-stag-warning">⚠ VERIFICATION REQUIRED</span>}
-                          {s.badgeType === "external" && <span className="bca-stag bca-stag-external">⊙ EXTERNAL</span>}
-                          {s.badgeType === "review"   && <span className="bca-stag bca-stag-review">⊙ UNDER REVIEW</span>}
+                          {s.badgeType === "verified"   && <span className="bca-stag bca-stag-verified">✓ VERIFIED</span>}
+                          {s.badgeType === "unverified" && <span className="bca-stag bca-stag-external">⊙ UNVERIFIED</span>}
+                          {s.badgeType === "warning"    && <span className="bca-stag bca-stag-warning">⚠ VERIFICATION REQUIRED</span>}
+                          {s.badgeType === "external"   && <span className="bca-stag bca-stag-external">⊙ EXTERNAL</span>}
+                          {s.badgeType === "review"     && <span className="bca-stag bca-stag-review">⊙ UNDER REVIEW</span>}
                         </div>
                       </th>
                     ))}
@@ -836,15 +1075,250 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         })()}
 
 
+        {viewMode === "bid-history" && (() => {
+          if (bidHistoryLoading) {
+            return (
+              <div className="bca-loading" style={{ minHeight: '200px' }}>
+                <div className="bca-spinner" />
+                <span>Loading Bid History...</span>
+              </div>
+            );
+          }
+
+          if (bidHistoryError) {
+            return (
+              <div className="bca-empty" style={{ color: '#ef4444' }}>
+                ⚠ {bidHistoryError}
+              </div>
+            );
+          }
+
+          if (bidHistoryData.length === 0) {
+            return (
+              <div className="bca-empty">No bid history found for this RFQ.</div>
+            );
+          }
+
+          // Use resolvedItems from first supplier (all suppliers share same rfqItems)
+          const historyItems = bidHistoryData[0]?.resolvedItems || [];
+
+          const allCurrentTotals = bidHistoryData.map(s => s.currentTotal).filter(t => t > 0);
+          const minCurrentTotal = allCurrentTotals.length > 0 ? Math.min(...allCurrentTotals) : 0;
+
+          const isLotOptionEffective = isLotOption || !!bidHistoryApiData?.addLotOption;
+
+          return (
+            <div className="bca-cmp-wrap">
+              <table className="bca-cmp-table">
+                <thead>
+                  <tr>
+                    <th className="bca-cmp-th-fixed bca-cmp-th-num">#</th>
+                    <th className="bca-cmp-th-fixed bca-cmp-th-mat">Material</th>
+                    <th className="bca-cmp-th-fixed">Cost Center</th>
+                    <th className="bca-cmp-th-fixed">Code</th>
+                    <th className="bca-cmp-th-fixed bca-cmp-th-sm">Qty</th>
+                    <th className="bca-cmp-th-fixed bca-cmp-th-sm">UOM</th>
+                    {bidHistoryData.map(s => (
+                      <th key={s.id} className="bca-cmp-th-supp" colSpan={2}>
+                        <div className="bca-cmp-supp-name">{s.name}</div>
+                      </th>
+                    ))}
+                  </tr>
+                  <tr>
+                    <th className="bca-cmp-th-fixed" colSpan={6} style={{ borderTop: 'none', background: '#f8fafc' }} />
+                    {bidHistoryData.map(s => (
+                      <React.Fragment key={s.id}>
+                        <th className="bca-hist-sub-th bca-hist-first">First Bid</th>
+                        <th className="bca-hist-sub-th bca-hist-current">Current Bid</th>
+                      </React.Fragment>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyItems.map((item: any, idx: number) => {
+                    return (
+                      <tr key={item.id} className="bca-cmp-row">
+                        <td className="bca-cmp-td-fixed bca-td-num">{idx + 1}</td>
+                        <td className="bca-cmp-td-fixed bca-cmp-td-mat">
+                          <div className="bca-cmp-mat-name">{item.description || item.name || '—'}</div>
+                        </td>
+                        <td className="bca-cmp-td-fixed bca-cmp-td-muted">{item.costCenter || '—'}</td>
+                        <td className="bca-cmp-td-fixed bca-cmp-td-muted">{item.materialCode || '—'}</td>
+                        <td className="bca-cmp-td-fixed bca-cmp-td-muted bca-cmp-td-center">{item.quantity || 1}</td>
+                        <td className="bca-cmp-td-fixed bca-cmp-td-muted bca-cmp-td-center">{item.uom || '—'}</td>
+                        {bidHistoryData.map(s => {
+                          if (isLotOptionEffective) {
+                            return (
+                              <React.Fragment key={s.id}>
+                                <td className="bca-hist-td bca-hist-first-td">
+                                  <span className="bca-cmp-td-muted">NA</span>
+                                </td>
+                                <td className="bca-hist-td bca-hist-current-td">
+                                  <span className="bca-cmp-td-muted">NA</span>
+                                </td>
+                              </React.Fragment>
+                            );
+                          }
+
+                          const itemData = s.itemPrices[item.id] || {
+                            firstBid: 0,
+                            currentBid: 0,
+                            firstBreakdown: { discount: 0, tax: 0, delivery: 0 },
+                            currentBreakdown: { discount: 0, tax: 0, delivery: 0 },
+                          };
+                          const firstPrice = itemData.firstBid;
+                          const currentPrice = itemData.currentBid;
+                          const firstBd = itemData.firstBreakdown || { discount: 0, tax: 0, delivery: 0 };
+                          const currentBd = itemData.currentBreakdown || { discount: 0, tax: 0, delivery: 0 };
+
+                          const firstDiscAmt = firstBd.discount > 0 ? Math.round(firstPrice * firstBd.discount / 100) : 0;
+                          const firstTaxAmt  = firstBd.tax > 0 ? Math.round((firstPrice - firstDiscAmt) * firstBd.tax / 100) : 0;
+
+                          const currentDiscAmt = currentBd.discount > 0 ? Math.round(currentPrice * currentBd.discount / 100) : 0;
+                          const currentTaxAmt  = currentBd.tax > 0 ? Math.round((currentPrice - currentDiscAmt) * currentBd.tax / 100) : 0;
+
+                          const decreased = firstPrice > 0 && currentPrice > 0 && currentPrice < firstPrice;
+                          const increased = firstPrice > 0 && currentPrice > 0 && currentPrice > firstPrice;
+                          const pctChange = firstPrice > 0
+                            ? Math.round(((currentPrice - firstPrice) / firstPrice) * 100)
+                            : 0;
+
+                          return (
+                            <React.Fragment key={s.id}>
+                              <td className="bca-hist-td bca-hist-first-td">
+                                <span className="bca-cmp-price">{firstPrice > 0 ? fmtINR(firstPrice) : '—'}</span>
+                                <div className="bca-cmp-breakdown" style={{ marginTop: '6px' }}>
+                                  <div className="bca-cmp-breakdown-title">BREAKDOWN</div>
+                                  <div className="bca-cmp-breakdown-row"><span>Unit Price</span><span>{firstPrice > 0 ? fmtINR(firstPrice) : '—'}</span></div>
+                                  {firstBd.discount > 0 && <div className="bca-cmp-breakdown-row bca-cmp-disc"><span>Discount</span><span>{firstBd.discount}% — <span className="bca-discount">-{fmtINR(firstDiscAmt)}</span></span></div>}
+                                  {firstBd.tax > 0 && <div className="bca-cmp-breakdown-row"><span>Tax</span><span>{firstBd.tax}% → {fmtINR(firstTaxAmt)}</span></div>}
+                                  {firstBd.delivery > 0 && <div className="bca-cmp-breakdown-row"><span>Delivery</span><span>{fmtINR(firstBd.delivery)}</span></div>}
+                                </div>
+                              </td>
+                              <td className="bca-hist-td bca-hist-current-td">
+                                <div className="bca-hist-current-row">
+                                  <span className="bca-cmp-price">{currentPrice > 0 ? fmtINR(currentPrice) : '—'}</span>
+                                  {firstPrice > 0 && currentPrice > 0 && (
+                                    <span className={`bca-hist-delta ${decreased ? 'bca-hist-delta-down' : increased ? 'bca-hist-delta-up' : 'bca-hist-delta-same'}`}>
+                                      {decreased ? '▼' : increased ? '▲' : '='} {Math.abs(pctChange)}%
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="bca-cmp-breakdown" style={{ marginTop: '6px' }}>
+                                  <div className="bca-cmp-breakdown-title">BREAKDOWN</div>
+                                  <div className="bca-cmp-breakdown-row"><span>Unit Price</span><span>{currentPrice > 0 ? fmtINR(currentPrice) : '—'}</span></div>
+                                  {currentBd.discount > 0 && <div className="bca-cmp-breakdown-row bca-cmp-disc"><span>Discount</span><span>{currentBd.discount}% — <span className="bca-discount">-{fmtINR(currentDiscAmt)}</span></span></div>}
+                                  {currentBd.tax > 0 && <div className="bca-cmp-breakdown-row"><span>Tax</span><span>{currentBd.tax}% → {fmtINR(currentTaxAmt)}</span></div>}
+                                  {currentBd.delivery > 0 && <div className="bca-cmp-breakdown-row"><span>Delivery</span><span>{fmtINR(currentBd.delivery)}</span></div>}
+                                </div>
+                              </td>
+                            </React.Fragment>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="bca-cmp-total-row">
+                    <td className="bca-cmp-td-fixed" colSpan={6}><strong>Total</strong></td>
+                    {bidHistoryData.map(s => {
+                      const isLowest = s.currentTotal > 0 && s.currentTotal === minCurrentTotal;
+                      const fLot = s.firstLotBreakdown || { discount: 0, tax: 0, delivery: 0 };
+                      const cLot = s.currentLotBreakdown || { discount: 0, tax: 0, delivery: 0 };
+
+                      return (
+                        <React.Fragment key={s.id}>
+                          <td className="bca-hist-td bca-hist-first-td">
+                            <div className="bca-cmp-total-price">{s.firstTotal > 0 ? fmtINR(s.firstTotal) : '—'}</div>
+                            {isLotOptionEffective && s.firstTotal > 0 && (
+                              <div className="bca-cmp-breakdown" style={{ marginTop: '6px' }}>
+                                <div className="bca-cmp-breakdown-title">BREAKDOWN</div>
+                                {fLot.discount > 0 && (
+                                  <div className="bca-cmp-breakdown-row bca-cmp-disc">
+                                    <span>Discount</span>
+                                    <span>{fLot.discountType === 'PERCENTAGE' ? `${fLot.discount}%` : fmtINR(fLot.discount)}</span>
+                                  </div>
+                                )}
+                                {fLot.tax > 0 && (
+                                  <div className="bca-cmp-breakdown-row">
+                                    <span>Tax</span>
+                                    <span>{fLot.taxType === 'PERCENTAGE' ? `${fLot.tax}%` : fmtINR(fLot.tax)}</span>
+                                  </div>
+                                )}
+                                {fLot.delivery > 0 && (
+                                  <div className="bca-cmp-breakdown-row">
+                                    <span>Delivery Charge</span>
+                                    <span>{fmtINR(fLot.delivery)}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                          <td className={`bca-hist-td bca-hist-current-td${isLowest ? ' bca-cmp-td-selected' : ''}`}>
+                            <div className="bca-cmp-total-price">{s.currentTotal > 0 ? fmtINR(s.currentTotal) : '—'}</div>
+                            {isLowest && <div className="bca-stag bca-stag-lowest bca-mt-xs">LOWEST CURRENT</div>}
+                            {isLotOptionEffective && s.currentTotal > 0 && (
+                              <div className="bca-cmp-breakdown" style={{ marginTop: '6px' }}>
+                                <div className="bca-cmp-breakdown-title">BREAKDOWN</div>
+                                {cLot.discount > 0 && (
+                                  <div className="bca-cmp-breakdown-row bca-cmp-disc">
+                                    <span>Discount</span>
+                                    <span>{cLot.discountType === 'PERCENTAGE' ? `${cLot.discount}%` : fmtINR(cLot.discount)}</span>
+                                  </div>
+                                )}
+                                {cLot.tax > 0 && (
+                                  <div className="bca-cmp-breakdown-row">
+                                    <span>Tax</span>
+                                    <span>{cLot.taxType === 'PERCENTAGE' ? `${cLot.tax}%` : fmtINR(cLot.tax)}</span>
+                                  </div>
+                                )}
+                                {cLot.delivery > 0 && (
+                                  <div className="bca-cmp-breakdown-row">
+                                    <span>Delivery Charge</span>
+                                    <span>{fmtINR(cLot.delivery)}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        </React.Fragment>
+                      );
+                    })}
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          );
+        })()}
+
+
         {viewMode === "by-supplier" && (() => {
-          const supps = effectiveQuotations.map((q: any) => {
+          const isLotOptionEffective = isLotOption || !!bidHistoryApiData?.addLotOption;
+
+          const supps = effectiveQuotations.map((q: any, index: number) => {
             const id = q.quotationId || q.supplierId || q._id || 'unknown';
-            const name = q.supplierName || q.organizationName || 'Supplier';
-            const vs = (q.verificationStatus || q.status || '').toLowerCase();
+            const rawName = (q.supplierName || q.organizationName || '').trim();
+            const isMissingOrGeneric = !rawName || rawName.toLowerCase() === 'null' || rawName.toLowerCase() === 'undefined' || rawName.toLowerCase() === 'supplier';
+
+            let name = rawName;
+            if (isLotOptionEffective && isMissingOrGeneric) {
+              name = effectiveQuotations.length > 1 ? `Supplier ${index + 1}` : 'Supplier';
+            } else if (!name) {
+              name = 'Supplier';
+            }
+
+            const vs = (q.verificationStatus || q.status || '').toLowerCase().trim();
             let badgeType = 'external';
-            if (vs.includes('verified') && !vs.includes('required')) badgeType = 'verified';
-            else if (vs.includes('required') || vs.includes('pending')) badgeType = 'warning';
-            else if (vs.includes('review')) badgeType = 'review';
+            if (vs === 'verified' || (vs.includes('verified') && !vs.includes('unverified') && !vs.includes('required') && !vs.includes('not'))) {
+              badgeType = 'verified';
+            } else if (vs.includes('unverified') || vs.includes('not verified')) {
+              badgeType = 'unverified';
+            } else if (vs.includes('required') || vs.includes('pending')) {
+              badgeType = 'warning';
+            } else if (vs.includes('review')) {
+              badgeType = 'review';
+            }
 
             const itemsCount = (q.supplierQuotationItems && q.supplierQuotationItems.length > 0)
               ? q.supplierQuotationItems.length
@@ -856,12 +1330,19 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                   (sum: number, qi: any) => sum + (qi.subTotal ?? (qi.quotedAmount ?? qi.quotedPrice ?? 0) * (qi.quantity ?? 1)), 0
                 );
 
-            return { id, name, badgeType, itemsCount, total };
+            const outerRankRaw = (q.rank !== undefined && q.rank !== null && q.rank !== '')
+              ? String(q.rank).trim().toUpperCase()
+              : (q.supplierQuotationRank !== undefined && q.supplierQuotationRank !== null && q.supplierQuotationRank !== '')
+                ? String(q.supplierQuotationRank).trim().toUpperCase()
+                : '';
+
+            return { id, name, badgeType, itemsCount, total, outerRankRaw, rawQuotation: q };
           });
 
           const validTotals = supps.map(s => s.total).filter(t => t > 0);
           const minTotal = validTotals.length > 0 ? Math.min(...validTotals) : 0;
           const lowestSupp = supps.find(s => s.total > 0 && s.total === minTotal) || supps[0];
+          const sortedTotals = [...supps].filter(s => s.total > 0).sort((a, b) => a.total - b.total);
 
           return (
             <div className="bca-supplier-list">
@@ -877,6 +1358,24 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
 
                   const isExpanded = !!expandedSuppliers[s.id];
 
+                  // Determine rank label strictly from supplierQuotation level rank (q.rank)
+                  let rankLabel = '';
+                  let isL1 = isLowest;
+                  if (s.outerRankRaw) {
+                    let cleanR = s.outerRankRaw;
+                    if (!cleanR.startsWith('L') && !cleanR.startsWith('RANK')) {
+                      cleanR = `L${cleanR}`;
+                    }
+                    rankLabel = cleanR.startsWith('RANK') ? cleanR : `Rank ${cleanR}`;
+                    isL1 = s.outerRankRaw === 'L1' || s.outerRankRaw === '1' || cleanR === 'L1';
+                  } else if (!isLotOptionEffective && s.total > 0) {
+                    const idx = sortedTotals.findIndex(st => st.id === s.id);
+                    if (idx >= 0) {
+                      rankLabel = `Rank L${idx + 1}`;
+                      isL1 = idx === 0;
+                    }
+                  }
+
                   return (
                     <div
                       key={s.id}
@@ -884,12 +1383,33 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                     >
                       <div className="bca-supplier-row-header">
                         <div className="bca-supplier-row-left">
-                          <div className="bca-supplier-row-name">{s.name}</div>
-                          <div className="bca-supplier-row-tags">
-                            {s.badgeType === "verified"  && <span className="bca-stag bca-stag-verified">✓ VERIFIED</span>}
-                            {s.badgeType === "warning"   && <span className="bca-stag bca-stag-warning">⚠ VERIFICATION REQUIRED</span>}
-                            {s.badgeType === "external"  && <span className="bca-stag bca-stag-external">⊙ EXTERNAL</span>}
-                            {s.badgeType === "review"    && <span className="bca-stag bca-stag-review">⊙ UNDER REVIEW</span>}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {isLotOptionEffective && (
+                              <button
+                                type="button"
+                                className="bca-expand-plus-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedSuppliers(prev => ({ ...prev, [s.id]: !prev[s.id] }));
+                                }}
+                                title={isExpanded ? "Collapse item details" : "Expand item details"}
+                              >
+                                {isExpanded ? "−" : "+"}
+                              </button>
+                            )}
+                            <div className="bca-supplier-row-name">{s.name}</div>
+                            {isLotOptionEffective && rankLabel && (
+                              <span className={`bca-stag ${isL1 ? 'bca-stag-lowest' : 'bca-stag-verified'}`} style={{ fontSize: '11px', fontWeight: 700 }}>
+                                {rankLabel}
+                              </span>
+                            )}
+                          </div>
+                          <div className="bca-supplier-row-tags" style={{ marginTop: '4px' }}>
+                            {s.badgeType === "verified"   && <span className="bca-stag bca-stag-verified">✓ VERIFIED</span>}
+                            {s.badgeType === "unverified" && <span className="bca-stag bca-stag-external">⊙ UNVERIFIED</span>}
+                            {s.badgeType === "warning"    && <span className="bca-stag bca-stag-warning">⚠ VERIFICATION REQUIRED</span>}
+                            {s.badgeType === "external"   && <span className="bca-stag bca-stag-external">⊙ EXTERNAL</span>}
+                            {s.badgeType === "review"     && <span className="bca-stag bca-stag-review">⊙ UNDER REVIEW</span>}
                             {isLowest && <span className="bca-stag bca-stag-lowest">LOWEST OVERALL</span>}
                           </div>
                         </div>
@@ -898,15 +1418,6 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                             <div className="bca-supplier-row-total-label">TOTAL ({s.itemsCount} ITEMS)</div>
                             <div className="bca-supplier-row-total">{s.total > 0 ? fmtINR(s.total) : '—'}</div>
                           </div>
-                          {isLotOption && (
-                            <button
-                              className="bca-btn-expand-toggle"
-                              onClick={() => setExpandedSuppliers(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
-                            >
-                              <span>{isExpanded ? "Collapse" : "Expand"}</span>
-                              <span className={`bca-expand-arrow${isExpanded ? " bca-expand-arrow-open" : ""}`}>▼</span>
-                            </button>
-                          )}
                           <button
                             className={`bca-btn ${isSelected ? "bca-btn-selected" : "bca-btn-outline"}`}
                             onClick={() => selectAllForSupplier(s.id)}
@@ -916,7 +1427,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                         </div>
                       </div>
 
-                      {isLotOption && isExpanded && (() => {
+                      {isLotOptionEffective && isExpanded && (() => {
                         const q = effectiveQuotations.find((qItem: any) => (qItem.quotationId || qItem.supplierId || qItem._id) === s.id);
                         return (
                           <div className="bca-supplier-expanded-content">
@@ -1254,61 +1765,124 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         </div>
       )}
 
-      {showAwardModal && (
-        <div className="bca-modal-overlay">
-          <div className="bca-modal-content bca-modal-lg">
-            <h2 className="bca-modal-title bca-modal-title-lg">Complete Verification to Reward</h2>
-            <p className="bca-modal-text bca-modal-text-lg">
-              One or more selected suppliers require verification or registration before the reward can be processed.
-            </p>
-            
-            <div className="bca-award-veri-card">
-              <div className="bca-award-veri-header">
-                <div>
-                  <div className="bca-award-veri-name">Global Supplies</div>
-                  <div className="bca-stag bca-stag-external bca-mt-sm">&#8857; EXTERNAL SUPPLIER</div>
-                </div>
-                <div className="bca-award-veri-totals">
-                  <div className="bca-award-veri-items">6 Items</div>
-                  <div className="bca-award-veri-price">₹16,23,271</div>
-                </div>
-              </div>
-              
-              <div className="bca-award-veri-body">
-                <p>This supplier is not registered on the portal. Registration and verification will be requested by email at <strong>contact@globalsupplies.com</strong>.</p>
-                <div className="bca-award-veri-steps">
-                  <span>1. Send Link</span> <span className="bca-step-sep">&mdash;</span> 
-                  <span>2. Registers</span> <span className="bca-step-sep">&mdash;</span> 
-                  <span>3. Verification</span> <span className="bca-step-sep">&mdash;</span> 
-                  <span>4. Review</span> <span className="bca-step-sep">&mdash;</span> 
-                  <span>5. Reward</span>
-                </div>
-                
-                <div className="bca-award-veri-form">
-                  <label className="bca-award-veri-label">Verification Template</label>
-                  <select className="bca-award-veri-select">
-                    <option>Standard Supplier Verification</option>
-                  </select>
-                </div>
-                
-                <button className="bca-btn bca-btn-primary bca-btn-block bca-mt-md">
-                  Send Registration &amp; Verification
-                </button>
-              </div>
-            </div>
+      {showAwardModal && (() => {
+        // Group selections by supplier ID to calculate totals and item counts per selected supplier
+        const supplierSummaryMap: Record<string, { name: string; itemsCount: number; totalValue: number }> = {};
 
-            <div className="bca-modal-footer">
-              <div className="bca-modal-footer-left">
-                <span className="bca-total-award">Total Award Value: <strong>{fmtINR(totalAwardValue)}</strong></span>
-              </div>
-              <div className="bca-modal-actions">
-                <button className="bca-btn bca-btn-ghost bca-modal-cancel" onClick={() => setShowAwardModal(false)}>Cancel</button>
-                <button className="bca-btn bca-btn-disabled" disabled>Confirm Award</button>
-              </div>
+        lineItems.forEach((item: any) => {
+          const itemId = item.id || item.itemId || item._id;
+          const sid = selections[itemId];
+          if (!sid) return;
+
+          const quotation = effectiveQuotations.find(
+            (q: any) => (q.quotationId || q.supplierId || q._id) === sid
+          );
+          const sName = quotation?.supplierName || quotation?.organizationName || 'Supplier';
+
+          const qi = quotation ? getQuoteItemForRfqItem(quotation, item) : null;
+          const qty = item?.quantity || item?.qty || 1;
+          const rawSubtotal = qi?.subTotal ?? null;
+          const rawUnitPrice = qi?.quotedAmount ?? qi?.quotedPrice ?? 0;
+          const subtotal = rawSubtotal ?? (rawUnitPrice * qty);
+
+          if (!supplierSummaryMap[sid]) {
+            supplierSummaryMap[sid] = { name: sName, itemsCount: 0, totalValue: 0 };
+          }
+          supplierSummaryMap[sid].itemsCount += 1;
+          supplierSummaryMap[sid].totalValue += subtotal;
+        });
+
+        const selectedSuppliersList = Object.values(supplierSummaryMap);
+        const displayList = selectedSuppliersList.length > 0
+          ? selectedSuppliersList
+          : displaySuppliers.slice(0, 1).map((s: any) => ({
+              name: s.name || 'Global Supplies',
+              itemsCount: lineItems.length || 1,
+              totalValue: s.total || totalAwardValue,
+            }));
+
+        return (
+          <div className="bca-modal-overlay">
+            <div className="bca-modal-content bca-modal-lg">
+              {awardSuccess ? (
+                <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>✅</div>
+                  <h2 className="bca-modal-title" style={{ color: '#059669' }}>RFQ Awarded Successfully!</h2>
+                  <p className="bca-modal-text">The award has been processed. Selected suppliers have been notified.</p>
+                  <div className="bca-modal-stats" style={{ marginTop: '1rem', display: 'flex', justifyContent: 'center', gap: '2rem' }}>
+                    <div className="bca-modal-stat">
+                      <div className="bca-modal-stat-label">AWARDED VALUE</div>
+                      <div className="bca-modal-stat-value" style={{ color: '#059669', fontSize: '1.25rem', fontWeight: 700 }}>{fmtINR(totalAwardValue)}</div>
+                    </div>
+                    <div className="bca-modal-stat">
+                      <div className="bca-modal-stat-label">ITEMS AWARDED</div>
+                      <div className="bca-modal-stat-value" style={{ fontSize: '1.25rem', fontWeight: 700 }}>{selectedItemCount}</div>
+                    </div>
+                  </div>
+                  <div className="bca-modal-actions" style={{ justifyContent: 'center', marginTop: '1.5rem' }}>
+                    <button
+                      className="bca-btn bca-btn-primary"
+                      onClick={() => { setShowAwardModal(false); setAwardSuccess(false); }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h2 className="bca-modal-title bca-modal-title-lg">Confirm Award Selection</h2>
+                  <p className="bca-modal-text bca-modal-text-lg">
+                    Review the selected supplier(s) and confirm the award for this RFQ.
+                  </p>
+                  
+                  {displayList.map((sup, idx) => (
+                    <div key={idx} className="bca-award-veri-card" style={{ marginBottom: '1rem' }}>
+                      <div className="bca-award-veri-header">
+                        <div>
+                          <div className="bca-award-veri-name">{sup.name}</div>
+                          <div className="bca-stag bca-stag-external bca-mt-sm">&#8857; SELECTED SUPPLIER</div>
+                        </div>
+                        <div className="bca-award-veri-totals">
+                          <div className="bca-award-veri-items">{sup.itemsCount} {sup.itemsCount === 1 ? 'Item' : 'Items'}</div>
+                          <div className="bca-award-veri-price">{fmtINR(sup.totalValue)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {awardError && (
+                    <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '10px 14px', margin: '1rem 0', color: '#dc2626', fontSize: '13px' }}>
+                      ⚠ {awardError}
+                    </div>
+                  )}
+
+                  <div className="bca-modal-footer">
+                    <div className="bca-modal-footer-left">
+                      <span className="bca-total-award">Total Award Value: <strong>{fmtINR(totalAwardValue)}</strong></span>
+                    </div>
+                    <div className="bca-modal-actions">
+                      <button
+                        className="bca-btn bca-btn-ghost bca-modal-cancel"
+                        onClick={() => { setShowAwardModal(false); setAwardError(null); }}
+                        disabled={awardingRfq}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className={`bca-btn ${awardingRfq ? 'bca-btn-disabled' : 'bca-btn-primary'} bca-modal-confirm`}
+                        onClick={handleConfirmAward}
+                        disabled={awardingRfq}
+                      >
+                        {awardingRfq ? 'Awarding...' : 'Confirm Award'}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

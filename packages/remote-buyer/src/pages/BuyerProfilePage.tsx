@@ -1,41 +1,22 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProfileView } from '@vosox/shared-ui';
 import type { PersonDetail, PersonDetailUpdate } from '@vosox/shared-ui';
 import { isErrorResponse } from '@vosox/shared-ui';
-import { getPersonDetailCached, updatePersonDetail, invalidatePersonDetailCache } from '../api/Buyerapi';
+import { updatePersonDetail } from '../api/Buyerapi';
+import { useBuyerAuthStore } from '../store/useBuyerAuthStore';
 import Header from '../components/Header';
 
 const BuyerProfilePage: React.FC = () => {
   const navigate = useNavigate();
-  const hasLoadedRef = useRef(false);
+  // Sourced from the store, which fetches it once (on login and on reload) via
+  // BuyerApp's mount effect - no per-page fetch, no local cache.
+  const personDetail = useBuyerAuthStore((state) => state.personDetail);
+  const loading = useBuyerAuthStore((state) => state.personDetailLoading);
+  const setPersonDetail = useBuyerAuthStore((state) => state.setPersonDetail);
 
-  const [personDetail, setPersonDetail] = useState<PersonDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (hasLoadedRef.current) return;
-    hasLoadedRef.current = true;
-
-    const loadProfile = async () => {
-      setLoading(true);
-      setError(null);
-
-      const result = await getPersonDetailCached();
-
-      if (isErrorResponse(result)) {
-        setError(result.message || 'Failed to load profile.');
-      } else {
-        setPersonDetail(result as PersonDetail);
-      }
-
-      setLoading(false);
-    };
-
-    loadProfile();
-  }, []);
 
   const handleSave = async (updates: PersonDetailUpdate) => {
     setSaving(true);
@@ -49,8 +30,7 @@ const BuyerProfilePage: React.FC = () => {
       return;
     }
 
-    invalidatePersonDetailCache(result);
-    setPersonDetail(result as PersonDetail);
+    setPersonDetail(result);
     setSaving(false);
   };
 
@@ -58,7 +38,7 @@ const BuyerProfilePage: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9' }}>
       <Header />
       <ProfileView
-        personDetail={personDetail}
+        personDetail={personDetail as unknown as PersonDetail | null}
         loading={loading}
         saving={saving}
         error={error}
