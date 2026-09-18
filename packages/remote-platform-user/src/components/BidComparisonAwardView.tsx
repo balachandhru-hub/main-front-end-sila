@@ -3,6 +3,7 @@ import "./BidComparisonAward.css";
 import { Button } from "@vosox/shared-ui";
 import { fetchBuyerAsset, getBidComparisonData, isBidComparisonError, awardRfq } from "../api/platformApi";
 import type { BidComparisonResponseDto } from "../api/platformApi";
+import { fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
 
 
 const IconMessageSquare = () => (
@@ -84,8 +85,11 @@ function fmtINR(val: number) {
 }
 
 const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
-  rfq, rfqId, loading, error, freezingBid, onFreeze, onBack, onChatClick
+  rfq: rfqProp, rfqId, loading, error, freezingBid, onFreeze, onBack, onChatClick
 }) => {
+  const [refreshedRfq, setRefreshedRfq] = useState<any | null>(null);
+  const rfq = refreshedRfq ?? rfqProp;
+
   const [viewMode, setViewMode] = useState<"summary" | "comparison" | "by-supplier" | "bid-history">("summary");
   const [showFreezeModal, setShowFreezeModal] = useState(false);
   const [showAwardModal, setShowAwardModal] = useState(false);
@@ -184,6 +188,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     }
   };
   const isBidFrozen = rfq?.status === "Freezing" || rfq?.status === "Frozen";
+  const isRfqAwarded = rfq?.status === "AWARDED";
   const isLotOption = !!rfq?.addLotOption;
   const quotations: any[] = useMemo(() => {
     if (!rfq?.supplierQuotation) return [];
@@ -317,6 +322,26 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
 
       if (selectedQ) newSel[itemId] = selectedQ.quotationId || selectedQ.supplierId;
     });
+
+    if (Object.keys(newSel).length === 0) {
+      const totals = effectiveQuotations.map((q: any) => ({
+        q,
+        total: (q.totalPrice !== undefined && q.totalPrice !== null)
+          ? q.totalPrice
+          : (q.supplierQuotationItems || []).reduce(
+              (sum: number, qi: any) => sum + (qi.subTotal ?? (qi.quotedAmount ?? qi.quotedPrice ?? 0) * (qi.quantity ?? 1)), 0
+            ),
+      })).filter((t) => t.total > 0);
+
+      if (totals.length > 0) {
+        const lowest = totals.reduce((min, cur) => (cur.total < min.total ? cur : min), totals[0]);
+        const suppId = lowest.q.quotationId || lowest.q.supplierId;
+        lineItems.forEach((item: any) => {
+          newSel[item.id || item.rfqItemId] = suppId;
+        });
+      }
+    }
+
     setSelections(newSel);
   };
 
@@ -324,6 +349,10 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     setAutoSelected(false);
     setSelections({});
   }, [rfq?.id, rfq?._id]);
+
+  useEffect(() => {
+    setRefreshedRfq(null);
+  }, [rfqId, rfqProp?.rfqId]);
 
   useEffect(() => {
     if (!autoSelected && lineItems.length > 0 && effectiveQuotations.length > 0) {
@@ -338,11 +367,15 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     }
   }, [isLotOption, viewMode]);
 
-  // Fetch Bid History data from API when tab is activated
+  useEffect(() => {
+    if (isRfqAwarded && !isLotOption && viewMode === "by-supplier") {
+      setViewMode("summary");
+    }
+  }, [isRfqAwarded, isLotOption, viewMode]);
+
   useEffect(() => {
     const effectiveRfqId = rfqId || rfq?.rfqId || rfq?.id || rfq?._id;
     if (viewMode !== 'bid-history' || !effectiveRfqId) return;
-    // Don't re-fetch if we already have data for this RFQ
     if (bidHistoryApiData?.rfqId === effectiveRfqId) return;
 
     let cancelled = false;
@@ -384,10 +417,17 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
 
     const selectionsArray = Object.entries(selections)
       .filter(([_, sid]) => Boolean(sid))
-      .map(([itemId, sid]) => ({
-        rfqItemId: itemId,
-        supplierId: sid,
-      }));
+      .map(([itemId, sid]) => {
+        const quotation = effectiveQuotations.find(
+          (q: any) => (q.quotationId || q.supplierId || q._id) === sid
+        );
+        if (!quotation?.supplierId) return null;
+        return {
+          rfqItemId: itemId,
+          supplierId: quotation.supplierId,
+        };
+      })
+      .filter((sel): sel is { rfqItemId: string; supplierId: string } => sel !== null);
 
     if (selectionsArray.length === 0) {
       setAwardError("Please select at least one item to award.");
@@ -409,6 +449,12 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         setAwardError(res.message || res.description || "Failed to award RFQ.");
       } else {
         setAwardSuccess(true);
+        try {
+          const updated = await fetchBuyerRFQById(effectiveRfqId);
+          setRefreshedRfq({ ...updated, rfqId: effectiveRfqId });
+        } catch {
+          // Award already succeeded; a failed refresh shouldn't surface as an award error.
+        }
       }
     } catch (err: any) {
       setAwardError(err?.message || "An error occurred while awarding the RFQ.");
@@ -567,13 +613,27 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           </div>
         </div>
         <div className="bca-page-header-right">
-          <span className={`bca-status-badge ${isBidFrozen ? "bca-status-frozen" : "bca-status-active"}`}>
-            &#9679; {isBidFrozen ? "BID FROZEN" : "BIDDING ACTIVE"}
+          <span className={`bca-status-badge ${isRfqAwarded ? "bca-status-awarded" : isBidFrozen ? "bca-status-frozen" : "bca-status-active"}`}>
+            &#9679; {isRfqAwarded ? "RFQ AWARDED" : isBidFrozen ? "BID FROZEN" : "BIDDING ACTIVE"}
           </span>
-          {isBidFrozen ? (
-            <button
+          {isRfqAwarded ? (
+            <Button
+              variant="primary"
               type="button"
-              className="bca-btn-frozen-pill"
+              className="bca-btn-icon-gap"
+              disabled
+            >
+              <span className="bca-icon-lock" style={{ opacity: 0.8 }}>
+                <span className="bca-icon-lock-shackle"></span>
+                <span className="bca-icon-lock-body"></span>
+              </span>
+              <span>Bid Close</span>
+            </Button>
+          ) : isBidFrozen ? (
+            <Button
+              variant="primary"
+              type="button"
+              className="bca-btn-icon-gap"
               disabled
             >
               <span className="bca-icon-lock" style={{ opacity: 0.8 }}>
@@ -581,7 +641,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                 <span className="bca-icon-lock-body"></span>
               </span>
               <span>Bid Frozen</span>
-            </button>
+            </Button>
           ) : (
             <Button variant="primary" className="bca-btn-icon-gap" onClick={() => setShowFreezeModal(true)} disabled={freezingBid}>
               <span className="bca-icon-lock">
@@ -764,7 +824,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         <div>
           <h2 className="bca-award-title">
             {viewMode === "summary"
-              ? "Award Selection"
+              ? (isRfqAwarded ? "Awarded Suppliers" : "Award Selection")
               : viewMode === "bid-history"
                 ? "Bid History"
                 : isLotOption
@@ -775,7 +835,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           </h2>
           <p className="bca-award-subtitle">
             {viewMode === "summary"
-              ? "Lowest-priced supplier auto-selected for every line item. Compare manually or award one supplier for all items."
+              ? (isRfqAwarded ? "Suppliers awarded for each line item of this RFQ." : "Lowest-priced supplier auto-selected for every line item. Compare manually or award one supplier for all items.")
               : viewMode === "bid-history"
                 ? "Track supplier bid progression — compare First Bid vs Current Bid for each line item."
                 : isLotOption
@@ -790,7 +850,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
             className={`bca-tab${viewMode === "summary" ? " bca-tab-active" : ""}`}
             onClick={() => setViewMode("summary")}
           >
-            Award Selection
+            {isRfqAwarded ? "Awarded Suppliers" : "Award Selection"}
           </button>
           {!isLotOption && (
             <button
@@ -800,12 +860,14 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
               Bid Comparison
             </button>
           )}
-          <button
-            className={`bca-tab${viewMode === "by-supplier" ? " bca-tab-active" : ""}`}
-            onClick={() => setViewMode("by-supplier")}
-          >
-            {isLotOption ? "Bid Comparison" : "Select by Supplier"}
-          </button>
+          {(isLotOption || !isRfqAwarded) && (
+            <button
+              className={`bca-tab${viewMode === "by-supplier" ? " bca-tab-active" : ""}`}
+              onClick={() => setViewMode("by-supplier")}
+            >
+              {isLotOption ? "Bid Comparison" : "Select by Supplier"}
+            </button>
+          )}
           <button
             className={`bca-tab${viewMode === "bid-history" ? " bca-tab-active" : ""}`}
             onClick={() => setViewMode("bid-history")}
@@ -818,7 +880,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
       <div className="bca-award-subbar">
         <div className="bca-award-chips">
           <span className="bca-award-chip">
-            {viewMode === "summary" ? "Award Selection" : viewMode === "comparison" ? "Bid Comparison" : viewMode === "bid-history" ? "Bid History" : "Select by Supplier"}
+            {viewMode === "summary" ? (isRfqAwarded ? "Awarded Suppliers" : "Award Selection") : viewMode === "comparison" ? "Bid Comparison" : viewMode === "bid-history" ? "Bid History" : "Select by Supplier"}
           </span>
           {effectiveQuotations.length > 0 && (() => {
             const supplierItemCount: Record<string, number> = {};
@@ -865,7 +927,12 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                 <tbody>
                    {lineItems.map((item: any, idx: number) => {
                     const itemId = item.id;
-                    const selSuppId = selections[itemId];
+                    const awardedQuotation = isRfqAwarded
+                      ? effectiveQuotations.find((q: any) => getQuoteItemForRfqItem(q, item)?.isAwarded === true)
+                      : null;
+                    const selSuppId = awardedQuotation
+                      ? (awardedQuotation.quotationId || awardedQuotation.supplierId)
+                      : selections[itemId];
                     const selQuotation = selSuppId
                       ? effectiveQuotations.find((q: any) => (q.quotationId || q.supplierId) === selSuppId)
                       : effectiveQuotations[0];
@@ -949,6 +1016,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
             const prices: Record<string, number> = {};
             const ranks: Record<string, string> = {};
             const breakdown: Record<string, { discount: number; tax: number; delivery: number }> = {};
+            const awarded: Record<string, boolean> = {};
             effectiveQuotations.forEach((q: any) => {
               const suppId = q.quotationId || q.supplierId || q._id || 'unknown';
               const qi = getQuoteItemForRfqItem(q, item);
@@ -959,6 +1027,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                 tax: qi?.tax ?? qi?.taxPercentage ?? qi?.gst ?? 0,
                 delivery: qi?.deliveryCharge ?? qi?.deliveryAmount ?? 0,
               };
+              awarded[suppId] = qi?.isAwarded === true;
             });
             return {
               id: item.id,
@@ -970,6 +1039,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
               prices,
               ranks,
               breakdown,
+              awarded,
             };
           });
 
@@ -1024,23 +1094,35 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                           const isSelected = hasManualSelection
                             ? selections[item.id] === s.id
                             : isLowest;
+                          const isAwardedItem = (item.awarded as Record<string, boolean>)?.[s.id] === true;
                           const discAmt = bd.discount > 0 ? Math.round(price * bd.discount / 100) : 0;
                           const taxAmt  = bd.tax > 0 ? Math.round((price - discAmt) * bd.tax / 100) : 0;
                           const rank = rankLabel || (price > 0 ? String([...Object.values(item.prices as Record<string, number>)].filter(p => p > 0).sort((a, b) => a - b).indexOf(price) + 1) : '');
+                          const isCellHighlighted = isRfqAwarded ? isAwardedItem : isSelected;
 
                           return (
-                            <td key={s.id} className={`bca-cmp-td-supp${isSelected ? " bca-cmp-td-selected" : ""}`}>
+                            <td key={s.id} className={`bca-cmp-td-supp${isCellHighlighted ? " bca-cmp-td-selected" : ""}`}>
                               <div className="bca-cmp-price-row">
                                 <span className="bca-cmp-price">{price > 0 ? fmtINR(price) : '—'}</span>
                                 {isLowest && <span className="bca-lowest-badge">LOWEST</span>}
                               </div>
                               <div className="bca-cmp-per-unit">per unit</div>
-                              <button
-                                className={`bca-btn bca-cmp-sel-btn ${isSelected ? "bca-btn-selected" : "bca-btn-outline"}`}
-                                onClick={() => setSelections(prev => ({ ...prev, [item.id]: s.id }))}
-                              >
-                                {isSelected ? "✓ Selected" : "Select"}
-                              </button>
+                              {isRfqAwarded ? (
+                                isAwardedItem ? (
+                                  <button className="bca-btn bca-cmp-sel-btn bca-cmp-awarded-btn" disabled>
+                                    ✓ Awarded
+                                  </button>
+                                ) : (
+                                  <div className="bca-btn bca-cmp-sel-btn bca-cmp-btn-placeholder" aria-hidden="true">&nbsp;</div>
+                                )
+                              ) : (
+                                <button
+                                  className={`bca-btn bca-cmp-sel-btn ${isSelected ? "bca-btn-selected" : "bca-btn-outline"}`}
+                                  onClick={() => setSelections(prev => ({ ...prev, [item.id]: s.id }))}
+                                >
+                                  {isSelected ? "✓ Selected" : "Select"}
+                                </button>
+                              )}
                               <div className="bca-cmp-breakdown">
                                 <div className="bca-cmp-breakdown-title">BREAKDOWN</div>
                                 <div className="bca-cmp-breakdown-row"><span>Unit Price</span><span>{price > 0 ? fmtINR(price) : '—'}</span></div>
@@ -1293,7 +1375,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         })()}
 
 
-        {viewMode === "by-supplier" && (() => {
+        {viewMode === "by-supplier" && (isLotOption || !isRfqAwarded) && (() => {
           const isLotOptionEffective = isLotOption || !!bidHistoryApiData?.addLotOption;
 
           const supps = effectiveQuotations.map((q: any, index: number) => {
@@ -1336,7 +1418,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                 ? String(q.supplierQuotationRank).trim().toUpperCase()
                 : '';
 
-            return { id, name, badgeType, itemsCount, total, outerRankRaw, rawQuotation: q };
+            return { id, name, badgeType, itemsCount, total, outerRankRaw, isAwarded: q.isAwarded === true, rawQuotation: q };
           });
 
           const validTotals = supps.map(s => s.total).filter(t => t > 0);
@@ -1403,6 +1485,11 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                                 {rankLabel}
                               </span>
                             )}
+                            {isLotOptionEffective && s.isAwarded && (
+                              <span className="bca-stag bca-stag-awarded" style={{ fontSize: '11px', fontWeight: 700 }}>
+                                ✓ AWARDED
+                              </span>
+                            )}
                           </div>
                           <div className="bca-supplier-row-tags" style={{ marginTop: '4px' }}>
                             {s.badgeType === "verified"   && <span className="bca-stag bca-stag-verified">✓ VERIFIED</span>}
@@ -1422,7 +1509,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                             className={`bca-btn ${isSelected ? "bca-btn-selected" : "bca-btn-outline"}`}
                             onClick={() => selectAllForSupplier(s.id)}
                           >
-                            {isSelected ? "✓ Selected" : "Select All Items"}
+                            {isSelected && s.rawQuotation?.isAwarded === true ? "✓ Awarded" : isSelected ? "✓ Selected" : "Select All Items"}
                           </button>
                         </div>
                       </div>
@@ -1720,6 +1807,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         </div>
       )}
 
+      {!isRfqAwarded && (
       <div className="bca-bottom-bar">
         <div className="bca-bottom-left">
           <span className={`bca-bar-status ${isBidFrozen ? "bca-bar-frozen" : "bca-bar-active"}`}>{isBidFrozen ? "Bid Frozen" : "Bidding Active"}</span>
@@ -1727,8 +1815,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           <span className="bca-bar-text">{distinctSelected.length} Supplier{distinctSelected.length !== 1 ? "s" : ""}</span>
           {totalAwardValue > 0 && <span className="bca-total-award">Total Award Value: <strong>{fmtINR(totalAwardValue)}</strong></span>}
         </div>
-        <button 
-          className={`bca-btn ${barButtonDisabled ? "bca-btn-disabled" : "bca-btn-primary"}`} 
+        <button
+          className={`bca-btn ${barButtonDisabled ? "bca-btn-disabled" : "bca-btn-primary"}`}
           disabled={barButtonDisabled}
           onClick={() => {
             if (isBidFrozen) setShowAwardModal(true);
@@ -1738,6 +1826,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           {barButtonLabel}
         </button>
       </div>
+      )}
 
       {showFreezeModal && (
         <div className="bca-modal-overlay">

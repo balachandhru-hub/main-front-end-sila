@@ -55,6 +55,11 @@ interface TemplateFormData {
   description: string;
   fields: FormField[];
 }
+const IconBack = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 15L7 10L12 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 export default function UserTemplate({ templates = [], organizationId }: UserTemplateProps) {
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
@@ -619,7 +624,10 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
   if (showCreateForm) {
     return (
       <div className="ut-container">
-        <div className="ut-header">
+        <div className="ut-header" style={{ alignItems: 'center' }}>
+          <button type="button" className="afd-back" onClick={handleCancelCreate} aria-label="Back to templates list" title="Back">
+            <IconBack />
+          </button>
           <div className="ut-header-content">
             <h1>Onboarding Registration Templates</h1>
             <p>Configure compliance checks, required physical files, and document parameters for unverified vendor groups.</p>
@@ -885,24 +893,24 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
                       </button>
                       {currentUser?.userRole === "BUYER_ADMINISTRATOR" && (
                         <>
-                      <button
-                        className="ut-btn-action ut-btn-edit"
-                        title="Edit"
-                        onClick={() => handleOpenEditTemplate(template)}
-                      >
-                        <Edit2 size={18} />
-                        Edit
-                      </button>
-                      <button
-                        className="ut-btn-action ut-btn-delete"
-                        title="Delete"
-                        onClick={() => setConfirmDeleteId(template.templateId)}
-                        disabled={deletingTemplateId === template.templateId}
-                      >
-                        <Trash2 size={18} />
-                        {deletingTemplateId === template.templateId ? 'Deleting...' : ''}
-                      </button>
-                      </>
+                          <button
+                            className="ut-btn-action ut-btn-edit"
+                            title="Edit"
+                            onClick={() => handleOpenEditTemplate(template)}
+                          >
+                            <Edit2 size={18} />
+                            Edit
+                          </button>
+                          <button
+                            className="ut-btn-action ut-btn-delete"
+                            title="Delete"
+                            onClick={() => setConfirmDeleteId(template.templateId)}
+                            disabled={deletingTemplateId === template.templateId}
+                          >
+                            <Trash2 size={18} />
+                            {deletingTemplateId === template.templateId ? 'Deleting...' : ''}
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
