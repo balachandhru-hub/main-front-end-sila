@@ -78,7 +78,7 @@
 .eauction-preview-popover {
   position: absolute;
   bottom: calc(100% + 0.75rem);
-  right: 0;
+  left: 0;
   width: 22rem;
   background: #ffffff;
   color: #0f172a;
