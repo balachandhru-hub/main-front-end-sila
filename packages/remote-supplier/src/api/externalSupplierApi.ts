@@ -95,7 +95,7 @@ export const sendExternalSupplierMessage = async (
     const response = await externalSupplierInstance.post<ExternalChatMessageDto>(
       '/api/v1/buyer/external-message/supplier-send',
       payload,
-      sessionTokenHeader(sessionToken)
+      { ...sessionTokenHeader(sessionToken), params: { rfqId: payload.rfqId } }
     );
     return response.data;
   } catch (error: any) {

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./BuyerRFQChat.css";
-import type { RfqSupplierRefDto } from "../../dto/rfqDto";
+import type { RfqSupplierRefDto, RfqExternalSupplierRefDto } from "../../dto/rfqDto";
 import type { ChatMessageDto, ChatThreadDto } from "../../dto/chatDto";
 import {
   fetchBuyerMessageThreads,
@@ -9,7 +9,7 @@ import {
   sendBuyerMessage,
   downloadBuyerMessageAttachment,
 } from "../../api/Buyerapi";
-import { useBuyerAuthStore } from "../../store/useBuyerAuthStore";
+import type { PersonDetailDto } from "../../api/Buyerapi";
 import { toastService } from "@vosox/shared-ui";
 import ChatConversation from "./ChatConversation";
 import ChatDetails from "./ChatDetails";
@@ -29,6 +29,17 @@ interface BuyerRFQChatProps {
   supplierIds: RfqSupplierRefDto[];
   /** supplierId -> known organization/supplier display name, e.g. sourced from supplierQuotation. */
   supplierNames?: Record<string, string>;
+  /** The ONLY source of which external suppliers appear in the chat and their display names. */
+  externalSupplierIds?: RfqExternalSupplierRefDto[];
+  /**
+   * The logged-in buyer's own profile, for the "Buyer" participant shown in
+   * Chat Details. Passed in rather than read from a store here because this
+   * component is shared across host apps (BuyerDashboard in remote-buyer,
+   * BuyerAdminDash in remote-platform-user) that keep that profile in their
+   * own, separate auth stores.
+   */
+  buyerProfile: PersonDetailDto | null;
+  isLoadingBuyerProfile?: boolean;
 }
 
 const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
@@ -38,6 +49,9 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
   rfqTitle,
   supplierIds,
   supplierNames,
+  externalSupplierIds = [],
+  buyerProfile,
+  isLoadingBuyerProfile = false,
 }) => {
   const [threads, setThreads] = useState<ChatThreadDto[]>([]);
   // Starts true (not false) because threads are always fetched on mount — this
@@ -48,11 +62,6 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
   const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "conversation">("list");
   const [isChatDetailsOpen, setIsChatDetailsOpen] = useState(false);
-
-  // Sourced from the store, which fetches it once (on login and on reload) via
-  // BuyerApp's mount effect - no per-component fetch, no local cache.
-  const buyerProfile = useBuyerAuthStore((state) => state.personDetail);
-  const isLoadingBuyerProfile = useBuyerAuthStore((state) => state.personDetailLoading);
 
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -69,11 +78,14 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
   // sees the currently open thread without reconnecting on every supplier switch.
   const selectedThreadIdRef = useRef<string | null>(null);
 
-  // One chat thread per supplier. `supplierIds` from the RFQ is the ONLY
-  // source for which suppliers appear here — a matching thread (if any) is
-  // merged in, but a supplier with no thread still gets a "Start chat" entry.
+  // One chat thread per supplier. `supplierIds`/`externalSupplierIds` from the
+  // RFQ are the ONLY source for which suppliers appear here — a matching
+  // thread (if any) is merged in, but a supplier with no thread still gets a
+  // "Start chat" entry. External suppliers are kept in the same list, keyed
+  // by externalSupplierId instead of supplierId and flagged via isExternal so
+  // sending/thread-matching can route to the right id.
   const chatSuppliers = useMemo<ChatSupplier[]>(() => {
-    const list: ChatSupplier[] = supplierIds
+    const internal: ChatSupplier[] = supplierIds
       .filter((s) => !!s?.supplierId)
       .map((s) => {
         const thread = threads.find((t) => t.supplierId === s.supplierId) || null;
@@ -82,8 +94,27 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
           supplierId: s.supplierId,
           supplierName,
           thread,
+          isExternal: false,
         };
       });
+
+    const external: ChatSupplier[] = externalSupplierIds
+      .filter((s) => !!s?.externalSupplierId)
+      .map((s) => {
+        const thread =
+          threads.find(
+            (t) => t.externalSupplierId === s.externalSupplierId || t.supplierId === s.externalSupplierId
+          ) || null;
+        const supplierName = thread?.counterpartyName || s.externalSupplierName || "External Supplier";
+        return {
+          supplierId: s.externalSupplierId,
+          supplierName,
+          thread,
+          isExternal: true,
+        };
+      });
+
+    const list = [...internal, ...external];
 
     list.sort((a, b) => {
       const at = a.thread?.lastMessageAt ? new Date(a.thread.lastMessageAt).getTime() : 0;
@@ -92,7 +123,7 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
     });
 
     return list;
-  }, [supplierIds, threads, supplierNames]);
+  }, [supplierIds, externalSupplierIds, threads, supplierNames]);
 
   const currentSupplier = chatSuppliers.find((s) => s.supplierId === selectedSupplierId) || null;
   const totalUnread = threads.reduce((sum, t) => sum + (t.unreadCount || 0), 0);
@@ -103,8 +134,12 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
     const seen = new Map<string, string>();
     for (const message of messages) {
       if (message.senderOrganizationType?.toLowerCase() === "buyer") continue;
-      if (!message.senderUserId || !message.senderName) continue;
-      if (!seen.has(message.senderUserId)) seen.set(message.senderUserId, message.senderName);
+      if (!message.senderName) continue;
+      // External supplier messages have no senderUserId (they're an unregistered
+      // session-token contact, not an internal user) — fall back to the sender
+      // name itself as the dedup key so they still show up here.
+      const key = message.senderUserId || message.senderName;
+      if (!seen.has(key)) seen.set(key, message.senderName);
     }
     return Array.from(seen.entries()).map(([userId, name]) => ({ userId, name }));
   }, [messages]);
@@ -311,7 +346,9 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
 
       const response = await sendBuyerMessage({
         rfqId,
-        supplierId: selectedSupplierId,
+        ...(supplier.isExternal
+          ? { externalSupplierId: selectedSupplierId }
+          : { supplierId: selectedSupplierId }),
         body,
         attachments,
       });
@@ -321,14 +358,17 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
       setMessages((prev) => (prev.some((m) => m.id === response.id) ? prev : [...prev, response]));
 
       setThreads((prev) => {
-        const idx = prev.findIndex((t) => t.supplierId === selectedSupplierId);
+        const idx = prev.findIndex((t) =>
+          supplier.isExternal ? t.externalSupplierId === selectedSupplierId : t.supplierId === selectedSupplierId
+        );
         if (idx === -1) {
           const newThread: ChatThreadDto = {
             threadId: response.threadId,
             rfqId,
             rfqNumber: rfqNumber || "",
             buyerId: "",
-            supplierId: selectedSupplierId,
+            supplierId: supplier.isExternal ? "" : selectedSupplierId,
+            externalSupplierId: supplier.isExternal ? selectedSupplierId : undefined,
             counterpartyName: supplier.supplierName,
             lastMessageBody: response.body,
             lastMessageAt: response.dateCreated,
@@ -391,7 +431,7 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
           </button>
         </div>
 
-        {supplierIds.length === 0 ? (
+        {supplierIds.length === 0 && externalSupplierIds.length === 0 ? (
           <div className="brc-empty-state">
             <div className="brc-empty-state-icon">
               <IconMessageSquare />

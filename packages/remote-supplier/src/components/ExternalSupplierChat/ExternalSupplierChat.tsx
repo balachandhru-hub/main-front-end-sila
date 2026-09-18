@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "../../../../remote-buyer/src/components/BuyerRFQChat/BuyerRFQChat.css";
 import { isErrorResponse, toastService } from "@vosox/shared-ui";
 import type { ExternalChatMessageDto, ExternalChatThreadDto } from "../../dto/externalChatDto";
@@ -11,7 +11,6 @@ import {
 } from "../../api/externalSupplierApi";
 import ExternalChatConversation from "./ExternalChatConversation";
 import ExternalChatDetails from "./ExternalChatDetails";
-import type { ObservedParticipant } from "./types";
 import {
   downloadBase64File,
   fileToBase64,
@@ -31,6 +30,8 @@ interface ExternalSupplierChatProps {
   rfqTitle?: string;
   /** From the external RFQ response, if the backend supplies it — preferred over the threads API's counterpartyName. */
   buyerName?: string;
+  /** From the external RFQ response — the invited external contact's own name, shown for "You" in chat details. */
+  externalSupplierName?: string;
 }
 
 // An external supplier bid link is always a single conversation between the
@@ -47,6 +48,7 @@ const ExternalSupplierChat: React.FC<ExternalSupplierChatProps> = ({
   rfqNumber,
   rfqTitle,
   buyerName,
+  externalSupplierName,
 }) => {
   const [thread, setThread] = useState<ExternalChatThreadDto | null>(null);
   const [loadingThread, setLoadingThread] = useState(true);
@@ -74,18 +76,6 @@ const ExternalSupplierChat: React.FC<ExternalSupplierChatProps> = ({
   // Buyer's identity — the threads API's counterpartyName is only a fallback
   // for when it's unavailable.
   const counterpartyName = buyerName || thread?.counterpartyName || "Buyer";
-
-  // The buyer-side people who've actually sent a message are only knowable
-  // from the conversation itself — there is no invited-users list for them.
-  const observedParticipants = useMemo<ObservedParticipant[]>(() => {
-    const seen = new Map<string, string>();
-    for (const message of messages) {
-      if (message.senderOrganizationType?.toLowerCase() === "supplier") continue;
-      if (!message.senderUserId || !message.senderName) continue;
-      if (!seen.has(message.senderUserId)) seen.set(message.senderUserId, message.senderName);
-    }
-    return Array.from(seen.entries()).map(([userId, name]) => ({ userId, name }));
-  }, [messages]);
 
   const loadInitialHistory = async (threadId: string, unreadCount: number) => {
     setLoadingMessages(true);
@@ -382,7 +372,7 @@ const ExternalSupplierChat: React.FC<ExternalSupplierChatProps> = ({
           {isChatDetailsOpen ? (
             <ExternalChatDetails
               counterpartyName={counterpartyName}
-              observedParticipants={observedParticipants}
+              externalSupplierName={externalSupplierName}
               onBack={() => setIsChatDetailsOpen(false)}
             />
           ) : (

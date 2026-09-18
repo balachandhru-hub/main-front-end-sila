@@ -636,6 +636,8 @@ const BuyersDashboard: React.FC = () => {
   };
 
   const currentUserId = useBuyerAuthStore((state) => state.personDetail?.userId || null);
+  const buyerProfile = useBuyerAuthStore((state) => state.personDetail);
+  const isLoadingBuyerProfile = useBuyerAuthStore((state) => state.personDetailLoading);
 
   const [materialRecords, setMaterialRecords] = useState<PendingMaterialApproval[]>([]);
   const [loadingMaterial, setLoadingMaterial] = useState(false);
@@ -1785,6 +1787,9 @@ const BuyersDashboard: React.FC = () => {
             rfqTitle={fullPageRfq?.title}
             supplierIds={fullPageRfq?.supplierIds || []}
             supplierNames={chatSupplierNames}
+            externalSupplierIds={fullPageRfq?.externalSupplierIds || []}
+            buyerProfile={buyerProfile}
+            isLoadingBuyerProfile={isLoadingBuyerProfile}
           />
         )}
       </div>

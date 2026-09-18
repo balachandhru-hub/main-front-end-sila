@@ -4,6 +4,8 @@ export interface ChatSupplier {
   supplierId: string;
   supplierName: string;
   thread: ChatThreadDto | null;
+  /** True when this row is an external (unregistered) supplier, keyed by externalSupplierId instead of supplierId. */
+  isExternal: boolean;
 }
 
 export interface PendingAttachment {

@@ -1015,6 +1015,8 @@ const ExternalSupplierBid: React.FC = () => {
           rfqId={rfqId!}
           sessionToken={sessionToken!}
           rfqTitle={rfq?.title}
+          buyerName={rfq?.buyerName}
+          externalSupplierName={rfq?.externalSupplierName}
         />
       )}
 

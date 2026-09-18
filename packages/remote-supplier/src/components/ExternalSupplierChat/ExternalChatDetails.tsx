@@ -1,22 +1,24 @@
 import React from "react";
-import type { ObservedParticipant } from "./types";
 import { getInitials } from "../../../../remote-buyer/src/components/BuyerRFQChat/chatUtils";
 import { IconChevronLeft } from "../../../../remote-buyer/src/components/BuyerRFQChat/ChatIcons";
 
 interface ExternalChatDetailsProps {
   counterpartyName: string;
-  observedParticipants: ObservedParticipant[];
+  externalSupplierName?: string;
   onBack: () => void;
 }
 
 // Unlike the logged-in Buyer/Supplier chats, an external supplier bid link has
 // no authenticated profile to show for "You" — the invited contact is only
-// ever known by the RFQ invitation itself, not a per-user session.
+// ever known by the RFQ invitation itself, not a per-user session. It is also
+// always exactly one buyer and one external contact — there's no multi-user
+// participant list to observe from message history like the internal chats.
 const ExternalChatDetails: React.FC<ExternalChatDetailsProps> = ({
   counterpartyName,
-  observedParticipants,
+  externalSupplierName,
   onBack,
 }) => {
+  const youLabel = externalSupplierName ? `You (${externalSupplierName})` : "You (External Supplier)";
   return (
     <div className="brc-details">
       <div className="brcd-header">
@@ -44,29 +46,23 @@ const ExternalChatDetails: React.FC<ExternalChatDetailsProps> = ({
         <div className="brcd-section">
           <div className="brcd-section-title">Chat participants</div>
 
-          <div className="brcd-participant-group-label">External Supplier</div>
+          <div className="brcd-participant-group-label">Supplier</div>
           <div className="brc-participant-row">
-            <div className="brc-supplier-avatar brc-participant-avatar">{getInitials("External Supplier")}</div>
+            <div className="brc-supplier-avatar brc-participant-avatar">
+              {getInitials(externalSupplierName || "External Supplier")}
+            </div>
             <div className="brc-participant-info">
-              <div className="brc-participant-name">You (External Supplier)</div>
+              <div className="brc-participant-name">{youLabel}</div>
             </div>
           </div>
 
-          <div className="brcd-participant-group-label">{counterpartyName}</div>
-          {observedParticipants.length === 0 ? (
-            <div className="brcd-empty-note">
-              No one from {counterpartyName} has sent a message in this conversation yet.
+          <div className="brcd-participant-group-label">Buyer</div>
+          <div className="brc-participant-row">
+            <div className="brc-supplier-avatar brc-participant-avatar">{getInitials(counterpartyName)}</div>
+            <div className="brc-participant-info">
+              <div className="brc-participant-name">{counterpartyName}</div>
             </div>
-          ) : (
-            observedParticipants.map((participant) => (
-              <div key={participant.userId} className="brc-participant-row">
-                <div className="brc-supplier-avatar brc-participant-avatar">{getInitials(participant.name)}</div>
-                <div className="brc-participant-info">
-                  <div className="brc-participant-name">{participant.name}</div>
-                </div>
-              </div>
-            ))
-          )}
+          </div>
         </div>
       </div>
     </div>

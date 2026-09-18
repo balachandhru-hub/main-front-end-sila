@@ -159,6 +159,12 @@ export interface RfqSupplierRefDto {
   supplierName: string;
 }
 
+export interface RfqExternalSupplierRefDto {
+  externalSupplierId: string;
+  externalSupplierName: string;
+  supplierType: string;
+}
+
 export interface BuyerRFQDetailResponse {
   title: string;
   description: string;
@@ -176,6 +182,7 @@ export interface BuyerRFQDetailResponse {
   questions: RfqQuestionDto[];
   items: RfqItemDto[];
   supplierIds: RfqSupplierRefDto[];
+  externalSupplierIds?: RfqExternalSupplierRefDto[];
   invitedUsers?: InvitedUserDto[] | null;
   rfqVerificationTemplateId: string | null;
   supplierQuotation: BuyerSupplierQuotation[];
