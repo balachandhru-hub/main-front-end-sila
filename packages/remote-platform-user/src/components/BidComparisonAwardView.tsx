@@ -537,7 +537,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     return (<div className="bca-loading"><div className="bca-spinner" /><span>Loading Bid Comparison...</span></div>);
   }
   if (error && !rfq) {
-    return (<div className="bca-error"><p>{error}</p><button className="bca-btn bca-btn-outline" onClick={onBack}>Back to RFQs</button></div>);
+    return (<div className="bca-error"><p>{error}</p><button className="bca-btn bca-btn-outline" onClick={onBack}>Back</button></div>);
   }
   if (!rfq) return null;
 
@@ -556,7 +556,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     <div className="bca-page">
       <div className="bca-page-header">
         <div className="bca-header-left">
-          <button className="bca-back-circle-btn" onClick={onBack} title="Back to RFQs">
+          <button className="bca-back-circle-btn" onClick={onBack} title="Back">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 15L7 10L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
