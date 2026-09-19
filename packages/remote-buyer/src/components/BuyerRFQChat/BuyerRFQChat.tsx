@@ -10,7 +10,7 @@ import {
   downloadBuyerMessageAttachment,
 } from "../../api/Buyerapi";
 import type { PersonDetailDto } from "../../api/Buyerapi";
-import { toastService } from "@vosox/shared-ui";
+import { EmptyState, Loader, toastService } from "@vosox/shared-ui";
 import ChatConversation from "./ChatConversation";
 import ChatDetails from "./ChatDetails";
 import type { ChatSupplier, ObservedParticipant } from "./types";
@@ -412,16 +412,22 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
 
   return (
     <div className="brc-overlay" onClick={onClose}>
-      <div className="brc-drawer" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="brc-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="brc-drawer-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="brc-header">
           <div className="brc-header-title-row">
-            <span className="brc-header-icon">
+            <span className="brc-header-icon" aria-hidden="true">
               <IconMessageSquare />
             </span>
             <div className="brc-header-text">
-              <h2 className="brc-header-title">{rfqTitle ? `Chat — ${rfqTitle}` : "RFQ Chat"}</h2>
+              <h2 id="brc-drawer-title" className="brc-header-title">{rfqTitle ? `Chat — ${rfqTitle}` : "RFQ Chat"}</h2>
               <div className="brc-header-subtitle">
-                {rfqNumber ? `${rfqNumber}` : ""}
+                {rfqNumber ? <span className="sila-ref">{rfqNumber}</span> : ""}
                 {totalUnread > 0 ? `${rfqNumber ? " • " : ""}${totalUnread} unread` : ""}
               </div>
             </div>
@@ -432,11 +438,8 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
         </div>
 
         {supplierIds.length === 0 && externalSupplierIds.length === 0 ? (
-          <div className="brc-empty-state">
-            <div className="brc-empty-state-icon">
-              <IconMessageSquare />
-            </div>
-            <div className="brc-empty-state-title">No suppliers are invited to this RFQ.</div>
+          <div className="brc-state-wrap">
+            <EmptyState icon={<IconMessageSquare />} title="No suppliers are invited to this RFQ." />
           </div>
         ) : (
           <div className={`brc-body brc-mobile-${mobileView}`}>
@@ -444,13 +447,12 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
               <div className="brc-supplier-list-header">Chats</div>
               <div className="brc-supplier-items">
                 {loadingThreads ? (
-                  <div className="brc-loading-state">
-                    <div className="brc-spinner-md" />
-                    <span>Loading conversations...</span>
+                  <div className="brc-state-wrap">
+                    <Loader size={24} message="Loading conversations..." />
                   </div>
                 ) : chatSuppliers.length === 0 ? (
-                  <div className="brc-empty-state">
-                    <div className="brc-empty-state-title">No suppliers are invited to this RFQ.</div>
+                  <div className="brc-state-wrap">
+                    <EmptyState title="No suppliers are invited to this RFQ." />
                   </div>
                 ) : (
                   <>
@@ -459,12 +461,19 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
                         key={supplier.supplierId}
                         className={`brc-supplier-item${
                           supplier.supplierId === selectedSupplierId ? " brc-supplier-item-active" : ""
-                        }`}
+                        }${supplier.thread?.unreadCount ? " brc-supplier-item-unread" : ""}`}
                         onClick={() => handleSelectSupplier(supplier.supplierId)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleSelectSupplier(supplier.supplierId);
+                          }
+                        }}
                         role="button"
                         tabIndex={0}
+                        aria-current={supplier.supplierId === selectedSupplierId ? "true" : undefined}
                       >
-                        <div className="brc-supplier-avatar">{getInitials(supplier.supplierName)}</div>
+                        <div className="brc-supplier-avatar" aria-hidden="true">{getInitials(supplier.supplierName)}</div>
                         <div className="brc-supplier-info">
                           <div className="brc-supplier-name-row">
                             <span className="brc-supplier-name">{supplier.supplierName}</span>
@@ -483,7 +492,10 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
                               <span className="brc-supplier-preview-start">Start chat</span>
                             )}
                             {!!supplier.thread?.unreadCount && (
-                              <span className="brc-unread-badge">
+                              <span
+                                className="brc-unread-badge"
+                                aria-label={`${supplier.thread.unreadCount} unread`}
+                              >
                                 {supplier.thread.unreadCount > 99 ? "99+" : supplier.thread.unreadCount}
                               </span>
                             )}

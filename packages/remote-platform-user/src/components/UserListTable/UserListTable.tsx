@@ -1,5 +1,6 @@
 import React from 'react';
 import { FaTrash } from 'react-icons/fa';
+import { EmptyState, StatusBadge } from '@vosox/shared-ui';
 import type { User } from '../../types';
 import './UserListTable.css';
 
@@ -16,10 +17,10 @@ const UserListTable: React.FC<UserListTableProps> = ({ users, title, onDelete })
       <h3 className="nad-table-title">{title}</h3>
 
       {users.length === 0 ? (
-        <p className="nad-empty">No users found</p>
+        <EmptyState className="nad-empty" title="No users found" />
       ) : (
         <div className="nad-table-wrapper">
-          <table className="nad-table">
+          <table className="nad-table ult-table">
             <thead>
               <tr>
                 <th>Name</th>
@@ -27,7 +28,7 @@ const UserListTable: React.FC<UserListTableProps> = ({ users, title, onDelete })
                 <th>Username</th>
                 <th>Role</th>
                 <th>Status</th>
-                <th>Actions</th>
+                <th className="ult-col-actions">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -44,19 +45,23 @@ const UserListTable: React.FC<UserListTableProps> = ({ users, title, onDelete })
                     </span>
                   </td>
                   <td>
-                    <span className={`nad-status nad-status-${user.status}`}>
-                      {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-                    </span>
+                    <StatusBadge
+                      status={user.status}
+                      label={user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                      className={`nad-status nad-status-${user.status}`}
+                    />
                   </td>
                   <td>
                     <div className="nad-actions">
                       {onDelete && (
                         <button
+                          type="button"
                           className="nad-btn-action nad-btn-delete"
                           onClick={() => onDelete(user.id)}
                           title="Delete user"
+                          aria-label={`Delete user ${user.name}`}
                         >
-                          <FaTrash />
+                          <FaTrash aria-hidden="true" />
                         </button>
                       )}
                     </div>

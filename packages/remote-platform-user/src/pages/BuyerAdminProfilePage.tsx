@@ -39,17 +39,16 @@ const BuyerAdminProfilePage: React.FC = () => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#ffffff' }}>
-      <Header />
-        <ProfileView
-          personDetail={personDetail as unknown as PersonDetail | null}
-          loading={personDetailLoading}
-          saving={saving}
-          error={error}
-          onSave={handleSave}
-          onBack={() => navigate('/platform-user/buyer-admin')}
-        />
-    </div>
+    <Header>
+      <ProfileView
+        personDetail={personDetail as unknown as PersonDetail | null}
+        loading={personDetailLoading}
+        saving={saving}
+        error={error}
+        onSave={handleSave}
+        onBack={() => navigate('/platform-user/buyer-admin')}
+      />
+    </Header>
   );
 };
 

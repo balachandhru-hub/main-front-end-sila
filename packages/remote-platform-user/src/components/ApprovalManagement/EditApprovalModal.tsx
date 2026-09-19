@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./EditApprovalModal.css";
+import { FaTimes } from "react-icons/fa";
 import { toastService } from "@vosox/shared-ui";
 import { updateApprovalFlow } from "./approvalManagementApi";
 
@@ -52,22 +53,32 @@ const EditApprovalModal: React.FC<EditApprovalModalProps> = ({
 
   return (
     <div className="aem-overlay" onClick={() => !saving && onClose()}>
-      <form className="aem-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit} noValidate>
+      <form
+        className="aem-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="aem-title"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={handleSubmit}
+        noValidate
+      >
         <div className="aem-header">
           <div>
-            <h2 className="aem-title">Edit Approval</h2>
+            <h2 className="aem-title" id="aem-title">Edit Approval</h2>
             <p className="aem-subtitle">Update the approval name.</p>
           </div>
           <button type="button" className="aem-close" onClick={onClose} disabled={saving} aria-label="Close">
-            ✕
+            <FaTimes aria-hidden="true" />
           </button>
         </div>
 
         <div className="aem-body">
           <label className="aem-field">
-            <span className="aem-label">Approval Name <em>*</em></span>
+            <span className="aem-label">Approval Name <em aria-hidden="true">*</em></span>
             <input
               className={`aem-input ${errors.approvalName ? "aem-input-error" : ""}`}
+              aria-required="true"
+              aria-invalid={!!errors.approvalName}
               value={approvalName}
               autoFocus
               onChange={(e) => {
@@ -75,15 +86,15 @@ const EditApprovalModal: React.FC<EditApprovalModalProps> = ({
                 setErrors((prev) => ({ ...prev, approvalName: undefined }));
               }}
             />
-            {errors.approvalName && <span className="aem-error">{errors.approvalName}</span>}
+            {errors.approvalName && <span className="aem-error" role="alert">{errors.approvalName}</span>}
           </label>
         </div>
 
         <div className="aem-footer">
-          <button type="button" className="aem-btn aem-btn-secondary" onClick={onClose} disabled={saving}>
+          <button type="button" className="aem-btn aem-btn-secondary sila-btn sila-btn--secondary" onClick={onClose} disabled={saving}>
             Cancel
           </button>
-          <button type="submit" className="aem-btn aem-btn-primary" disabled={saving}>
+          <button type="submit" className="aem-btn aem-btn-primary sila-btn sila-btn--primary" disabled={saving}>
             {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>

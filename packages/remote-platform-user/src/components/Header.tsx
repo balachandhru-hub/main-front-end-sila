@@ -1,165 +1,38 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AppShell, AccountMenuIcons } from '@vosox/shared-ui';
+import type { AppNavItem, AppUserMenuItem } from '@vosox/shared-ui';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
-import './Header.css';
+import type { UserRole } from '../types';
 
-const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;
-
-const IconEdit = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-  </svg>
-);
-
-const IconLock = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-);
-
-const IconBuilding = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
-    <path d="M6 12H4a2 2 0 0 0-2 2v8" />
-    <path d="M18 9h2a2 2 0 0 1 2 2v11" />
-    <path d="M10 6h4" />
-    <path d="M10 10h4" />
-    <path d="M10 14h4" />
-    <path d="M10 18h4" />
-  </svg>
-);
-
-const IconHelpCircle = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="10" />
-    <path d="M12 16v-4M12 8h.01" />
-  </svg>
-);
-
-const IconLogOut = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-    <polyline points="16 17 21 12 16 7" />
-    <line x1="21" y1="12" x2="9" y2="12" />
-  </svg>
-);
-
-export interface HeaderNavLeaf {
-  key: string;
-  label: string;
-}
-// subItems can be a flat leaf (existing) or a non-clickable group with nested leaves.
-export interface HeaderNavGroup {
-  label: string;
-  items: HeaderNavLeaf[];
-}
-export type HeaderNavSubEntry = HeaderNavLeaf | HeaderNavGroup;
-
-const isHeaderNavGroup = (entry: HeaderNavSubEntry): entry is HeaderNavGroup => 'items' in entry;
-
-export interface HeaderNavItem {
-  key: string;
-  icon?: React.ReactNode;
-  label: string;
-  badge?: number;
-  subItems?: HeaderNavSubEntry[];
-}
+export type HeaderNavItem = AppNavItem;
 
 export interface HeaderProps {
   navItems?: HeaderNavItem[];
   activeNav?: string;
   onNavClick?: (key: string) => void;
   onLogout?: () => void;
+  /** The page rendered inside the shell. */
+  children?: React.ReactNode;
 }
 
-const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogout }) => {
+const PROFILE_ROUTE: Partial<Record<UserRole, string>> = {
+  BUYER_ADMINISTRATOR: '/platform-user/buyer-admin/profile',
+  SUPPLIER_ADMINISTRATOR: '/platform-user/supplier-admin/profile',
+  BUYER_NETWORK_ADMIN: '/platform-user/buyer-network-admin/profile',
+  SUPPLIER_NETWORK_ADMIN: '/platform-user/supplier-network-admin/profile',
+};
+
+/** Admin portal chrome: shared AppShell wired to the admin session and role routes. */
+const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogout, children }) => {
   const navigate = useNavigate();
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const personDetail = useNetworkAdminAuthStore((state) => state.personDetail);
-  const [openDropdownKey, setOpenDropdownKey] = useState<string | null>(null);
-  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const role = currentUser?.userRole;
 
-  const handleDropdownEnter = (key: string) => {
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    setOpenDropdownKey(key);
-  };
+  const goToProfile = () => navigate((role && PROFILE_ROUTE[role]) || '/platform-user/dashboard');
 
-  const handleDropdownLeave = () => {
-    hideTimerRef.current = setTimeout(() => {
-      setOpenDropdownKey(null);
-    }, 400);
-  };
-
-  const userName = personDetail?.name || '';
-  const userEmail = personDetail?.email || '';
-  const firstLetter = userName ? userName.trim().charAt(0).toUpperCase() : '';
-
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    if (isDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isDropdownOpen]);
-
-  const handleAvatarClick = () => setIsDropdownOpen((prev) => !prev);
-
-  const handleCompanyProfile = () => {
-    setIsDropdownOpen(false);
-    if (onNavClick) {
-      onNavClick("companyProfile");
-    } else {
-      const role = currentUser?.userRole;
-      if (role === 'BUYER_ADMINISTRATOR') {
-        navigate('/platform-user/buyer-admin/profile');
-      } else if (role === 'SUPPLIER_ADMINISTRATOR') {
-        navigate('/platform-user/supplier-admin/profile');
-      } else if (role === 'BUYER_NETWORK_ADMIN') {
-        navigate('/platform-user/buyer-network-admin/profile');
-      } else if (role === 'SUPPLIER_NETWORK_ADMIN') {
-        navigate('/platform-user/supplier-network-admin/profile');
-      } else {
-        navigate('/platform-user/dashboard');
-      }
-    }
-  };
-
-  const handleEditProfile = () => {
-    setIsDropdownOpen(false);
-    const role = currentUser?.userRole;
-
-    if (role === 'BUYER_ADMINISTRATOR') {
-      navigate('/platform-user/buyer-admin/profile');
-    } else if (role === 'SUPPLIER_ADMINISTRATOR') {
-      navigate('/platform-user/supplier-admin/profile');
-    } else if (role === 'BUYER_NETWORK_ADMIN') {
-      navigate('/platform-user/buyer-network-admin/profile');
-    } else if (role === 'SUPPLIER_NETWORK_ADMIN') {
-      navigate('/platform-user/supplier-network-admin/profile');
-    } else {
-      navigate('/platform-user/dashboard');
-    }
-  };
-
-
-  const handleResetPassword = () => {
-    setIsDropdownOpen(false);
-  };
-
-  const handleSupport = () => {
-    setIsDropdownOpen(false);
-  };
-
-  const handleLogoutClick = () => {
-    setIsDropdownOpen(false);
+  const handleLogout = () => {
     if (onLogout) {
       onLogout();
     } else {
@@ -180,126 +53,33 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
     }
   };
 
+  const userMenuItems: AppUserMenuItem[] = [
+    {
+      key: 'companyProfile',
+      label: 'Company Profile',
+      icon: <AccountMenuIcons.Building />,
+      onSelect: () => (onNavClick ? onNavClick('companyProfile') : goToProfile()),
+    },
+    { key: 'editProfile', label: 'Edit Profile', icon: <AccountMenuIcons.User />, onSelect: goToProfile },
+    { key: 'resetPassword', label: 'Reset Password', icon: <AccountMenuIcons.Lock />, onSelect: () => undefined },
+    { key: 'support', label: 'Support', icon: <AccountMenuIcons.Help />, onSelect: () => undefined },
+    { key: 'logout', label: 'Log Out', icon: <AccountMenuIcons.LogOut />, onSelect: handleLogout, tone: 'danger', dividerBefore: true },
+  ];
+
   return (
-    <header className="vsx-header">
-      <div 
-        className="vsx-header-brand" 
-        onClick={handleLogoClick}
-        style={{ cursor: 'pointer' }}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLogoClick(); }}
-      >
-        <img src={sila_logo} alt="SILA" className="vsx-header-logo" />
-      </div>
-
-
-      {navItems && navItems.length > 0 && (
-        <nav className="vsx-header-nav">
-          {navItems.map((item) => (
-            item.subItems ? (
-              <div
-                key={item.key}
-                className="bad-header-dropdown-container"
-                onMouseEnter={() => handleDropdownEnter(item.key)}
-                onMouseLeave={handleDropdownLeave}
-              >
-                <button
-                  type="button"
-                  className={`vsx-header-nav-item${activeNav === item.key || item.subItems.some(s => isHeaderNavGroup(s) ? s.items.some(leaf => leaf.key === activeNav) : s.key === activeNav) ? " vsx-header-nav-item-active" : ""}`}
-                >
-                  <span className="vsx-header-nav-label">{item.label}</span>
-                </button>
-                <div
-                  className={`bad-header-dropdown-menu${item.subItems.some(isHeaderNavGroup) ? " bad-header-dropdown-menu-grouped" : ""}`}
-                  style={openDropdownKey === item.key ? { visibility: 'visible', opacity: 1, pointerEvents: 'auto' } : {}}
-                >
-                  {item.subItems.map((sub, subIdx) =>
-                    isHeaderNavGroup(sub) ? (
-                      <div key={`${item.key}-group-${subIdx}`} className="bad-header-subitem-group">
-                        <div className="bad-header-subitem bad-header-subitem-parent">
-                          <span>{sub.label}</span>
-                          <span className="bad-header-subitem-arrow">›</span>
-                        </div>
-                        <div className="bad-header-subitem-submenu">
-                          {sub.items.map(leaf => (
-                            <div
-                              key={leaf.key}
-                              className={`bad-header-subitem${activeNav === leaf.key ? " bad-header-subitem-active" : ""}`}
-                              onClick={() => { onNavClick && onNavClick(leaf.key); setOpenDropdownKey(null); }}
-                            >
-                              {leaf.label}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        key={sub.key}
-                        className={`bad-header-subitem${activeNav === sub.key ? " bad-header-subitem-active" : ""}`}
-                        onClick={() => { onNavClick && onNavClick(sub.key); setOpenDropdownKey(null); }}
-                      >
-                        {sub.label}
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-            ) : (
-              <button
-                key={item.key}
-                type="button"
-                className={`vsx-header-nav-item${activeNav === item.key ? " vsx-header-nav-item-active" : ""}`}
-                onClick={() => onNavClick && onNavClick(item.key)}
-              >
-                <span className="vsx-header-nav-label">{item.label}</span>
-                {item.badge ? <span className="vsx-header-nav-badge">{item.badge}</span> : null}
-              </button>
-            )
-          ))}
-        </nav>
-      )}
-
-      <div className="vsx-header-spacer" />
-
-      <div className="vsx-header-right" style={{ position: 'relative' }}>
-        <div className="vsx-header-user-card" onClick={handleAvatarClick} role="button" tabIndex={0}>
-          <div className="vsx-header-account">
-            <span className="vsx-header-account-name" title={userName}>{userName || 'Admin Portal'}</span>
-            <span className="vsx-header-account-email" title={userEmail}>{userEmail || 'System Administrator'}</span>
-          </div>
-          <div className="vsx-header-avatar">
-            {firstLetter || 'A'}
-          </div>
-        </div>
-
-        {isDropdownOpen && (
-          <div ref={dropdownRef} className="vsx-profile-dropdown">
-            <button className="vsx-dropdown-item" onClick={handleCompanyProfile}>
-              <IconBuilding />
-              <span>Company Profile</span>
-            </button>
-            <button className="vsx-dropdown-item" onClick={handleEditProfile}>
-              <IconEdit />
-              <span>Edit Profile</span>
-            </button>
-            <button className="vsx-dropdown-item" onClick={handleResetPassword}>
-              <IconLock />
-              <span>Reset Password</span>
-            </button>
-            <button className="vsx-dropdown-item" onClick={handleSupport}>
-              <IconHelpCircle />
-              <span>Support</span>
-            </button>
-            <div className="vsx-dropdown-divider" />
-            <button className="vsx-dropdown-item vsx-dropdown-item-danger" onClick={handleLogoutClick}>
-              <IconLogOut />
-              <span>Log Out</span>
-            </button>
-          </div>
-        )}
-      </div>
-    </header>
+    <AppShell
+      onLogoClick={handleLogoClick}
+      navItems={navItems}
+      activeNav={activeNav}
+      onNavClick={onNavClick}
+      userName={personDetail?.name}
+      userEmail={personDetail?.email}
+      userFallbackName="Admin Portal"
+      userFallbackEmail="System Administrator"
+      userMenuItems={userMenuItems}
+    >
+      {children}
+    </AppShell>
   );
 };
 

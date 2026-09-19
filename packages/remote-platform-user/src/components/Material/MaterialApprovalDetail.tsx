@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { toastService } from '@vosox/shared-ui';
+import { EmptyState, Loader, toastService } from '@vosox/shared-ui';
 import type {
   PendingMaterialApproval,
   MaterialApprovalDetail as MaterialApprovalDetailDto,
@@ -11,12 +11,18 @@ import {
   MATERIAL_APPROVAL_STATUS,
 } from './materialApi';
 import MaterialApprovalCard from './MaterialApprovalCard';
+import { MaterialStatusBadge } from './MaterialTable';
 import './MaterialApproval.css';
 
-const IconClose = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
+const IconBack = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M19 12H5M12 19l-7-7 7-7" />
+  </svg>
+);
+
+const IconArrow = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m9 6 6 6-6 6" />
   </svg>
 );
 
@@ -27,10 +33,10 @@ interface MaterialApprovalDetailProps {
   onApprovalSubmitted: () => void;
 }
 
-const InfoField: React.FC<{ label: string; value?: string | null }> = ({ label, value }) => (
+const InfoField: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, value }) => (
   <div className="matap-info-field">
-    <div className="matap-info-label">{label}</div>
-    <div className="matap-info-value">{value || '—'}</div>
+    <dt className="matap-info-label">{label}</dt>
+    <dd className="matap-info-value">{value || '—'}</dd>
   </div>
 );
 
@@ -86,85 +92,100 @@ const MaterialApprovalDetail: React.FC<MaterialApprovalDetailProps> = ({
   const isDecided = overallTone === 'approved' || overallTone === 'rejected';
 
   const approvers = [...(detail?.approvalUsers || [])].sort((a, b) => a.order - b.order);
+  const approvedCount = approvers.filter((a) => classifyStatusText(a.status) === 'approved').length;
 
   return (
-    <div className="bad-modal bad-rfq-fullpage matap-detail">
+    <div className="matap-detail">
       <div className="matap-detail-header">
-        <button className="matap-detail-close" onClick={onBack} aria-label="Close">
-          <IconClose />
+        <button
+          type="button"
+          className="sila-btn sila-btn--secondary sila-btn--icon matap-detail-close"
+          onClick={onBack}
+          aria-label="Back to list"
+          title="Back to list"
+        >
+          <IconBack />
         </button>
-        <span className="matap-detail-ref-badge">{material.materialCode}</span>
-        <h2 className="matap-detail-title">{material.description || 'Material Approval'}</h2>
-        <div className="matap-detail-meta">
-          <span>{material.productType}</span>
-          <span className="matap-detail-dot">•</span>
-          <span>{material.materialGroup}</span>
-          {detail && (
-            <span className={`matap-overall-badge matap-status-${overallTone}`}>
-              {detail.status || '—'}
-            </span>
-          )}
+        <div className="matap-detail-heading">
+          <span className="sila-ref matap-detail-ref-badge">{material.materialCode}</span>
+          <div className="matap-detail-title-row">
+            <h2 className="matap-detail-title">{material.description || 'Material Approval'}</h2>
+            {detail && <MaterialStatusBadge value={detail.status} />}
+          </div>
+          <div className="matap-detail-meta">
+            <span>{material.productType}</span>
+            <span className="matap-detail-dot" aria-hidden="true">•</span>
+            <span>{material.materialGroup}</span>
+          </div>
         </div>
       </div>
 
-      <div className="bad-modal-body">
+      <div className="matap-detail-body">
         {loading ? (
-          <div className="matap-state-box">
-            <div className="matap-state-inner">
-              <div className="bad-spinner" />
-              <span>Loading material approval details...</span>
-            </div>
-          </div>
+          <Loader size={28} message="Loading material approval details..." />
         ) : error && !detail ? (
-          <div className="matap-state-message matap-state-message-error">{error}</div>
+          <EmptyState variant="error" title="Couldn't load this approval" description={error} />
         ) : detail ? (
           <div className="matap-detail-stack">
-            <div className="bad-modal-section-title">Material Information</div>
-            <div className="matap-info-grid">
-              <InfoField label="Base UoM" value={detail.baseUnitOfMeasure} />
-              <InfoField label="Order UoM" value={detail.orderUnitOfMeasure} />
-              <InfoField label="Alternate UoM" value={detail.alternateUnitOfMeasure} />
-              <InfoField label="Valuation Class" value={detail.valuationClass} />
-              <InfoField label="UoM Mapping" value={detail.unitOfMeasureMapping} />
-              <InfoField label="Sub Unit" value={detail.subUnit} />
-              <InfoField label="Micro Unit" value={detail.microUnit} />
-              <InfoField label="Status" value={detail.status} />
-            </div>
+            <section>
+              <h3 className="matap-section-title">Material Information</h3>
+              <dl className="matap-info-grid">
+                <InfoField label="Base UoM" value={detail.baseUnitOfMeasure} />
+                <InfoField label="Order UoM" value={detail.orderUnitOfMeasure} />
+                <InfoField label="Alternate UoM" value={detail.alternateUnitOfMeasure} />
+                <InfoField label="Valuation Class" value={detail.valuationClass} />
+                <InfoField label="UoM Mapping" value={detail.unitOfMeasureMapping} />
+                <InfoField label="Sub Unit" value={detail.subUnit} />
+                <InfoField label="Micro Unit" value={detail.microUnit} />
+                <InfoField label="Status" value={detail.status ? <MaterialStatusBadge value={detail.status} /> : null} />
+              </dl>
+            </section>
 
-            <div className="bad-modal-section-title">Approval Chain</div>
+            <section>
+              <h3 className="matap-section-title">
+                Approval Chain
+                {approvers.length > 0 && (
+                  <span className="matap-section-count">
+                    {approvedCount} of {approvers.length} approved
+                  </span>
+                )}
+              </h3>
 
-            {approvers.length === 0 ? (
-              <div className="matap-state-message">No approvers assigned to this material yet.</div>
-            ) : (
-              <div className="matap-strip">
-                {approvers.map((approver, idx) => {
-                  const cardTone = classifyStatusText(approver.status);
-                  return (
-                    <React.Fragment key={approver.userId}>
-                      <MaterialApprovalCard
-                        approverName={approver.userName}
-                        approverEmail={approver.email}
-                        position={approver.order}
-                        isCurrentUser={!!currentUserId && approver.userId === currentUserId}
-                        canAct={!!currentUserId && approver.userId === currentUserId && !isDecided && cardTone === 'pending'}
-                        submitting={submitting}
-                        onDecision={handleDecision}
-                        statusTone={cardTone}
-                      />
-                      {idx < approvers.length - 1 && (
-                        <span className="matap-connector" aria-hidden="true" />
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            )}
+              {approvers.length === 0 ? (
+                <EmptyState title="No approvers assigned to this material yet." />
+              ) : (
+                <div className="matap-strip" role="list">
+                  {approvers.map((approver, idx) => {
+                    const cardTone = classifyStatusText(approver.status);
+                    return (
+                      <React.Fragment key={approver.userId}>
+                        <MaterialApprovalCard
+                          approverName={approver.userName}
+                          approverEmail={approver.email}
+                          position={approver.order}
+                          isCurrentUser={!!currentUserId && approver.userId === currentUserId}
+                          canAct={!!currentUserId && approver.userId === currentUserId && !isDecided && cardTone === 'pending'}
+                          submitting={submitting}
+                          onDecision={handleDecision}
+                          statusTone={cardTone}
+                        />
+                        {idx < approvers.length - 1 && (
+                          <span className={`matap-connector${cardTone === 'approved' ? ' matap-connector-done' : ''}`} aria-hidden="true">
+                            <IconArrow />
+                          </span>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
           </div>
         ) : null}
       </div>
 
-      <div className="bad-modal-footer">
-        <button className="bad-btn bad-btn-outline" onClick={onBack}>
+      <div className="matap-detail-footer">
+        <button type="button" className="sila-btn sila-btn--secondary" onClick={onBack}>
           Back to list
         </button>
       </div>

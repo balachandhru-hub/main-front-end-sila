@@ -1,76 +1,77 @@
+/* Add Item Master modal — follows .sila-modal / .sila-form-grid */
+
 .item-master-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
-
+  z-index: var(--sila-z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
-
-  padding: 24px;
-
+  padding: var(--sila-space-6);
   background: rgba(15, 23, 42, 0.45);
+  font-family: var(--sila-font);
 }
 
 .item-master-modal {
   display: flex;
   flex-direction: column;
-
-  width: min(720px, 100%);
-  max-height: calc(100vh - 48px);
-
+  width: min(45rem, 100%);
+  max-height: calc(100vh - 3rem);
   overflow: hidden;
-
-  background: #ffffff;
-  border: 1px solid #dbe3ec;
-  border-radius: 14px;
-
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+  background: var(--sila-surface);
+  border: 0.0625rem solid var(--sila-border);
+  border-radius: var(--sila-radius-lg);
+  box-shadow: var(--sila-shadow-lg);
 }
 
 .item-master-modal-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-
+  gap: var(--sila-space-4);
   flex-shrink: 0;
-
-  padding: 24px 28px 20px;
-
-  border-bottom: 1px solid #e5e7eb;
+  padding: var(--sila-space-4) var(--sila-space-5);
+  border-bottom: 0.0625rem solid var(--sila-border-subtle);
 }
 
 .item-master-modal-title {
   margin: 0;
-
-  font-size: 20px;
-  font-weight: 600;
-
-  color: #17365d;
+  font-size: var(--sila-text-lg);
+  font-weight: var(--sila-weight-semibold);
+  line-height: var(--sila-leading-tight);
+  color: var(--sila-text);
 }
 
 .item-master-modal-subtitle {
-  margin: 6px 0 0;
-
-  font-size: 13px;
-  color: #64748b;
+  padding: var(--sila-space-1) 0 0;
+  font-size: var(--sila-text-sm);
+  color: var(--sila-text-muted);
 }
 
 .item-master-modal-close {
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0.0625rem solid transparent;
+  border-radius: var(--sila-radius);
   background: transparent;
-
-  font-size: 28px;
-  line-height: 1;
-
-  color: #64748b;
-
+  color: var(--sila-text-muted);
   cursor: pointer;
-  padding: 0 2px;
+  transition: var(--sila-transition);
 }
 
-.item-master-modal-close:hover {
-  color: #1e293b;
+.item-master-modal-close:hover:not(:disabled) {
+  background: var(--sila-surface-hover);
+  color: var(--sila-text);
+}
+
+.item-master-modal-close:focus-visible {
+  outline: none;
+  box-shadow: var(--sila-focus-ring);
 }
 
 .item-master-modal-close:disabled {
@@ -81,158 +82,128 @@
 .item-master-modal-form {
   display: flex;
   flex-direction: column;
-
   min-height: 0;
   flex: 1;
 }
 
 .item-master-modal-body {
   overflow-y: auto;
-
-  padding: 24px;
+  padding: var(--sila-space-5);
 }
 
 .item-master-field {
-  margin-bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sila-space-1-5);
+  padding-bottom: var(--sila-space-4);
+  min-width: 0;
+}
+
+.item-master-fields-row .item-master-field {
+  margin-bottom: 0;
 }
 
 .item-master-field label {
   display: block;
-
-  margin-bottom: 8px;
-
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.3px;
-
-  color: #17365d;
+  font-size: var(--sila-text-sm);
+  font-weight: var(--sila-weight-medium);
+  color: var(--sila-text-secondary);
 }
 
-.item-master-field label span {
-  color: #dc2626;
+.item-master-field label .sila-required {
+  padding-left: 0.125rem;
+  color: var(--sila-danger);
 }
 
-.item-master-field input {
-  width: 100%;
-  height: 54px;
-
-  box-sizing: border-box;
-
-  padding: 0 20px;
-
-  border: 1px solid #dbe3ec;
-  border-radius: 12px;
-
-  outline: none;
-
-  font-size: 16px;
-  color: #334155;
-
-  background: #ffffff;
-
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.item-master-field input::placeholder {
-  color: #64748b;
-}
-
-.item-master-field input:focus {
-  border-color: #2f6feb;
-
-  box-shadow: 0 0 0 3px rgba(47, 111, 235, 0.12);
-}
-
-.item-master-field input.item-master-input-error {
-  border-color: #ef4444;
-}
-
+.item-master-field input,
 .item-master-field select,
 .item-master-field textarea {
   width: 100%;
-
   box-sizing: border-box;
-
-  padding: 14px 20px;
-
-  border: 1px solid #dbe3ec;
-  border-radius: 12px;
-
+  padding: 0 var(--sila-space-3);
+  border: 0.0625rem solid var(--sila-border-strong);
+  border-radius: var(--sila-radius);
   outline: none;
-
-  font-size: 16px;
   font-family: inherit;
-  color: #334155;
-
-  background: #ffffff;
-
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  font-size: var(--sila-text-md);
+  color: var(--sila-text);
+  background: var(--sila-surface);
+  transition: var(--sila-transition);
 }
 
+.item-master-field input,
 .item-master-field select {
-  height: 54px;
+  height: var(--sila-control-height);
 }
 
 .item-master-field textarea {
+  min-height: 5.25rem;
+  padding: var(--sila-space-2) var(--sila-space-3);
+  line-height: var(--sila-leading);
   resize: vertical;
 }
 
+.item-master-field input::placeholder,
+.item-master-field textarea::placeholder {
+  color: var(--sila-text-subtle);
+}
+
+.item-master-field input:hover:not(:disabled),
+.item-master-field select:hover:not(:disabled),
+.item-master-field textarea:hover:not(:disabled) {
+  border-color: var(--sila-text-subtle);
+}
+
+.item-master-field input:focus,
 .item-master-field select:focus,
 .item-master-field textarea:focus {
-  border-color: #2f6feb;
-
-  box-shadow: 0 0 0 3px rgba(47, 111, 235, 0.12);
+  border-color: var(--sila-primary);
+  box-shadow: var(--sila-focus-ring);
 }
 
 .item-master-field select:disabled {
-  color: #94a3b8;
-  background: #f8fafc;
+  color: var(--sila-text-muted);
+  background: var(--sila-surface-subtle);
   cursor: not-allowed;
 }
 
+.item-master-field input.item-master-input-error,
 .item-master-field select.item-master-input-error,
 .item-master-field textarea.item-master-input-error {
-  border-color: #ef4444;
+  border-color: var(--sila-danger);
+}
+
+.item-master-field input.item-master-input-error:focus,
+.item-master-field select.item-master-input-error:focus,
+.item-master-field textarea.item-master-input-error:focus {
+  box-shadow: 0 0 0 0.1875rem var(--sila-danger-ring);
 }
 
 .item-master-field-hint {
-  margin-top: 6px;
-
-  font-size: 12px;
-  color: #64748b;
+  font-size: var(--sila-text-xs);
+  color: var(--sila-text-muted);
 }
 
-.item-master-field-hint.item-master-field-hint-error {
-  color: #dc2626;
-}
-
+.item-master-field-hint.item-master-field-hint-error,
 .item-master-error {
-  margin-top: 6px;
-
-  font-size: 12px;
-  color: #dc2626;
+  font-size: var(--sila-text-xs);
+  color: var(--sila-danger);
 }
 
 .item-master-section-divider {
-  margin: 4px 0 20px;
-
+  margin: var(--sila-space-1) 0 var(--sila-space-4);
   border: none;
-  border-top: 1px solid #e5e7eb;
+  border-top: 0.0625rem solid var(--sila-border-subtle);
 }
 
 .item-master-fields-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-
-  column-gap: 1.5rem;
-  row-gap: 1.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sila-space-4);
+  padding-bottom: var(--sila-space-4);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 37.5rem) {
   .item-master-fields-row {
     grid-template-columns: 1fr;
   }
@@ -241,103 +212,80 @@
 .item-master-modal-footer {
   display: flex;
   justify-content: flex-end;
-
+  align-items: center;
   flex-shrink: 0;
-
-  gap: 12px;
-
-  padding: 16px 24px;
-
-  border-top: 1px solid #e5e7eb;
+  gap: var(--sila-space-2);
+  padding: var(--sila-space-3) var(--sila-space-5);
+  border-top: 0.0625rem solid var(--sila-border-subtle);
+  background: var(--sila-surface-subtle);
 }
 
 .item-master-cancel-btn,
 .item-master-create-btn {
-  min-height: 42px;
-
-  padding: 0 20px;
-
-  border-radius: 8px;
-
-  font-size: 14px;
-  font-weight: 500;
-
-  cursor: pointer;
-}
-
-/* Cancel Button */
-.item-master-cancel-btn {
-  border: 1px solid #cbd5e1;
-
-  background: #ffffff;
-  color: #475569;
-}
-
-.item-master-cancel-btn:hover {
-  background: #f8fafc;
-}
-
-/* Create Item Master Button */
-.item-master-create-btn {
-  width: fit-content;
-
-  background: #2f6feb;
-  color: #ffffff;
-
-  border: 1px solid #2f6feb;
-  border-radius: 8px;
-
-  padding: 0 20px;
-
-  font-size: 14px;
-  font-weight: 600;
-
-  cursor: pointer;
-
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
-  gap: 0.375rem;
-
+  gap: var(--sila-space-2);
+  height: var(--sila-control-height);
+  padding: 0 var(--sila-space-4);
+  border-radius: var(--sila-radius);
+  font-family: inherit;
+  font-size: var(--sila-text-md);
+  font-weight: var(--sila-weight-semibold);
   white-space: nowrap;
-
-  min-height: 42px;
+  cursor: pointer;
+  transition: var(--sila-transition);
 }
 
-.item-master-create-btn:hover {
-  background: #1f5fd1;
-  border-color: #1f5fd1;
+.item-master-cancel-btn {
+  border: 0.0625rem solid var(--sila-border-strong);
+  background: var(--sila-surface);
+  color: var(--sila-text-secondary);
+}
+
+.item-master-cancel-btn:hover:not(:disabled) {
+  background: var(--sila-surface-hover);
+  color: var(--sila-text);
+}
+
+.item-master-create-btn {
+  background: var(--sila-primary);
+  color: var(--sila-text-inverse);
+  border: 0.0625rem solid var(--sila-primary);
+}
+
+.item-master-create-btn:hover:not(:disabled) {
+  background: var(--sila-primary-hover);
+  border-color: var(--sila-primary-hover);
+}
+
+.item-master-cancel-btn:focus-visible,
+.item-master-create-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--sila-focus-ring);
 }
 
 .item-master-cancel-btn:disabled,
 .item-master-create-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.item-master-create-btn:disabled {
-  background: #2f6feb;
-  border-color: #2f6feb;
-}
-
 /* Mobile */
-@media (max-width: 600px) {
+@media (max-width: 37.5rem) {
   .item-master-modal-overlay {
-    padding: 16px;
+    padding: var(--sila-space-4);
   }
 
-  .item-master-modal-header {
-    padding: 20px;
-  }
-
+  .item-master-modal-header,
   .item-master-modal-body {
-    padding: 20px;
+    padding: var(--sila-space-4);
   }
 
   .item-master-modal-footer {
     flex-direction: column-reverse;
-    padding: 16px 20px;
+    align-items: stretch;
+    padding: var(--sila-space-3) var(--sila-space-4);
   }
 
   .item-master-cancel-btn,

@@ -7,7 +7,7 @@ import ItemMasterCatalog from "./ItemMasterCatalog.tsx";
 import Header from "./Header";
 import QsAns from "./Qsans.tsx";
 // import QuotationSummaryTable from "./QuotationSummaryTable.tsx";
-import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, updateRfqStatus } from "../api/Buyerapi";
+import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, updateRfqStatus, fetchBuyerDashboardAnalytics } from "../api/Buyerapi";
 import { useBuyerAuthStore } from "../store/useBuyerAuthStore";
 import BuyerRFQChat from "./BuyerRFQChat/BuyerRFQChat";
 import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
@@ -20,21 +20,13 @@ import MaterialApprovalDetail from "../../../remote-platform-user/src/components
 import type { ContractRecord } from "../../../remote-platform-user/src/components/Contract/contractApi";
 import { fetchContracts } from "../../../remote-platform-user/src/components/Contract/contractApi";
 import ContractTable from "../../../remote-platform-user/src/components/Contract/ContractTable";
-import { CompanyProfile, toastService } from '@vosox/shared-ui';
+import { BuyerAnalytics, CompanyProfile, EmptyState, Loader, StatusBadge, toastService, useAsyncData } from '@vosox/shared-ui';
 import { useAuth } from '../../../host-app/src/AuthContext.tsx';
 import ApprovalManagement from "../../../remote-platform-user/src/components/ApprovalManagement/ApprovalManagement.tsx";
 
 /* ---------------------------------- Icons ---------------------------------- */
 
 
-
-interface POItem {
-  code: string;
-  status: "ACCEPTED" | "DELIVERED";
-  company: string;
-  orderDate: string;
-  amount: string;
-}
 
 interface MatchCard {
   location: string;
@@ -69,48 +61,11 @@ const IconClose = () => (
 //   </svg>
 // );
 
-const IconMail = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="4" width="20" height="16" rx="2" />
-    <path d="m22 6-10 7L2 6" />
-  </svg>
-);
-
 const IconFile = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
     <path d="M14 2v6h6" />
     <path d="M8 13h8M8 17h8M8 9h2" />
-  </svg>
-);
-
-const IconTrend = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-    <polyline points="16 7 22 7 22 13" />
-  </svg>
-);
-
-const IconBag = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-    <path d="M3 6h18" />
-    <path d="M16 10a4 4 0 0 1-8 0" />
-  </svg>
-);
-
-const IconInvoice = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 2h11l5 5v15H4z" />
-    <path d="M15 2v5h5" />
-    <path d="M9 13h1M9 17h6" />
-  </svg>
-);
-
-const IconBell = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
   </svg>
 );
 
@@ -142,14 +97,6 @@ const NavIconMore = () => (
     <circle cx="12" cy="12" r="1" />
     <circle cx="19" cy="12" r="1" />
     <circle cx="5" cy="12" r="1" />
-  </svg>
-);
-
-const LogoutIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-    <polyline points="16 17 21 12 16 7" />
-    <line x1="21" y1="12" x2="9" y2="12" />
   </svg>
 );
 
@@ -301,9 +248,9 @@ const collectSubEntryKeys = (entries: NavSubEntry[]): string[] =>
   entries.flatMap((entry) => (isNavGroup(entry) ? collectSubEntryKeys(entry.items) : [entry.key]));
 
 const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number; subItems?: NavSubEntry[] }[] = [
-  { key: "dashboard", icon: <NavIconHome />, label: "Dashboard", section: "MAIN" },
-  { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ", section: "SOURCING & ORDERS" },
-  { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog", section: "DIRECTORY & CATALOG" },
+  { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
+  { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
+  { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog" },
   { key: "models", icon: <NavIconModels />, label: "Models" },
   { 
     key: "configuration", 
@@ -331,18 +278,7 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
   },
 ];
 
-interface StatCard {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  linkText: string;
-  cardClass: string;
-  iconClass: string;
-  urgencyBadge?: string;
-  // When all the cards have their own link to navigate, remove the onClickable
-  isClickable?: boolean;
-}
-
+// Placeholder purchase orders: the backend has no purchase-order entity yet.
 interface POItem {
   code: string;
   status: "ACCEPTED" | "DELIVERED";
@@ -350,16 +286,6 @@ interface POItem {
   orderDate: string;
   amount: string;
 }
-
-// When all the cards have their own link to navigate, remove the onClickable
-const statCards: StatCard[] = [
-  { icon: <IconFile />, label: "Active RFQs", value: 3, linkText: "Manage RFQs >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral", isClickable: true, },
-  { icon: <IconMail />, label: "Quotations received", value: 5, linkText: "Review bids >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral", isClickable: false, },
-  { icon: <IconTrend />, label: "Suppliers engaged", value: 8, linkText: "View directory >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral", isClickable: false, },
-  { icon: <IconBag />, label: "Purchase orders", value: 4, linkText: "Track orders >", cardClass: "pud-stat-card-neutral", iconClass: "pud-stat-icon-neutral", isClickable: false, },
-  { icon: <IconInvoice />, label: "Invoices", value: 2, linkText: "Invoice list >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "Needs action", isClickable: false, },
-  { icon: <IconBell />, label: "Notifications", value: 3, linkText: "Inquiries & alerts >", cardClass: "pud-stat-card-warning", iconClass: "pud-stat-icon-warning", urgencyBadge: "New alerts", isClickable: false, },
-];
 
 const poItems: POItem[] = [
   { code: "PO-2026-90412", status: "ACCEPTED", company: "Meridian Components Ltd.", orderDate: "2026-07-04", amount: "$18,500.00" },
@@ -458,17 +384,16 @@ const BuyersDashboard: React.FC = () => {
 
   const [activeNav, setActiveNav] = useState<string>("dashboard");
   const [loggingOut, setLoggingOut] = useState(false);
-  const [logoutError, setLogoutError] = useState<string | null>(null);
 
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
   const [loadingRfqs, setLoadingRfqs] = useState(false);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
 
   const [rfqs, setRfqs] = useState<any[]>(mockRfqs);
+  const analytics = useAsyncData(fetchBuyerDashboardAnalytics);
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
   const RFQ_INITIAL_VISIBLE = 3;
 
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // STATE FOR QUOTATION COMPARISON
   const [selectedQuotationsRfq, setSelectedQuotationsRfq] = useState<any | null>(null);
@@ -713,7 +638,6 @@ const BuyersDashboard: React.FC = () => {
   }, [activeNav]);
 
   const handleNavClick = (key: string) => {
-    setIsMobileSidebarOpen(false);
     if (key === "activeRFQs" || key === "allRfqs") {
       handleOpenAllRfqs();
       return;
@@ -895,11 +819,10 @@ const BuyersDashboard: React.FC = () => {
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
-    setLogoutError(null);
     try {
       await logoutBuyer();
-    } catch (error: any) {
-      setLogoutError(error?.message || "Logout request failed, clearing session locally.");
+    } catch {
+      // The session is cleared locally below even when the server call fails.
     } finally {
       sessionStorage.clear();
       window.dispatchEvent(new CustomEvent("session:expired"));
@@ -925,110 +848,9 @@ const BuyersDashboard: React.FC = () => {
   }, [rfqPageView, fullPageRfq]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#edeff0", paddingTop: "5.25rem" }}>
-      <Header navItems={headerNavItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout} />
-
-      <div
-        className={`pud-shell${isMobileSidebarOpen ? " pud-sidebar-open-mobile" : ""}`}
-        style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
-      >
-
-        {/* <button
-          type="button"
-          className="pud-mobile-sidebar-toggle"
-          onClick={() => setIsMobileSidebarOpen((prev) => !prev)}
-          aria-label={isMobileSidebarOpen ? "Close menu" : "Open menu"}
-          aria-expanded={isMobileSidebarOpen}
-        >
-          {isMobileSidebarOpen ? <IconClose /> : <IconMenu />}
-        </button>
-
-        <div
-          className="pud-sidebar-backdrop"
-          onClick={() => setIsMobileSidebarOpen(false)}
-          aria-hidden="true"
-        /> */}
-
-        <aside className="pud-sidebar">
-          <nav className="pud-nav">
-            {navItems.map((item) => (
-              <React.Fragment key={item.key}>
-                {item.section && (
-                  <div className="pud-nav-section-title">{item.section}</div>
-                )}
-                {item.subItems ? (
-                  <div className="pud-nav-dropdown-container">
-                    <div
-                      className={`pud-nav-item${activeNav === item.key || collectSubEntryKeys(item.subItems).includes(activeNav) ? " pud-nav-item-active" : ""}`}
-                    >
-                      <span className="pud-nav-icon">{item.icon}</span>
-                      <span className="pud-nav-label">{item.label}</span>
-                      <span className="pud-nav-chevron">
-                        <IconChevronRight />
-                      </span>
-                    </div>
-                    <div className="pud-nav-dropdown-menu">
-                      {item.subItems.map((entry, entryIdx) =>
-                        isNavGroup(entry) ? (
-                          <div key={`${item.key}-group-${entryIdx}`} className="pud-nav-subgroup">
-                            <div className="pud-nav-subgroup-title">{entry.label}</div>
-                            {entry.items.map((leaf) => (
-                              <div
-                                key={leaf.key}
-                                onClick={() => handleNavClick(leaf.key)}
-                                className={`pud-nav-subitem pud-nav-subitem-nested${activeNav === leaf.key ? " pud-nav-subitem-active" : ""}`}
-                              >
-                                {leaf.label}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div
-                            key={entry.key}
-                            onClick={() => handleNavClick(entry.key)}
-                            className={`pud-nav-subitem${activeNav === entry.key ? " pud-nav-subitem-active" : ""}`}
-                          >
-                            {entry.label}
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    className={`pud-nav-item${activeNav === item.key ? " pud-nav-item-active" : ""}`}
-                    onClick={() => handleNavClick(item.key)}
-                  >
-                    <span className="pud-nav-icon">{item.icon}</span>
-                    <span className="pud-nav-label">{item.label}</span>
-                    {item.badge && <span className="pud-nav-badge">{item.badge}</span>}
-                  </div>
-                )}
-              </React.Fragment>
-            ))}
-            <div
-              className="pud-nav-item pud-nav-item-logout"
-              style={{
-                marginTop: "auto",
-                opacity: loggingOut ? 0.6 : 1,
-                cursor: loggingOut ? "not-allowed" : "pointer",
-                pointerEvents: loggingOut ? "none" : "auto",
-              }}
-              onClick={handleLogout}
-              role="button"
-              aria-disabled={loggingOut}
-              title={logoutError || undefined}
-            >
-              <span className="bad-nav-item-logout" style={{ transform: "rotate(180deg)" }}>
-                <LogoutIcon />
-              </span>
-              <span className="bad-nav-item-logout">{loggingOut ? "Logging out..." : "Log Out"}</span>
-            </div>
-          </nav>
-        </aside>
-
+    <Header navItems={headerNavItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout}>
         <div className="pud-main">
-          <main className="pud-content">
+          <div className="pud-content">
             {activeNav === "createRFQ" ? (
               <CreateRFQ onNavClick={handleNavClick} onRfqCreated={refreshRfqs} />
             ) : activeNav === "product" ? (
@@ -1071,57 +893,42 @@ const BuyersDashboard: React.FC = () => {
             ) : activeNav === "approvalManagement" ? (
               <ApprovalManagement canCreate={false}/>
             ) : rfqPageView === "allRfqs" ? (
-              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.03)' }}>
-                <div style={{ marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <button
-                      type="button"
-                      onClick={handleBackToDashboard}
-                      title="Back to Dashboard"
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        padding: 0,
-                        margin: 0,
-                        cursor: 'pointer',
-                        color: '#0f172a',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        outline: 'none',
-                      }}
-                    >
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M19 12H5M12 19l-7-7 7-7" />
-                      </svg>
-                    </button>
-                    <h1 className="pud-title" style={{ margin: 0 }}>All RFQs</h1>
+              <section className="pud-allrfqs-card" aria-labelledby="pud-allrfqs-title">
+                <div className="pud-allrfqs-header">
+                  <button
+                    type="button"
+                    className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm"
+                    onClick={handleBackToDashboard}
+                    title="Back to Dashboard"
+                    aria-label="Back to Dashboard"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M19 12H5M12 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <div>
+                    <h1 className="pud-title" id="pud-allrfqs-title">All RFQs</h1>
+                    <p className="pud-subtitle">
+                      Complete list of RFQs you've posted, awaiting supplier quotations.
+                    </p>
                   </div>
-                  <p className="pud-subtitle" style={{ margin: 0, marginTop: '4px' }}>
-                    Complete list of RFQs you've posted, awaiting supplier quotations.
-                  </p>
                 </div>
 
                 {loadingAllRfqs ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
-                    <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                      <div className="pud-spinner" />
-                      <span>Loading all sourcing opportunities...</span>
-                    </div>
+                  <div className="pud-allrfqs-state">
+                    <Loader size={24} message="Loading all sourcing opportunities..." />
                   </div>
                 ) : allRfqsError && allRfqsList.length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>{allRfqsError}</div>
+                  <EmptyState variant="error" title="Unable to load RFQs" description={allRfqsError} />
                 ) : allRfqsList.length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
-                    No RFQs found.
-                  </div>
+                  <EmptyState title="No RFQs found." icon={<IconFile />} />
                 ) : (
                   <div>
                     <div className="pud-rfq-table-container">
                       <table className="pud-rfq-items-table pud-allrfqs-table">
                         <thead>
                           <tr>
-                            <th style={{ width: '48px' }}>S.No</th>
+                            <th className="pud-allrfqs-sno sila-num">S.No</th>
                             <th>RFQ Number</th>
                             <th>Title</th>
                             <th>Organization</th>
@@ -1134,14 +941,21 @@ const BuyersDashboard: React.FC = () => {
                             <tr
                               key={rfq.rfqId || idx}
                               onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
-                              style={{ cursor: 'pointer' }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  handleViewRfqDetailsFullPage(rfq.rfqId);
+                                }
+                              }}
+                              tabIndex={0}
+                              aria-label={`Open RFQ ${rfq.rfqNumber ?? ""}`}
                             >
-                              <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
-                              <td><span className="pud-code-badge">{rfq.rfqNumber}</span></td>
-                              <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                              <td className="sila-num sila-cell-muted">{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
+                              <td><span className="sila-ref">{rfq.rfqNumber}</span></td>
+                              <td className="sila-cell-strong">{rfq.title}</td>
                               <td>{rfq.organizationName}</td>
                               <td>{rfq.deliveryLocation}</td>
-                              <td>
+                              <td className="sila-cell-muted">
                                 {rfq.endDate
                                   ? new Date(rfq.endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
                                   : "—"}
@@ -1152,32 +966,37 @@ const BuyersDashboard: React.FC = () => {
                       </table>
                     </div>
 
-                    <div className="budp-pagination budp-allrfqs-pagination">
-                      <button
-                        type="button"
-                        className={`budp-page-btn${allRfqsPage === 1 || loadingAllRfqs ? " budp-page-btn-disabled" : ""}`}
-                        onClick={handleAllRfqsPrevPage}
-                        disabled={allRfqsPage <= 1 || loadingAllRfqs}
-                        aria-label="Previous RFQ page"
-                      >
-                        <IconChevronLeft />
-                      </button>
+                    <nav className="budp-pagination budp-allrfqs-pagination" aria-label="RFQ list pagination">
+                      <span>
+                        Showing {(allRfqsPage - 1) * RFQ_PAGE_SIZE + 1}–{(allRfqsPage - 1) * RFQ_PAGE_SIZE + allRfqsList.length}
+                      </span>
+                      <div className="budp-pagination-pages">
+                        <button
+                          type="button"
+                          className={`budp-page-btn${allRfqsPage === 1 || loadingAllRfqs ? " budp-page-btn-disabled" : ""}`}
+                          onClick={handleAllRfqsPrevPage}
+                          disabled={allRfqsPage <= 1 || loadingAllRfqs}
+                          aria-label="Previous RFQ page"
+                        >
+                          <IconChevronLeft />
+                        </button>
 
-                      <span className="budp-page-number">Page {allRfqsPage}</span>
+                        <span className="budp-page-number" aria-current="page">Page {allRfqsPage}</span>
 
-                      <button
-                        type="button"
-                        className={`budp-page-btn${!allRfqsHasMore || loadingAllRfqs ? " budp-page-btn-disabled" : ""}`}
-                        onClick={handleAllRfqsNextPage}
-                        disabled={!allRfqsHasMore || loadingAllRfqs}
-                        aria-label="Next RFQ page"
-                      >
-                        <IconChevronRight />
-                      </button>
-                    </div>
+                        <button
+                          type="button"
+                          className={`budp-page-btn${!allRfqsHasMore || loadingAllRfqs ? " budp-page-btn-disabled" : ""}`}
+                          onClick={handleAllRfqsNextPage}
+                          disabled={!allRfqsHasMore || loadingAllRfqs}
+                          aria-label="Next RFQ page"
+                        >
+                          <IconChevronRight />
+                        </button>
+                      </div>
+                    </nav>
                   </div>
                 )}
-              </div>
+              </section>
             ) : rfqPageView === "rfqDetail" ? (
               // <>
               //   <div className="pud-modal pud-rfq-fullpage">
@@ -1459,7 +1278,12 @@ const BuyersDashboard: React.FC = () => {
                     <span className="pud-modal-badge">
                       <IconSparkles /> Bid Comparison
                     </span>
-                    <button className="pud-modal-close" onClick={handleBackFromQuotationComparison}>
+                    <button
+                      type="button"
+                      className="pud-modal-close"
+                      onClick={handleBackFromQuotationComparison}
+                      aria-label="Close bid comparison"
+                    >
                       <IconClose />
                     </button>
                     <h2 className="pud-modal-name">
@@ -1467,13 +1291,13 @@ const BuyersDashboard: React.FC = () => {
                     </h2>
                     {selectedQuotationsRfq && (
                       <div className="pud-modal-meta">
-                        <span><IconFile /> {selectedQuotationsRfq.rfqNumber}</span>
+                        <span><IconFile /> <span className="sila-ref">{selectedQuotationsRfq.rfqNumber}</span></span>
                         <span><IconPin /> {selectedQuotationsRfq.deliveryLocation}</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="pud-modal-body" style={{ maxHeight: 'calc(100% - 120px)', overflowY: 'auto', padding: '24px' }}>
+                  <div className="pud-modal-body pud-comparison-body">
                     <QuotationComparisonCard
                       rfqId={selectedQuotationsRfq?.rfqId}
                       rfqTitle={selectedQuotationsRfq?.title}
@@ -1496,7 +1320,7 @@ const BuyersDashboard: React.FC = () => {
               />
             ) : (
               <>
-                <div className="pud-dashboard-header">
+                <div className="pud-dashboard-header sila-page-header">
                   <div>
                     <h1 className="pud-title">Buyer Operations Command</h1>
                     <p className="pud-subtitle">Real-time procurement tracking, bid submittals, and transaction monitoring.</p>
@@ -1508,40 +1332,22 @@ const BuyersDashboard: React.FC = () => {
                       onClick={() => handleNavClick("createRFQ")}
                     >
                       <NavIconFilePlus />
-                      <span> + Create RFQ</span>
+                      <span>Create RFQ</span>
                     </button>
                   </div>
                 </div>
 
-                <div className="pud-stats-grid">
-                  {statCards.map((stat) => (
-                    <div className={`pud-stat-card ${stat.cardClass}`} key={stat.label}>
-                      <div className="pud-stat-top">
-                        <div className={`pud-stat-icon ${stat.iconClass}`}>{stat.icon}</div>
-                        {stat.urgencyBadge && (
-                          <span className="pud-urgency-badge">⚡ {stat.urgencyBadge}</span>
-                        )}
-                      </div>
-                      <div className="pud-stat-label">{stat.label}</div>
-                      <div className="pud-stat-value">{stat.value}</div>
-                      <a className="pud-stat-link" href="#" onClick={(e) => {
-                        e.preventDefault();
-                        //There is isClickable, only true value link is working where other links are showing but not working.
-                        // For now only Manage RFQ is working 
-                        // When all the links have their own navigation remove the isClickable field in interface and in array object.
-                        if (stat.isClickable) { handleNavClick("activeRFQs"); }
-                      }}>
-                        {stat.linkText}
-                      </a>
-                    </div>
-                  ))}
-                </div>
+                <BuyerAnalytics
+                  state={analytics}
+                  onViewRfqs={() => handleNavClick("activeRFQs")}
+                  onOpenRfq={handleViewRfqDetailsFullPage}
+                />
 
                 <div className="pud-panels">
                   <section className="pud-panel">
                     <div className="pud-panel-header">
                       <div>
-                        <div className="pud-panel-title">Recent RFQs</div>
+                        <h2 className="pud-panel-title">Recent RFQs</h2>
                         <div className="pud-panel-subtitle">RFQs you've posted, awaiting supplier quotations</div>
                       </div>
                       {!loadingRfqs && !rfqsError && rfqs.length > 0 && (
@@ -1558,23 +1364,16 @@ const BuyersDashboard: React.FC = () => {
                       )}
                     </div>
                     {loadingRfqs ? (
-                      <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px' }}>
-                        <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                          <div className="pud-spinner" />
-                          <span>Loading sourcing opportunities...</span>
-                        </div>
+                      <div className="pud-panel-list pud-panel-state">
+                        <Loader size={24} message="Loading sourcing opportunities..." />
                       </div>
                     ) : rfqsError ? (
-                      <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
-                        <div style={{ color: '#ef4444', fontSize: '14px', textAlign: 'center' }}>
-                          {rfqsError}
-                        </div>
+                      <div className="pud-panel-list pud-panel-state">
+                        <EmptyState variant="error" title="Unable to load RFQs" description={rfqsError} />
                       </div>
                     ) : rfqs.length === 0 ? (
-                      <div className="pud-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
-                        <div style={{ color: '#64748b', fontSize: '14px', textAlign: 'center' }}>
-                          No recent sourcing opportunities found.
-                        </div>
+                      <div className="pud-panel-list pud-panel-state">
+                        <EmptyState title="No recent sourcing opportunities found." icon={<IconFile />} />
                       </div>
                     ) : (
                       <div className="pud-panel-list">
@@ -1583,12 +1382,18 @@ const BuyersDashboard: React.FC = () => {
                             className="pud-rfq-card-item"
                             key={rfq.rfqId}
                             onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handleViewRfqDetailsFullPage(rfq.rfqId);
+                              }
+                            }}
                             role="button"
                             tabIndex={0}
                           >
                             <div className="pud-rfq-meta">
-                              <span className="pud-code-badge">{rfq.rfqNumber}</span>
-                              <span className="pud-dot-sep">•</span>
+                              <span className="pud-code-badge sila-ref">{rfq.rfqNumber}</span>
+                              <span className="pud-dot-sep" aria-hidden="true">•</span>
                               <span className="pud-company">{rfq.organizationName}</span>
                             </div>
 
@@ -1611,39 +1416,38 @@ const BuyersDashboard: React.FC = () => {
                   <section className="pud-panel">
                     <div className="pud-panel-header">
                       <div>
-                        <div className="pud-panel-title">Recent Purchase Orders</div>
+                        <h2 className="pud-panel-title">Recent Purchase Orders</h2>
                         <div className="pud-panel-subtitle">New orders requiring attention</div>
                       </div>
-                      <a className="pud-panel-link" href="#">View All →</a>
+                      <a className="pud-panel-link" href="#" onClick={(e) => e.preventDefault()}>View All →</a>
                     </div>
                     <div className="pud-panel-list">
                       {poItems.map((po) => (
                         <div className="pud-po-row" key={po.code}>
                           <div className="pud-po-info">
                             <div className="pud-po-meta">
-                              <span className="pud-po-code">{po.code}</span>
-                              <span className={`pud-status-badge pud-status-badge-${po.status.toLowerCase()}`}>
-                                {po.status}
-                              </span>
+                              <span className="pud-po-code sila-ref">{po.code}</span>
+                              <StatusBadge status={po.status} size="sm" />
                             </div>
                             <div className="pud-po-company">{po.company}</div>
                             <div className="pud-po-date"><IconCalendar /> Order Date: {po.orderDate}</div>
                           </div>
                           <div className="pud-po-right">
                             <div className="pud-po-amount">{po.amount}</div>
-                            <a className="pud-po-process" href="#">Process →</a>
+                            <a className="pud-po-process" href="#" onClick={(e) => e.preventDefault()}>Process →</a>
                           </div>
                         </div>
                       ))}
                     </div>
                   </section>
+
                 </div>
 
-                <section className="pud-matchmaker">
+                <section className="pud-matchmaker" aria-labelledby="pud-matchmaker-title">
                   <div className="pud-matchmaker-header">
                     <div className="pud-matchmaker-title-row">
-                      <span className="pud-matchmaker-icon"><IconSparkles /></span>
-                      <div className="pud-matchmaker-title">Smart Supplier Matchmaker</div>
+                      <span className="pud-matchmaker-icon" aria-hidden="true"><IconSparkles /></span>
+                      <h2 className="pud-matchmaker-title" id="pud-matchmaker-title">Smart Supplier Matchmaker</h2>
                     </div>
                     <div className="pud-matchmaker-subtitle">
                       Verified suppliers ready to fulfill products and services matching your sourcing categories and delivery regions.
@@ -1652,12 +1456,12 @@ const BuyersDashboard: React.FC = () => {
 
                   <div className="pud-match-grid">
                     {matchCards.map((card) => (
-                      <div className="pud-match-card" key={card.name}>
+                      <article className="pud-match-card" key={card.name}>
                         <span className="pud-match-location"><IconPin /> {card.location}</span>
                         <div className="pud-match-top">
-                          <div className="pud-match-avatar">{card.initials}</div>
+                          <div className="pud-match-avatar" aria-hidden="true">{card.initials}</div>
                           <div>
-                            <div className="pud-match-name">{card.name}</div>
+                            <h3 className="pud-match-name">{card.name}</h3>
                             <div className="pud-match-seeking"><NavIconBuilding /> Supplies: {card.seeking}</div>
                           </div>
                         </div>
@@ -1668,50 +1472,62 @@ const BuyersDashboard: React.FC = () => {
                         </div>
                         <div className="pud-match-actions">
                           <button
+                            type="button"
                             className="pud-btn pud-btn-outline pud-btn-flex"
                             onClick={() => setSelectedProfile(card)}
                           >
                             <IconEye /> Profile
                           </button>
                           {card.actionVariant === "message" ? (
-                            <button className="pud-btn pud-btn-message pud-btn-flex">
+                            <button type="button" className="pud-btn pud-btn-message pud-btn-flex">
                               <IconMessageSquare /> Message
                             </button>
                           ) : (
-                            <button className="pud-btn pud-btn-interest pud-btn-flex">
+                            <button type="button" className="pud-btn pud-btn-interest pud-btn-flex">
                               <IconSend /> Send Interest
                             </button>
                           )}
                         </div>
-                      </div>
+                      </article>
                     ))}
                   </div>
 
-                  <div className="pud-pagination">
-                    <button className="pud-page-btn pud-page-btn-disabled" disabled>
+                  <nav className="pud-pagination" aria-label="Supplier matches pagination">
+                    <button type="button" className="pud-page-btn pud-page-btn-disabled" disabled aria-label="Previous suppliers">
                       <IconChevronLeft />
                     </button>
-                    <button className="pud-page-btn pud-page-btn-active">
+                    <button type="button" className="pud-page-btn" aria-label="Next suppliers">
                       <IconChevronRight />
                     </button>
-                  </div>
+                  </nav>
                 </section>
               </>
             )}
-          </main>
+          </div>
         </div>
 
         {selectedProfile && (
           <div className="pud-modal-overlay" onClick={() => setSelectedProfile(null)}>
-            <div className="pud-modal" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="pud-modal pud-profile-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="pud-profile-modal-title"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="pud-modal-header">
                 <span className="pud-modal-badge">
                   <IconShieldCheck /> Verified Supplier Partner
                 </span>
-                <button className="pud-modal-close" onClick={() => setSelectedProfile(null)}>
+                <button
+                  type="button"
+                  className="pud-modal-close"
+                  onClick={() => setSelectedProfile(null)}
+                  aria-label="Close supplier profile"
+                >
                   <IconClose />
                 </button>
-                <h2 className="pud-modal-name">{selectedProfile.name}</h2>
+                <h2 className="pud-modal-name" id="pud-profile-modal-title">{selectedProfile.name}</h2>
                 <div className="pud-modal-meta">
                   <span><IconPin /> {selectedProfile.location}</span>
                   <span><IconGlobe /> {selectedProfile.website}</span>
@@ -1766,11 +1582,11 @@ const BuyersDashboard: React.FC = () => {
 
               <div className="pud-modal-footer">
                 {selectedProfile.actionVariant === "message" ? (
-                  <button className="pud-btn pud-btn-message pud-modal-footer-btn">
+                  <button type="button" className="pud-btn pud-btn-message pud-modal-footer-btn">
                     <IconMessageSquare /> Message Supplier
                   </button>
                 ) : (
-                  <button className="pud-btn pud-btn-interest pud-modal-footer-btn">
+                  <button type="button" className="pud-btn pud-btn-interest pud-modal-footer-btn">
                     <IconSend /> Send Interest
                   </button>
                 )}
@@ -1792,8 +1608,7 @@ const BuyersDashboard: React.FC = () => {
             isLoadingBuyerProfile={isLoadingBuyerProfile}
           />
         )}
-      </div>
-    </div>
+    </Header>
   );
 };
 

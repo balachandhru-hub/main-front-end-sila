@@ -28,6 +28,7 @@ import {
   FaDownload,
   FaSpinner,
 } from 'react-icons/fa';
+import { StatusBadge } from '@vosox/shared-ui';
 import './PlatformUserPopup.css';
 
 interface PlatformUserPopupProps {
@@ -306,16 +307,22 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
 
   return (
     <div className="pup-overlay" onClick={onClose}>
-      <div className="pup-panel" onClick={(e) => e.stopPropagation()}>
-        <button className="pup-close" onClick={onClose} aria-label="Close details">
-          <FaTimes />
+      <div
+        className="pup-panel"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pup-title"
+      >
+        <button type="button" className="pup-close" onClick={onClose} aria-label="Close details" title="Close">
+          <FaTimes aria-hidden="true" />
         </button>
 
         {/* Header */}
         <div className={`pup-header ${accentClass}`}>
-          <div className="pup-avatar">{initialsOf(name)}</div>
+          <div className="pup-avatar" aria-hidden="true">{initialsOf(name)}</div>
           <div className="pup-header-info">
-            <h2 className="pup-title">{name}</h2>
+            <h2 className="pup-title" id="pup-title">{name}</h2>
             <div className="pup-header-badges">
               <span className="pup-badge pup-badge-role">
                 {type === 'buyers' ? 'Registered Buyer' : 'Registered Supplier'}
@@ -323,29 +330,35 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
               {profile.businessType && <span className="pup-badge">{profile.businessType}</span>}
               {profile.industry && <span className="pup-badge">{profile.industry}</span>}
               {profile.status && (
-                <span className={`pup-badge pup-badge-status-${profile.status.toLowerCase()}`}>
-                  {profile.status === 'PENDING_VERIFICATION' ? 'PENDING' : profile.status.replace('_', ' ')}
-                </span>
+                <StatusBadge
+                  status={profile.status}
+                  label={profile.status === 'PENDING_VERIFICATION' ? 'PENDING' : profile.status.replace('_', ' ')}
+                  className={`pup-badge pup-badge-status-${profile.status.toLowerCase()}`}
+                />
               )}
             </div>
           </div>
           <div className="pup-header-toggle-wrapper">
             <span className="pup-toggle-label">
-              Status: <strong style={{ color: internalStatus ? '#059669' : '#dc2626' }}>{internalStatus ? 'ON' : 'OFF'}</strong>
+              Status:{' '}
+              <strong className={internalStatus ? 'pup-toggle-state pup-toggle-state-on' : 'pup-toggle-state pup-toggle-state-off'}>
+                {internalStatus ? 'ON' : 'OFF'}
+              </strong>
             </span>
             <button
               type="button"
               role="switch"
               aria-checked={internalStatus}
+              aria-label="Account active status"
               className={`pup-switch ${internalStatus ? 'pup-switch-on' : 'pup-switch-off'} ${internalStatusLoading ? 'pup-switch-loading' : ''}`}
               onClick={handleToggleInternalStatus}
               disabled={internalStatusLoading}
               title={internalStatus ? 'Click to turn OFF (deactivate)' : 'Click to turn ON (activate)'}
             >
               <span className="pup-switch-thumb">
-                {internalStatusLoading && <FaSpinner className="pup-spin" style={{ fontSize: '10px' }} />}
+                {internalStatusLoading && <FaSpinner className="pup-spin pup-spin-xs" aria-hidden="true" />}
               </span>
-              <span className="pup-switch-text">{internalStatus ? 'ON' : 'OFF'}</span>
+              <span className="pup-switch-text" aria-hidden="true">{internalStatus ? 'ON' : 'OFF'}</span>
             </button>
           </div>
         </div>
@@ -361,7 +374,7 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
           {/* Company Overview */}
           <section className="pup-section">
             <h3 className="pup-section-title">
-              <FaBuilding className="pup-section-icon" />
+              <FaBuilding className="pup-section-icon" aria-hidden="true" />
               Company Overview
             </h3>
             <div className="pup-grid">
@@ -395,7 +408,7 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
           {categories.length > 0 && (
             <section className="pup-section">
               <h3 className="pup-section-title">
-                <FaFileAlt className="pup-section-icon" />
+                <FaFileAlt className="pup-section-icon" aria-hidden="true" />
                 Product &amp; Service Categories
                 <span className="pup-count-badge">{categories.length}</span>
               </h3>
@@ -417,7 +430,7 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
           {/* Contact & Address */}
           <section className="pup-section">
             <h3 className="pup-section-title">
-              <FaMapMarkerAlt className="pup-section-icon" />
+              <FaMapMarkerAlt className="pup-section-icon" aria-hidden="true" />
               Contact &amp; Registered Address
             </h3>
             <div className="pup-grid">
@@ -436,7 +449,7 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
           {/* Registrations */}
           <section className="pup-section">
             <h3 className="pup-section-title">
-              <FaFileAlt className="pup-section-icon" />
+              <FaFileAlt className="pup-section-icon" aria-hidden="true" />
               Registrations &amp; Compliance
               <span className="pup-count-badge">{registrations.length}</span>
             </h3>
@@ -457,24 +470,26 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
                         <DetailRow label="Document File" value={reg.asset?.fileName} />
                       </div>
                       {attachment && (
-                        <div className="pup-attachment-actions" style={{ marginTop: '12px' }}>
+                        <div className="pup-attachment-actions pup-attachment-actions-inline">
                           <button
+                            type="button"
                             className="pup-attachment-btn"
                             onClick={() => handleView(attachment)}
                             disabled={actionState[attachment.key] !== undefined && actionState[attachment.key] !== null}
                           >
-                            {actionState[attachment.key] === 'view' ? <FaSpinner className="pup-spin" /> : <FaEye />}
+                            {actionState[attachment.key] === 'view' ? <FaSpinner className="pup-spin" aria-hidden="true" /> : <FaEye aria-hidden="true" />}
                             View
                           </button>
                           <button
+                            type="button"
                             className="pup-attachment-btn pup-attachment-btn-primary"
                             onClick={() => handleDownload(attachment)}
                             disabled={actionState[attachment.key] !== undefined && actionState[attachment.key] !== null}
                           >
                             {actionState[attachment.key] === 'download' ? (
-                              <FaSpinner className="pup-spin" />
+                              <FaSpinner className="pup-spin" aria-hidden="true" />
                             ) : (
-                              <FaDownload />
+                              <FaDownload aria-hidden="true" />
                             )}
                             Download
                           </button>
@@ -485,13 +500,13 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
                 })}
               </div>
             )}
-            {actionError && <div className="pup-action-error">{actionError}</div>}
+            {actionError && <div className="pup-action-error" role="alert">{actionError}</div>}
           </section>
 
           {/* Bank Accounts */}
           <section className="pup-section">
             <h3 className="pup-section-title">
-              <FaUniversity className="pup-section-icon" />
+              <FaUniversity className="pup-section-icon" aria-hidden="true" />
               Bank Accounts
               <span className="pup-count-badge">{bankAccounts.length}</span>
             </h3>
@@ -507,7 +522,7 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
                         {acct.isPrimary && <span className="pup-badge pup-badge-primary">Primary</span>}
                         {acct.isVerified !== undefined && (
                           <span className={`pup-badge ${acct.isVerified ? 'pup-badge-verified' : 'pup-badge-unverified'}`}>
-                            <FaCheckCircle style={{ marginRight: '4px' }} />
+                            <FaCheckCircle className="pup-badge-icon" aria-hidden="true" />
                             {acct.isVerified ? 'Verified' : 'Unverified'}
                           </span>
                         )}
@@ -531,7 +546,7 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
           {/* Dispatch / Delivery Locations */}
           <section className="pup-section">
             <h3 className="pup-section-title">
-              <FaWarehouse className="pup-section-icon" />
+              <FaWarehouse className="pup-section-icon" aria-hidden="true" />
               {type === 'buyers' ? 'Delivery Locations' : 'Dispatch Locations'}
               <span className="pup-count-badge">{dispatchLocations.length}</span>
             </h3>
@@ -566,28 +581,32 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
           {/* Admin Approval Actions */}
           <section className="pup-section pup-section-last pup-admin-actions-section">
             <h3 className="pup-section-title">
-              <FaCheckCircle className="pup-section-icon" />
+              <FaCheckCircle className="pup-section-icon" aria-hidden="true" />
               Platform Administrator Actions
             </h3>
-            {statusError && <div className="pup-action-error">{statusError}</div>}
+            {statusError && <div className="pup-action-error" role="alert">{statusError}</div>}
             {isFinalized ? (
               <div className="pup-admin-status-display">
                 Registration has been finalized. Status: 
-                <span className={`pup-badge pup-badge-status-${currentStatus.toLowerCase()}`} style={{ marginLeft: '8px' }}>
-                  {currentStatus.replace('_', ' ')}
-                </span>
+                <StatusBadge
+                  status={currentStatus}
+                  label={currentStatus.replace('_', ' ')}
+                  className={`pup-badge pup-badge-status-${currentStatus.toLowerCase()} pup-badge-inline`}
+                />
               </div>
             ) : (
               <div className="pup-admin-actions">
                 <button
+                  type="button"
                   className="pup-btn-approve"
                   onClick={handleApprove}
                   disabled={statusLoading}
                 >
-                  {statusLoading ? <FaSpinner className="pup-spin" /> : <FaCheckCircle style={{ marginRight: '6px' }} />}
+                  {statusLoading ? <FaSpinner className="pup-spin" aria-hidden="true" /> : <FaCheckCircle aria-hidden="true" />}
                   Approve Registration
                 </button>
                 <button
+                  type="button"
                   className="pup-btn-reject"
                   onClick={() => {
                     setStatusError(null);
@@ -595,7 +614,7 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
                   }}
                   disabled={statusLoading}
                 >
-                  <FaTimes style={{ marginRight: '6px' }} />
+                  <FaTimes aria-hidden="true" />
                   Reject Registration
                 </button>
               </div>
@@ -607,13 +626,31 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
       {/* Rejection Comments Modal */}
       {showRejectModal && (
         <div className="pup-reject-overlay" onClick={() => setShowRejectModal(false)}>
-          <div className="pup-reject-panel" onClick={(e) => e.stopPropagation()}>
-            <button className="pup-close" onClick={() => setShowRejectModal(false)} aria-label="Close comment panel">
-              <FaTimes />
+          <div
+            className="pup-reject-panel"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pup-reject-title"
+            aria-describedby="pup-reject-subtitle"
+          >
+            <button
+              type="button"
+              className="pup-close"
+              onClick={() => setShowRejectModal(false)}
+              aria-label="Close comment panel"
+              title="Close"
+            >
+              <FaTimes aria-hidden="true" />
             </button>
-            <h4 className="pup-reject-title">Rejection Comments</h4>
-            <p className="pup-reject-subtitle">Please enter comments detailing the reason for rejecting this registration.</p>
+            <h4 className="pup-reject-title" id="pup-reject-title">Rejection Comments</h4>
+            <p className="pup-reject-subtitle" id="pup-reject-subtitle">Please enter comments detailing the reason for rejecting this registration.</p>
+            <label htmlFor="pup-reject-textarea" className="pup-reject-label">
+              Comments<span className="pup-required" aria-hidden="true">*</span>
+            </label>
             <textarea
+              id="pup-reject-textarea"
+              aria-required="true"
               className="pup-reject-textarea"
               placeholder="Enter rejection comments here..."
               value={rejectComments}
@@ -622,6 +659,7 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
             />
             <div className="pup-reject-actions">
               <button
+                type="button"
                 className="pup-reject-btn pup-reject-btn-cancel"
                 onClick={() => {
                   setShowRejectModal(false);
@@ -632,11 +670,12 @@ export const PlatformUserPopup: React.FC<PlatformUserPopupProps> = ({ type, reco
                 Cancel
               </button>
               <button
+                type="button"
                 className="pup-reject-btn pup-reject-btn-submit"
                 onClick={handleReject}
                 disabled={statusLoading || !rejectComments.trim()}
               >
-                {statusLoading ? <FaSpinner className="pup-spin" /> : 'Submit Rejection'}
+                {statusLoading ? <FaSpinner className="pup-spin" aria-hidden="true" /> : 'Submit Rejection'}
               </button>
             </div>
           </div>

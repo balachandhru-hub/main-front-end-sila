@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { EmptyState, Loader } from "@vosox/shared-ui";
 import type { ChatMessageDto } from "../../dto/chatDto";
 import type { ChatSupplier, PendingAttachment } from "./types";
 import { formatDateSeparator, formatFileSize, formatMessageTime, getInitials, isSameCalendarDay } from "./chatUtils";
@@ -62,14 +63,12 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
   if (!supplier) {
     return (
       <div className="brc-conversation">
-        <div className="brc-empty-state">
-          <div className="brc-empty-state-icon">
-            <IconMessageSquare />
-          </div>
-          <div className="brc-empty-state-title">Select a supplier</div>
-          <div className="brc-empty-state-desc">
-            Choose a supplier from the list to view or start a conversation.
-          </div>
+        <div className="brc-state-wrap">
+          <EmptyState
+            icon={<IconMessageSquare />}
+            title="Select a supplier"
+            description="Choose a supplier from the list to view or start a conversation."
+          />
         </div>
       </div>
     );
@@ -116,11 +115,11 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
         <button type="button" className="brc-back-to-list" onClick={onBackToList} aria-label="Back to supplier list">
           <IconChevronLeft />
         </button>
-        <div className="brc-supplier-avatar" style={{ flexShrink: 0 }}>
+        <div className="brc-supplier-avatar" aria-hidden="true">
           {getInitials(supplier.supplierName)}
         </div>
         <div className="brc-conversation-header-text">
-          <div className="brc-conversation-name">{supplier.supplierName}</div>
+          <h3 className="brc-conversation-name">{supplier.supplierName}</h3>
           <button type="button" className="brc-conversation-participants-toggle" onClick={onOpenDetails}>
             <IconUsers />
             Chat details
@@ -129,26 +128,27 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
       </div>
 
       {isLoadingMessages ? (
-        <div className="brc-loading-state">
-          <div className="brc-spinner-md" />
-          <span>Loading conversation history...</span>
+        <div className="brc-state-wrap">
+          <Loader size={24} message="Loading conversation history..." />
         </div>
       ) : messagesError ? (
-        <div className="brc-error-state">{messagesError}</div>
+        <div className="brc-state-wrap">
+          <EmptyState variant="error" title={messagesError} />
+        </div>
       ) : messages.length === 0 ? (
-        <div className="brc-empty-state">
-          <div className="brc-empty-state-icon">
-            <IconMessageSquare />
-          </div>
-          <div className="brc-empty-state-title">No messages yet</div>
-          <div className="brc-empty-state-desc">
-            {supplier.thread
-              ? "No messages yet. Start the conversation by sending a message."
-              : `Start a conversation with ${supplier.supplierName}.`}
-          </div>
+        <div className="brc-state-wrap">
+          <EmptyState
+            icon={<IconMessageSquare />}
+            title="No messages yet"
+            description={
+              supplier.thread
+                ? "No messages yet. Start the conversation by sending a message."
+                : `Start a conversation with ${supplier.supplierName}.`
+            }
+          />
         </div>
       ) : (
-        <div className="brc-messages">
+        <div className="brc-messages" role="log" aria-label={`Messages with ${supplier.supplierName}`}>
           {hasMoreHistory && (
             <button
               type="button"
@@ -187,7 +187,7 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
                             disabled={downloadingAttachmentId === att.id}
                             title={`Download ${att.fileName}`}
                           >
-                            <span className="brc-attachment-chip-icon">
+                            <span className="brc-attachment-chip-icon" aria-hidden="true">
                               <IconFile />
                             </span>
                             <span className="brc-attachment-chip-info">
@@ -202,7 +202,9 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
                       </div>
                     )}
                   </div>
-                  <div className="brc-message-time">{formatMessageTime(message.dateCreated)}</div>
+                  <time className="brc-message-time" dateTime={message.dateCreated}>
+                    {formatMessageTime(message.dateCreated)}
+                  </time>
                 </div>
               </React.Fragment>
             );
@@ -238,7 +240,9 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
           ref={fileInputRef}
           type="file"
           multiple
-          style={{ display: "none" }}
+          className="brc-file-input"
+          tabIndex={-1}
+          aria-hidden="true"
           onChange={handleFilesSelected}
         />
         <button
@@ -254,6 +258,7 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
         <textarea
           className="brc-composer-input"
           placeholder="Type a message..."
+          aria-label={`Message ${supplier.supplierName}`}
           rows={1}
           value={messageText}
           onChange={(e) => setMessageText(e.target.value)}
@@ -261,7 +266,7 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
           disabled={isSendingMessage}
         />
         <button type="button" className="brc-send-btn" onClick={handleSend} disabled={!canSend}>
-          {isSendingMessage ? <span className="brc-spinner-sm" /> : <IconSend />}
+          {isSendingMessage ? <span className="brc-spinner-sm" aria-hidden="true" /> : <IconSend />}
           Send
         </button>
       </div>

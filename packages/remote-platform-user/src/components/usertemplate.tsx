@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
-import { FaEye as Eye, FaEdit as Edit2, FaTrash as Trash2, FaPlus as Plus } from 'react-icons/fa';
-import { toastService } from '@vosox/shared-ui';
+import {
+  FaEye as Eye,
+  FaEdit as Edit2,
+  FaTrash as Trash2,
+  FaPlus as Plus,
+  FaCheck as Check,
+  FaChevronLeft as ChevronLeft,
+  FaChevronRight as ChevronRight,
+  FaClipboardList as ClipboardIcon,
+} from 'react-icons/fa';
+import { toastService, EmptyState, Loader } from '@vosox/shared-ui';
 import './usertemplate.css';
 import {
   createBuyerVerificationTemplate,
@@ -56,7 +65,7 @@ interface TemplateFormData {
   fields: FormField[];
 }
 const IconBack = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path d="M12 15L7 10L12 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
@@ -621,544 +630,700 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
     }
   };
 
+  const createSteps = ['Enter Template Information', 'Configure Form Fields'];
+
   if (showCreateForm) {
     return (
       <div className="ut-container">
-        <div className="ut-header" style={{ alignItems: 'center' }}>
-          <button type="button" className="afd-back" onClick={handleCancelCreate} aria-label="Back to templates list" title="Back">
-            <IconBack />
-          </button>
-          <div className="ut-header-content">
-            <h1>Onboarding Registration Templates</h1>
-            <p>Configure compliance checks, required physical files, and document parameters for unverified vendor groups.</p>
+        <div className="ut-header ut-header--create sila-page-header">
+          <div className="ut-header-main sila-page-header-main">
+            <button
+              type="button"
+              className="afd-back ut-back-btn sila-btn sila-btn--secondary sila-btn--icon sila-btn--sm"
+              onClick={handleCancelCreate}
+              aria-label="Back to templates list"
+              title="Back"
+            >
+              <IconBack />
+            </button>
+            <div className="ut-header-content">
+              <h1 className="sila-page-title">Onboarding Registration Templates</h1>
+              <p className="sila-page-description">Configure compliance checks, required physical files, and document parameters for unverified vendor groups.</p>
+            </div>
           </div>
         </div>
 
-        {currentStep === 1 ? (
-          <div className="ut-form-card">
-            <div className="ut-form-header">
-              <span className="ut-step-indicator">Step 1 of 2</span>
-              <h2>Enter Template Information</h2>
-            </div>
+        <div className="ut-form-card">
+          <ol className="sila-steps ut-steps" aria-label="Template creation progress">
+            {createSteps.map((label, idx) => {
+              const stepNumber = idx + 1;
+              const state =
+                stepNumber < currentStep ? 'sila-step--done' : stepNumber === currentStep ? 'sila-step--current' : '';
+              return (
+                <li
+                  key={label}
+                  className={`sila-step ${state}`.trim()}
+                  aria-current={stepNumber === currentStep ? 'step' : undefined}
+                >
+                  <span className="sila-step-marker" aria-hidden="true">
+                    {stepNumber < currentStep ? <Check size={10} /> : stepNumber}
+                  </span>
+                  <span>{label}</span>
+                </li>
+              );
+            })}
+          </ol>
 
-            <div className="ut-form-group">
-              <label>Template Name</label>
-              <input
-                type="text"
-                placeholder="Enter template name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-              />
-            </div>
+          {currentStep === 1 ? (
+            <>
+              <div className="ut-form-header">
+                <span className="ut-step-indicator">Step 1 of 2</span>
+                <h2>Enter Template Information</h2>
+              </div>
 
-            <div className="ut-form-group">
-              <label>Description</label>
-              <textarea
-                placeholder="Explain the target supplier group and compliance standards met this checklist."
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                rows={4}
-              />
-            </div>
+              <div className="ut-form-group sila-field">
+                <label htmlFor="ut-create-name" className="sila-label">
+                  Template Name <span className="sila-required" aria-hidden="true">*</span>
+                </label>
+                <input
+                  id="ut-create-name"
+                  type="text"
+                  className="sila-input"
+                  placeholder="Enter template name"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  aria-required="true"
+                />
+              </div>
 
-            <div className="ut-form-actions">
-              <button className="ut-btn-cancel" onClick={handleCancelCreate}>
-                Cancel
-              </button>
-              <button className="ut-btn-primary" onClick={handleStep1Next}>
-                Next
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="ut-form-card">
-            <div className="ut-form-header">
-              <span className="ut-step-indicator">Step 2 of 2</span>
-              <h2>Configure Form Fields</h2>
-            </div>
+              <div className="ut-form-group sila-field">
+                <label htmlFor="ut-create-description" className="sila-label">Description</label>
+                <textarea
+                  id="ut-create-description"
+                  className="sila-textarea"
+                  placeholder="Explain the target supplier group and compliance standards met this checklist."
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  rows={4}
+                />
+              </div>
 
-            <div className="ut-add-field-section">
-              <button className="ut-btn-add-field" onClick={handleAddField}>
-                <Plus size={18} /> Add Form Field
-              </button>
-            </div>
+              <div className="ut-form-actions">
+                <button type="button" className="ut-btn-cancel sila-btn sila-btn--secondary" onClick={handleCancelCreate}>
+                  Cancel
+                </button>
+                <button type="button" className="ut-btn-primary sila-btn sila-btn--primary" onClick={handleStep1Next}>
+                  Next
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="ut-form-header">
+                <span className="ut-step-indicator">Step 2 of 2</span>
+                <h2>Configure Form Fields</h2>
+              </div>
 
-            {showFieldForm && (
-              <div className="ut-inline-field-form">
-                <div className="ut-inline-form-container">
-                  <div className="ut-form-group">
-                    <label>Field Type</label>
-                    <select
-                      value={fieldForm.type}
-                      onChange={(e) => setFieldForm({ ...fieldForm, type: e.target.value })}
-                      disabled={loadingQuestionTypes}
-                    >
-                      <option value="" disabled>
-                        {loadingQuestionTypes ? 'Loading...' : 'Select a field type'}
-                      </option>
-                      {questionTypes.map((qt) => (
-                        <option key={qt.id} value={qt.key}>{qt.description}</option>
-                      ))}
-                    </select>
-                    {questionTypesError && (
-                      <div className="ut-error-message">{questionTypesError}</div>
-                    )}
-                  </div>
+              <div className="ut-add-field-section">
+                <button type="button" className="ut-btn-add-field" onClick={handleAddField}>
+                  <Plus size={12} aria-hidden="true" /> Add Form Field
+                </button>
+              </div>
 
-                  <div className="ut-form-group">
-                    <label>Question Label</label>
-                    <input
-                      type="text"
-                      placeholder="eg. Business Type"
-                      value={fieldForm.label}
-                      onChange={(e) =>
-                        setFieldForm({ ...fieldForm, label: e.target.value })
-                      }
-                    />
-                  </div>
+              {showFieldForm && (
+                <div className="ut-inline-field-form">
+                  <div className="ut-inline-form-container">
+                    <div className="ut-form-group sila-field">
+                      <label htmlFor="ut-create-field-type" className="sila-label">
+                        Field Type <span className="sila-required" aria-hidden="true">*</span>
+                      </label>
+                      <select
+                        id="ut-create-field-type"
+                        className="sila-select"
+                        value={fieldForm.type}
+                        onChange={(e) => setFieldForm({ ...fieldForm, type: e.target.value })}
+                        disabled={loadingQuestionTypes}
+                        aria-required="true"
+                        aria-invalid={questionTypesError ? true : undefined}
+                        aria-describedby={questionTypesError ? 'ut-create-field-type-error' : undefined}
+                      >
+                        <option value="" disabled>
+                          {loadingQuestionTypes ? 'Loading...' : 'Select a field type'}
+                        </option>
+                        {questionTypes.map((qt) => (
+                          <option key={qt.id} value={qt.key}>{qt.description}</option>
+                        ))}
+                      </select>
+                      {questionTypesError && (
+                        <div id="ut-create-field-type-error" className="ut-error-message sila-error-text">{questionTypesError}</div>
+                      )}
+                    </div>
 
-                  {isOptionsType(fieldForm.type) && (
-                    <div className="ut-form-group">
-                      <label>Available Options (Comma Separated)</label>
+                    <div className="ut-form-group sila-field">
+                      <label htmlFor="ut-create-field-label" className="sila-label">
+                        Question Label <span className="sila-required" aria-hidden="true">*</span>
+                      </label>
                       <input
+                        id="ut-create-field-label"
                         type="text"
-                        placeholder="eg. Manufacturer, Distributor, Retailer"
-                        value={fieldForm.options}
+                        className="sila-input"
+                        placeholder="eg. Business Type"
+                        value={fieldForm.label}
+                        onChange={(e) =>
+                          setFieldForm({ ...fieldForm, label: e.target.value })
+                        }
+                        aria-required="true"
+                      />
+                    </div>
+
+                    {isOptionsType(fieldForm.type) && (
+                      <div className="ut-form-group sila-field">
+                        <label htmlFor="ut-create-field-options" className="sila-label">Available Options (Comma Separated)</label>
+                        <input
+                          id="ut-create-field-options"
+                          type="text"
+                          className="sila-input"
+                          placeholder="eg. Manufacturer, Distributor, Retailer"
+                          value={fieldForm.options}
+                          onChange={(e) =>
+                            setFieldForm({
+                              ...fieldForm,
+                              options: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    )}
+
+                    <div className="ut-form-group ut-form-group--checkbox">
+                      <input
+                        type="checkbox"
+                        id="mandatory"
+                        checked={fieldForm.mandatory}
                         onChange={(e) =>
                           setFieldForm({
                             ...fieldForm,
-                            options: e.target.value,
+                            mandatory: e.target.checked,
                           })
                         }
                       />
+                      <label htmlFor="mandatory">
+                        Make this field mandatory (*)
+                      </label>
                     </div>
-                  )}
 
-                  <div className="ut-form-group ut-form-group--checkbox">
-                    <input
-                      type="checkbox"
-                      id="mandatory"
-                      checked={fieldForm.mandatory}
-                      onChange={(e) =>
-                        setFieldForm({
-                          ...fieldForm,
-                          mandatory: e.target.checked,
-                        })
-                      }
-                    />
-                    <label htmlFor="mandatory">
-                      Make this field mandatory (*)
-                    </label>
-                  </div>
-
-                  <div className="ut-inline-form-actions">
-                    <button
-                      className="ut-btn-cancel"
-                      onClick={() => setShowFieldForm(false)}
-                    >
-                      Cancel
-                    </button>
-                    <button className="ut-btn-primary" onClick={handleSaveField}>
-                      Save Field
-                    </button>
+                    <div className="ut-inline-form-actions">
+                      <button
+                        type="button"
+                        className="ut-btn-cancel sila-btn sila-btn--secondary sila-btn--sm"
+                        onClick={() => setShowFieldForm(false)}
+                      >
+                        Cancel
+                      </button>
+                      <button type="button" className="ut-btn-primary sila-btn sila-btn--primary sila-btn--sm" onClick={handleSaveField}>
+                        Save Field
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-
-            <div className="ut-fields-list">
-              <h3 className="ut-fields-list-title">Configured Form Schema ({formData.fields.length})</h3>
-              {formData.fields.length === 0 ? (
-                <p className="ut-empty-state">No fields added yet. Click "Add Form Field" to get started.</p>
-              ) : (
-                formData.fields.map((field) => (
-                  <div key={field.id} className="ut-field-item">
-                    <div className="ut-field-info">
-                      <div className="ut-field-name">{field.label}</div>
-                      <div className="ut-field-type">Type: {getQuestionTypeLabel(field.type)}</div>
-                      {field.mandatory && (
-                        <div className="ut-field-mandatory">Mandatory</div>
-                      )}
-                    </div>
-                    <div className="ut-field-actions">
-                      <button
-                        className="ut-btn-edit-field"
-                        onClick={() => handleEditField(field.id)}
-                      >
-                        <Edit2 size={16} /> Edit
-                      </button>
-                      <button
-                        className="ut-btn-delete-field"
-                        onClick={() => handleDeleteField(field.id)}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))
               )}
-            </div>
 
-            {publishError && (
-              <div className="ut-error-message ut-error-message--form">
-                {publishError}
+              <div className="ut-fields-list">
+                <h3 className="ut-fields-list-title">Configured Form Schema ({formData.fields.length})</h3>
+                {formData.fields.length === 0 ? (
+                  <p className="ut-empty-state">No fields added yet. Click "Add Form Field" to get started.</p>
+                ) : (
+                  formData.fields.map((field) => (
+                    <div key={field.id} className="ut-field-item">
+                      <div className="ut-field-info">
+                        <div className="ut-field-name">{field.label}</div>
+                        <div className="ut-field-type">Type: {getQuestionTypeLabel(field.type)}</div>
+                        {field.mandatory && (
+                          <span className="ut-field-mandatory sila-badge sila-badge--sm sila-badge--danger">Mandatory</span>
+                        )}
+                      </div>
+                      <div className="ut-field-actions">
+                        <button
+                          type="button"
+                          className="ut-btn-edit-field sila-btn sila-btn--ghost sila-btn--sm"
+                          onClick={() => handleEditField(field.id)}
+                          aria-label={`Edit field ${field.label}`}
+                        >
+                          <Edit2 size={13} aria-hidden="true" /> Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="ut-btn-delete-field sila-btn sila-btn--ghost sila-btn--sm sila-btn--icon"
+                          onClick={() => handleDeleteField(field.id)}
+                          aria-label={`Delete field ${field.label}`}
+                          title="Delete"
+                        >
+                          <Trash2 size={13} aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-            )}
 
-            <div className="ut-form-actions">
-              <button className="ut-btn-cancel" onClick={() => setCurrentStep(1)} disabled={publishing}>
-                Cancel
-              </button>
-              <button className="ut-btn-publish" onClick={handlePublishTemplate} disabled={publishing}>
-                {publishing ? 'Publishing...' : 'Publish Template'}
-              </button>
-            </div>
-          </div>
-        )}
+              {publishError && (
+                <div className="ut-error-message ut-error-message--form sila-alert sila-alert--danger" role="alert">
+                  {publishError}
+                </div>
+              )}
+
+              <div className="ut-form-actions">
+                <button
+                  type="button"
+                  className="ut-btn-cancel sila-btn sila-btn--secondary"
+                  onClick={() => setCurrentStep(1)}
+                  disabled={publishing}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="ut-btn-publish sila-btn sila-btn--primary"
+                  onClick={handlePublishTemplate}
+                  disabled={publishing}
+                >
+                  {publishing && <span className="sila-spinner" aria-hidden="true" />}
+                  {publishing ? 'Publishing...' : 'Publish Template'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="ut-container">
-      <div className="ut-header">
+      <div className="ut-header sila-page-header">
         <div className="ut-header-content">
-          <h1>Onboarding Registration Templates</h1>
-          <p>Configure compliance checks, required physical files, and document parameters for unverified vendor groups.</p>
+          <h1 className="sila-page-title">Onboarding Registration Templates</h1>
+          <p className="sila-page-description">Configure compliance checks, required physical files, and document parameters for unverified vendor groups.</p>
         </div>
         {currentUser?.userRole === "BUYER_ADMINISTRATOR" && (
-          <button className="ut-btn-create" onClick={handleCreateTemplate}>
-            + Create Template
+          <button type="button" className="ut-btn-create sila-btn sila-btn--primary" onClick={handleCreateTemplate}>
+            <Plus size={12} aria-hidden="true" /> Create Template
           </button>
         )}
       </div>
 
       {viewError && (
-        <div className="ut-error-message ut-error-message--page">
+        <div className="ut-error-message ut-error-message--page sila-alert sila-alert--danger" role="alert">
           {viewError}
         </div>
       )}
 
       {deleteError && (
-        <div className="ut-error-message ut-error-message--page">
+        <div className="ut-error-message ut-error-message--page sila-alert sila-alert--danger" role="alert">
           {deleteError}
         </div>
       )}
 
       {templatesError && (
-        <div className="ut-error-message ut-error-message--page">
+        <div className="ut-error-message ut-error-message--page sila-alert sila-alert--danger" role="alert">
           {templatesError}
         </div>
       )}
 
       {/* Templates Table */}
       {apiTemplates.length > 0 && (
-        <div className="ut-table-wrapper">
-          <table className="ut-table">
-            <thead>
-              <tr>
-                <th className="ut-col-name">TEMPLATE NAME</th>
-                <th className="ut-col-modified">LAST MODIFIED</th>
-                <th className="ut-col-action">ACTION</th>
-              </tr>
-            </thead>
-            <tbody>
-              {apiTemplates.map((template) => (
-                <tr key={template.templateId} className="ut-table-row">
-                  <td className="ut-col-name">
-                    <div className="ut-template-name-wrapper">
-                      <div className="ut-template-name">{template.templateName}</div>
-                      <div className="ut-template-description">
-                        {template.questions.length} questions • {template.templateType}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="ut-col-modified">
-                    {new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </td>
-                  <td className="ut-col-action">
-                    <div className={`ut-action-buttons ${template.templateType === "DEFAULT" ? "ut-default-template" : ""}`}>
-                      <button
-                        className="ut-btn-action ut-btn-view"
-                        title="View"
-                        onClick={() => handleViewTemplate(template.templateId)}
-                        disabled={loadingViewId === template.templateId}
-                      >
-                        <Eye size={18} />
-                        {loadingViewId === template.templateId ? 'Loading...' : 'View'}
-                      </button>
-                      {currentUser?.userRole === "BUYER_ADMINISTRATOR" && (
-                        <>
-                          <button
-                            className="ut-btn-action ut-btn-edit"
-                            title="Edit"
-                            onClick={() => handleOpenEditTemplate(template)}
-                          >
-                            <Edit2 size={18} />
-                            Edit
-                          </button>
-                          <button
-                            className="ut-btn-action ut-btn-delete"
-                            title="Delete"
-                            onClick={() => setConfirmDeleteId(template.templateId)}
-                            disabled={deletingTemplateId === template.templateId}
-                          >
-                            <Trash2 size={18} />
-                            {deletingTemplateId === template.templateId ? 'Deleting...' : ''}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
+        <div className="ut-table-wrapper" aria-busy={loadingTemplates || undefined}>
+          <div className="ut-table-scroll sila-table-wrap">
+            <table className="ut-table sila-table">
+              <thead>
+                <tr>
+                  <th scope="col" className="ut-col-name">Template Name</th>
+                  <th scope="col" className="ut-col-modified">Last Modified</th>
+                  <th scope="col" className="ut-col-action">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {apiTemplates.map((template) => (
+                  <tr key={template.templateId} className="ut-table-row">
+                    <td className="ut-col-name">
+                      <div className="ut-template-name-wrapper">
+                        <div className="ut-template-name">{template.templateName}</div>
+                        <div className="ut-template-description">
+                          {template.questions.length} questions • {template.templateType}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="ut-col-modified">
+                      {new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </td>
+                    <td className="ut-col-action">
+                      <div className={`ut-action-buttons ${template.templateType === "DEFAULT" ? "ut-default-template" : ""}`}>
+                        <button
+                          type="button"
+                          className="ut-btn-action ut-btn-view sila-btn sila-btn--ghost sila-btn--sm"
+                          title="View"
+                          onClick={() => handleViewTemplate(template.templateId)}
+                          disabled={loadingViewId === template.templateId}
+                          aria-label={`View ${template.templateName}`}
+                        >
+                          {loadingViewId === template.templateId ? (
+                            <span className="sila-spinner" aria-hidden="true" />
+                          ) : (
+                            <Eye size={13} aria-hidden="true" />
+                          )}
+                          {loadingViewId === template.templateId ? 'Loading...' : 'View'}
+                        </button>
+                        {currentUser?.userRole === "BUYER_ADMINISTRATOR" && (
+                          <>
+                            <button
+                              type="button"
+                              className="ut-btn-action ut-btn-edit sila-btn sila-btn--ghost sila-btn--sm"
+                              title="Edit"
+                              onClick={() => handleOpenEditTemplate(template)}
+                              aria-label={`Edit ${template.templateName}`}
+                            >
+                              <Edit2 size={13} aria-hidden="true" />
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="ut-btn-action ut-btn-delete sila-btn sila-btn--ghost sila-btn--sm"
+                              title="Delete"
+                              onClick={() => setConfirmDeleteId(template.templateId)}
+                              disabled={deletingTemplateId === template.templateId}
+                              aria-label={`Delete ${template.templateName}`}
+                            >
+                              {deletingTemplateId === template.templateId ? (
+                                <span className="sila-spinner" aria-hidden="true" />
+                              ) : (
+                                <Trash2 size={13} aria-hidden="true" />
+                              )}
+                              {deletingTemplateId === template.templateId ? 'Deleting...' : ''}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {/* Pagination Controls */}
           {(currentPage > 1 || hasNextPage) && (
-            <div className="ut-pagination-controls">
-              <button
-                className="ut-btn-pagination"
-                onClick={handlePrevPage}
-                disabled={currentPage === 1 || loadingTemplates}
-              >
-                ← Previous
-              </button>
-              <span className="ut-pagination-info">
+            <nav className="ut-pagination-controls sila-pagination" aria-label="Templates pagination">
+              <span className="ut-pagination-info" aria-live="polite">
                 Page {currentPage}
               </span>
-              <button
-                className="ut-btn-pagination"
-                onClick={handleNextPage}
-                disabled={!hasNextPage || loadingTemplates}
-              >
-                Next →
-              </button>
-            </div>
+              <div className="sila-pagination-pages">
+                <button
+                  type="button"
+                  className="ut-btn-pagination sila-page-btn"
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 1 || loadingTemplates}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={11} aria-hidden="true" />
+                  <span>Previous</span>
+                </button>
+                <button
+                  type="button"
+                  className="ut-btn-pagination sila-page-btn"
+                  onClick={handleNextPage}
+                  disabled={!hasNextPage || loadingTemplates}
+                  aria-label="Next page"
+                >
+                  <span>Next</span>
+                  <ChevronRight size={11} aria-hidden="true" />
+                </button>
+              </div>
+            </nav>
           )}
         </div>
       )}
 
-      {/* Empty State */}
+      {/* Empty / loading State */}
       {apiTemplates.length === 0 && (
         <div className="ut-empty-state-container">
-          <p>No templates available. Create a new template to get started.</p>
+          {loadingTemplates ? (
+            <Loader size={24} message="Loading templates..." />
+          ) : (
+            <EmptyState
+              icon={<ClipboardIcon size={18} aria-hidden="true" />}
+              title="No templates available. Create a new template to get started."
+            />
+          )}
         </div>
       )}
 
       {/* View Template Modal */}
       {viewingTemplate && (
-        <div className="ut-modal-overlay" onClick={() => setViewingTemplate(null)}>
-          <div className="ut-modal ut-modal--view" onClick={(e) => e.stopPropagation()}>
-            <div className="ut-modal-header">
+        <div className="ut-modal-overlay sila-root sila-overlay" onClick={() => setViewingTemplate(null)}>
+          <div
+            className="ut-modal ut-modal--view sila-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ut-view-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="ut-modal-header sila-modal-header">
               <div className="ut-modal-header-info">
-                <h2 className="ut-modal-title">{viewingTemplate.templateName}</h2>
+                <h2 id="ut-view-title" className="ut-modal-title sila-modal-title">{viewingTemplate.templateName}</h2>
                 <div className="ut-modal-subtitle">
-                  {viewingTemplate.templateType} • Code: {viewingTemplate.templateCode}
+                  {viewingTemplate.templateType} • Code: <span className="sila-ref">{viewingTemplate.templateCode}</span>
                 </div>
               </div>
+            </div>
+
+            <div className="ut-modal-body sila-modal-body">
+              {viewingTemplate.questions.length === 0 ? (
+                <p className="ut-empty-state">No questions configured for this template.</p>
+              ) : (
+                <div className="ut-modal-questions">
+                  {viewingTemplate.questions
+                    .slice()
+                    .sort((a, b) => a.displayOrder - b.displayOrder)
+                    .map((q) => (
+                      <div key={q.questionId} className="ut-field-item ut-field-item--flush">
+                        <div className="ut-field-info">
+                          <div className="ut-field-name">{q.question}</div>
+                          <div className="ut-field-type">Type: {getQuestionTypeLabel(q.questionType)}</div>
+                          {q.options && q.options.length > 0 && (
+                            <div className="ut-field-type">Options: {q.options.join(', ')}</div>
+                          )}
+                          {q.isRequired && (
+                            <span className="ut-field-mandatory sila-badge sila-badge--sm sila-badge--danger">Mandatory</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            <div className="ut-modal-footer sila-modal-footer">
               <button
-                className="ut-btn-cancel ut-modal-close-btn"
+                type="button"
+                className="ut-btn-cancel ut-modal-close-btn sila-btn sila-btn--secondary"
                 onClick={() => setViewingTemplate(null)}
               >
                 Close
               </button>
             </div>
-
-            {viewingTemplate.questions.length === 0 ? (
-              <p className="ut-empty-state">No questions configured for this template.</p>
-            ) : (
-              <div className="ut-modal-questions">
-                {viewingTemplate.questions
-                  .slice()
-                  .sort((a, b) => a.displayOrder - b.displayOrder)
-                  .map((q) => (
-                    <div key={q.questionId} className="ut-field-item ut-field-item--flush">
-                      <div className="ut-field-info">
-                        <div className="ut-field-name">{q.question}</div>
-                        <div className="ut-field-type">Type: {getQuestionTypeLabel(q.questionType)}</div>
-                        {q.options && q.options.length > 0 && (
-                          <div className="ut-field-type">Options: {q.options.join(', ')}</div>
-                        )}
-                        {q.isRequired && (
-                          <div className="ut-field-mandatory">Mandatory</div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            )}
           </div>
         </div>
       )}
 
       {/* Edit Template Modal */}
       {editingTemplate && (
-        <div className="ut-modal-overlay ut-modal-overlay--scrollable" onClick={handleCancelEdit}>
-          <div className="ut-form-card ut-modal ut-edit-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="ut-form-header">
-              <span className="ut-step-indicator">Edit Template</span>
-              <h2>Update Template Information</h2>
+        <div className="ut-modal-overlay ut-modal-overlay--scrollable sila-root sila-overlay" onClick={handleCancelEdit}>
+          <div
+            className="ut-form-card ut-modal ut-edit-modal sila-modal sila-modal--lg"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ut-edit-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="ut-form-header sila-modal-header">
+              <div>
+                <span className="ut-step-indicator">Edit Template</span>
+                <h2 id="ut-edit-title" className="sila-modal-title">Update Template Information</h2>
+              </div>
             </div>
 
-            <div className="ut-form-group">
-              <label>Template Name</label>
-              <input
-                type="text"
-                className="ut-input--readonly"
-                readOnly
-                value={editFormData.name}
-              />
-            </div>
+            <div className="ut-edit-body sila-modal-body">
+              <div className="ut-form-group sila-field">
+                <label htmlFor="ut-edit-name" className="sila-label">Template Name</label>
+                <input
+                  id="ut-edit-name"
+                  type="text"
+                  className="ut-input--readonly sila-input"
+                  readOnly
+                  value={editFormData.name}
+                />
+              </div>
 
-            <div className="ut-form-group">
-              <label>Description</label>
-              <textarea
-                className="ut-textarea--readonly"
-                readOnly
-                value={editFormData.description}
-                rows={4}
-              />
-            </div>
+              <div className="ut-form-group sila-field">
+                <label htmlFor="ut-edit-description" className="sila-label">Description</label>
+                <textarea
+                  id="ut-edit-description"
+                  className="ut-textarea--readonly sila-textarea"
+                  readOnly
+                  value={editFormData.description}
+                  rows={4}
+                />
+              </div>
 
-            <div className="ut-add-field-section">
-              <button className="ut-btn-add-field" onClick={handleAddFieldForEdit}>
-                <Plus size={18} /> Add Form Field
-              </button>
-            </div>
+              <div className="ut-add-field-section">
+                <button type="button" className="ut-btn-add-field" onClick={handleAddFieldForEdit}>
+                  <Plus size={12} aria-hidden="true" /> Add Form Field
+                </button>
+              </div>
 
-            {showEditFieldForm && (
-              <div className="ut-inline-field-form">
-                <div className="ut-inline-form-container">
-                  <div className="ut-form-group">
-                    <label>Field Type</label>
-                    <select
-                      value={editFieldForm.type}
-                      onChange={(e) => setEditFieldForm({ ...editFieldForm, type: e.target.value })}
-                      disabled={loadingQuestionTypes}
-                    >
-                      <option value="" disabled>
-                        {loadingQuestionTypes ? 'Loading...' : 'Select a field type'}
-                      </option>
-                      {questionTypes.map((qt) => (
-                        <option key={qt.id} value={qt.key}>{qt.description}</option>
-                      ))}
-                    </select>
-                    {questionTypesError && (
-                      <div className="ut-error-message">{questionTypesError}</div>
-                    )}
-                  </div>
+              {showEditFieldForm && (
+                <div className="ut-inline-field-form">
+                  <div className="ut-inline-form-container">
+                    <div className="ut-form-group sila-field">
+                      <label htmlFor="ut-edit-field-type" className="sila-label">
+                        Field Type <span className="sila-required" aria-hidden="true">*</span>
+                      </label>
+                      <select
+                        id="ut-edit-field-type"
+                        className="sila-select"
+                        value={editFieldForm.type}
+                        onChange={(e) => setEditFieldForm({ ...editFieldForm, type: e.target.value })}
+                        disabled={loadingQuestionTypes}
+                        aria-required="true"
+                        aria-invalid={questionTypesError ? true : undefined}
+                        aria-describedby={questionTypesError ? 'ut-edit-field-type-error' : undefined}
+                      >
+                        <option value="" disabled>
+                          {loadingQuestionTypes ? 'Loading...' : 'Select a field type'}
+                        </option>
+                        {questionTypes.map((qt) => (
+                          <option key={qt.id} value={qt.key}>{qt.description}</option>
+                        ))}
+                      </select>
+                      {questionTypesError && (
+                        <div id="ut-edit-field-type-error" className="ut-error-message sila-error-text">{questionTypesError}</div>
+                      )}
+                    </div>
 
-                  <div className="ut-form-group">
-                    <label>Question Label</label>
-                    <input
-                      type="text"
-                      placeholder="eg. Business Type"
-                      value={editFieldForm.label}
-                      onChange={(e) =>
-                        setEditFieldForm({ ...editFieldForm, label: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  {isOptionsType(editFieldForm.type) && (
-                    <div className="ut-form-group">
-                      <label>Available Options (Comma Separated)</label>
+                    <div className="ut-form-group sila-field">
+                      <label htmlFor="ut-edit-field-label" className="sila-label">
+                        Question Label <span className="sila-required" aria-hidden="true">*</span>
+                      </label>
                       <input
+                        id="ut-edit-field-label"
                         type="text"
-                        placeholder="eg. Manufacturer, Distributor, Retailer"
-                        value={editFieldForm.options}
+                        className="sila-input"
+                        placeholder="eg. Business Type"
+                        value={editFieldForm.label}
+                        onChange={(e) =>
+                          setEditFieldForm({ ...editFieldForm, label: e.target.value })
+                        }
+                        aria-required="true"
+                      />
+                    </div>
+
+                    {isOptionsType(editFieldForm.type) && (
+                      <div className="ut-form-group sila-field">
+                        <label htmlFor="ut-edit-field-options" className="sila-label">Available Options (Comma Separated)</label>
+                        <input
+                          id="ut-edit-field-options"
+                          type="text"
+                          className="sila-input"
+                          placeholder="eg. Manufacturer, Distributor, Retailer"
+                          value={editFieldForm.options}
+                          onChange={(e) =>
+                            setEditFieldForm({
+                              ...editFieldForm,
+                              options: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    )}
+
+                    <div className="ut-form-group ut-form-group--checkbox">
+                      <input
+                        type="checkbox"
+                        id="mandatory-edit"
+                        checked={editFieldForm.mandatory}
                         onChange={(e) =>
                           setEditFieldForm({
                             ...editFieldForm,
-                            options: e.target.value,
+                            mandatory: e.target.checked,
                           })
                         }
                       />
+                      <label htmlFor="mandatory-edit">
+                        Make this field mandatory (*)
+                      </label>
                     </div>
-                  )}
 
-                  <div className="ut-form-group ut-form-group--checkbox">
-                    <input
-                      type="checkbox"
-                      id="mandatory-edit"
-                      checked={editFieldForm.mandatory}
-                      onChange={(e) =>
-                        setEditFieldForm({
-                          ...editFieldForm,
-                          mandatory: e.target.checked,
-                        })
-                      }
-                    />
-                    <label htmlFor="mandatory-edit">
-                      Make this field mandatory (*)
-                    </label>
-                  </div>
-
-                  <div className="ut-inline-form-actions">
-                    <button
-                      className="ut-btn-cancel"
-                      onClick={() => setShowEditFieldForm(false)}
-                    >
-                      Cancel
-                    </button>
-                    <button className="ut-btn-primary" onClick={handleSaveFieldForEdit}>
-                      Save Field
-                    </button>
+                    <div className="ut-inline-form-actions">
+                      <button
+                        type="button"
+                        className="ut-btn-cancel sila-btn sila-btn--secondary sila-btn--sm"
+                        onClick={() => setShowEditFieldForm(false)}
+                      >
+                        Cancel
+                      </button>
+                      <button type="button" className="ut-btn-primary sila-btn sila-btn--primary sila-btn--sm" onClick={handleSaveFieldForEdit}>
+                        Save Field
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div className="ut-fields-list">
-              <h3 className="ut-fields-list-title">Configured Form Schema ({editFormData.fields.length})</h3>
-              {editFormData.fields.length === 0 ? (
-                <p className="ut-empty-state">No fields added yet. Click "Add Form Field" to get started.</p>
-              ) : (
-                editFormData.fields.map((field) => (
-                  <div key={field.id} className="ut-field-item">
-                    <div className="ut-field-info">
-                      <div className="ut-field-name">{field.label}</div>
-                      <div className="ut-field-type">Type: {getQuestionTypeLabel(field.type)}</div>
-                      {field.mandatory && (
-                        <div className="ut-field-mandatory">Mandatory</div>
-                      )}
+              <div className="ut-fields-list">
+                <h3 className="ut-fields-list-title">Configured Form Schema ({editFormData.fields.length})</h3>
+                {editFormData.fields.length === 0 ? (
+                  <p className="ut-empty-state">No fields added yet. Click "Add Form Field" to get started.</p>
+                ) : (
+                  editFormData.fields.map((field) => (
+                    <div key={field.id} className="ut-field-item">
+                      <div className="ut-field-info">
+                        <div className="ut-field-name">{field.label}</div>
+                        <div className="ut-field-type">Type: {getQuestionTypeLabel(field.type)}</div>
+                        {field.mandatory && (
+                          <span className="ut-field-mandatory sila-badge sila-badge--sm sila-badge--danger">Mandatory</span>
+                        )}
+                      </div>
+                      <div className="ut-field-actions">
+                        <button
+                          type="button"
+                          className="ut-btn-edit-field sila-btn sila-btn--ghost sila-btn--sm"
+                          onClick={() => handleEditFieldForEdit(field.id)}
+                          aria-label={`Edit field ${field.label}`}
+                        >
+                          <Edit2 size={13} aria-hidden="true" /> Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="ut-btn-delete-field sila-btn sila-btn--ghost sila-btn--sm sila-btn--icon"
+                          onClick={() => handleDeleteFieldForEdit(field.id)}
+                          aria-label={`Delete field ${field.label}`}
+                          title="Delete"
+                        >
+                          <Trash2 size={13} aria-hidden="true" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="ut-field-actions">
-                      <button
-                        className="ut-btn-edit-field"
-                        onClick={() => handleEditFieldForEdit(field.id)}
-                      >
-                        <Edit2 size={16} /> Edit
-                      </button>
-                      <button
-                        className="ut-btn-delete-field"
-                        onClick={() => handleDeleteFieldForEdit(field.id)}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))
+                  ))
+                )}
+              </div>
+
+              {updateError && (
+                <div className="ut-error-message ut-error-message--form sila-alert sila-alert--danger" role="alert">
+                  {updateError}
+                </div>
               )}
             </div>
 
-            {updateError && (
-              <div className="ut-error-message ut-error-message--form">
-                {updateError}
-              </div>
-            )}
-
-            <div className="ut-form-actions">
-              <button className="ut-btn-cancel" onClick={handleCancelEdit} disabled={updatingTemplate}>
+            <div className="ut-form-actions ut-form-actions--modal sila-modal-footer">
+              <button
+                type="button"
+                className="ut-btn-cancel sila-btn sila-btn--secondary"
+                onClick={handleCancelEdit}
+                disabled={updatingTemplate}
+              >
                 Cancel
               </button>
-              <button className="ut-btn-publish" onClick={handleUpdateTemplate} disabled={updatingTemplate}>
+              <button
+                type="button"
+                className="ut-btn-publish sila-btn sila-btn--primary"
+                onClick={handleUpdateTemplate}
+                disabled={updatingTemplate}
+              >
+                {updatingTemplate && <span className="sila-spinner" aria-hidden="true" />}
                 {updatingTemplate ? 'Updating...' : 'Save Changes'}
               </button>
             </div>
@@ -1168,15 +1333,34 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
 
       {/* Inline Delete Confirmation */}
       {confirmDeleteId && (
-        <div className="ut-modal-overlay" onClick={() => setConfirmDeleteId(null)}>
-          <div className="ut-modal ut-modal--confirm" onClick={(e) => e.stopPropagation()}>
-            <p className="ut-confirm-text">Are you sure you want to delete this template? This cannot be undone.</p>
-            <div className="ut-form-actions">
-              <button className="ut-btn-cancel" onClick={() => setConfirmDeleteId(null)}>
+        <div className="ut-modal-overlay sila-root sila-overlay" onClick={() => setConfirmDeleteId(null)}>
+          <div
+            className="ut-modal ut-modal--confirm sila-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="ut-confirm-title"
+            aria-describedby="ut-confirm-text"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sila-modal-header">
+              <h2 id="ut-confirm-title" className="sila-modal-title">Delete template</h2>
+            </div>
+            <div className="sila-modal-body">
+              <p id="ut-confirm-text" className="ut-confirm-text sila-modal-text">
+                Are you sure you want to delete this template? This cannot be undone.
+              </p>
+            </div>
+            <div className="ut-form-actions ut-form-actions--modal sila-modal-footer">
+              <button
+                type="button"
+                className="ut-btn-cancel sila-btn sila-btn--secondary"
+                onClick={() => setConfirmDeleteId(null)}
+              >
                 Cancel
               </button>
               <button
-                className="ut-btn-delete-confirm"
+                type="button"
+                className="ut-btn-delete-confirm sila-btn sila-btn--danger"
                 onClick={() => {
                   const templateId = confirmDeleteId;
                   setConfirmDeleteId(null);

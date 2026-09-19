@@ -3,21 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Loader, isErrorResponse, Button } from '@vosox/shared-ui';
 import { FaCheckCircle, FaExclamationCircle, FaUserPlus } from 'react-icons/fa';
 import {
-  FaCheckCircle,
-  FaExclamationCircle,
-  FaFileAlt,
-  FaRegCalendarAlt,
-  FaMapMarkerAlt,
-  FaClipboardList,
-  FaQuestionCircle,
-  FaFileInvoiceDollar,
-  FaPaperclip,
-  FaCircle,
-  FaEye,
-  FaDownload,
-  FaUserPlus,
-} from 'react-icons/fa';
-import {
   fetchExternalRfqDetails,
   submitExternalQuotation,
   fetchExternalAsset,

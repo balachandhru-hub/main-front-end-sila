@@ -25,7 +25,8 @@ import {
     type VerificationQuestion,
     type SubmitVerificationPayload,
 } from "../api/supplierApi";
-import { isErrorResponse, toastService } from "@vosox/shared-ui";
+import { EmptyState, Loader, PageHeader, Pagination, StatusBadge, isErrorResponse, toastService } from "@vosox/shared-ui";
+import { FaCheck, FaFileAlt } from "react-icons/fa";
 
 
 type InvitationStatus = "open" | "submitted" | "accepted" | "declined" | "closed";
@@ -126,14 +127,6 @@ const IconClose = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="6" x2="6" y2="18" />
         <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-);
-
-const IconFile = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <path d="M14 2v6h6" />
-        <path d="M8 13h8M8 17h8M8 9h2" />
     </svg>
 );
 
@@ -287,6 +280,13 @@ const getDefaultAnswerForQuestion = (
 };
 
 
+const STATUS_ICON: Partial<Record<InvitationStatus, React.ReactNode>> = {
+    open: <IconClock />,
+    submitted: <IconSend />,
+    accepted: <IconCheckCircle />,
+    declined: <IconXCircle />,
+};
+
 const InvitationCard: React.FC<{
     invitation: Invitation;
     showActions: boolean;
@@ -298,90 +298,80 @@ const InvitationCard: React.FC<{
     actionError: string | null;
 }> = ({ invitation, showActions, canViewDetails, onAccept, onDecline, onViewDetails, actionLoading, actionError }) => {
     const { category, status, code, title, company, description, closing } = invitation;
+    const canRespond = showActions && (status === "open" || status === "submitted");
 
     return (
-        <div className={`inv-card inv-card-${status}`}>
+        <article className={`inv-card inv-card-${status}`}>
             <div className="inv-card-top">
-                {category && (
-                    <span className={`inv-category inv-category-${status}`}>
-                        <IconTag /> {category}
-                    </span>
-                )}
-                {status === "open" && (
-                    <span className="inv-status inv-status-open">
-                        <IconClock /> OPEN
-                    </span>
-                )}
-                {status === "submitted" && (
-                    <span className="inv-status inv-status-submitted">
-                        <IconSend /> SUBMITTED
-                    </span>
-                )}
-                {status === "accepted" && (
-                    <span className="inv-status inv-status-accepted">
-                        <IconCheckCircle /> ACCEPTED
-                    </span>
-                )}
-                {status === "declined" && <span className="inv-status inv-status-declined">DECLINED</span>}
-                {status === "closed" && <span className="inv-status inv-status-closed">CLOSED</span>}
+                <span className="sila-ref">{code}</span>
+                <StatusBadge
+                    status={status}
+                    size="sm"
+                    label={<>{STATUS_ICON[status] && <span className="inv-status-icon" aria-hidden="true">{STATUS_ICON[status]}</span>}{status.charAt(0).toUpperCase() + status.slice(1)}</>}
+                />
             </div>
 
             <div className="inv-card-body">
+                <h3 className="inv-card-title">{title}</h3>
                 <div className="inv-card-meta-row">
-                    <span className="inv-code-badge">{code}</span>
-                    <span className="inv-closing">
+                    <span className="inv-meta-item">
+                        <IconBuildingSmall /> {company}
+                    </span>
+                    <span className="inv-meta-item">
                         <IconCalendar /> Closing: {closing}
                     </span>
-                </div>
-
-                <div className="inv-card-title">{title}</div>
-                <div className="inv-company">
-                    <IconBuildingSmall /> {company}
+                    {category && (
+                        <span className="inv-meta-item">
+                            <IconTag /> {category}
+                        </span>
+                    )}
                 </div>
                 <p className="inv-description">{description}</p>
 
                 {actionError && (
-                    <div className="inv-action-error">{actionError}</div>
+                    <div className="sila-error-text inv-action-error" role="alert">{actionError}</div>
                 )}
             </div>
 
             <div className="inv-card-footer">
-                {showActions && (status === "open" || status === "submitted") && (
-                    <div className="inv-footer-left">
-                        <button
-                            className="inv-btn inv-btn-accept"
-                            onClick={() => onAccept(invitation)}
-                            disabled={actionLoading !== null}
-                        >
-                            {actionLoading === "accept" ? "Accepting..." : "Accept"}
-                        </button>
-                        <button
-                            className="inv-btn inv-btn-decline"
-                            onClick={() => onDecline(invitation)}
-                            disabled={actionLoading !== null}
-                        >
-                            {actionLoading === "decline" ? "Declining..." : "Decline"}
-                        </button>
-                    </div>
-                )}
-                {status === "accepted" && (
-                    <div className="inv-footer-left">
+                <div className="inv-footer-left">
+                    {canRespond && (
+                        <>
+                            <button
+                                type="button"
+                                className="sila-btn sila-btn--primary sila-btn--sm"
+                                onClick={() => onAccept(invitation)}
+                                disabled={actionLoading !== null}
+                            >
+                                {actionLoading === "accept" && <span className="sila-spinner" aria-hidden="true" />}
+                                {actionLoading === "accept" ? "Accepting..." : "Accept"}
+                            </button>
+                            <button
+                                type="button"
+                                className="sila-btn sila-btn--secondary sila-btn--sm inv-btn-decline"
+                                onClick={() => onDecline(invitation)}
+                                disabled={actionLoading !== null}
+                            >
+                                {actionLoading === "decline" && <span className="sila-spinner" aria-hidden="true" />}
+                                {actionLoading === "decline" ? "Declining..." : "Decline"}
+                            </button>
+                        </>
+                    )}
+                    {status === "accepted" && (
                         <span className="inv-footer-status inv-footer-status-accepted">
                             <IconCheckCircle /> Invitation Accepted
                         </span>
-                    </div>
-                )}
-                {status === "declined" && (
-                    <div className="inv-footer-left">
+                    )}
+                    {status === "declined" && (
                         <span className="inv-footer-status inv-footer-status-declined">
                             <IconXCircle /> Invitation Declined
                         </span>
-                    </div>
-                )}
-                {(!showActions && (status === "open" || status === "submitted")) || status === "closed" ? <div className="inv-footer-left" /> : null}
+                    )}
+                </div>
 
                 <button
-                    className="inv-btn inv-btn-view"
+                    type="button"
+                    className="sila-btn sila-btn--ghost sila-btn--sm inv-btn-view"
                     onClick={() => onViewDetails(invitation)}
                     disabled={!canViewDetails}
                     title={!canViewDetails ? "Details unavailable" : undefined}
@@ -389,7 +379,7 @@ const InvitationCard: React.FC<{
                     View Details <IconArrowRight />
                 </button>
             </div>
-        </div>
+        </article>
     );
 };
 
@@ -1018,32 +1008,40 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
 
     return (
         <>
-            <div className="sad-border">
-            <div>
-            <h1 className="inv-title">Sourcing Invitations</h1>
-            <p className="inv-subtitle">Direct invitations from buyers asking you to submit price bids and proposals.</p>
-            </div>
+            <div className="sad-border inv-page">
+            <PageHeader
+                className="inv-page-header"
+                title="Sourcing Invitations"
+                description="Direct invitations from buyers asking you to submit price bids and proposals."
+            />
 
+            <section className="sila-card inv-list-card">
             <div className="inv-tabs-bar">
-                <div className="inv-tabs">
+                <div className="sila-tabs inv-tabs" role="tablist" aria-label="Invitation status">
                     {tabs.map((tab) => (
                         <button
                             key={tab.key}
-                            className={`inv-tab${activeTab === tab.key ? " inv-tab-active" : ""}`}
+                            type="button"
+                            role="tab"
+                            aria-selected={activeTab === tab.key}
+                            className={`sila-tab inv-tab${activeTab === tab.key ? " inv-tab-active" : ""}`}
                             onClick={() => handleTabChange(tab.key)}
                         >
-                            {tab.label} ({tabCounts[tab.key]})
+                            {tab.label}
+                            <span className="sila-count sila-count--neutral">{tabCounts[tab.key]}</span>
                         </button>
                     ))}
                 </div>
 
                 <div className="inv-search-wrapper">
-                    <div className="inv-search">
-                        <IconSearch />
+                    <div className="sila-search inv-search">
+                        <span className="sila-search-icon" aria-hidden="true"><IconSearch /></span>
 
                         <input
                             type="text"
+                            className="sila-input"
                             placeholder="Search buyer, ID or category..."
+                            aria-label="Search invitations"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onKeyDown={(e) => {
@@ -1059,6 +1057,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                 className="inv-search-clear"
                                 onClick={handleClearSearch}
                                 title="Clear search"
+                                aria-label="Clear search"
                             >
                                 <IconClose />
                             </button>
@@ -1067,7 +1066,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
 
                     <button
                         type="button"
-                        className="inv-search-btn"
+                        className="sila-btn sila-btn--secondary"
                         onClick={handleSearch}
                         disabled={loading || !searchQuery.trim()}
                     >
@@ -1076,15 +1075,11 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                 </div>
             </div>
 
+            <div className="inv-list-body">
             {loading ? (
-                <div className="inv-loading-wrap">
-                    <div className="inv-loading-inner">
-                        <div className="inv-spinner" />
-                        <span>Loading invitations...</span>
-                    </div>
-                </div>
+                <Loader size={24} message="Loading invitations..." />
             ) : error ? (
-                <div className="inv-error-text">{error}</div>
+                <EmptyState variant="error" title="Couldn't load invitations" description={error} />
             ) : invitations.length > 0 ? (
                 <div className="inv-grid">
                     {invitations.map((inv, idx) => (
@@ -1102,151 +1097,134 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                     ))}
                 </div>
             ) : (
-                <div className="inv-empty">
-                    <span className="inv-empty-icon">
-                        <IconBookOpen />
-                    </span>
-                    <div className="inv-empty-title">No Invitations Found</div>
-                    <div className="inv-empty-subtitle">
-                        There are no sourcing invitations matching your search criteria or filter at this time.
-                    </div>
-                </div>
+                <EmptyState
+                    icon={<IconBookOpen />}
+                    title="No Invitations Found"
+                    description="There are no sourcing invitations matching your search criteria or filter at this time."
+                />
             )}
+            </div>
 
             {isAdmin && !loading && !error && (
-                <div className="inv-pagination">
-                    <button
-                        className="inv-btn inv-btn-view"
-                        onClick={() => {
-                            const previousPage = currentPage - 1;
+                <Pagination
+                    page={currentPage + 1}
+                    hasNext={hasNextPage}
+                    onPrevious={() => {
+                        const previousPage = currentPage - 1;
 
-                            setCurrentPage(previousPage);
-                            setInvitations([]);
-                            loadInvitations(previousPage, activeTab, appliedSearchQuery);
-                        }}
-                        disabled={currentPage === 0}
-                    >
-                        Previous
-                    </button>
+                        setCurrentPage(previousPage);
+                        setInvitations([]);
+                        loadInvitations(previousPage, activeTab, appliedSearchQuery);
+                    }}
+                    onNext={() => {
+                        const nextPage = currentPage + 1;
 
-                    <span>
-                        Page {currentPage + 1}
-                    </span>
-
-                    <button
-                        className="inv-btn inv-btn-view"
-                        onClick={() => {
-                            const nextPage = currentPage + 1;
-
-                            setCurrentPage(nextPage);
-                            setInvitations([]);
-                            loadInvitations(nextPage, activeTab, appliedSearchQuery);
-                        }}
-                        disabled={!hasNextPage}
-                    >
-                        Next
-                    </button>
-                </div>
+                        setCurrentPage(nextPage);
+                        setInvitations([]);
+                        loadInvitations(nextPage, activeTab, appliedSearchQuery);
+                    }}
+                />
             )}
+            </section>
 
             {detailInvitation && (
-                <div className="inv-modal-overlay" onClick={closeDetail}>
-                    <div className="inv-modal inv-modal-verification" onClick={(e) => e.stopPropagation()}>
-                        <div className="inv-modal-header">
-                            <span className="inv-modal-badge">
-                                <IconFile /> Invitation Details
-                            </span>
+                <div className="sila-overlay inv-modal-overlay" onClick={closeDetail}>
+                    <div
+                        className="sila-modal sila-modal--lg inv-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="inv-modal-title"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="sila-modal-header">
+                            <div className="inv-modal-heading">
+                                <span className="inv-modal-overline">Invitation Details</span>
+                                <h2 className="sila-modal-title" id="inv-modal-title">
+                                    {loadingDetail ? "Loading..." : viewingDetail?.rfqNumber || detailInvitation.title}
+                                </h2>
 
-                            <button className="inv-modal-close" onClick={closeDetail}>
+                                {viewingDetail && (
+                                    <div className="inv-modal-meta">
+                                        <span><IconCalendar /> Due: {new Date(viewingDetail.dueDate).toLocaleString()}</span>
+                                        <span><IconBuildingSmall /> {viewingDetail.organizationName || "Organization"}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                type="button"
+                                className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm"
+                                onClick={closeDetail}
+                                aria-label="Close invitation details"
+                            >
                                 <IconClose />
                             </button>
-
-                            <h2 className="inv-modal-name">
-                                {loadingDetail ? "Loading..." : viewingDetail?.rfqNumber || detailInvitation.title}
-                            </h2>
-
-                            {viewingDetail && (
-                                <div className="inv-modal-meta">
-                                    <span><IconCalendar /> Due: {new Date(viewingDetail.dueDate).toLocaleString()}</span>
-                                    <span><IconBuildingSmall /> {viewingDetail.organizationName || "Organization"}</span>
-                                </div>
-                            )}
                         </div>
 
-                        <div className="inv-modal-body">
+                        <div className="sila-modal-body">
                             {loadingDetail ? (
-                                <div className="inv-loading-wrap">
-                                    <div className="inv-loading-inner">
-                                        <div className="inv-spinner" />
-                                        <span>Fetching invitation details...</span>
-                                    </div>
-                                </div>
+                                <Loader size={24} message="Fetching invitation details..." />
                             ) : detailError ? (
-                                <div className="inv-error-text">
-                                    {detailError}
-                                </div>
+                                <EmptyState variant="error" title="Couldn't load invitation" description={detailError} />
                             ) : viewingDetail ? (
                                 <div className="inv-modal-detail">
                                     {viewingDetail.description && (
                                         <div>
-                                            <div className="inv-modal-section-title">Description</div>
+                                            <h3 className="inv-modal-section-title">Description</h3>
                                             <p className="inv-modal-desc">
                                                 {viewingDetail.description}
                                             </p>
                                         </div>
                                     )}
 
-                                    <div className="inv-modal-stats-grid">
-                                        <div>
-                                            <div className="inv-modal-stat-label">Status</div>
-                                            <div className="inv-modal-stat-value">
-                                                {viewingDetail.status}
-                                            </div>
+                                    <dl className="sila-meta-grid inv-modal-stats-grid">
+                                        <div className="sila-meta-item">
+                                            <dt className="sila-meta-label">Status</dt>
+                                            <dd className="sila-meta-value">
+                                                <StatusBadge status={viewingDetail.status} />
+                                            </dd>
                                         </div>
 
-                                        <div>
-                                            <div className="inv-modal-stat-label">Reference No.</div>
-                                            <div className="inv-modal-stat-value">
-                                                {viewingDetail.snid || "—"}
-                                            </div>
+                                        <div className="sila-meta-item">
+                                            <dt className="sila-meta-label">Reference No.</dt>
+                                            <dd className="sila-meta-value">
+                                                {viewingDetail.snid ? <span className="sila-ref">{viewingDetail.snid}</span> : "—"}
+                                            </dd>
                                         </div>
 
-                                        <div>
-                                            <div className="inv-modal-stat-label">Remarks</div>
-                                            <div className="inv-modal-stat-value">
+                                        <div className="sila-meta-item">
+                                            <dt className="sila-meta-label">Remarks</dt>
+                                            <dd className="sila-meta-value">
                                                 {viewingDetail.remarks || "—"}
-                                            </div>
+                                            </dd>
                                         </div>
-                                    </div>
+                                    </dl>
 
                                     {isDefaultTemplate ? (
                                         <div className="inv-modal-qa-block">
                                             {adminRole === "supplier" && (
                                                 <>
                                                     {loadingProfile && (
-                                                        <div className="inv-loading-inner">
-                                                            <div className="inv-spinner" />
-                                                            <span>Loading your details...</span>
-                                                        </div>
+                                                        <Loader size={20} message="Loading your details..." />
                                                     )}
 
                                                     {profileError && !loadingProfile && (
-                                                        <div className="inv-action-error">{profileError}</div>
+                                                        <div className="sila-alert sila-alert--danger inv-alert" role="alert">{profileError}</div>
                                                     )}
 
                                                     {supplierProfile && !loadingProfile && (
-                                                        <div className="inv-modal-qa-empty" style={{ marginBottom: "12px" }}>
+                                                        <div className="sila-alert inv-alert inv-alert--info">
                                                             Please review the answers below. If everything is correct, click <strong>Accept</strong> to confirm, then <strong>Submit</strong> to finalize.
                                                         </div>
                                                     )}
                                                 </>
                                             )}
 
-                                            <div className="inv-modal-qa-list">
+                                            <ol className="inv-modal-qa-list">
                                                 {viewingDetail.questions.map((question, index) => (
-                                                    <div key={question.verificationTemplateQuestionId} className="inv-modal-qa-item">
+                                                    <li key={question.verificationTemplateQuestionId} className="inv-modal-qa-item">
                                                         <div className="inv-modal-qa-question">
-                                                            Q{index + 1}: {question.question}
+                                                            <span className="inv-q-index">Q{index + 1}.</span> {question.question}
                                                         </div>
 
                                                         <div className="inv-modal-qa-answer">
@@ -1256,63 +1234,51 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                                     ? defaultAnswers[question.verificationTemplateQuestionId] || "N/A"
                                                                     : "—"}
                                                         </div>
-                                                    </div>
+                                                    </li>
                                                 ))}
-                                            </div>
+                                            </ol>
                                         </div>
                                     ) : viewingDetail.questions && viewingDetail.questions.length > 0 && (
                                         <div className="inv-modal-qa-block">
-                                            <div className="inv-modal-section-title">Questions & Answers</div>
+                                            <h3 className="inv-modal-section-title">Questions &amp; Answers</h3>
 
                                             {verificationError && (
-                                                <div style={{
-                                                    background: "#fee2e2",
-                                                    border: "1px solid #fca5a5",
-                                                    color: "#b91c1c",
-                                                    padding: "12px 16px",
-                                                    borderRadius: "8px",
-                                                    fontSize: "13px",
-                                                    fontWeight: 500,
-                                                    marginBottom: "16px",
-                                                }}>
+                                                <div className="sila-alert sila-alert--danger inv-alert" role="alert">
                                                     {verificationError}
                                                 </div>
                                             )}
 
                                             {verificationSuccess && (
-                                                <div style={{
-                                                    background: "#dcfce7",
-                                                    border: "1px solid #bbf7d0",
-                                                    color: "#15803d",
-                                                    padding: "12px 16px",
-                                                    borderRadius: "8px",
-                                                    fontSize: "13px",
-                                                    fontWeight: 500,
-                                                    marginBottom: "16px",
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: "8px",
-                                                }}>
+                                                <div className="sila-alert sila-alert--success inv-alert inv-alert--success" role="status">
                                                     <IconCheckCircle /> Answers submitted successfully!
                                                 </div>
                                             )}
 
-                                            <div className="inv-modal-qa-list">
+                                            <ol className="inv-modal-qa-list">
                                                 {viewingDetail.questions.map((question, index) => {
                                                     const answer = verificationAnswers[question.verificationTemplateQuestionId];
                                                     const kind = getQuestionKind(question.questionType);
+                                                    const inputId = `inv-q-${question.verificationTemplateQuestionId}`;
+                                                    const questionText = (
+                                                        <>
+                                                            <span className="inv-q-index">Q{index + 1}.</span> {question.question}
+                                                            {question.isRequired && <span className="sila-required" aria-hidden="true">*</span>}
+                                                        </>
+                                                    );
 
                                                     return (
-                                                        <div key={question.verificationTemplateQuestionId} className="inv-modal-qa-item">
-                                                            <div className="inv-modal-qa-question">
-                                                                Q{index + 1}: {question.question}
-                                                                {question.isRequired && <span style={{ color: "#ef4444" }}> *</span>}
-                                                            </div>
+                                                        <li key={question.verificationTemplateQuestionId} className="inv-modal-qa-item">
+                                                            {kind === "text" || (kind === "file" && !question.assetId && !isAlreadySubmitted) ? (
+                                                                <label className="inv-modal-qa-question" htmlFor={inputId}>{questionText}</label>
+                                                            ) : (
+                                                                <div className="inv-modal-qa-question" id={`${inputId}-label`}>{questionText}</div>
+                                                            )}
 
                                                             {kind === "text" && (
                                                                 <input
+                                                                    id={inputId}
                                                                     type="text"
-                                                                    className="inv-question-input"
+                                                                    className="sila-input inv-question-input"
                                                                     placeholder="Enter your answer..."
                                                                     value={answer?.textAnswer || ""}
                                                                     onChange={(e) => handleTextAnswerChange(question.verificationTemplateQuestionId, e.target.value)}
@@ -1322,7 +1288,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                             )}
 
                                                             {kind === "radio" && question.options && question.options.length > 0 && (
-                                                                <div className="inv-question-options">
+                                                                <div className="inv-question-options" role="radiogroup" aria-labelledby={`${inputId}-label`}>
                                                                     {question.options.map((option) => (
                                                                         <label key={option.id} className="inv-option-label">
                                                                             <input
@@ -1340,7 +1306,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                             )}
 
                                                             {kind === "checkbox" && question.options && question.options.length > 0 && (
-                                                                <div className="inv-question-options">
+                                                                <div className="inv-question-options" role="group" aria-labelledby={`${inputId}-label`}>
                                                                     {question.options.map((option) => (
                                                                         <label key={option.id} className="inv-option-label">
                                                                             <input
@@ -1360,54 +1326,58 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                                                     {question.assetId ? (
                                                                         <button
                                                                             type="button"
-                                                                            className="inv-btn inv-btn-outline"
+                                                                            className="sila-btn sila-btn--secondary sila-btn--sm"
                                                                             onClick={() => handleDownloadAsset(question.assetId!)}
                                                                         >
-                                                                            View Uploaded File
+                                                                            <FaFileAlt aria-hidden="true" /> View Uploaded File
                                                                         </button>
                                                                     ) : isAlreadySubmitted ? (
-                                                                        <div style={{ fontSize: "12px", color: "#64748b" }}>No file uploaded</div>
+                                                                        <div className="sila-help">No file uploaded</div>
                                                                     ) : (
                                                                         <>
                                                                             <input
+                                                                                id={inputId}
                                                                                 type="file"
-                                                                                className="inv-question-input"
+                                                                                className="sila-input inv-question-input inv-file-input"
                                                                                 onChange={(e) => handleFileChange(question.verificationTemplateQuestionId, e.target.files?.[0] || null)}
                                                                                 required={question.isRequired}
                                                                             />
 
                                                                             {answer?.file && (
-                                                                                <div style={{ fontSize: "12px", color: "#64748b", marginTop: "6px" }}>
-                                                                                    📄 {answer.file.name}
+                                                                                <div className="sila-help inv-file-name">
+                                                                                    <FaFileAlt aria-hidden="true" /> {answer.file.name}
                                                                                 </div>
                                                                             )}
                                                                         </>
                                                                     )}
                                                                 </div>
                                                             )}
-                                                        </div>
+                                                        </li>
                                                     );
                                                 })}
-                                            </div>
+                                            </ol>
                                         </div>
                                     )}
                                 </div>
                             ) : null}
                         </div>
 
-                        <div className="inv-modal-footer inv-modal-footer-verification">
-                            {adminRole === "buyer" ? null : isDefaultTemplate ? (
+                        {adminRole !== "buyer" && (
+                        <div className="sila-modal-footer inv-modal-footer">
+                            {isDefaultTemplate ? (
                                 <>
                                     <button
-                                        className="inv-btn inv-btn-draft"
+                                        type="button"
+                                        className="sila-btn sila-btn--secondary"
                                         onClick={() => setHasConfirmedDetails(true)}
                                         disabled={loadingProfile || !supplierProfile || isAlreadySubmitted || hasConfirmedDetails}
                                     >
-                                        {hasConfirmedDetails ? "Accepted ✓" : "Accept"}
+                                        {hasConfirmedDetails ? <><FaCheck aria-hidden="true" /> Accepted</> : "Accept"}
                                     </button>
 
                                     <button
-                                        className="inv-btn inv-btn-submit-verification"
+                                        type="button"
+                                        className="sila-btn sila-btn--primary"
                                         onClick={handleSubmitDefault}
                                         disabled={submittingVerification || isAlreadySubmitted || !hasConfirmedDetails}
                                     >
@@ -1417,7 +1387,8 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                             ) : (
                                 <>
                                     <button
-                                        className="inv-btn inv-btn-draft"
+                                        type="button"
+                                        className="sila-btn sila-btn--secondary"
                                         onClick={() => handleSubmitAnswers("DRAFT")}
                                         disabled={submittingVerification || !viewingDetail || isAlreadySubmitted}
                                     >
@@ -1425,7 +1396,8 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                     </button>
 
                                     <button
-                                        className="inv-btn inv-btn-submit-verification"
+                                        type="button"
+                                        className="sila-btn sila-btn--primary"
                                         onClick={() => handleSubmitAnswers("SUBMITTED")}
                                         disabled={submittingVerification || !viewingDetail || isAlreadySubmitted}
                                     >
@@ -1434,6 +1406,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                                 </>
                             )}
                         </div>
+                        )}
                     </div>
                 </div>
             )}

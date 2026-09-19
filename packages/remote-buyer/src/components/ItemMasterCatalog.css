@@ -1,221 +1,178 @@
+/* Material master catalog — list + detail views.
+   Page padding comes from the app shell, so the container adds none. */
+
 .imc-container {
-  padding: 0.5rem 1.5rem;
+  padding: 0;
+  font-family: var(--sila-font);
+  color: var(--sila-text);
 }
 
 .imc-page {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.75rem;
-
-  padding: 1.5rem;
-
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03);
+  background: var(--sila-surface);
+  border: 0.0625rem solid var(--sila-border);
+  border-radius: var(--sila-radius-md);
+  padding: var(--sila-space-5);
+  box-shadow: var(--sila-shadow-xs);
 }
 
 .imc-header {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
-
-  margin-bottom: 1.5rem;
+  gap: var(--sila-space-3) var(--sila-space-4);
+  padding-bottom: var(--sila-space-5);
 }
 
 .imc-title {
   margin: 0;
-
-  font-size: 1.5rem;
-  font-weight: 600;
-
-  color: #1e293b;
+  font-size: var(--sila-text-2xl);
+  font-weight: var(--sila-weight-semibold);
+  line-height: var(--sila-leading-tight);
+  letter-spacing: -0.015em;
+  color: var(--sila-text);
 }
 
 .imc-subtitle {
-  margin: 6px 0 0;
-
-  font-size: 0.875rem;
-  color: #64748b;
+  padding: var(--sila-space-1) 0 0;
+  font-size: var(--sila-text-sm);
+  color: var(--sila-text-muted);
 }
 
 .imc-header-actions {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: var(--sila-space-2);
+}
+
+/* Buttons also carry .sila-btn; these keep the look when used on their own. */
+.imc-btn-primary,
+.imc-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sila-space-2);
+  height: var(--sila-control-height);
+  padding: 0 var(--sila-space-4);
+  border-radius: var(--sila-radius);
+  font-family: inherit;
+  font-size: var(--sila-text-md);
+  font-weight: var(--sila-weight-semibold);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--sila-transition);
 }
 
 .imc-btn-primary {
-  background: #3b82f6;
-  color: #ffffff;
-
-  border: 1px solid #3b82f6;
-  border-radius: 8px;
-
-  padding: 10px 18px;
-
-  font-size: 14px;
-  font-weight: 600;
-
-  cursor: pointer;
-  white-space: nowrap;
+  background: var(--sila-primary);
+  color: var(--sila-text-inverse);
+  border: 0.0625rem solid var(--sila-primary);
 }
 
 .imc-btn-primary:hover {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--sila-primary-hover);
+  border-color: var(--sila-primary-hover);
 }
 
 .imc-btn-secondary {
-  background: #ffffff;
-  color: #475569;
-
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-
-  padding: 10px 18px;
-
-  font-size: 14px;
-  font-weight: 500;
-
-  cursor: pointer;
+  background: var(--sila-surface);
+  color: var(--sila-text-secondary);
+  border: 0.0625rem solid var(--sila-border-strong);
 }
 
 .imc-btn-secondary:hover {
-  background: #f8fafc;
+  background: var(--sila-surface-hover);
+  color: var(--sila-text);
+}
+
+.imc-btn-primary svg {
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 .imc-btn-retry {
-  background: transparent;
-  border: 1px solid currentColor;
-  border-radius: 6px;
-
-  padding: 4px 12px;
-
-  font-size: 12px;
-  font-weight: 600;
-
-  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .imc-error-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-
-  padding: 12px 16px;
-  margin-bottom: 1rem;
-
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-
-  color: #dc2626;
-  font-size: 0.875rem;
+  gap: var(--sila-space-3);
+  padding: var(--sila-space-3) var(--sila-space-4);
+  margin-bottom: var(--sila-space-4);
+  background: var(--sila-danger-soft);
+  border: 0.0625rem solid var(--sila-danger-border);
+  border-radius: var(--sila-radius);
+  color: var(--sila-danger-strong);
+  font-size: var(--sila-text-sm);
 }
 
 .imc-loading-state {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-
-  padding: 3rem 1rem;
-
-  color: #64748b;
-  font-size: 0.875rem;
-}
-
-.imc-spinner {
-  width: 28px;
-  height: 28px;
-
-  border: 3px solid #e2e8f0;
-  border-top-color: #3b82f6;
-  border-radius: 50%;
-
-  animation: imc-spin 0.8s linear infinite;
-}
-
-@keyframes imc-spin {
-  to {
-    transform: rotate(360deg);
-  }
+  min-height: 12.5rem;
 }
 
 .imc-empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-
-  padding: 3rem 1rem;
-
-  color: #64748b;
-  font-size: 0.9375rem;
+  border: 0.0625rem dashed var(--sila-border);
+  border-radius: var(--sila-radius);
 }
 
-/* ---- List view: item master table (mirrors the "All RFQs" table) ---- */
+/* ---- List view: item master table (matches .sila-table) ---- */
 
 .item-master-table-container {
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
-
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-
-  background: #ffffff;
+  border: 0.0625rem solid var(--sila-border);
+  border-radius: var(--sila-radius);
+  background: var(--sila-surface);
 }
 
 .item-master-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-
-  font-size: 0.8125rem;
+  font-size: var(--sila-text-sm);
 }
 
 .item-master-table thead th {
-  background: #c4c3c2;
-
-  padding: 0.625rem 0.875rem;
-
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #1e293b;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-
-  border-bottom: 1px solid #e2e8f0;
-  border-right: 1px solid #e2e8f0;
+  height: 2.375rem;
+  background: var(--sila-surface-subtle);
+  padding: 0 var(--sila-space-4);
+  font-size: var(--sila-text-xs);
+  font-weight: var(--sila-weight-semibold);
+  color: var(--sila-text-muted);
+  white-space: nowrap;
+  border-bottom: 0.0625rem solid var(--sila-border);
 }
 
-.item-master-table thead th:last-child {
-  border-right: none;
+.item-master-table .imc-col-index {
+  width: 4rem;
+  color: var(--sila-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.item-master-table thead th.imc-col-index {
+  color: var(--sila-text-muted);
 }
 
 .item-master-table tbody tr {
-  background: #ffffff;
+  background: var(--sila-surface);
   cursor: pointer;
 }
 
 .item-master-table td {
-  padding: 0.75rem 0.875rem;
-
-  font-size: 0.8125rem;
-  color: #1e293b;
-
-  vertical-align: top;
+  height: 2.75rem;
+  padding: var(--sila-space-2) var(--sila-space-4);
+  font-size: var(--sila-text-sm);
+  color: var(--sila-text);
+  vertical-align: middle;
   overflow-wrap: break-word;
-
-  border-bottom: 1px solid #dbe3ea;
-  border-right: 1px solid #e2e8f0;
-}
-
-.item-master-table td:last-child {
-  border-right: none;
+  border-bottom: 0.0625rem solid var(--sila-border-subtle);
+  transition: background-color var(--sila-duration-fast) var(--sila-ease);
 }
 
 .item-master-table tbody tr:last-child td {
@@ -223,105 +180,112 @@
 }
 
 .item-master-table tbody tr:hover td {
-  background: #f8fafc;
+  background: var(--sila-surface-subtle);
+}
+
+.item-master-table tbody tr:focus-visible {
+  outline: 0.125rem solid var(--sila-primary);
+  outline-offset: -0.125rem;
 }
 
 /* ---- Detail view ---- */
 
-.detail-header {
+.imc-container .detail-header {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--sila-space-3);
   flex-wrap: wrap;
-
-  margin-bottom: 1.5rem;
+  padding-bottom: var(--sila-space-5);
 }
 
-.detail-header-title {
+.imc-container .detail-header-title {
   flex: 1;
-  min-width: 160px;
+  min-width: 10rem;
 }
 
-.back-button {
-   width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 50%;
-  background: #ffffff;
-  border: 1.5px solid #e2e8f0;
-  color: #374151;
+.imc-container .back-button {
+  width: var(--sila-control-height);
+  height: var(--sila-control-height);
+  border-radius: var(--sila-radius);
+  background: var(--sila-surface);
+  border: 0.0625rem solid var(--sila-border-strong);
+  color: var(--sila-text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-  transition: all 0.18s ease;
+  transition: var(--sila-transition);
   flex-shrink: 0;
 }
 
-.back-button:hover {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
-  color: #111827;
-  transform: scale(1.05);
+.imc-container .back-button:hover {
+  background: var(--sila-surface-hover);
+  color: var(--sila-text);
 }
 
-.back-button:active {
-  background-color: #e2e8f0;
-  color: #0f172a;
+.imc-container .back-button:focus-visible {
+  outline: none;
+  border-color: var(--sila-primary);
+  box-shadow: var(--sila-focus-ring);
 }
 
-.back-icon {
-  width: 1.25rem;
-  height: 1.25rem;
+.imc-container .back-button:active {
+  background-color: var(--sila-surface-sunken);
+}
+
+.imc-container .back-icon {
+  width: 1.125rem;
+  height: 1.125rem;
   stroke: currentColor;
   stroke-width: 2;
 }
 
-.detail-card {
+.imc-container .detail-card {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  column-gap: 2.5rem;
-  row-gap: 1.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: var(--sila-space-8);
+  row-gap: var(--sila-space-5);
 }
 
-@media (max-width: 900px) {
-  .detail-card {
-    grid-template-columns: repeat(2, 1fr);
+@media (max-width: 56.25rem) {
+  .imc-container .detail-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 560px) {
-  .detail-card {
+@media (max-width: 35rem) {
+  .imc-container .detail-card {
     grid-template-columns: 1fr;
   }
 }
 
-.detail-field {
+.imc-container .detail-field {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: var(--sila-space-1);
 }
 
-.detail-field .label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-
-  color: #94a3b8;
+.imc-container .detail-field .label {
+  font-size: var(--sila-text-xs);
+  font-weight: var(--sila-weight-medium);
+  color: var(--sila-text-muted);
 }
 
-.detail-field .value {
-  color: #111827;
-  font-weight: 600;
-  font-size: 0.9375rem;
+.imc-container .detail-field .value {
+  color: var(--sila-text);
+  font-weight: var(--sila-weight-medium);
+  font-size: var(--sila-text-md);
   line-height: 1.4;
-
   word-break: break-word;
 }
 
-.detail-field .value-empty {
-  color: #94a3b8;
-  font-weight: 500;
+.imc-container .detail-field .value-empty {
+  color: var(--sila-text-subtle);
+  font-weight: var(--sila-weight-regular);
+}
+
+@media (max-width: 48rem) {
+  .imc-page {
+    padding: var(--sila-space-4);
+  }
 }

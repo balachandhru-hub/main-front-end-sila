@@ -1,47 +1,47 @@
 .qcc-container {
-    background: #ffffff;
+    background: var(--sila-surface);
 }
 
 .qcc-section-title {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: #0f172a;
-    letter-spacing: -0.01em;
-    margin-bottom: 0.625rem;
+    font-size: var(--sila-text-md);
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text);
+    padding-bottom: var(--sila-space-3);
 }
 
 .qcc-state {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
+    gap: var(--sila-space-3);
     min-height: 12.5rem;
-    padding: 2.5rem 1.5rem;
-    font-size: 0.8125rem;
-    border: 0.0625rem solid #dbe3ea;
-    border-radius: 0.625rem;
+    padding: var(--sila-space-10) var(--sila-space-6);
+    font-size: var(--sila-text-sm);
+    border: 0.0625rem solid var(--sila-border);
+    border-radius: var(--sila-radius-md);
+    background: var(--sila-surface);
 }
 
 .qcc-loading-state {
     flex-direction: column;
-    color: #64748b;
+    color: var(--sila-text-muted);
 }
 
 .qcc-error-state {
-    color: #dc2626;
+    color: var(--sila-danger);
     text-align: center;
 }
 
 .qcc-empty-state {
-    color: #94a3b8;
+    color: var(--sila-text-muted);
     text-align: center;
 }
 
 .qcc-spinner {
-    width: 1.75rem;
-    height: 1.75rem;
-    border: 0.1875rem solid #dbe3ea;
-    border-top-color: #15803d;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 0.125rem solid var(--sila-border);
+    border-top-color: var(--sila-primary);
     border-radius: 50%;
     animation: qcc-spin 0.8s linear infinite;
 }
@@ -56,10 +56,10 @@
     width: 100%;
     max-width: 100%;
     overflow-x: auto;
-    border: 0.0625rem solid #dbe3ea;
-    border-radius: 0.625rem;
-    background: #ffffff;
-    box-shadow: 0 0.0625rem 0.1875rem rgba(15, 23, 42, 0.06);
+    border: 0.0625rem solid var(--sila-border);
+    border-radius: var(--sila-radius-md);
+    background: var(--sila-surface);
+    box-shadow: var(--sila-shadow-xs);
 }
 
 .qcc-table-container::-webkit-scrollbar {
@@ -71,32 +71,31 @@
 }
 
 .qcc-table-container::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: var(--sila-border-strong);
     border-radius: 0.5rem;
 }
 
 .qcc-table-container::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background: var(--sila-text-subtle);
 }
 
 .qcc-items-table {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
-    font-size: 0.8125rem;
-    color: #1e293b;
+    font-size: var(--sila-text-sm);
+    color: var(--sila-text);
 }
 
 .qcc-items-table th {
-    background: #f7f9fc;
-    padding: 0.6875rem 0.875rem;
-    font-weight: 600;
-    color: #47536b;
-    border-bottom: 0.125rem solid #dbe3ea;
-    border-right: 0.0625rem solid #e5eaf1;
-    font-size: 0.71875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.045em;
+    background: var(--sila-surface-subtle);
+    padding: 0.625rem var(--sila-space-3);
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text-muted);
+    border-bottom: 0.0625rem solid var(--sila-border);
+    border-right: 0.0625rem solid var(--sila-border-subtle);
+    font-size: var(--sila-text-xs);
+    white-space: nowrap;
 }
 
 .qcc-items-table th:last-child {
@@ -104,12 +103,13 @@
 }
 
 .qcc-items-table td {
-    padding: 0.75rem 0.875rem;
-    border-bottom: 0.0625rem solid #e9edf3;
-    border-right: 0.0625rem solid #e9edf3;
+    padding: 0.6875rem var(--sila-space-3);
+    border-bottom: 0.0625rem solid var(--sila-border-subtle);
+    border-right: 0.0625rem solid var(--sila-border-subtle);
     vertical-align: top;
     overflow-wrap: break-word;
     line-height: 1.45;
+    color: var(--sila-text-secondary);
 }
 
 .qcc-items-table td:last-child {
@@ -121,58 +121,61 @@
 }
 
 .qcc-items-table tbody tr td {
-    transition: background-color 0.12s ease;
+    transition: background-color var(--sila-duration-fast) var(--sila-ease);
 }
 
 .qcc-items-table tbody tr:hover td {
-    background: #f8fafc;
+    background: var(--sila-surface-subtle);
 }
 
+/* Each supplier's column group is fenced by a stronger left rule so the eye can track it */
 .qcc-supplier-group-header {
     text-align: center;
     vertical-align: top;
-    background: #f5f8fd;
-    padding-top: 0.75rem;
-    padding-bottom: 0.75rem;
-    border-left: 0.0625rem solid #d7e0ec;
+    background: var(--sila-surface-sunken);
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+    border-left: 0.0625rem solid var(--sila-border-strong);
 }
 
 .qcc-supplier-group-name {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #16223b;
+    font-size: var(--sila-text-sm);
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text);
     text-transform: none;
     letter-spacing: normal;
     white-space: normal;
     word-break: break-word;
 }
 
-.qcc-sub-header {
+.qcc-items-table .qcc-sub-header {
     text-align: right;
-    background: #f5f8fd;
-    border-left: 0.0625rem solid #d7e0ec;
-    color: #5b6b85;
+    background: var(--sila-surface-subtle);
+    border-left: 0.0625rem solid var(--sila-border-subtle);
+    color: var(--sila-text-muted);
 }
 
 .qcc-items-table td.qcc-rate-cell {
     text-align: right;
-    border-left: 0.0625rem solid #e9edf3;
+    border-left: 0.0625rem solid var(--sila-border-subtle);
     font-variant-numeric: tabular-nums;
-    font-weight: 500;
-    color: #1e293b;
+    font-weight: var(--sila-weight-regular);
+    color: var(--sila-text-secondary);
+    white-space: nowrap;
 }
 
 .qcc-items-table td.qcc-amount-cell {
     text-align: right;
     font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    color: #0f172a;
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text);
+    white-space: nowrap;
 }
 
 .qcc-items-table td.qcc-ll-cell {
     text-align: right;
     font-variant-numeric: tabular-nums;
-    color: #475569;
+    color: var(--sila-text-secondary);
 }
 
 .qcc-items-table th.qcc-align-right,
@@ -183,7 +186,18 @@
 
 .qcc-supplier-name-label {
     text-align: left;
-    color: #8592a8;
+    color: var(--sila-text-muted);
+}
+
+.qcc-code {
+    font-family: var(--sila-font-mono);
+    font-size: 0.92em;
+    color: var(--sila-text-secondary);
+    white-space: nowrap;
+}
+
+.qcc-uom {
+    color: var(--sila-text-muted);
 }
 
 .qcc-expand-header {
@@ -196,134 +210,139 @@
 }
 
 .qcc-material-name {
-    font-weight: 600;
-    color: #1e293b;
+    font-weight: var(--sila-weight-medium);
+    color: var(--sila-text);
 }
 
 .qcc-material-sub {
-    font-size: 0.6875rem;
-    color: #64748b;
-    margin-top: 0.125rem;
+    font-size: var(--sila-text-xs);
+    color: var(--sila-text-muted);
+    padding-top: var(--sila-space-0-5);
 }
 
 .qcc-expand-toggle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 1.4375rem;
-    height: 1.4375rem;
+    width: 1.5rem;
+    height: 1.5rem;
     padding: 0;
     margin: 0;
     cursor: pointer;
-    border: 0.0625rem solid #c7d2e0;
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 700;
+    border: 0.0625rem solid var(--sila-border);
+    border-radius: var(--sila-radius-sm);
+    font-size: var(--sila-text-xs);
     line-height: 1;
-    color: #2f6feb;
-    background: #eff6ff;
-    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    color: var(--sila-text-muted);
+    background: var(--sila-surface);
+    transition: var(--sila-transition);
 }
 
-.qcc-expand-toggle:hover {
-    background: #dbeafe;
-    border-color: #93c5fd;
+.qcc-expand-toggle svg {
+    width: 0.625rem;
+    height: 0.625rem;
+}
+
+.qcc-expand-toggle:hover,
+.qcc-expand-toggle[aria-expanded="true"] {
+    background: var(--sila-primary-soft);
+    border-color: var(--sila-primary-border);
+    color: var(--sila-primary);
 }
 
 .qcc-expand-toggle:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 0.1875rem rgba(47, 111, 235, 0.25);
+    box-shadow: var(--sila-focus-ring);
 }
 
 .qcc-expanded-row td {
-    background: #f9fafc;
+    background: var(--sila-surface-subtle);
     border-top: none;
     padding-top: 0.625rem;
-    padding-bottom: 0.75rem;
+    padding-bottom: var(--sila-space-3);
 }
 
 .qcc-expanded-label-cell {
-    color: #9aa5b8;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.045em;
+    color: var(--sila-text-muted);
+    font-size: var(--sila-text-xs);
+    font-weight: var(--sila-weight-semibold);
     vertical-align: top;
 }
 
 .qcc-expanded-detail-cell {
     vertical-align: top;
-    border-left: 0.0625rem solid #e9edf3;
+    border-left: 0.0625rem solid var(--sila-border-strong);
 }
 
 .qcc-expanded-versions {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0 1.25rem;
+    gap: 0 var(--sila-space-5);
 }
 
 .qcc-expanded-version + .qcc-expanded-version {
-    border-left: 0.0625rem solid #e9edf3;
-    padding-left: 1.25rem;
+    border-left: 0.0625rem solid var(--sila-border);
+    padding-left: var(--sila-space-5);
 }
 
 .qcc-expanded-version-label {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    color: #5b6b85;
+    font-size: var(--sila-text-2xs);
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.045em;
-    margin-bottom: 0.25rem;
+    letter-spacing: 0.04em;
+    padding-bottom: var(--sila-space-1);
 }
 
 .qcc-expanded-detail-grid {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 0.1875rem 0.75rem;
-    font-size: 0.75rem;
+    gap: 0.1875rem var(--sila-space-3);
+    font-size: var(--sila-text-xs);
 }
 
 .qcc-expanded-detail-grid span:nth-child(odd) {
-    color: #64748b;
+    color: var(--sila-text-muted);
 }
 
 .qcc-expanded-detail-grid span:nth-child(even) {
-    font-weight: 600;
-    color: #0f172a;
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text);
     text-align: right;
     font-variant-numeric: tabular-nums;
 }
 
 .qcc-expanded-detail-grid span.qcc-discount {
-    color: #dc2626 !important;
+    color: var(--sila-danger);
 }
 
-.qcc-no-data {
+.qcc-items-table td.qcc-no-data {
     text-align: center;
-    color: #94a3b8;
-    padding: 1.5rem !important;
+    color: var(--sila-text-muted);
+    padding: var(--sila-space-6);
 }
 
+/* Totals footer: subtle band so the grand totals read as the conclusion of each column group */
 .qcc-grand-total-row td {
-    background: #ffffff;
-    font-weight: 600;
-    color: #1e293b;
+    background: var(--sila-surface-subtle);
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text);
     text-align: right;
     font-variant-numeric: tabular-nums;
-    border-left: 0.0625rem solid #dbe3ea;
-    border-top: 0.125rem solid #dbe3ea;
+    border-left: 0.0625rem solid var(--sila-border-strong);
+    border-top: 0.0625rem solid var(--sila-border-strong);
 }
 
 .qcc-grand-total-row td:first-child,
 .qcc-grand-total-row td:nth-child(2) {
-    background: #ffffff;
+    background: var(--sila-surface-subtle);
     border-left: none;
     text-align: left;
-    color: #1e293b;
+    color: var(--sila-text);
 }
 
 .qcc-grand-total-row td:last-child {
-    border-bottom-right-radius: 0.5625rem;
+    border-bottom-right-radius: var(--sila-radius-md);
 }
 
 .qcc-grand-total-row td.qcc-expand-cell {
@@ -332,12 +351,12 @@
 }
 
 .qcc-summary-detail-row td {
-    background: #f9fafc;
-    border-top: 0.0625rem solid #e9edf3;
+    background: var(--sila-surface-subtle);
+    border-top: 0.0625rem solid var(--sila-border);
 }
 
 .qcc-summary-detail-row td:first-child {
-    background: #ffffff;
+    background: var(--sila-surface);
     border-left: none;
 }
 
@@ -350,21 +369,21 @@
     display: inline-flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 0.75rem;
+    gap: var(--sila-space-3);
     flex-wrap: wrap;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: #1e293b;
+    font-size: var(--sila-text-sm);
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text);
 }
 
 .qcc-grand-total-grid {
     display: inline-grid;
     grid-template-columns: auto 1fr;
-    column-gap: 0.75rem;
-    row-gap: 0.25rem;
+    column-gap: var(--sila-space-3);
+    row-gap: var(--sila-space-1);
     text-align: left;
-    font-weight: 500;
-    color: #47536b;
+    font-weight: var(--sila-weight-medium);
+    color: var(--sila-text-muted);
 }
 
 .qcc-grand-total-grid span:nth-child(odd) {
@@ -373,15 +392,15 @@
 
 .qcc-grand-total-grid span:nth-child(even) {
     text-align: right;
-    font-weight: 600;
-    color: #1e293b;
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text);
 }
 
 .qcc-grand-total-grid span.qcc-discount {
-    color: #dc2626 !important;
+    color: var(--sila-danger);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 48rem) {
     .qcc-section-title {
         font-size: 0.875rem;
     }
@@ -403,12 +422,12 @@
     .qcc-expanded-version + .qcc-expanded-version {
         border-left: none;
         padding-left: 0;
-        border-top: 0.0625rem solid #e9edf3;
+        border-top: 0.0625rem solid var(--sila-border);
         padding-top: 0.5rem;
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 30rem) {
     .qcc-items-table {
         font-size: 0.6875rem;
     }

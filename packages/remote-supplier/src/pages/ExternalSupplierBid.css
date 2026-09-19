@@ -214,7 +214,7 @@
 
 /* --- Responsive --- */
 
-@media (max-width: 768px) {
+@media (max-width: 48rem) {
   .ebid-modal-actions {
     flex-direction: column-reverse;
   }
@@ -228,7 +228,7 @@
   }
 }
 
-@media (max-width: 468px) {
+@media (max-width: 29.25rem) {
   .ebid-page {
     padding-top: 4.125rem;
   }
@@ -262,7 +262,7 @@
 }
 
 .ebid-qa-section-header {
-  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
 }
 
 .ebid-qa-section-title {
@@ -270,7 +270,7 @@
   font-weight: 700;
   color: #0f172a;
   line-height: 1.5rem;
-  margin: 0 0 0.25rem 0;
+  padding: 0 0 0.25rem 0;
 }
 
 .ebid-qa-section-sub {
@@ -292,7 +292,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  padding-bottom: 1rem;
 }
 
 .ebid-qa-supplier-left {
@@ -333,7 +333,7 @@
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
+  border-radius: var(--sila-radius-full);
   white-space: nowrap;
 }
 
@@ -361,7 +361,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.625rem;
-  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
 }
 
 .ebid-qa-question-left {
@@ -490,7 +490,7 @@
   background: #eff6ff;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 48rem) {
   .ebid-qa-section {
     padding: 1rem;
   }

@@ -1,47 +1,60 @@
 .apm-page {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--sila-space-4);
 }
 
 .apm-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #0f172a;
+  font-size: var(--sila-text-2xl);
+  font-weight: var(--sila-weight-semibold);
+  color: var(--sila-text);
   margin: 0;
 }
 
 .apm-subtitle {
-  margin: 0.375rem 0 0;
-  color: #64748b;
-  font-size: 0.8125rem;
+  padding: var(--sila-space-1-5) 0 0;
+  color: var(--sila-text-muted);
+  font-size: var(--sila-text-sm);
 }
 
 .apm-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.625rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
-  padding: 1rem 1.25rem;
+  background: var(--sila-surface);
+  border: 0.0625rem solid var(--sila-border);
+  border-radius: var(--sila-radius-md);
+  box-shadow: var(--sila-shadow-xs);
+  padding: var(--sila-space-4) var(--sila-space-5);
 }
 
 .apm-section-toggle {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--sila-space-2);
   background: none;
   border: none;
-  padding: 0 0 0.75rem;
+  padding: 0 0 var(--sila-space-3);
   width: 100%;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 0.0625rem solid var(--sila-border-subtle);
   cursor: pointer;
   text-align: left;
+  font-family: inherit;
+  color: var(--sila-text);
+}
+
+.apm-section-toggle:focus-visible {
+  outline: 0.125rem solid var(--sila-primary);
+  outline-offset: 0.125rem;
+  border-radius: var(--sila-radius-sm);
 }
 
 .apm-caret {
-  font-size: 0.625rem;
-  color: #334155;
-  transition: transform 0.15s ease;
+  display: inline-flex;
+  color: var(--sila-text-muted);
+  transition: transform var(--sila-duration-fast) var(--sila-ease);
+}
+
+.apm-caret svg {
+  width: 0.625rem;
+  height: 0.625rem;
 }
 
 .apm-caret-open {
@@ -49,74 +62,82 @@
 }
 
 .apm-section-title {
-  font-size: 1rem;
-  color: #0a6ed1;
+  font-size: var(--sila-text-md);
+  font-weight: var(--sila-weight-semibold);
+  color: var(--sila-text);
 }
 
 .apm-info {
   display: inline-flex;
-  color: #64748b;
+  color: var(--sila-text-muted);
 }
 
 .apm-diagram {
-  padding-top: 0.75rem;
+  padding-top: var(--sila-space-3);
 }
 
 .apm-flow {
   display: flex;
   align-items: center;
   overflow-x: auto;
-  padding: 0.5rem 0.25rem 0.75rem;
+  padding: var(--sila-space-2) var(--sila-space-1) var(--sila-space-3);
   scrollbar-width: thin;
 }
 
+/* Arrow between approvers: a line ending in a head pointing at the next step */
 .apm-connector {
   position: relative;
-  flex: 0 0 3rem;
-  height: 1px;
-  background: #0a6ed1;
+  flex: 0 0 2.5rem;
+  height: 0.125rem;
+  background: var(--sila-primary-border);
 }
 
 .apm-connector::after {
   content: "";
   position: absolute;
-  right: 0.5rem;
-  top: -1px;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 5px solid #0a6ed1;
+  right: 0;
+  top: -0.25rem;
+  border-top: 0.3125rem solid transparent;
+  border-bottom: 0.3125rem solid transparent;
+  border-left: 0.375rem solid var(--sila-primary-border);
 }
 
 .apm-node {
   flex: 0 0 13rem;
-  border: 1px solid #94a3b8;
-  border-radius: 0.375rem;
-  background: #fff;
+  border: 0.0625rem solid var(--sila-border-strong);
+  border-radius: var(--sila-radius);
+  background: var(--sila-surface);
   cursor: pointer;
-  font-size: 0.8125rem;
+  font-size: var(--sila-text-sm);
   overflow: hidden;
-  transition: box-shadow 0.15s ease, opacity 0.15s ease;
+  transition: var(--sila-transition), opacity var(--sila-duration-fast) var(--sila-ease);
 }
 
 .apm-node:hover {
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+  border-color: var(--sila-primary-border);
+  box-shadow: var(--sila-shadow-sm);
+}
+
+.apm-node:focus-visible {
+  outline: none;
+  box-shadow: var(--sila-focus-ring);
 }
 
 .apm-node-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.375rem;
-  padding: 0.5rem 0.625rem;
-  border-bottom: 1px solid #cbd5e1;
+  gap: var(--sila-space-1-5);
+  padding: var(--sila-space-2) 0.625rem;
+  border-bottom: 0.0625rem solid var(--sila-border-subtle);
   min-height: 2.75rem;
 }
 
 .apm-node-title {
   flex: 1;
   min-width: 0;
-  font-weight: 600;
-  color: #0f172a;
+  font-weight: var(--sila-weight-semibold);
+  color: var(--sila-text);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -131,16 +152,16 @@
   width: 1.5rem;
   height: 1.75rem;
   margin-left: -0.25rem;
-  border-radius: 0.25rem;
-  color: #94a3b8;
+  border-radius: var(--sila-radius-sm);
+  color: var(--sila-text-subtle);
   cursor: grab;
   touch-action: none;
   user-select: none;
 }
 
 .apm-node-grip:hover {
-  background: #e2e8f0;
-  color: #334155;
+  background: var(--sila-surface-hover);
+  color: var(--sila-text-secondary);
 }
 
 .apm-node-grip:active {
@@ -158,32 +179,36 @@
 }
 
 .apm-drop-left {
-  box-shadow: -4px 0 0 #0a6ed1;
+  box-shadow: -0.1875rem 0 0 var(--sila-primary);
 }
 
 .apm-drop-right {
-  box-shadow: 4px 0 0 #0a6ed1;
+  box-shadow: 0.1875rem 0 0 var(--sila-primary);
 }
 
+/* Step marker, same shape as .sila-step-marker */
 .apm-node-order {
   flex: 0 0 auto;
-  min-width: 1.375rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
   height: 1.375rem;
-  padding: 0 0.3125rem;
-  border-radius: 999px;
-  background: #0a6ed1;
-  color: #fff;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  line-height: 1.375rem;
-  text-align: center;
+  border-radius: 50%;
+  border: 0.125rem solid var(--sila-primary-border);
+  background: var(--sila-surface);
+  color: var(--sila-primary);
+  font-size: var(--sila-text-2xs);
+  font-weight: var(--sila-weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 .apm-node-body {
-  padding: 0.5rem 0.625rem;
-  color: #475569;
+  padding: var(--sila-space-2) 0.625rem;
+  color: var(--sila-text-muted);
   height: 4rem;
-  font-size: 0.75rem;
+  font-size: var(--sila-text-xs);
   overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -191,44 +216,55 @@
   overflow: hidden;
 }
 
-.apm-node-selected .apm-node-body {
-  background: #bbf7d0;
+/* Selected approver: primary outline, soft header, filled marker */
+.apm-node-selected {
+  border-color: var(--sila-primary);
+  box-shadow: 0 0 0 0.0625rem var(--sila-primary);
 }
 
-.apm-node-selected {
-  border-color: #16a34a;
+.apm-node-selected .apm-node-head {
+  background: var(--sila-primary-soft);
+  border-bottom-color: var(--sila-primary-border);
+}
+
+.apm-node-selected .apm-node-order {
+  background: var(--sila-primary);
+  border-color: var(--sila-primary);
+  color: var(--sila-text-inverse);
 }
 
 .apm-drag-ghost {
   position: fixed;
-  left: var(--apm-ghost-x, -9999px);
-  top: var(--apm-ghost-y, -9999px);
-  z-index: 2000;
+  left: var(--apm-ghost-x, -624.9375rem);
+  top: var(--apm-ghost-y, -624.9375rem);
+  z-index: var(--sila-z-toast);
   width: 13rem;
-  border: 1px solid #0a6ed1;
-  border-radius: 0.375rem;
-  background: #fff;
-  font-size: 0.8125rem;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.25);
+  border: 0.0625rem solid var(--sila-primary);
+  border-radius: var(--sila-radius);
+  background: var(--sila-surface);
+  font-size: var(--sila-text-sm);
+  box-shadow: var(--sila-shadow-lg);
   pointer-events: none;
-  transform: rotate(2deg);
 }
 
 .apm-empty {
   flex: 0 0 auto;
-  padding: 1rem;
-  color: #64748b;
-  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sila-space-2);
+  padding: var(--sila-space-4);
+  color: var(--sila-text-muted);
+  font-size: var(--sila-text-sm);
 }
 
 .apm-empty-error {
-  color: #dc2626;
+  color: var(--sila-danger);
 }
 
 .apm-scrollbar {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--sila-space-2);
 }
 
 .apm-scroll-spacer {
@@ -236,36 +272,54 @@
 }
 
 .apm-scroll-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sila-control-height-sm);
+  height: var(--sila-control-height-sm);
   background: none;
-  border: none;
-  color: #475569;
+  border: 0.0625rem solid transparent;
+  border-radius: var(--sila-radius);
+  color: var(--sila-text-muted);
   cursor: pointer;
-  font-size: 0.75rem;
+  transition: var(--sila-transition);
+}
+
+.apm-scroll-btn svg {
+  width: 0.6875rem;
+  height: 0.6875rem;
 }
 
 .apm-scroll-btn:hover {
-  color: #0a6ed1;
+  background: var(--sila-surface-hover);
+  color: var(--sila-primary);
+}
+
+.apm-scroll-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--sila-focus-ring);
 }
 
 .apm-details-title {
-  margin: 0 0 0.75rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: #0f172a;
+  padding: 0 0 var(--sila-space-3);
+  font-size: var(--sila-text-md);
+  font-weight: var(--sila-weight-semibold);
+  color: var(--sila-text);
 }
 
 .apm-details-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  font-size: 0.8125rem;
-  color: #334155;
+  grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+  gap: var(--sila-space-4) var(--sila-space-6);
+  font-size: var(--sila-text-md);
+  color: var(--sila-text);
 }
 
 .apm-details-grid > div {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+  gap: var(--sila-space-1);
+  min-width: 0;
 }
 
 .apm-details-full {
@@ -273,8 +327,12 @@
 }
 
 .apm-label {
-  font-size: 0.6875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #64748b;
+  font-size: var(--sila-text-xs);
+  font-weight: var(--sila-weight-medium);
+  color: var(--sila-text-muted);
+}
+
+.apm-value {
+  color: var(--sila-text);
+  overflow-wrap: anywhere;
 }

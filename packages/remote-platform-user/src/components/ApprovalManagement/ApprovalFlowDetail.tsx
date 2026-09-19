@@ -17,8 +17,8 @@ interface ApprovalFlowDetailProps {
 }
 
 const IconBack = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M12 15L7 10L12 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M12 15L7 10L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
@@ -107,15 +107,15 @@ const ApprovalFlowDetail: React.FC<ApprovalFlowDetailProps> = ({ flow: initialFl
   return (
     <div className="afd-page">
       <div className="afd-header">
-        <button type="button" className="afd-back" onClick={onBack} aria-label="Back to approval list">
+        <button type="button" className="afd-back sila-btn sila-btn--secondary sila-btn--icon" onClick={onBack} aria-label="Back to approval list">
           <IconBack />
         </button>
         <div className="afd-heading">
           <div className="afd-title-edit">
-          <h1 className="afd-title">{flow.approvalName || "Approval Flow"}</h1>
-          <button
+            <h1 className="afd-title">{flow.approvalName || "Approval Flow"}</h1>
+            <button
               type="button"
-              className="afd-edit-btn"
+              className="afd-edit-btn sila-btn sila-btn--ghost sila-btn--sm sila-btn--icon"
               title="Edit Approval Flow"
               aria-label="Edit Approval Flow"
               onClick={() => setIsEditing(true)}
@@ -124,9 +124,9 @@ const ApprovalFlowDetail: React.FC<ApprovalFlowDetailProps> = ({ flow: initialFl
             </button>
           </div>
           <div className="afd-meta">
-            <span className="afd-code">{flow.approvalCode || "—"}</span>
+            <span className="afd-code sila-ref">{flow.approvalCode || "—"}</span>
             {!loading && !error && (
-              <span className="afd-count">
+              <span className="afd-count sila-badge sila-badge--neutral">
                 {approvers.length} approver{approvers.length === 1 ? "" : "s"}
               </span>
             )}

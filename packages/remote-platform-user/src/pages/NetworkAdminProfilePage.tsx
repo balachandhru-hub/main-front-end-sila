@@ -44,8 +44,7 @@ const NetworkAdminProfilePage: React.FC = () => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg-color)' }}>
-      <Header />
+    <Header>
       <ProfileView
         personDetail={personDetail as unknown as PersonDetail | null}
         loading={personDetailLoading}
@@ -54,7 +53,7 @@ const NetworkAdminProfilePage: React.FC = () => {
         onSave={handleSave}
         onBack={() => navigate(networkAdminHome)}
       />
-    </div>
+    </Header>
   );
 };
 

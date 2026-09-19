@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
-import { createPortal } from "react-dom";
+import React, { useState, useEffect, useMemo } from "react";
 import "./BuyerAdminDash.css";
 import Header from "./Header";
 import UserAdmin from "../UserAdmin";
@@ -13,11 +12,12 @@ import {
   fetchBuyerRFQById,
   fetchBuyerVerificationTemplates,
   updateRfqStatus,
-  type VerificationTemplate
+  type VerificationTemplate,
+  fetchBuyerDashboardAnalytics,
 } from "../../../remote-buyer/src/api/Buyerapi";
 import CreateRFQ from "./UserListTable/CreateRFQ";
 import { logoutPlatformUser } from "../api/platformApi";
-import { toastService } from "@vosox/shared-ui";
+import { BuyerAnalytics, StatusBadge, toastService, useAsyncData } from "@vosox/shared-ui";
 import UserTemplate from "./usertemplate"
 import ApprovalManagement from "./ApprovalManagement/ApprovalManagement";
 import { ToastContainer } from "@vosox/shared-ui";
@@ -34,24 +34,6 @@ import type { ContractRecord } from "./Contract/contractApi";
 import { fetchContracts } from "./Contract/contractApi";
 import ContractTable from "./Contract/ContractTable";
 import BidComparisonAwardView from "./BidComparisonAwardView";
-
-interface StatCard {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  linkText: string;
-  colorClass: string;
-  isClickable?: boolean;
-  navKey?: string;
-}
-
-interface POItem {
-  code: string;
-  status: "ACCEPTED" | "DELIVERED";
-  company: string;
-  orderDate: string;
-  amount: string;
-}
 
 interface MatchCard {
   location: string;
@@ -72,74 +54,36 @@ interface MatchCard {
 }
 
 const IconClose = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <line x1="18" y1="6" x2="6" y2="18" />
     <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
 
 const IconMail = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <rect x="2" y="4" width="20" height="16" rx="2" />
     <path d="m22 6-10 7L2 6" />
   </svg>
 );
 
 const IconFile = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
     <path d="M14 2v6h6" />
     <path d="M8 13h8M8 17h8M8 9h2" />
   </svg>
 );
 
-const IconTrend = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-    <polyline points="16 7 22 7 22 13" />
-  </svg>
-);
-
-const IconBag = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-    <path d="M3 6h18" />
-    <path d="M16 10a4 4 0 0 1-8 0" />
-  </svg>
-);
-
-const IconInvoice = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 2h11l5 5v15H4z" />
-    <path d="M15 2v5h5" />
-    <path d="M9 13h1M9 17h6" />
-  </svg>
-);
-
-const IconBell = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-  </svg>
-);
-
-// const IconMenu = () => (
-//   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-//     <line x1="3" y1="6" x2="21" y2="6" />
-//     <line x1="3" y1="12" x2="21" y2="12" />
-//     <line x1="3" y1="18" x2="21" y2="18" />
-//   </svg>
-// );
-
 const NavIconHome = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
     <path d="M9 22V12h6v10" />
   </svg>
 );
 
 const NavIconUsers = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
     <circle cx="9" cy="7" r="4" />
     <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
@@ -148,14 +92,14 @@ const NavIconUsers = () => (
 );
 
 const NavIconBuilding = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <rect x="4" y="2" width="16" height="20" rx="1" />
     <path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01" />
   </svg>
 );
 
 const NavIconTemplate = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <rect x="3" y="3" width="18" height="18" rx="2" />
     <path d="M3 9h18" />
     <path d="M9 3v18" />
@@ -163,44 +107,36 @@ const NavIconTemplate = () => (
 );
 
 const NavIconFileCheck = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
     <path d="M14 2v6h6" />
     <path d="m9 15 2 2 4-4" />
   </svg>
 );
 
-const LogoutIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-    <polyline points="16 17 21 12 16 7" />
-    <line x1="21" y1="12" x2="9" y2="12" />
-  </svg>
-);
-
 const IconCalendar = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <rect x="3" y="4" width="18" height="18" rx="2" />
     <path d="M16 2v4M8 2v4M3 10h18" />
   </svg>
 );
 
 const IconPin = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
     <circle cx="12" cy="10" r="3" />
   </svg>
 );
 
 const IconEye = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
     <circle cx="12" cy="12" r="3" />
   </svg>
 );
 
 // const IconDownload = () => (
-//   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
 //     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
 //     <polyline points="7 10 12 15 17 10" />
 //     <line x1="12" y1="15" x2="12" y2="3" />
@@ -208,20 +144,20 @@ const IconEye = () => (
 // );
 
 const IconMessageSquare = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   </svg>
 );
 
 const IconSend = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="m22 2-7 20-4-9-9-4Z" />
     <path d="M22 2 11 13" />
   </svg>
 );
 
 // const IconBidCompare = () => (
-//   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
 //     <line x1="12" y1="20" x2="12" y2="10" />
 //     <line x1="18" y1="20" x2="18" y2="4" />
 //     <line x1="6" y1="20" x2="6" y2="16" />
@@ -229,33 +165,33 @@ const IconSend = () => (
 // );
 
 // const IconFreezeLock = () => (
-//   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
 //     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
 //     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
 //   </svg>
 // );
 
 const IconSparkles = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
     <path d="M5 3v4M3 5h4M19 3v4M17 5h4M5 19v4M3 21h4M19 19v4M17 21h4" />
   </svg>
 );
 
 const IconChevronLeft = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <polyline points="15 18 9 12 15 6" />
   </svg>
 );
 
 const IconChevronRight = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <polyline points="9 18 15 12 9 6" />
   </svg>
 );
 
 const IconMore = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <circle cx="12" cy="12" r="1" />
     <circle cx="19" cy="12" r="1" />
     <circle cx="5" cy="12" r="1" />
@@ -263,13 +199,13 @@ const IconMore = () => (
 );
 
 const IconChevronDown = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <polyline points="6 9 12 15 18 9" />
   </svg>
 );
 
 const IconGlobe = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <circle cx="12" cy="12" r="10" />
     <line x1="2" y1="12" x2="22" y2="12" />
     <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z" />
@@ -277,20 +213,20 @@ const IconGlobe = () => (
 );
 
 const IconShieldCheck = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M12 2 4 5v6c0 5 3.5 8.5 8 11 4.5-2.5 8-6 8-11V5Z" />
     <path d="m9 12 2 2 4-4" />
   </svg>
 );
 
 const IconCheckCircle = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M20 6 9 17l-5-5" />
   </svg>
 );
 
 const NavIconFilePlus = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
     <path d="M14 2v6h6" />
     <path d="M12 12v6M9 15h6" />
@@ -314,10 +250,10 @@ const collectSubEntryKeys = (entries: NavSubEntry[]): string[] =>
   entries.flatMap((entry) => (isNavGroup(entry) ? collectSubEntryKeys(entry.items) : [entry.key]));
 
 const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number; subItems?: NavSubEntry[]; chevronIcon?: React.ReactNode }[] = [
-  { key: "dashboard", icon: <NavIconHome />, label: "Dashboard", section: "MAIN" },
-  { key: "invitations", icon: <IconMail />, label: "Invitations", section: "SOURCING & ORDERS" },
+  { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
+  { key: "invitations", icon: <IconMail />, label: "Invitations" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
-  { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog", section: "DIRECTORY & CATALOG" },
+  { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog" },
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
   {
     key: "configuration",
@@ -346,15 +282,14 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
   },
 ];
 
-const statCards: StatCard[] = [
-  { icon: <IconFile />, navKey: "activeRFQs", label: "ACTIVE RFQS", value: 3, linkText: "Manage RFQs >", colorClass: "bad-stat-icon-blue" },
-  { icon: <NavIconFilePlus />, navKey: "createRFQ", label: "CREATE RFQ", value: 0, linkText: "Create RFQ >", colorClass: "bad-stat-icon-blue" },
-  { icon: <IconMail />, navKey: "quotationsReceived", label: "QUOTATIONS RECEIVED", value: 5, linkText: "Review bids >", colorClass: "bad-stat-icon-indigo" },
-  { icon: <IconTrend />, navKey: "suppliersEngaged", label: "SUPPLIERS ENGAGED", value: 8, linkText: "View directory", colorClass: "bad-stat-icon-green" },
-  { icon: <IconBag />, navKey: "purchaseOrders", label: "PURCHASE ORDERS", value: 4, linkText: "Track orders >", colorClass: "bad-stat-icon-purple" },
-  { icon: <IconInvoice />, navKey: "pendingInvoices", label: "PENDING INVOICES", value: 2, linkText: "Invoice list >", colorClass: "bad-stat-icon-orange" },
-  { icon: <IconBell />, navKey: "notifications", label: "NOTIFICATIONS", value: 3, linkText: "Inquiries & Alerts >", colorClass: "bad-stat-icon-teal" },
-];
+// Placeholder purchase orders: the backend has no purchase-order entity yet.
+interface POItem {
+  code: string;
+  status: "ACCEPTED" | "DELIVERED";
+  company: string;
+  orderDate: string;
+  amount: string;
+}
 
 const poItems: POItem[] = [
   { code: "PO-2026-90412", status: "ACCEPTED", company: "Meridian Components Ltd.", orderDate: "2026-07-04", amount: "$18,500.00" },
@@ -450,41 +385,14 @@ const mockRfqs = [
 const BuyerAdminDash: React.FC = () => {
   const [activeNav, setActiveNav] = useState<string>("dashboard");
   const [loggingOut, setLoggingOut] = useState(false);
-  const [logoutError, setLogoutError] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
 
   const [loadingRfqs, setLoadingRfqs] = useState(false);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
   const [rfqs, setRfqs] = useState<any[]>(mockRfqs);
+  const analytics = useAsyncData(fetchBuyerDashboardAnalytics);
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
   const RFQ_INITIAL_VISIBLE = 3;
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-
-  // Portaled to document.body — .bad-sidebar's overflow-y:auto would clip it otherwise.
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
-  const [moreMenuPos, setMoreMenuPos] = useState<{ top: number; left: number } | null>(null);
-  const moreTriggerRef = useRef<HTMLDivElement>(null);
-
-  const closeMoreMenu = () => setMoreMenuOpen(false);
-
-  const toggleMoreMenu = () => {
-    if (!moreMenuOpen && moreTriggerRef.current) {
-      const rect = moreTriggerRef.current.getBoundingClientRect();
-      setMoreMenuPos({ top: rect.bottom + 4, left: rect.left });
-    }
-    setMoreMenuOpen((prev) => !prev);
-  };
-
-  useEffect(() => {
-    if (!moreMenuOpen) return;
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (moreTriggerRef.current && !moreTriggerRef.current.contains(e.target as Node)) {
-        closeMoreMenu();
-      }
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [moreMenuOpen]);
 
   const [templates, setTemplates] = useState<VerificationTemplate[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
@@ -772,7 +680,6 @@ const BuyerAdminDash: React.FC = () => {
   };
 
   const handleNavClick = (key: string) => {
-    setIsMobileSidebarOpen(false);
     if (key === "activeRFQs") {
       handleOpenAllRfqs();
       return;
@@ -781,15 +688,6 @@ const BuyerAdminDash: React.FC = () => {
     setRfqPageView("dashboard");
   };
 
-  const handleCardClick = (navKey?: string, label?: string) => {
-    if (navKey === "activeRFQs" || label === "ACTIVE RFQs") {
-      handleOpenAllRfqs(); // Redirects to All/Manage RFQs table
-    } else if (navKey === "createRFQ" || label === "CREATE RFQ") {
-      handleNavClick("createRFQ"); // Redirects to Create RFQ form
-    } else if (navKey) {
-      handleNavClick(navKey);
-    }
-  };
 
   // const handleBackToDashboard = () => {
   //   setRfqPageView("dashboard");
@@ -869,11 +767,10 @@ const BuyerAdminDash: React.FC = () => {
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
-    setLogoutError(null);
     try {
       await logoutPlatformUser();
-    } catch (error: any) {
-      setLogoutError(error?.message || "Logout request failed, clearing session locally.");
+    } catch {
+      // The session is cleared locally below even when the server call fails.
     } finally {
       useNetworkAdminAuthStore.getState().logout();
       sessionStorage.clear();
@@ -976,151 +873,10 @@ const BuyerAdminDash: React.FC = () => {
   // );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#edeff0", paddingTop: "5.25rem" }}>
-      <ToastContainer />
-      <Header navItems={navItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout} />
-      <div
-        className={`bad-shell${isMobileSidebarOpen ? " bad-sidebar-open-mobile" : ""}`}
-        style={{ flex: 1, position: "relative", minHeight: "calc(100vh - 64px)" }}
-      >
-
-
-        <div
-          className="bad-sidebar-backdrop"
-          onClick={() => setIsMobileSidebarOpen(false)}
-          aria-hidden="true"
-        />
-        <aside className="bad-sidebar">
-          <nav className="bad-nav" >
-            {navItems.map((item) => (
-              <React.Fragment key={item.key}>
-                {item.section && (
-                  <div className="bad-nav-section-title">{item.section}</div>
-                )}
-                {item.subItems && item.key === "more" ? (
-                  <div className="bad-nav-flyout-trigger" ref={moreTriggerRef}>
-                    <div
-                      className={`bad-nav-item${activeNav === item.key || collectSubEntryKeys(item.subItems).includes(activeNav) || moreMenuOpen ? " bad-nav-item-active" : ""}`}
-                      onClick={toggleMoreMenu}
-                    >
-                      <span className="bad-nav-icon">{item.icon}</span>
-                      <span className="bad-nav-label">{item.label}</span>
-                      <span className="bad-nav-chevron">
-                        {item.chevronIcon || <IconChevronRight />}
-                      </span>
-                    </div>
-                    {moreMenuOpen && moreMenuPos && createPortal(
-                      <div
-                        className="bad-nav-flyout-menu bad-nav-flyout-menu-portal"
-                        style={{ top: moreMenuPos.top, left: moreMenuPos.left }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                      >
-                        {item.subItems.map((entry, entryIdx) =>
-                          isNavGroup(entry) ? (
-                            <div key={`${item.key}-group-${entryIdx}`} className="bad-nav-flyout-trigger">
-                              <div className="bad-nav-flyout-item bad-nav-flyout-item-parent">
-                                <span>{entry.label}</span>
-                                <span className="bad-nav-flyout-arrow"><IconChevronRight /></span>
-                              </div>
-                              <div className="bad-nav-flyout-menu bad-nav-flyout-menu-nested">
-                                {entry.items.map(leaf => (
-                                  <div
-                                    key={leaf.key}
-                                    onClick={() => { handleNavClick(leaf.key); closeMoreMenu(); }}
-                                    className={`bad-nav-flyout-item${activeNav === leaf.key ? " bad-nav-flyout-item-active" : ""}`}
-                                  >
-                                    {leaf.label}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : (
-                            <div
-                              key={entry.key}
-                              onClick={() => { handleNavClick(entry.key); closeMoreMenu(); }}
-                              className={`bad-nav-flyout-item${activeNav === entry.key ? " bad-nav-flyout-item-active" : ""}`}
-                            >
-                              {entry.label}
-                            </div>
-                          )
-                        )}
-                      </div>,
-                      document.body
-                    )}
-                  </div>
-                ) : item.subItems ? (
-                  <div className="bad-nav-dropdown-container">
-                    <div
-                      className={`bad-nav-item${activeNav === item.key || collectSubEntryKeys(item.subItems).includes(activeNav) ? " bad-nav-item-active" : ""}`}
-                    >
-                      <span className="bad-nav-icon">{item.icon}</span>
-                      <span className="bad-nav-label">{item.label}</span>
-                      <span className="bad-nav-chevron">
-                        {item.chevronIcon || <IconChevronRight />}
-                      </span>
-                    </div>
-                    <div className="bad-nav-dropdown-menu">
-                      {item.subItems.map((entry, entryIdx) =>
-                        isNavGroup(entry) ? (
-                          <div key={`${item.key}-group-${entryIdx}`} className="bad-nav-subgroup">
-                            <div className="bad-nav-subgroup-title">{entry.label}</div>
-                            {entry.items.map(leaf => (
-                              <div
-                                key={leaf.key}
-                                onClick={() => handleNavClick(leaf.key)}
-                                className={`bad-nav-subitem bad-nav-subitem-nested${activeNav === leaf.key ? " bad-nav-subitem-active" : ""}`}
-                              >
-                                {leaf.label}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div
-                            key={entry.key}
-                            onClick={() => handleNavClick(entry.key)}
-                            className={`bad-nav-subitem${activeNav === entry.key ? " bad-nav-subitem-active" : ""}`}
-                          >
-                            {entry.label}
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    className={`bad-nav-item${activeNav === item.key ? " bad-nav-item-active" : ""}`}
-                    onClick={() => handleNavClick(item.key)}
-                  >
-                    <span className="bad-nav-icon">{item.icon}</span>
-                    <span className="bad-nav-label">{item.label}</span>
-                    {item.badge && <span className="bad-nav-badge">{item.badge}</span>}
-                  </div>
-                )}
-              </React.Fragment>
-            ))}
-            <div
-              className="bad-nav-item bad-nav-item-logout"
-              style={{
-                marginTop: "auto",
-                opacity: loggingOut ? 0.6 : 1,
-                cursor: loggingOut ? "not-allowed" : "pointer",
-                pointerEvents: loggingOut ? "none" : "auto",
-              }}
-              onClick={handleLogout}
-              role="button"
-              aria-disabled={loggingOut}
-              title={logoutError || undefined}
-            >
-              <span className="bad-nav-icon" style={{ transform: "rotate(180deg)" }}>
-                <LogoutIcon />
-              </span>
-              <span className="bad-nav-label">{loggingOut ? "Logging out..." : "Log Out"}</span>
-            </div>
-          </nav>
-        </aside>
-
+    <Header navItems={navItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout}>
+        <ToastContainer />
         <div className="bad-main">
-          <main className="bad-content">
+          <div className="bad-content">
             {activeNav === "userList" ? (
               <UserAdmin />
             ) : activeNav === "invitations" ? (
@@ -1130,15 +886,15 @@ const BuyerAdminDash: React.FC = () => {
             ) : activeNav === "template" ? (
               <div>
                 {loadingTemplates ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
-                    <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <div className="bad-spinner" style={{ width: '32px', height: '32px' }} />
+                  <div className="bad-state-box bad-state-box-lg">
+                    <div className="bad-state-inner">
+                      <div className="bad-spinner" aria-hidden="true" />
                       <span>Loading verification templates...</span>
                     </div>
                   </div>
                 ) : templatesError ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
-                    <h3>Error Loading Templates</h3>
+                  <div className="bad-state-message bad-state-error" role="alert">
+                    <h3 className="bad-state-title">Error Loading Templates</h3>
                     <p>{templatesError}</p>
                   </div>
                 ) : (
@@ -1185,26 +941,26 @@ const BuyerAdminDash: React.FC = () => {
             ) : rfqPageView === "allRfqs" ? (
               <>
                 <div className="bad-table">
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '1.25rem', }}>
+                  <div className="bad-table-header">
                     <div>
                       <h1 className="bad-title">All RFQs</h1>
-                      <p className="bad-subtitle" style={{ marginBottom: 0 }}>
+                      <p className="bad-subtitle">
                         RFQs posted across your organization, awaiting supplier quotations.
                       </p>
                     </div>
                   </div>
 
                   {loadingAllRfqs ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
-                      <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                        <div className="bad-spinner" />
+                    <div className="bad-state-box">
+                      <div className="bad-state-inner">
+                        <div className="bad-spinner" aria-hidden="true" />
                         <span>Loading all sourcing opportunities...</span>
                       </div>
                     </div>
                   ) : allRfqsError && allRfqsList.length === 0 ? (
-                    <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>{allRfqsError}</div>
+                    <div className="bad-state-message bad-state-error" role="alert">{allRfqsError}</div>
                   ) : allRfqsList.length === 0 ? (
-                    <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                    <div className="bad-state-message">
                       No RFQs found.
                     </div>
                   ) : (
@@ -1213,7 +969,7 @@ const BuyerAdminDash: React.FC = () => {
                         <table className="bad-rfq-items-table bad-allrfqs-table">
                           <thead>
                             <tr>
-                              <th style={{ width: '48px' }}>S.No</th>
+                              <th className="bad-col-sno">S.No</th>
                               <th>RFQ Number</th>
                               <th>Title</th>
                               <th>Organization</th>
@@ -1224,10 +980,14 @@ const BuyerAdminDash: React.FC = () => {
                           <tbody>
                             {allRfqsList.map((rfq: any, idx: number) => (
                               <tr key={rfq.rfqId || idx}
-                                onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}>
-                                <td style={{ color: '#94a3b8', fontWeight: 600 }}>{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
-                                <td><span className="bad-code-badge">{rfq.rfqNumber}</span></td>
-                                <td style={{ fontWeight: 600, color: '#1e293b' }}>{rfq.title}</td>
+                                tabIndex={0}
+                                onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleViewRfqDetailsFullPage(rfq.rfqId);
+                                }}>
+                                <td className="bad-cell-sno">{(allRfqsPage - 1) * RFQ_PAGE_SIZE + idx + 1}</td>
+                                <td><span className="bad-code-badge sila-ref">{rfq.rfqNumber}</span></td>
+                                <td className="bad-cell-strong">{rfq.title}</td>
                                 <td>{rfq.organizationName}</td>
                                 <td>{rfq.deliveryLocation}</td>
                                 <td>
@@ -1551,7 +1311,7 @@ const BuyerAdminDash: React.FC = () => {
                     <span className="bad-modal-badge">
                       <IconSparkles /> Bid Comparison
                     </span>
-                    <button className="bad-modal-close" onClick={handleBackFromQuotationComparison}>
+                    <button type="button" className="bad-modal-close" onClick={handleBackFromQuotationComparison} aria-label="Close bid comparison">
                       <IconClose />
                     </button>
                     <h2 className="bad-modal-name">
@@ -1565,7 +1325,7 @@ const BuyerAdminDash: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="bad-modal-body" style={{ maxHeight: 'calc(100% - 120px)', overflowY: 'auto', padding: '24px' }}>
+                  <div className="bad-modal-body bad-modal-body-scroll">
                     <QuotationComparisonCard
                       rfqId={selectedQuotationsRfq?.rfqId}
                       rfqTitle={selectedQuotationsRfq?.title}
@@ -1583,26 +1343,16 @@ const BuyerAdminDash: React.FC = () => {
               />
             ) : (
               <>
-                <div>
-                  <h1 className="bad-title" style={{ fontSize: '20px', fontWeight: 500 }}>Buyer Admin Command Center</h1>
+                <div className="bad-page-header">
+                  <h1 className="bad-title">Buyer Admin Command Center</h1>
                   <p className="bad-subtitle">Manage buyers, track procurement activities, and oversee operations.</p>
                 </div>
 
-                <div className="bad-stats-grid">
-                  {statCards.map((stat) => (
-                    <div className="bad-stat-card" key={stat.label}>
-                      <div className={`bad-stat-icon ${stat.colorClass}`}>{stat.icon}</div>
-                      <div className="bad-stat-label">{stat.label}</div>
-                      <div className="bad-stat-value">{stat.value}</div>
-                      <a className="bad-stat-link" href="#" onClick={(e) => {
-                        e.preventDefault();
-                        handleCardClick(stat.navKey, stat.label);
-                      }}>
-                        {stat.linkText}
-                      </a>
-                    </div>
-                  ))}
-                </div>
+                <BuyerAnalytics
+                  state={analytics}
+                  onViewRfqs={handleOpenAllRfqs}
+                  onOpenRfq={handleViewRfqDetailsFullPage}
+                />
 
                 <div className="bad-panels">
                   <section className="bad-panel">
@@ -1625,21 +1375,21 @@ const BuyerAdminDash: React.FC = () => {
                       )}
                     </div>
                     {loadingRfqs ? (
-                      <div className="bad-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px' }}>
-                        <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                          <div className="bad-spinner" />
+                      <div className="bad-panel-list bad-panel-state">
+                        <div className="bad-state-inner">
+                          <div className="bad-spinner" aria-hidden="true" />
                           <span>Loading sourcing opportunities...</span>
                         </div>
                       </div>
                     ) : rfqsError ? (
-                      <div className="bad-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
-                        <div style={{ color: '#ef4444', fontSize: '14px', textAlign: 'center' }}>
+                      <div className="bad-panel-list bad-panel-state">
+                        <div className="bad-state-inner bad-state-error" role="alert">
                           {rfqsError}
                         </div>
                       </div>
                     ) : rfqs.length === 0 ? (
-                      <div className="bad-panel-list" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '180px', padding: '16px' }}>
-                        <div style={{ color: '#64748b', fontSize: '14px', textAlign: 'center' }}>
+                      <div className="bad-panel-list bad-panel-state">
+                        <div className="bad-state-inner">
                           No recent sourcing opportunities found.
                         </div>
                       </div>
@@ -1650,12 +1400,15 @@ const BuyerAdminDash: React.FC = () => {
                             className="bad-rfq-card-item"
                             key={rfq.rfqId}
                             onClick={() => handleViewRfqDetailsFullPage(rfq.rfqId)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleViewRfqDetailsFullPage(rfq.rfqId);
+                            }}
                             role="button"
                             tabIndex={0}
                           >
                             <div className="bad-rfq-meta">
-                              <span className="bad-code-badge">{rfq.rfqNumber}</span>
-                              <span className="bad-dot-sep">•</span>
+                              <span className="bad-code-badge sila-ref">{rfq.rfqNumber}</span>
+                              <span className="bad-dot-sep" aria-hidden="true">•</span>
                               <span className="bad-company">{rfq.organizationName}</span>
                             </div>
 
@@ -1678,38 +1431,37 @@ const BuyerAdminDash: React.FC = () => {
                   <section className="bad-panel">
                     <div className="bad-panel-header">
                       <div>
-                        <div className="bad-panel-title">Recent Purchase Orders</div>
+                        <h2 className="bad-panel-title">Recent Purchase Orders</h2>
                         <div className="bad-panel-subtitle">Buyer orders requiring attention</div>
                       </div>
-                      <a className="bad-panel-link" href="#">View All →</a>
+                      <a className="bad-panel-link" href="#" onClick={(e) => e.preventDefault()}>View All →</a>
                     </div>
                     <div className="bad-panel-list">
                       {poItems.map((po) => (
                         <div className="bad-po-row" key={po.code}>
                           <div className="bad-po-info">
                             <div className="bad-po-meta">
-                              <span className="bad-po-code">{po.code}</span>
-                              <span className={`bad-status-badge bad-status-badge-${po.status.toLowerCase()}`}>
-                                {po.status}
-                              </span>
+                              <span className="bad-po-code sila-ref">{po.code}</span>
+                              <StatusBadge status={po.status} size="sm" />
                             </div>
                             <div className="bad-po-company">{po.company}</div>
                             <div className="bad-po-date"><IconCalendar /> Order Date: {po.orderDate}</div>
                           </div>
                           <div className="bad-po-right">
                             <div className="bad-po-amount">{po.amount}</div>
-                            <a className="bad-po-process" href="#">Process →</a>
+                            <a className="bad-po-process" href="#" onClick={(e) => e.preventDefault()}>Process →</a>
                           </div>
                         </div>
                       ))}
                     </div>
                   </section>
+
                 </div>
 
                 <section className="bad-matchmaker">
                   <div className="bad-matchmaker-header">
                     <div className="bad-matchmaker-title-row">
-                      <span className="bad-matchmaker-icon"><IconSparkles /></span>
+                      <span className="bad-matchmaker-icon" aria-hidden="true"><IconSparkles /></span>
                       <div className="bad-matchmaker-title">Supplier Network Overview</div>
                     </div>
                     <div className="bad-matchmaker-subtitle">
@@ -1722,7 +1474,7 @@ const BuyerAdminDash: React.FC = () => {
                       <div className="bad-match-card" key={card.name}>
                         <span className="bad-match-location"><IconPin /> {card.location}</span>
                         <div className="bad-match-top">
-                          <div className="bad-match-avatar">{card.initials}</div>
+                          <div className="bad-match-avatar" aria-hidden="true">{card.initials}</div>
                           <div>
                             <div className="bad-match-name">{card.name}</div>
                             <div className="bad-match-seeking"><NavIconBuilding /> Supplies: {card.seeking}</div>
@@ -1735,17 +1487,18 @@ const BuyerAdminDash: React.FC = () => {
                         </div>
                         <div className="bad-match-actions">
                           <button
+                            type="button"
                             className="bad-btn bad-btn-outline bad-btn-flex"
                             onClick={() => setSelectedProfile(card)}
                           >
                             <IconEye /> Profile
                           </button>
                           {card.actionVariant === "message" ? (
-                            <button className="bad-btn bad-btn-message bad-btn-flex">
+                            <button type="button" className="bad-btn bad-btn-message bad-btn-flex">
                               <IconMessageSquare /> Message
                             </button>
                           ) : (
-                            <button className="bad-btn bad-btn-interest bad-btn-flex">
+                            <button type="button" className="bad-btn bad-btn-interest bad-btn-flex">
                               <IconSend /> Send Interest
                             </button>
                           )}
@@ -1755,27 +1508,27 @@ const BuyerAdminDash: React.FC = () => {
                   </div>
 
                   <div className="bad-pagination">
-                    <button className="bad-page-btn bad-page-btn-disabled" disabled>
+                    <button type="button" className="bad-page-btn bad-page-btn-disabled" disabled aria-label="Previous page">
                       <IconChevronLeft />
                     </button>
-                    <button className="bad-page-btn bad-page-btn-active">
+                    <button type="button" className="bad-page-btn bad-page-btn-active" aria-label="Next page">
                       <IconChevronRight />
                     </button>
                   </div>
                 </section>
               </>
             )}
-          </main>
+          </div>
         </div>
 
         {selectedProfile && (
           <div className="bad-modal-overlay" onClick={() => setSelectedProfile(null)}>
-            <div className="bad-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="bad-modal" role="dialog" aria-modal="true" aria-label={selectedProfile.name} onClick={(e) => e.stopPropagation()}>
               <div className="bad-modal-header">
                 <span className="bad-modal-badge">
                   <IconShieldCheck /> Verified Supplier Partner
                 </span>
-                <button className="bad-modal-close" onClick={() => setSelectedProfile(null)}>
+                <button type="button" className="bad-modal-close" onClick={() => setSelectedProfile(null)} aria-label="Close profile">
                   <IconClose />
                 </button>
                 <h2 className="bad-modal-name">{selectedProfile.name}</h2>
@@ -1833,11 +1586,11 @@ const BuyerAdminDash: React.FC = () => {
 
               <div className="bad-modal-footer">
                 {selectedProfile.actionVariant === "message" ? (
-                  <button className="bad-btn bad-btn-message bad-modal-footer-btn">
+                  <button type="button" className="bad-btn bad-btn-message bad-modal-footer-btn">
                     <IconMessageSquare /> Message Supplier
                   </button>
                 ) : (
-                  <button className="bad-btn bad-btn-interest bad-modal-footer-btn">
+                  <button type="button" className="bad-btn bad-btn-interest bad-modal-footer-btn">
                     <IconSend /> Send Interest
                   </button>
                 )}
@@ -1859,8 +1612,7 @@ const BuyerAdminDash: React.FC = () => {
             isLoadingBuyerProfile={isLoadingBuyerProfile}
           />
         )}
-      </div>
-    </div>
+    </Header>
   );
 };
 

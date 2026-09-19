@@ -1,4 +1,5 @@
 import supplierInstance from './supplierInstance';
+import type { SupplierDashboardAnalytics } from '@vosox/shared-ui';
 import type {
   SupplierProfileResponse,
   UpdateRejectedSupplierPayload,
@@ -1590,4 +1591,33 @@ export const downloadSupplierMessageAttachment = async (
       description: 'Something went wrong while downloading the attachment.',
     };
   }
+};
+
+/** Aggregated bidding figures for the supplier dashboard (GET /api/v1/supplier/dashboard-analytics). */
+export const fetchSupplierDashboardAnalytics = async (): Promise<SupplierDashboardAnalytics> => {
+  // Users only ever see a neutral message; the technical reason goes to the console.
+  const unavailable = (detail: string, cause?: unknown): Error => {
+    console.warn(`[dashboard-analytics] /api/v1/supplier/dashboard-analytics: ${detail}`, cause ?? '');
+    return new Error('Dashboard figures are temporarily unavailable.');
+  };
+
+  let response;
+  try {
+    response = await supplierInstance.get<SupplierDashboardAnalytics>('/api/v1/supplier/dashboard-analytics');
+  } catch (error: any) {
+    if (error?.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+    }
+    if (!error?.response) throw unavailable('server unreachable', error);
+    if (error.response.status === 404) {
+      throw unavailable('endpoint not found (404) - deploy the latest Supplier API', error.response.data);
+    }
+    throw unavailable(`request failed (${error.response.status})`, error.response.data);
+  }
+
+  // An older server returns a different response shape; treat it as unavailable rather than crash.
+  if (!Array.isArray(response.data?.quotationsByBuyer)) {
+    throw unavailable('unexpected response shape - deploy the latest Supplier API', response.data);
+  }
+  return response.data;
 };

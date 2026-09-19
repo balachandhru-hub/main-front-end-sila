@@ -34,8 +34,7 @@ const SupplierProfilePage: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#ffffff' }}>
-      <Header />
+    <Header>
       <ProfileView
         personDetail={personDetail as unknown as PersonDetail | null}
         loading={loading}
@@ -44,7 +43,7 @@ const SupplierProfilePage: React.FC = () => {
         onSave={handleSave}
         onBack={() => navigate('/supplier/dashboard')}
       />
-    </div>
+    </Header>
   );
 };
 

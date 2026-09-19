@@ -52,7 +52,7 @@ export const PlatformUserDetailView: React.FC<PlatformUserDetailViewProps> = ({
   record,
   onBack,
   onStatusUpdated,
-   onSettingsClick,
+  onSettingsClick,
 }) => {
   const [statusLoading, setStatusLoading] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -181,8 +181,11 @@ export const PlatformUserDetailView: React.FC<PlatformUserDetailViewProps> = ({
     }
   };
 
+  const orgName = currentProfile?.businessProfile?.organizationName || 'this organization';
+  const commentsInvalid = !!statusError && !rejectComments.trim();
+
   return (
-    <div style={{ padding: '16px' }}>
+    <div className="pudv-page">
       <CompanyProfile
         mode="admin-review"
         showHeader={true}
@@ -198,23 +201,68 @@ export const PlatformUserDetailView: React.FC<PlatformUserDetailViewProps> = ({
       />
 
       {showRejectModal && (
-        <div className="pudv-modal-overlay">
-          <div className="pudv-reject-dialog">
-            <h3>Reject Organization Registration</h3>
-            <p>Please specify a reason for rejecting {currentProfile?.businessProfile?.organizationName || 'this organization'}:</p>
-            <textarea
-              value={rejectComments}
-              onChange={(e) => setRejectComments(e.target.value)}
-              placeholder="Type rejection comments here..."
-              rows={4}
-              className="pudv-textarea"
-            />
-            <div className="pudv-dialog-actions">
-              <button className="pudv-btn-cancel" onClick={() => setShowRejectModal(false)}>
+        <div className="pudv-modal-overlay sila-overlay">
+          <div
+            className="pudv-reject-dialog sila-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pudv-reject-title"
+            aria-describedby="pudv-reject-desc"
+          >
+            <div className="sila-modal-header">
+              <h3 id="pudv-reject-title" className="sila-modal-title">Reject Organization Registration</h3>
+            </div>
+            <div className="sila-modal-body pudv-reject-body">
+              <p id="pudv-reject-desc" className="sila-modal-text">
+                Please specify a reason for rejecting <strong>{orgName}</strong>:
+              </p>
+              <div className={`sila-field${commentsInvalid ? ' sila-field--error' : ''}`}>
+                <label htmlFor="pudv-reject-comments" className="sila-label">
+                  Rejection comments<span className="sila-required" aria-hidden="true">*</span>
+                </label>
+                <textarea
+                  id="pudv-reject-comments"
+                  value={rejectComments}
+                  onChange={(e) => setRejectComments(e.target.value)}
+                  placeholder="Type rejection comments here..."
+                  rows={4}
+                  className="pudv-textarea sila-textarea"
+                  required
+                  aria-required="true"
+                  aria-invalid={commentsInvalid}
+                  aria-describedby={statusError ? 'pudv-reject-error' : undefined}
+                  autoFocus
+                />
+                {statusError && (
+                  <span id="pudv-reject-error" className="sila-error-text" role="alert">
+                    {statusError}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="pudv-dialog-actions sila-modal-footer">
+              <button
+                type="button"
+                className="pudv-btn-cancel sila-btn sila-btn--secondary"
+                onClick={() => setShowRejectModal(false)}
+              >
                 Cancel
               </button>
-              <button className="pudv-btn-confirm-reject" onClick={handleReject} disabled={statusLoading}>
-                {statusLoading ? <FaSpinner className="pudv-spin" /> : 'Confirm Rejection'}
+              <button
+                type="button"
+                className="pudv-btn-confirm-reject sila-btn sila-btn--danger"
+                onClick={handleReject}
+                disabled={statusLoading}
+                aria-busy={statusLoading}
+              >
+                {statusLoading ? (
+                  <>
+                    <FaSpinner className="pudv-spin" aria-hidden="true" />
+                    <span className="sila-visually-hidden">Rejecting</span>
+                  </>
+                ) : (
+                  'Confirm Rejection'
+                )}
               </button>
             </div>
           </div>

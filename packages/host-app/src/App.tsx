@@ -26,7 +26,6 @@ const Protected: React.FC<{
       fullScreen={true}
       message='Verifying session...'
       theme='light'
-      color='#1976d2'
       />  
     );
   }
@@ -95,14 +94,13 @@ const Shell = () => {
   };
 
   return (
-    <div className="app-container">
+    <div className="app-container sila-root">
       <main className={`main-content ${!isLoggedIn || isAuthPage || isRegistration || isExternalBid ? 'no-padding' : ''}`}>
         <React.Suspense fallback={
           <Loader
             fullScreen={true}
             message="Loading modules..."
             theme="light"
-            color="#1976d2"
           />
         }>
           <Routes>
@@ -114,7 +112,6 @@ const Shell = () => {
                   fullScreen={true}
                   message='Verifying session...'
                   theme='light'
-                  color='#1976d2'
                   />  
                 ) :isLoggedIn ? (
                   <Navigate to={getRedirectUrl()} replace />

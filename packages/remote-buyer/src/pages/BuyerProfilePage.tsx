@@ -35,8 +35,7 @@ const BuyerProfilePage: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f4f6f9' }}>
-      <Header />
+    <Header>
       <ProfileView
         personDetail={personDetail as unknown as PersonDetail | null}
         loading={loading}
@@ -45,7 +44,7 @@ const BuyerProfilePage: React.FC = () => {
         onSave={handleSave}
         onBack={() => navigate('/buyer/dashboard')}
       />
-    </div>
+    </Header>
   );
 };
 
