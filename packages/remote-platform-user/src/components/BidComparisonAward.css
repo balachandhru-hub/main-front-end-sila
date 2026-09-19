@@ -1675,161 +1675,51 @@
   cursor: not-allowed;
 }
 
-/* Q&A Suppliers List */
-.bca-qa-suppliers {
+/* Q&A: one tab per supplier, answers rendered by the shared QuestionList */
+.bca-qa-tabs {
+  padding-bottom: var(--sila-space-4);
+}
+
+.bca-qa-tab {
+  gap: var(--sila-space-2);
+}
+
+.bca-qa-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--sila-primary-soft);
+  color: var(--sila-primary);
+  font-size: var(--sila-text-2xs);
+  font-weight: var(--sila-weight-semibold);
+}
+
+.bca-qa-panel {
   display: flex;
   flex-direction: column;
-  gap: var(--sila-space-4);
+  gap: var(--sila-space-3);
 }
 
-.bca-qa-supplier-card {
-  padding: var(--sila-space-4);
-  background: var(--sila-surface);
-  border: 0.0625rem solid var(--sila-border);
-  border-radius: var(--sila-radius-md);
-}
-
-.bca-qa-supplier-header {
+.bca-qa-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--sila-space-2);
-  padding-bottom: var(--sila-space-3);
 }
 
-.bca-qa-supplier-left {
-  display: flex;
-  align-items: center;
-  gap: var(--sila-space-3);
-  min-width: 0;
-}
-
-.bca-qa-supplier-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  background: var(--sila-primary-soft);
-  color: var(--sila-primary);
-  font-size: var(--sila-text-xs);
-  font-weight: var(--sila-weight-semibold);
-}
-
-.bca-qa-supplier-name {
+.bca-qa-panel-name {
   font-size: var(--sila-text-md);
   font-weight: var(--sila-weight-semibold);
   color: var(--sila-text);
 }
 
-.bca-qa-supplier-badge {
-  display: inline-flex;
-  align-items: center;
-  height: 1.375rem;
-  padding: 0 var(--sila-space-2);
-  background: var(--sila-neutral-soft);
-  border: 0.0625rem solid var(--sila-neutral-border);
-  border-radius: var(--sila-radius-full);
-  color: var(--sila-neutral);
-  font-size: var(--sila-text-xs);
-  font-weight: var(--sila-weight-semibold);
-  font-variant-numeric: tabular-nums;
-}
-
-.bca-qa-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sila-space-3);
-}
-
-.bca-qa-item {
-  padding: var(--sila-space-3) var(--sila-space-4);
-  background: var(--sila-surface);
-  border: 0.0625rem solid var(--sila-border-subtle);
-  border-radius: var(--sila-radius);
-}
-
-.bca-qa-question-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--sila-space-3);
-  padding-bottom: var(--sila-space-2);
-}
-
-.bca-qa-question-left {
-  display: flex;
-  align-items: baseline;
-  gap: var(--sila-space-2);
-  min-width: 0;
-}
-
-.bca-qa-index {
-  flex-shrink: 0;
-  font-size: var(--sila-text-sm);
-  font-weight: var(--sila-weight-semibold);
-  color: var(--sila-text-muted);
-}
-
-.bca-qa-question-text {
-  font-size: var(--sila-text-md);
-  font-weight: var(--sila-weight-medium);
-  color: var(--sila-text);
-}
-
-.bca-qa-tags {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  gap: var(--sila-space-1-5);
-}
-
-.bca-qa-type-badge,
-.bca-qa-req-badge {
-  display: inline-flex;
-  align-items: center;
-  height: 1.25rem;
-  padding: 0 var(--sila-space-2);
-  border: 0.0625rem solid transparent;
-  border-radius: var(--sila-radius-full);
-  font-size: var(--sila-text-2xs);
-  font-weight: var(--sila-weight-semibold);
-  white-space: nowrap;
-}
-
-.bca-qa-type-badge {
-  background: var(--sila-neutral-soft);
-  border-color: var(--sila-neutral-border);
-  color: var(--sila-neutral);
-}
-
-.bca-qa-req-badge {
-  background: var(--sila-danger-soft);
-  border-color: var(--sila-danger-border);
-  color: var(--sila-danger);
-}
-
-.bca-qa-answer-box {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sila-space-3);
-  padding: 0.625rem var(--sila-space-3);
-  background: var(--sila-surface-subtle);
-  border-left: 0.125rem solid var(--sila-primary-border);
-  border-radius: 0 var(--sila-radius) var(--sila-radius) 0;
-  color: var(--sila-text-secondary);
-  font-size: var(--sila-text-sm);
-  line-height: var(--sila-leading);
-}
-
-.bca-qa-empty-text {
-  font-size: var(--sila-text-sm);
-  font-style: italic;
-  color: var(--sila-text-muted);
+.bca-qa-panel .bca-doc-actions {
+  padding-left: var(--sila-space-2);
 }
 
 /* Document Viewer Modal */

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import "./BidComparisonAward.css";
-import { Button, StatusBadge } from "@vosox/shared-ui";
+import { Button, QuestionAnswer, QuestionItem, QuestionList, QuestionProgress, StatusBadge } from "@vosox/shared-ui";
 import { FaArrowDown, FaArrowUp, FaCheck, FaChevronDown, FaChevronRight, FaFlag, FaListUl, FaUsers } from "react-icons/fa";
 import { fetchBuyerAsset, getBidComparisonData, isBidComparisonError, awardRfq } from "../api/platformApi";
 import type { BidComparisonResponseDto } from "../api/platformApi";
@@ -127,6 +127,15 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     const answerList = Array.isArray(supplier?.answers) ? supplier.answers : Array.isArray(supplier?.supplierAnswers) ? supplier.supplierAnswers : [];
     return answerList.find((a: any) => a?.rfqQuestionId === questionId || a?.questionId === questionId) || null;
   };
+
+  const isQuestionAnswered = (supplier: any, question: any) => {
+    const match = getAnswerForQuestion(supplier, question);
+    return Boolean((match?.answer && String(match.answer).trim() !== "") || match?.attachment?.fileName || match?.attachment?.id);
+  };
+
+  // Q&A shows one supplier at a time; the tabs switch between them.
+  const [qaSupplierIndex, setQaSupplierIndex] = useState(0);
+  const activeQaSupplier = qaSuppliers[Math.min(qaSupplierIndex, Math.max(qaSuppliers.length - 1, 0))];
 
   const handleDocumentAction = async (doc: any, action: 'preview' | 'download') => {
     const assetId = doc.id || doc.assetId;
@@ -1710,92 +1719,91 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         <div className="bca-section-card">
           <div className="bca-section-header">
             <h3 className="bca-section-title">Evaluation Questions &amp; Answers</h3>
-            <p className="bca-section-sub">Responses submitted by each supplier for this RFQ.</p>
+            <p className="bca-section-sub">Responses submitted by each supplier for this RFQ. Select a supplier to review their answers.</p>
           </div>
 
-          <div className="bca-qa-suppliers">
-            {qaSuppliers?.map((supplier: any, sIdx: number) => {
+          <div className="sila-tabs bca-qa-tabs" role="tablist" aria-label="Suppliers">
+            {qaSuppliers.map((supplier: any, sIdx: number) => {
               const displayName = supplier?.supplierName || supplier?.organizationName || `Supplier ${sIdx + 1}`;
-              const answeredCount = questions?.filter((q: any) => {
-                const match = getAnswerForQuestion(supplier, q);
-                return Boolean(
-                  (match?.answer && String(match.answer).trim() !== "") || match?.attachment?.fileName || match?.attachment?.id
-                );
-              }).length;
-
+              const answered = questions.filter((q: any) => isQuestionAnswered(supplier, q)).length;
+              const selected = supplier === activeQaSupplier;
               return (
-                <div
-                  className="bca-qa-supplier-card"
-                  key={supplier?.supplierRFQId ? `${supplier?.supplierRFQId}-${sIdx}` : sIdx}
+                <button
+                  key={supplier?.supplierRFQId ? `${supplier.supplierRFQId}-${sIdx}` : sIdx}
+                  type="button"
+                  role="tab"
+                  id={`bca-qa-tab-${sIdx}`}
+                  aria-selected={selected}
+                  aria-controls="bca-qa-panel"
+                  className="sila-tab bca-qa-tab"
+                  onClick={() => setQaSupplierIndex(sIdx)}
                 >
-                  <div className="bca-qa-supplier-header">
-                    <div className="bca-qa-supplier-left">
-                      <span className="bca-qa-supplier-avatar" aria-hidden="true">{getInitials(displayName)}</span>
-                      <span className="bca-qa-supplier-name">{displayName}</span>
-                    </div>
-                    <span className="bca-qa-supplier-badge">
-                      {answeredCount}/{questions?.length} answered
-                    </span>
-                  </div>
-
-                  <div className="bca-qa-list">
-                    {questions?.map((q: any, qIdx: number) => {
-                      const match = getAnswerForQuestion(supplier, q);
-                      const display =
-                        match?.answer && String(match?.answer).trim() !== ""
-                          ? match?.answer
-                          : match?.attachment?.fileName || "";
-
-                      return (
-                        <div className="bca-qa-item" key={q?.id || qIdx}>
-                          <div className="bca-qa-question-row">
-                            <div className="bca-qa-question-left">
-                              <span className="bca-qa-index">Q{qIdx + 1}</span>
-                              <span className="bca-qa-question-text">{q?.question}</span>
-                            </div>
-                            <div className="bca-qa-tags">
-                              {q?.isRequired && <span className="bca-qa-req-badge">Required</span>}
-                              <span className="bca-qa-type-badge">{formatQuestionType(q?.questionType)}</span>
-                            </div>
-                          </div>
-
-                          {display || match?.attachment ? (
-                            <div className="bca-qa-answer-box">
-                              <span>{display}</span>
-                              {match?.attachment && (
-                                <div className="bca-doc-actions">
-                                  <button
-                                    type="button"
-                                    className="bca-doc-action-btn bca-doc-eye"
-                                    title="Preview attachment"
-                                    aria-label="Preview attachment"
-                                    onClick={() => handleDocumentAction(match?.attachment, 'preview')}
-                                  >
-                                    <IconEye />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="bca-doc-action-btn bca-doc-download"
-                                    title="Download attachment"
-                                    aria-label="Download attachment"
-                                    onClick={() => handleDocumentAction(match?.attachment, 'download')}
-                                  >
-                                    <IconDownload />
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="bca-qa-empty-text">No response yet.</div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                  <span className="bca-qa-avatar" aria-hidden="true">{getInitials(displayName)}</span>
+                  {displayName}
+                  <span className={`sila-count ${answered >= questions.length ? "" : "sila-count--neutral"}`.trim()}>
+                    {answered}/{questions.length}
+                  </span>
+                </button>
               );
             })}
           </div>
+
+          {activeQaSupplier && (() => {
+            const activeIndex = qaSuppliers.indexOf(activeQaSupplier);
+            const displayName = activeQaSupplier?.supplierName || activeQaSupplier?.organizationName || `Supplier ${activeIndex + 1}`;
+            const answered = questions.filter((q: any) => isQuestionAnswered(activeQaSupplier, q)).length;
+
+            return (
+              <div id="bca-qa-panel" role="tabpanel" aria-labelledby={`bca-qa-tab-${activeIndex}`} className="bca-qa-panel">
+                <div className="bca-qa-panel-header">
+                  <span className="bca-qa-panel-name">{displayName}</span>
+                  <QuestionProgress answered={answered} total={questions.length} />
+                </div>
+
+                <QuestionList aria-label={`${displayName} answers`}>
+                  {questions.map((q: any, qIdx: number) => {
+                    const match = getAnswerForQuestion(activeQaSupplier, q);
+                    const text = match?.answer && String(match.answer).trim() !== "" ? match.answer : match?.attachment?.fileName || "";
+
+                    return (
+                      <QuestionItem
+                        key={q?.id || qIdx}
+                        index={qIdx + 1}
+                        question={q?.question}
+                        typeLabel={formatQuestionType(q?.questionType)}
+                        required={Boolean(q?.isRequired)}
+                      >
+                        <QuestionAnswer value={text} emptyText="No response yet">
+                          {match?.attachment && (
+                            <div className="bca-doc-actions">
+                              <button
+                                type="button"
+                                className="bca-doc-action-btn bca-doc-eye"
+                                title="Preview attachment"
+                                aria-label="Preview attachment"
+                                onClick={() => handleDocumentAction(match?.attachment, 'preview')}
+                              >
+                                <IconEye />
+                              </button>
+                              <button
+                                type="button"
+                                className="bca-doc-action-btn bca-doc-download"
+                                title="Download attachment"
+                                aria-label="Download attachment"
+                                onClick={() => handleDocumentAction(match?.attachment, 'download')}
+                              >
+                                <IconDownload />
+                              </button>
+                            </div>
+                          )}
+                        </QuestionAnswer>
+                      </QuestionItem>
+                    );
+                  })}
+                </QuestionList>
+              </div>
+            );
+          })()}
         </div>
       )}
 

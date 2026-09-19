@@ -1,4 +1,4 @@
-/* Sourcing invitations (inv-*) — list, cards and verification detail modal. */
+/* Sourcing invitations (inv-*) — list, cards and the verification detail page. */
 
 .inv-page {
   display: flex;
@@ -250,73 +250,54 @@
   color: var(--sila-danger);
 }
 
-/* ---- Detail modal ------------------------------------------------------- */
+/* ---- Detail page -------------------------------------------------------- */
 
-.inv-modal-heading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sila-space-1);
-  min-width: 0;
-}
-
-.inv-modal-overline {
-  font-size: var(--sila-text-2xs);
-  font-weight: var(--sila-weight-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--sila-text-muted);
-}
-
-.inv-modal-meta {
-  display: flex;
+.inv-detail-meta {
+  display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--sila-space-1) var(--sila-space-4);
-  font-size: var(--sila-text-sm);
-  color: var(--sila-text-muted);
 }
 
-.inv-modal-meta span {
+.inv-detail-meta span {
   display: inline-flex;
   align-items: center;
   gap: var(--sila-space-1);
 }
 
-.inv-modal-detail {
+.inv-detail-summary,
+.inv-detail-qa {
   display: flex;
   flex-direction: column;
-  gap: var(--sila-space-5);
+  gap: var(--sila-space-4);
 }
 
-.inv-modal-section-title {
-  padding: 0 0 var(--sila-space-2);
-  font-size: var(--sila-text-sm);
-  font-weight: var(--sila-weight-semibold);
-  color: var(--sila-text);
-}
-
-.inv-modal-desc {
+.inv-detail-desc {
   margin: 0;
+  max-width: 60rem;
   font-size: var(--sila-text-md);
   line-height: var(--sila-leading);
   color: var(--sila-text-secondary);
+  white-space: pre-wrap;
 }
 
-.sila-meta-grid.inv-modal-stats-grid {
-  padding: var(--sila-space-4);
-  background: var(--sila-surface-subtle);
-  border: 0.0625rem solid var(--sila-border);
-  border-radius: var(--sila-radius-md);
-}
-
-.inv-modal-stats-grid dd {
-  margin: 0;
-}
-
-.inv-modal-qa-block {
+/* Stays in view while the supplier works through a long questionnaire. */
+.inv-detail-actions {
+  position: sticky;
+  bottom: var(--sila-space-3);
+  z-index: 1;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--sila-space-3);
+  padding: var(--sila-space-3) var(--sila-space-5);
+  box-shadow: var(--sila-shadow-md);
+}
+
+.inv-detail-actions-hint {
+  font-size: var(--sila-text-sm);
+  color: var(--sila-text-muted);
 }
 
 .inv-alert {
@@ -341,71 +322,12 @@
   color: var(--sila-success);
 }
 
-.inv-modal-qa-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sila-space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.inv-modal-qa-item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sila-space-2);
-  padding: var(--sila-space-3) var(--sila-space-4);
-  border: 0.0625rem solid var(--sila-border);
-  border-radius: var(--sila-radius-md);
-  background: var(--sila-surface);
-}
-
-.inv-modal-qa-question {
-  font-size: var(--sila-text-sm);
-  font-weight: var(--sila-weight-medium);
-  color: var(--sila-text);
-}
-
-.inv-q-index {
-  padding-right: 0.125rem;
-  font-weight: var(--sila-weight-semibold);
-  color: var(--sila-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.inv-modal-qa-answer {
-  font-size: var(--sila-text-sm);
-  color: var(--sila-text-secondary);
-  overflow-wrap: anywhere;
-}
-
-.inv-question-options {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sila-space-2);
-}
-
-.inv-option-label {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sila-space-2);
-  font-size: var(--sila-text-sm);
-  color: var(--sila-text-secondary);
-  cursor: pointer;
-}
-
-.inv-option-label input {
-  width: 1rem;
-  height: 1rem;
-  margin: 0;
-  accent-color: var(--sila-primary);
-}
-
 .inv-file-upload {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--sila-space-1-5);
+  max-width: 40rem;
 }
 
 .inv-file-upload .sila-input.inv-file-input {

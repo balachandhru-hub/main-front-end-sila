@@ -373,46 +373,6 @@
 
 /* ---- Modals ---------------------------------------------------------- */
 
-.ut-modal--view {
-  max-width: 37.5rem;
-}
-
-.ut-modal-header-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-width: 0;
-}
-
-.ut-modal-subtitle {
-  font-size: var(--sila-text-xs);
-  color: var(--sila-text-muted);
-}
-
-.ut-modal-questions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sila-space-2);
-}
-
-/* The edit dialog reuses .ut-form-card; strip the card chrome so .sila-modal applies */
-.ut-edit-modal.ut-form-card {
-  gap: 0;
-  padding: 0;
-  box-shadow: var(--sila-shadow-lg);
-  border-radius: var(--sila-radius-lg);
-}
-
-.ut-edit-modal .ut-form-header {
-  flex-direction: row;
-}
-
-.ut-edit-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sila-space-4);
-}
-
 .ut-modal--confirm {
   max-width: 26.25rem;
 }

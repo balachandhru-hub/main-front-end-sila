@@ -17,6 +17,7 @@ export * from './components/Dashboard/SupplierAnalytics';
 export * from './hooks/useAsyncData';
 export * from './types/dashboardAnalytics';
 export * from './components/Card';
+export * from './components/QuestionList';
 export * from './components/FormField';
 export * from './components/SearchInput';
 export * from './components/Modal';
