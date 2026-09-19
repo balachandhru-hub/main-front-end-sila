@@ -341,7 +341,8 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                         fileBytes: fileBytes,
                         fileName: catalogFile.name,
                         contentType: catalogFile.type,
-                        isSingletonAsset: true,
+                        // Never a singleton: that would deactivate files this catalog still links to.
+                        isSingletonAsset: false,
                     },
                 ];
             }

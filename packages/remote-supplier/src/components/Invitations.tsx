@@ -995,12 +995,14 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                     attachment: answer?.file && answer?.fileBase64
                         ? {
                             entityType: "SUPPLIER",
+                            // Stored against this verification request and never as a singleton: a
+                            // singleton upload deactivates the supplier's files for every other question.
                             entityId: viewingDetail.supplierOrganizationId,
                             assetType: "VERIFICATION_ATTACHMENT",
                             fileBytes: answer.fileBase64,
                             fileName: answer.file.name,
                             contentType: answer.file.type,
-                            isSingletonAsset: true,
+                            isSingletonAsset: false,
                         }
                         : null,
                 };

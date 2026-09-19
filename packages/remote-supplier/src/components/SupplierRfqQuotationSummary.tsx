@@ -482,6 +482,11 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
       return;
     }
 
+    if (!supplierRFQId) {
+      setSubmitAnswersError("This RFQ has no supplier record yet, so answers can't be saved. Please reload and try again.");
+      return;
+    }
+
     setSubmittingAnswers(true);
     setSubmitAnswersError(null);
     setSubmitAnswersSuccess(false);
@@ -495,8 +500,6 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
         return;
       }
 
-      const supplierEntityId =
-        entityTypes.find((e) => e.key === 'SUPPLIER')?.id || '59476530-3c10-438b-b3b3-9db9e96e8d93';
       const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
 
       const payload = {
@@ -510,12 +513,15 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
             a.file && a.fileBase64
               ? {
                 entityType: entityType,
-                entityId: supplierEntityId,
+                // Stored against this supplier's own RFQ, and never as a singleton: a singleton
+                // upload deactivates (and deletes) every other active asset with the same entity
+                // and type, so a shared id here wiped other suppliers' answer files.
+                entityId: supplierRFQId as string,
                 assetType: "RFQ_ANSWER_ATTACHMENT",
                 fileBytes: a.fileBase64,
                 fileName: a.file.name,
                 contentType: a.contentType || a.file.type,
-                isSingletonAsset: true,
+                isSingletonAsset: false,
               }
               : null;
 

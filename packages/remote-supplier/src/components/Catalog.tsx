@@ -607,7 +607,7 @@ const Catalog: React.FC<CatalogProps> = ({
             const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
 
             const assets: CatalogAssetDto[] = await Promise.all(
-                catalogFiles.map(async (file, index) => {
+                catalogFiles.map(async (file) => {
                     const fileBytes = await fileToBase64(file);
                     return {
                         entityType: entityType,
@@ -616,7 +616,8 @@ const Catalog: React.FC<CatalogProps> = ({
                         fileBytes: fileBytes,
                         fileName: file.name,
                         contentType: file.type,
-                        isSingletonAsset: index === 0,
+                        // Never a singleton: that would deactivate files this catalog still links to.
+                        isSingletonAsset: false,
                     };
                 })
             );
