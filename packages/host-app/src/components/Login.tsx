@@ -72,22 +72,17 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
     }
   };
 
+  // Every role lands on the same role-neutral URL; the host picks the right app for the role.
   const getRedirectUrl = (roleId: string): string | null => {
     switch (roleId) {
       case ROLE_IDS.BUYER_ADMIN:
-        return '/platform-user/buyer-admin';
       case ROLE_IDS.SUPPLIER_ADMIN:
-        return '/platform-user/supplier-admin';
       case ROLE_IDS.BUYER_NETWORK_ADMIN:
-        return '/platform-user/buyer-network-admin';
       case ROLE_IDS.SUPPLIER_NETWORK_ADMIN:
-        return '/platform-user/supplier-network-admin';
       case ROLE_IDS.PLATFORM_ADMIN:
-        return '/platform-user/dashboard';
       case ROLE_IDS.SUPPLIER:
-        return '/supplier/dashboard';
       case ROLE_IDS.BUYER:
-        return '/buyer/dashboard';
+        return '/dashboard';
       default:
         return null;
     }

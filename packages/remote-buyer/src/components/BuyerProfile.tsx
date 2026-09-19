@@ -1835,7 +1835,7 @@ if (Array.isArray(data)) {
                         <button
                             type="button"
                             className="bp-btn bp-btn-primary"
-                            onClick={() => navigate('/buyer/dashboard')}
+                            onClick={() => navigate('/dashboard')}
                         >
                             Go to Dashboard
                         </button>

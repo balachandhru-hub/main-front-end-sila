@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./SupplierDashboard.css";
 import Catalog from "./Catalog.tsx";
-import { CompanyProfile, EmptyState, Loader, PageHeader, Pagination, StatusBadge, SupplierAnalytics, useAsyncData } from '@vosox/shared-ui';
+import { CompanyProfile, EmptyState, Loader, PageHeader, Pagination, StatusBadge, SupplierAnalytics, useAsyncData, useRouteNav, type RouteNavPaths } from '@vosox/shared-ui';
 // import Invitations from "./Invitations.tsx";
 import {
   logoutSupplier,
@@ -146,6 +146,15 @@ const NavIconCatalog = () => (
   </svg>
 );
 
+/** Each section's URL (/dashboard, /rfqs …); see useRouteNav. */
+const SUPPLIER_NAV_PATHS: RouteNavPaths = {
+  dashboard: 'dashboard',
+  rfqs: 'rfqs',
+  catalogList: 'catalog',
+  invitations: 'invitations',
+  companyProfile: 'company-profile',
+};
+
 const navItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
   { key: "rfqs", icon: <NavIconFile />, label: "RFQs" },
@@ -247,7 +256,7 @@ const deleteCookie = (name: string) => {
 const SupplierDashboard: React.FC = () => {
 
 
-  const [activeNav, setActiveNav] = useState<string>("dashboard");
+  const [activeNav, setActiveNav] = useRouteNav(SUPPLIER_NAV_PATHS, "dashboard");
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [catalogViewContainer, setCatalogViewContainer] = useState<HTMLDivElement | null>(null);
@@ -495,6 +504,16 @@ const SupplierDashboard: React.FC = () => {
     setSelectedRfq(null);
     setRfqDetailError(null);
   };
+
+  // The RFQ list has its own URL (/rfqs). When the URL changes by itself (Back/Forward,
+  // reload, a shared link), bring the RFQ view in line with it.
+  useEffect(() => {
+    if (activeNav === "rfqs" && rfqPageView === "dashboard") {
+      handleOpenAllRfqs();
+    } else if (activeNav !== "rfqs" && rfqPageView === "allRfqs") {
+      setRfqPageView("dashboard");
+    }
+  }, [activeNav]);
 
   const handleNavClick = (key: string) => {
     if (key === "rfqs") {

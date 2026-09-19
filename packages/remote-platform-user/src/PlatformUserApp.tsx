@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ToastContainer } from '@vosox/shared-ui';
+import { EmptyState, ToastContainer } from '@vosox/shared-ui';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useNetworkAdminAuthStore } from './store/useAuthStore';
 import PlatformUserDashboard from './components/PlatformUserDashboard';
@@ -28,12 +28,10 @@ import type {
 } from './dto/networkAdminDto';
 import BuyerAdminProfilePage from './pages/BuyerAdminProfilePage';
 import SupplierAdminProfilePage from './pages/SupplierAdminProfilePage';
-import RoleProtectedRoute, { ROLE_HOME_ROUTE } from './components/RoleProtectedRoute';
+
 
 const NETWORK_ADMIN_ROLES: NetworkAdminRole[] = ['BUYER_NETWORK_ADMIN', 'SUPPLIER_NETWORK_ADMIN'];
 
-const networkAdminBasePath = (role: NetworkAdminRole): string =>
-  role === 'BUYER_NETWORK_ADMIN' ? '/platform-user/buyer-network-admin' : '/platform-user/supplier-network-admin';
 
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -275,7 +273,7 @@ const entityId = Array.isArray(entityTypes)
         }
       }
       onCompleteSuccess();
-      navigate(networkAdminBasePath(role), { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (error) {
       throw error;
     }
@@ -355,169 +353,91 @@ const PlatformUserApp: React.FC = () => {
 
   if (isLoading || (isNetworkAdmin && checkingProfile)) return null;
 
-  const defaultRoute = (currentUser && ROLE_HOME_ROUTE[currentUser.userRole]) || '/';
+  if (!currentUser) return <Navigate to="/" replace />;
+
+  const role = currentUser.userRole;
+  const onboardingPending = profileComplete === false;
+
+  // Every role uses the same role-neutral URLs (/dashboard, /profile, …). Only the signed-in
+  // role's routes are declared, so another role's pages cannot be reached by typing a URL.
+  const renderRoutes = () => {
+    switch (role) {
+      case 'PLATFORM_ADMINISTRATOR':
+        return (
+          <>
+            <Route path="dashboard" element={<PlatformUserDashboard />} />
+            <Route path="settings" element={<Department />} />
+            <Route path="departmentcostlist" element={<DepartmentCostList />} />
+            <Route path="templates" element={<PlatformUserTemplates />} />
+            <Route path="itemmaster" element={<ItemMaster />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </>
+        );
+
+      case 'BUYER_ADMINISTRATOR':
+        return (
+          <>
+            <Route path="profile" element={<BuyerAdminProfilePage />} />
+            {/* Dashboard sections (/dashboard, /rfqs, /users, …) are resolved inside the dashboard. */}
+            <Route path="*" element={<BuyerAdminDash />} />
+          </>
+        );
+
+      case 'SUPPLIER_ADMINISTRATOR':
+        return (
+          <>
+            <Route path="profile" element={<SupplierAdminProfilePage />} />
+            <Route path="*" element={<SupplierAdminDash />} />
+          </>
+        );
+
+      case 'BUYER_NETWORK_ADMIN':
+      case 'SUPPLIER_NETWORK_ADMIN':
+        return (
+          <>
+            <Route
+              path="onboarding"
+              element={
+                profileComplete ? (
+                  <Navigate to="/dashboard" replace />
+                ) : (
+                  <NetworkAdminOnboardingRoute
+                    role={role}
+                    organizationId={currentUser.organizationId || null}
+                    onCompleteSuccess={() => setProfileComplete(true)}
+                    onboardingData={onboardingData}
+                    rejectedProfile={rejectedProfile}
+                  />
+                )
+              }
+            />
+            <Route
+              path="profile"
+              element={onboardingPending ? <Navigate to="/onboarding" replace /> : <NetworkAdminProfilePage />}
+            />
+            <Route
+              path="dashboard"
+              element={onboardingPending ? <Navigate to="/onboarding" replace /> : <NetworkAdminDashboard />}
+            />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </>
+        );
+
+      default:
+        return (
+          <Route
+            path="*"
+            element={<EmptyState variant="error" title="No access" description="Your role does not have access to this portal." />}
+          />
+        );
+    }
+  };
 
   return (
     <>
       <ToastContainer />
       <Routes>
-      <Route
-        path="dashboard"
-        element={
-          <RoleProtectedRoute allowedRoles={['PLATFORM_ADMINISTRATOR']}>
-            <PlatformUserDashboard />
-          </RoleProtectedRoute>
-        }
-      />
-      <Route path="settings" element={<Department />} />
-      <Route path="departmentcostlist" element={<DepartmentCostList />} />
-
-      <Route
-        path="buyer-network-admin/onboarding"
-        element={
-          <RoleProtectedRoute allowedRoles={['BUYER_NETWORK_ADMIN']}>
-            {!networkAdminRole ? null : profileComplete ? (
-              <Navigate to="/platform-user/buyer-network-admin" replace />
-            ) : (
-              <NetworkAdminOnboardingRoute
-                role={networkAdminRole}
-                organizationId={currentUser?.organizationId || null}
-                onCompleteSuccess={() => setProfileComplete(true)}
-                onboardingData={onboardingData}
-                rejectedProfile={rejectedProfile}
-              />
-            )}
-          </RoleProtectedRoute>
-        }
-      />
-      <Route
-        path="buyer-network-admin"
-        element={
-          <RoleProtectedRoute allowedRoles={['BUYER_NETWORK_ADMIN']}>
-            {profileComplete === false ? (
-              <Navigate to="/platform-user/buyer-network-admin/onboarding" replace />
-            ) : (
-              <NetworkAdminDashboard />
-            )}
-          </RoleProtectedRoute>
-        }
-      />
-      <Route
-        path="buyer-network-admin/profile"
-        element={
-          <RoleProtectedRoute allowedRoles={['BUYER_NETWORK_ADMIN']}>
-            {profileComplete === false ? (
-              <Navigate to="/platform-user/buyer-network-admin/onboarding" replace />
-            ) : (
-              <NetworkAdminProfilePage />
-            )}
-          </RoleProtectedRoute>
-        }
-      />
-      <Route
-        path="buyer-network-admin/*"
-        element={
-          <RoleProtectedRoute allowedRoles={['BUYER_NETWORK_ADMIN']}>
-            {profileComplete === false ? (
-              <Navigate to="/platform-user/buyer-network-admin/onboarding" replace />
-            ) : (
-              <NetworkAdminDashboard />
-            )}
-          </RoleProtectedRoute>
-        }
-      />
-
-      <Route
-        path="supplier-network-admin/onboarding"
-        element={
-          <RoleProtectedRoute allowedRoles={['SUPPLIER_NETWORK_ADMIN']}>
-            {!networkAdminRole ? null : profileComplete ? (
-              <Navigate to="/platform-user/supplier-network-admin" replace />
-            ) : (
-              <NetworkAdminOnboardingRoute
-                role={networkAdminRole}
-                organizationId={currentUser?.organizationId || null}
-                onCompleteSuccess={() => setProfileComplete(true)}
-                onboardingData={onboardingData}
-                rejectedProfile={rejectedProfile}
-              />
-            )}
-          </RoleProtectedRoute>
-        }
-      />
-      <Route
-        path="supplier-network-admin"
-        element={
-          <RoleProtectedRoute allowedRoles={['SUPPLIER_NETWORK_ADMIN']}>
-            {profileComplete === false ? (
-              <Navigate to="/platform-user/supplier-network-admin/onboarding" replace />
-            ) : (
-              <NetworkAdminDashboard />
-            )}
-          </RoleProtectedRoute>
-        }
-      />
-      <Route
-        path="supplier-network-admin/profile"
-        element={
-          <RoleProtectedRoute allowedRoles={['SUPPLIER_NETWORK_ADMIN']}>
-            {profileComplete === false ? (
-              <Navigate to="/platform-user/supplier-network-admin/onboarding" replace />
-            ) : (
-              <NetworkAdminProfilePage />
-            )}
-          </RoleProtectedRoute>
-        }
-      />
-      <Route
-        path="supplier-network-admin/*"
-        element={
-          <RoleProtectedRoute allowedRoles={['SUPPLIER_NETWORK_ADMIN']}>
-            {profileComplete === false ? (
-              <Navigate to="/platform-user/supplier-network-admin/onboarding" replace />
-            ) : (
-              <NetworkAdminDashboard />
-            )}
-          </RoleProtectedRoute>
-        }
-      />
-      <Route path="templates" element={<PlatformUserTemplates />} />
-
-      <Route
-        path="buyer-admin"
-        element={
-          <RoleProtectedRoute allowedRoles={['BUYER_ADMINISTRATOR']}>
-            <BuyerAdminDash />
-          </RoleProtectedRoute>
-        }
-      />
-      <Route
-        path="buyer-admin/profile"
-        element={
-          <RoleProtectedRoute allowedRoles={['BUYER_ADMINISTRATOR']}>
-            <BuyerAdminProfilePage />
-          </RoleProtectedRoute>
-        }
-      />
-      <Route
-        path="supplier-admin"
-        element={
-          <RoleProtectedRoute allowedRoles={['SUPPLIER_ADMINISTRATOR']}>
-            <SupplierAdminDash />
-          </RoleProtectedRoute>
-        }
-      />
-      <Route
-        path="supplier-admin/profile"
-        element={
-          <RoleProtectedRoute allowedRoles={['SUPPLIER_ADMINISTRATOR']}>
-            <SupplierAdminProfilePage />
-          </RoleProtectedRoute>
-        }
-      />
-
-      <Route path="itemmaster" element={<ItemMaster />} />
-      <Route path="*" element={<Navigate to={defaultRoute} replace />} />
+        {renderRoutes()}
       </Routes>
     </>
   );

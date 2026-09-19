@@ -37,9 +37,9 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
       key: 'companyProfile',
       label: 'Company Profile',
       icon: <AccountMenuIcons.Building />,
-      onSelect: () => (onNavClick ? onNavClick('companyProfile') : navigate('/supplier/profile')),
+      onSelect: () => (onNavClick ? onNavClick('companyProfile') : navigate('/profile')),
     },
-    { key: 'editProfile', label: 'Edit Profile', icon: <AccountMenuIcons.User />, onSelect: () => navigate('/supplier/profile') },
+    { key: 'editProfile', label: 'Edit Profile', icon: <AccountMenuIcons.User />, onSelect: () => navigate('/profile') },
     { key: 'resetPassword', label: 'Reset Password', icon: <AccountMenuIcons.Lock />, onSelect: () => undefined },
     { key: 'support', label: 'Support', icon: <AccountMenuIcons.Help />, onSelect: () => undefined },
     { key: 'logout', label: 'Log Out', icon: <AccountMenuIcons.LogOut />, onSelect: handleLogout, tone: 'danger', dividerBefore: true },
@@ -47,7 +47,7 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
 
   return (
     <AppShell
-      onLogoClick={() => (onNavClick ? onNavClick('dashboard') : navigate('/supplier/dashboard'))}
+      onLogoClick={() => (onNavClick ? onNavClick('dashboard') : navigate('/dashboard'))}
       navItems={navItems}
       activeNav={activeNav}
       onNavClick={onNavClick}

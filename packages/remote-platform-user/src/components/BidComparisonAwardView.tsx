@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import "./BidComparisonAward.css";
 import { Button, QuestionAnswer, QuestionItem, QuestionList, QuestionProgress, StatusBadge } from "@vosox/shared-ui";
 import { FaArrowDown, FaArrowUp, FaCheck, FaChevronDown, FaChevronRight, FaFlag, FaListUl, FaUsers } from "react-icons/fa";
-import { fetchBuyerAsset, getBidComparisonData, isBidComparisonError, awardRfq } from "../api/platformApi";
+import { fetchBuyerAsset, fetchSupplierAnswerAsset, getBidComparisonData, isBidComparisonError, awardRfq } from "../api/platformApi";
 import type { BidComparisonResponseDto } from "../api/platformApi";
 import { fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
 
@@ -128,6 +128,17 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     return answerList.find((a: any) => a?.rfqQuestionId === questionId || a?.questionId === questionId) || null;
   };
 
+  /** The file a supplier uploaded for an answer, if any: `{ id, fileName }` or null. */
+  const getAnswerFile = (match: any): { id: string; fileName: string } | null => {
+    if (!match) return null;
+    const attachment = match.attachment ?? match.asset ?? null;
+    const id = attachment?.id ?? attachment?.assetId ?? match.assetId ?? match.attachmentId ?? match.answerAssetId ?? null;
+    if (!id) return null;
+    return { id: String(id), fileName: attachment?.fileName || match.fileName || match.answer || "attachment" };
+  };
+
+  const isFileQuestion = (question: any) => /file|attachment/i.test(String(question?.questionType || ""));
+
   const isQuestionAnswered = (supplier: any, question: any) => {
     const match = getAnswerForQuestion(supplier, question);
     return Boolean((match?.answer && String(match.answer).trim() !== "") || match?.attachment?.fileName || match?.attachment?.id);
@@ -137,7 +148,11 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   const [qaSupplierIndex, setQaSupplierIndex] = useState(0);
   const activeQaSupplier = qaSuppliers[Math.min(qaSupplierIndex, Math.max(qaSuppliers.length - 1, 0))];
 
-  const handleDocumentAction = async (doc: any, action: 'preview' | 'download') => {
+  const handleDocumentAction = async (
+    doc: any,
+    action: 'preview' | 'download',
+    fetchAsset: (assetId: string) => Promise<any> = fetchBuyerAsset,
+  ) => {
     const assetId = doc.id || doc.assetId;
     if (!assetId) {
       alert("Document asset ID is missing.");
@@ -145,7 +160,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     }
     try {
       setLoadingDocId(assetId);
-      const data: any = await fetchBuyerAsset(assetId);
+      const data: any = await fetchAsset(assetId);
       if (data && 'statusCode' in data && data.statusCode) {
         throw new Error(data.message || 'Failed to fetch document.');
       }
@@ -1740,7 +1755,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                 >
                   <span className="bca-qa-avatar" aria-hidden="true">{getInitials(displayName)}</span>
                   {displayName}
-                  <span className={`sila-count ${answered >= questions.length ? "" : "sila-count--neutral"}`.trim()}>
+                  <span className={`sila-count ${answered >= questions.length ? "sila-count--success" : "sila-count--neutral"}`}>
                     {answered}/{questions.length}
                   </span>
                 </button>
@@ -1763,7 +1778,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                 <QuestionList aria-label={`${displayName} answers`}>
                   {questions.map((q: any, qIdx: number) => {
                     const match = getAnswerForQuestion(activeQaSupplier, q);
-                    const text = match?.answer && String(match.answer).trim() !== "" ? match.answer : match?.attachment?.fileName || "";
+                    const file = getAnswerFile(match);
+                    const text = match?.answer && String(match.answer).trim() !== "" ? match.answer : file?.fileName || "";
 
                     return (
                       <QuestionItem
@@ -1774,27 +1790,31 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                         required={Boolean(q?.isRequired)}
                       >
                         <QuestionAnswer value={text} emptyText="No response yet">
-                          {match?.attachment && (
+                          {file ? (
                             <div className="bca-doc-actions">
                               <button
                                 type="button"
-                                className="bca-doc-action-btn bca-doc-eye"
-                                title="Preview attachment"
-                                aria-label="Preview attachment"
-                                onClick={() => handleDocumentAction(match?.attachment, 'preview')}
+                                className="sila-btn sila-btn--secondary sila-btn--sm"
+                                onClick={() => handleDocumentAction(file, 'preview', fetchSupplierAnswerAsset)}
+                                disabled={loadingDocId === file.id}
+                                aria-label={`View ${file.fileName}`}
                               >
-                                <IconEye />
+                                {loadingDocId === file.id ? <span className="sila-spinner" aria-hidden="true" /> : <IconEye />} View
                               </button>
                               <button
                                 type="button"
-                                className="bca-doc-action-btn bca-doc-download"
-                                title="Download attachment"
-                                aria-label="Download attachment"
-                                onClick={() => handleDocumentAction(match?.attachment, 'download')}
+                                className="sila-btn sila-btn--secondary sila-btn--sm"
+                                onClick={() => handleDocumentAction(file, 'download', fetchSupplierAnswerAsset)}
+                                disabled={loadingDocId === file.id}
+                                aria-label={`Download ${file.fileName}`}
                               >
-                                <IconDownload />
+                                <IconDownload /> Download
                               </button>
                             </div>
+                          ) : (
+                            isFileQuestion(q) && text && (
+                              <span className="sila-help">File not available for viewing</span>
+                            )
                           )}
                         </QuestionAnswer>
                       </QuestionItem>

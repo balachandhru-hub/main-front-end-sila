@@ -16,12 +16,8 @@ export interface HeaderProps {
   children?: React.ReactNode;
 }
 
-const PROFILE_ROUTE: Partial<Record<UserRole, string>> = {
-  BUYER_ADMINISTRATOR: '/platform-user/buyer-admin/profile',
-  SUPPLIER_ADMINISTRATOR: '/platform-user/supplier-admin/profile',
-  BUYER_NETWORK_ADMIN: '/platform-user/buyer-network-admin/profile',
-  SUPPLIER_NETWORK_ADMIN: '/platform-user/supplier-network-admin/profile',
-};
+/** Roles that have a personal profile page (at /profile). */
+const ROLES_WITH_PROFILE: UserRole[] = ['BUYER_ADMINISTRATOR', 'SUPPLIER_ADMINISTRATOR', 'BUYER_NETWORK_ADMIN', 'SUPPLIER_NETWORK_ADMIN'];
 
 /** Admin portal chrome: shared AppShell wired to the admin session and role routes. */
 const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogout, children }) => {
@@ -30,7 +26,7 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
   const personDetail = useNetworkAdminAuthStore((state) => state.personDetail);
   const role = currentUser?.userRole;
 
-  const goToProfile = () => navigate((role && PROFILE_ROUTE[role]) || '/platform-user/dashboard');
+  const goToProfile = () => navigate(role && ROLES_WITH_PROFILE.includes(role) ? '/profile' : '/dashboard');
 
   const handleLogout = () => {
     if (onLogout) {
@@ -49,7 +45,7 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
       );
       onNavClick(dashItem ? dashItem.key : 'dashboard');
     } else {
-      navigate('/platform-user/dashboard');
+      navigate('/dashboard');
     }
   };
 

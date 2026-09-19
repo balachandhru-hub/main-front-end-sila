@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import SupplierDashboard from './components/SupplierDashboard';
 import SupplierProfilePage from './pages/SupplierProfilePage';
 import { useSupplierAuthStore } from './store/useSupplierAuthStore';
@@ -16,9 +16,9 @@ const SupplierApp: React.FC = () => {
 
   return (
     <Routes>
-      <Route path="dashboard" element={<SupplierDashboard />} />
       <Route path="profile" element={<SupplierProfilePage />} />
-      <Route path="*" element={<Navigate to="/supplier/dashboard" replace />} />
+      {/* Dashboard sections (/dashboard, /rfqs, /catalog, …) are resolved inside the dashboard. */}
+      <Route path="*" element={<SupplierDashboard />} />
     </Routes>
   );
 };

@@ -412,12 +412,8 @@ function SubProductDropdown({
 
 export default function NetworkAdminOnboarding({ onComplete, onboardingData, rejectedProfile }: NetworkAdminOnboardingProps) {
     const navigate = useNavigate();
-    const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
     const logout = useNetworkAdminAuthStore((state) => state.logout);
-    const networkAdminHome =
-      currentUser?.userRole === 'SUPPLIER_NETWORK_ADMIN'
-        ? '/platform-user/supplier-network-admin'
-        : '/platform-user/buyer-network-admin';
+    const networkAdminHome = '/dashboard';
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [furthestStep, setFurthestStep] = useState<number>(1);
     const [loggingOut, setLoggingOut] = useState(false);

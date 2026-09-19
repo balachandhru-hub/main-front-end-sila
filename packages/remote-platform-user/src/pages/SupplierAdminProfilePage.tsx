@@ -46,7 +46,7 @@ const SupplierAdminProfilePage: React.FC = () => {
         saving={saving}
         error={error}
         onSave={handleSave}
-        onBack={() => navigate('/platform-user/supplier-admin')}
+        onBack={() => navigate('/dashboard')}
       />
     </Header>
   );

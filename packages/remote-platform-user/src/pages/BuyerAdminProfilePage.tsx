@@ -46,7 +46,7 @@ const BuyerAdminProfilePage: React.FC = () => {
         saving={saving}
         error={error}
         onSave={handleSave}
-        onBack={() => navigate('/platform-user/buyer-admin')}
+        onBack={() => navigate('/dashboard')}
       />
     </Header>
   );

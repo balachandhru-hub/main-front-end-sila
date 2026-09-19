@@ -433,6 +433,7 @@ button.sila-kpi:focus-visible { outline: none; box-shadow: var(--sila-focus-ring
 }
 
 .sila-count--neutral { background: var(--sila-surface-sunken); color: var(--sila-text-secondary); }
+.sila-count--success { background: var(--sila-success-soft); color: var(--sila-success-strong); }
 
 /* Monospace document references: RFQ-2026-001, PO numbers, etc. */
 .sila-ref {

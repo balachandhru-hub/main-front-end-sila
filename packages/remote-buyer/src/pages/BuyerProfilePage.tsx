@@ -42,7 +42,7 @@ const BuyerProfilePage: React.FC = () => {
         saving={saving}
         error={error}
         onSave={handleSave}
-        onBack={() => navigate('/buyer/dashboard')}
+        onBack={() => navigate('/dashboard')}
       />
     </Header>
   );

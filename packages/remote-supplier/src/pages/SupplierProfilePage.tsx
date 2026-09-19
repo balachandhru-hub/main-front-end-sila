@@ -41,7 +41,7 @@ const SupplierProfilePage: React.FC = () => {
         saving={saving}
         error={error}
         onSave={handleSave}
-        onBack={() => navigate('/supplier/dashboard')}
+        onBack={() => navigate('/dashboard')}
       />
     </Header>
   );

@@ -17,7 +17,7 @@ import {
 } from "../../../remote-buyer/src/api/Buyerapi";
 import CreateRFQ from "./UserListTable/CreateRFQ";
 import { logoutPlatformUser } from "../api/platformApi";
-import { BuyerAnalytics, StatusBadge, toastService, useAsyncData } from "@vosox/shared-ui";
+import { BuyerAnalytics, StatusBadge, toastService, useAsyncData, useRouteNav, type RouteNavPaths } from "@vosox/shared-ui";
 import UserTemplate from "./usertemplate"
 import ApprovalManagement from "./ApprovalManagement/ApprovalManagement";
 import { ToastContainer } from "@vosox/shared-ui";
@@ -249,6 +249,23 @@ const isNavGroup = (entry: NavSubEntry): entry is NavGroup => 'items' in entry;
 const collectSubEntryKeys = (entries: NavSubEntry[]): string[] =>
   entries.flatMap((entry) => (isNavGroup(entry) ? collectSubEntryKeys(entry.items) : [entry.key]));
 
+/** Each section's URL (/dashboard, /rfqs …); see useRouteNav. */
+const BUYER_ADMIN_NAV_PATHS: RouteNavPaths = {
+  dashboard: "dashboard",
+  invitations: "invitations",
+  activeRFQs: "rfqs",
+  allRfqs: "rfqs",
+  createRFQ: "create-rfq",
+  product: "product-catalog",
+  userList: "users",
+  template: "templates",
+  approvalManagement: "approval-management",
+  material: "material-approvals",
+  contract: "contract-approvals",
+  materialService: "material-service",
+  companyProfile: "company-profile",
+};
+
 const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number; subItems?: NavSubEntry[]; chevronIcon?: React.ReactNode }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
   { key: "invitations", icon: <IconMail />, label: "Invitations" },
@@ -383,7 +400,7 @@ const mockRfqs = [
 ];
 
 const BuyerAdminDash: React.FC = () => {
-  const [activeNav, setActiveNav] = useState<string>("dashboard");
+  const [activeNav, setActiveNav] = useRouteNav(BUYER_ADMIN_NAV_PATHS, "dashboard");
   const [loggingOut, setLoggingOut] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
 
@@ -678,6 +695,16 @@ const BuyerAdminDash: React.FC = () => {
     if (loadingAllRfqs || allRfqsPage <= 1) return;
     loadAllRfqsPage(allRfqsPage - 1);
   };
+
+  // The RFQ list has its own URL (/rfqs). When the URL changes by itself (Back/Forward,
+  // reload, a shared link), bring the RFQ view in line with it.
+  useEffect(() => {
+    if (activeNav === "activeRFQs" && rfqPageView === "dashboard") {
+      handleOpenAllRfqs();
+    } else if (activeNav !== "activeRFQs" && rfqPageView === "allRfqs") {
+      setRfqPageView("dashboard");
+    }
+  }, [activeNav]);
 
   const handleNavClick = (key: string) => {
     if (key === "activeRFQs") {
