@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./CreateApprovalForm.css";
+import { FaTimes } from "react-icons/fa";
 import { toastService } from "@vosox/shared-ui";
 import type { OrganizationUserDto } from "../../dto/networkAdminDto";
 import {
@@ -30,19 +31,19 @@ const AMOUNT_APPROVAL_TYPE = "CONTRACT_CREATE";
 const EMPTY_FORM: FormState = { approvalCode: "", approvalName: "", type: "", totalAmount: "", currency: "" };
 
 const IconPlus = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
     <path d="M12 5v14M5 12h14" />
   </svg>
 );
 
 const IconTrash = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
   </svg>
 );
 
 const IconArrow = ({ up }: { up?: boolean }) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d={up ? "M18 15l-6-6-6 6" : "M6 9l6 6 6-6"} />
   </svg>
 );
@@ -170,14 +171,22 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
 
   return (
     <div className="apf-overlay" onClick={() => !submitting && onClose()}>
-      <form className="apf-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit} noValidate>
+      <form
+        className="apf-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="apf-modal-title"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={handleSubmit}
+        noValidate
+      >
         <div className="apf-modal-header">
           <div>
-            <h2 className="apf-modal-title">Create Approval</h2>
+            <h2 className="apf-modal-title" id="apf-modal-title">Create Approval</h2>
             <p className="apf-modal-subtitle">Define the approval flow and the order in which users approve.</p>
           </div>
           <button type="button" className="apf-close" onClick={onClose} disabled={submitting} aria-label="Close">
-            ✕
+            <FaTimes aria-hidden="true" />
           </button>
         </div>
 
@@ -185,9 +194,11 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
           <div className="apf-section-label">Approval Details</div>
           <div className="apf-grid">
             <label className="apf-field">
-              <span className="apf-label">Approval Code <em>*</em></span>
+              <span className="apf-label">Approval Code <em aria-hidden="true">*</em></span>
               <input
                 className={`apf-input ${errors.approvalCode ? "apf-input-error" : ""}`}
+                aria-required="true"
+                aria-invalid={!!errors.approvalCode}
                 value={form.approvalCode}
                 onChange={(e) => setField("approvalCode", e.target.value)}
                 placeholder="e.g. APR-001"
@@ -196,9 +207,11 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
             </label>
 
             <label className="apf-field">
-              <span className="apf-label">Approval Name <em>*</em></span>
+              <span className="apf-label">Approval Name <em aria-hidden="true">*</em></span>
               <input
                 className={`apf-input ${errors.approvalName ? "apf-input-error" : ""}`}
+                aria-required="true"
+                aria-invalid={!!errors.approvalName}
                 value={form.approvalName}
                 onChange={(e) => setField("approvalName", e.target.value)}
                 placeholder="e.g. Purchasing Team Approval"
@@ -207,9 +220,11 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
             </label>
 
             <label className="apf-field">
-              <span className="apf-label">Type <em>*</em></span>
+              <span className="apf-label">Type <em aria-hidden="true">*</em></span>
               <select
                 className={`apf-input ${errors.type ? "apf-input-error" : ""}`}
+                aria-required="true"
+                aria-invalid={!!errors.type}
                 value={form.type}
                 onChange={(e) => setField("type", e.target.value)}
                 disabled={loadingOptions}
@@ -226,12 +241,15 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
 
             {requiresAmount && (
               <div className="apf-field">
-                <span className="apf-label">Total Amount <em>*</em></span>
+                <span className="apf-label" id="apf-amount-label">Total Amount <em aria-hidden="true">*</em></span>
                 <div className="apf-amount">
                   <input
                     type="number"
                     min={0}
-                    className={`apf-input ${errors.totalAmount ? "apf-input-error" : ""}`}
+                    className={`apf-input apf-input-number ${errors.totalAmount ? "apf-input-error" : ""}`}
+                    aria-labelledby="apf-amount-label"
+                    aria-required="true"
+                    aria-invalid={!!errors.totalAmount}
                     value={form.totalAmount}
                     onChange={(e) => setField("totalAmount", e.target.value)}
                     placeholder="0.00"
@@ -242,6 +260,7 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
                     onChange={(e) => setField("currency", e.target.value)}
                     disabled={loadingOptions}
                     aria-label="Currency"
+                    aria-invalid={!!errors.currency}
                   >
                     <option value="">{loadingOptions ? "..." : "Currency"}</option>
                     {currencies.map((c) => (
@@ -258,7 +277,7 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
             )}
           </div>
 
-          <div className="apf-section-label apf-section-gap">
+          <div className="apf-section-label apf-section-gap" id="apf-users-label">
             Users
             {selectedUsers.length > 0 && <span className="apf-count">{selectedUsers.length}</span>}
           </div>
@@ -266,6 +285,8 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
           <div className="apf-user-picker">
             <select
               className={`apf-input ${errors.users ? "apf-input-error" : ""}`}
+              aria-labelledby="apf-users-label"
+              aria-invalid={!!errors.users}
               value={pendingUserId}
               onFocus={loadUsers}
               onMouseDown={loadUsers}
@@ -283,7 +304,7 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
             </select>
             <button
               type="button"
-              className="apf-add-btn"
+              className="apf-add-btn sila-btn sila-btn--primary sila-btn--icon"
               onClick={addUser}
               disabled={!pendingUserId}
               title="Add user"
@@ -292,8 +313,8 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
               <IconPlus />
             </button>
           </div>
-          {usersError && <span className="apf-error">{usersError}</span>}
-          {errors.users && <span className="apf-error">{errors.users}</span>}
+          {usersError && <span className="apf-error" role="alert">{usersError}</span>}
+          {errors.users && <span className="apf-error" role="alert">{errors.users}</span>}
 
           {selectedUsers.length === 0 ? (
             <div className="apf-users-empty">
@@ -303,7 +324,7 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
             <ol className="apf-users">
               {selectedUsers.map((u, i) => (
                 <li key={u.userId} className="apf-user-card">
-                  <span className="apf-order">{i + 1}</span>
+                  <span className="apf-order" aria-label={`Step ${i + 1}`}>{i + 1}</span>
                   <div className="apf-user-info">
                     <div className="apf-user-top">
                       <span className="apf-user-name">{u.name}</span>
@@ -341,10 +362,10 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
         </div>
 
         <div className="apf-modal-footer">
-          <button type="button" className="apf-btn apf-btn-secondary" onClick={onClose} disabled={submitting}>
+          <button type="button" className="apf-btn apf-btn-secondary sila-btn sila-btn--secondary" onClick={onClose} disabled={submitting}>
             Cancel
           </button>
-          <button type="submit" className="apf-btn apf-btn-primary" disabled={submitting}>
+          <button type="submit" className="apf-btn apf-btn-primary sila-btn sila-btn--primary" disabled={submitting}>
             {submitting ? "Submitting..." : "Submit"}
           </button>
         </div>

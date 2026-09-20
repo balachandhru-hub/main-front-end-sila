@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./QuotationComparisonCard.css";
+import { FaChevronDown, FaChevronRight } from "react-icons/fa";
 import { getBidComparisonData, isBidComparisonError } from "../api/platformApi";
 import type {
   BidComparisonResponseDto,
@@ -142,7 +143,7 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
     return (
       <div className="qcc-container">
         <div className="qcc-state qcc-loading-state">
-          <div className="qcc-spinner" />
+          <div className="qcc-spinner" aria-hidden="true" />
           <span>Loading bid comparison data...</span>
         </div>
       </div>
@@ -152,7 +153,7 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
   if (error) {
     return (
       <div className="qcc-container">
-        <div className="qcc-state qcc-error-state">{error}</div>
+        <div className="qcc-state qcc-error-state" role="alert">{error}</div>
       </div>
     );
   }
@@ -200,7 +201,7 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
               ))}
             </tr>
             <tr>
-              <th className="qcc-expand-header"></th>
+              <th className="qcc-expand-header" aria-label="Expand"></th>
               <th>Material Info</th>
               <th className="qcc-align-right">LN</th>
               <th>Code</th>
@@ -234,7 +235,7 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
                           aria-expanded={isExpanded}
                           aria-label={isExpanded ? "Collapse item details" : "Expand item details"}
                         >
-                          {isExpanded ? "-" : "+"}
+                          {isExpanded ? <FaChevronDown aria-hidden="true" /> : <FaChevronRight aria-hidden="true" />}
                         </button>
                       </td>
                       <td>
@@ -244,11 +245,11 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
                         )}
                       </td>
                       <td className="qcc-ll-cell">{rfqItem.lineNumber ?? idx + 1}</td>
-                      <td>{rfqItem.materialCode || "N/A"}</td>
+                      <td><span className="qcc-code">{rfqItem.materialCode || "N/A"}</span></td>
                       <td className="qcc-align-right">
                         {rfqItem.quantity ? (
                           <>
-                            {rfqItem.quantity} <span>{rfqItem.uom}</span>
+                            {rfqItem.quantity} <span className="qcc-uom">{rfqItem.uom}</span>
                           </>
                         ) : (
                           "—"
@@ -334,7 +335,7 @@ const QuotationComparisonCard: React.FC<QuotationComparisonCardProps> = ({ rfqId
                     aria-expanded={isSummaryExpanded}
                     aria-label={isSummaryExpanded ? "Collapse summary" : "Expand summary"}
                   >
-                    {isSummaryExpanded ? "-" : "+"}
+                    {isSummaryExpanded ? <FaChevronDown aria-hidden="true" /> : <FaChevronRight aria-hidden="true" />}
                   </button>
                 </td>
                 <td colSpan={BASE_COLUMN_COUNT - 1}></td>

@@ -86,6 +86,27 @@ export const classifyStatusText = (status: string | null | undefined): StatusTon
   return 'neutral';
 };
 
+/** Readable labels for the status codes the API returns (APPROVE, REJECT, COMPLETE, ...). */
+const STATUS_LABELS: Record<string, string> = {
+  APPROVE: 'Approved',
+  APPROVED: 'Approved',
+  REJECT: 'Rejected',
+  REJECTED: 'Rejected',
+  PENDING: 'Pending',
+  OPEN: 'Open',
+  COMPLETE: 'Completed',
+  COMPLETED: 'Completed',
+};
+
+export const formatMaterialStatus = (status: string | null | undefined): string => {
+  const raw = (status || '').trim();
+  if (!raw) return '—';
+  const known = STATUS_LABELS[raw.toUpperCase()];
+  if (known) return known;
+  const words = raw.replace(/[_-]+/g, ' ').toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+
 export const fetchPendingMaterialApprovals = async (
   params: { status?: string; searchTerm?: string } = {}
 ): Promise<PendingMaterialApproval[]> => {

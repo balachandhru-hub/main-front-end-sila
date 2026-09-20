@@ -4,6 +4,7 @@ import federation from '@originjs/vite-plugin-federation';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { federationSafeAliases } from '../shared-ui/build/federationAliases';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootNodeModules = path.resolve(__dirname, '../../node_modules');
@@ -26,11 +27,16 @@ export default defineConfig(({ command }) => ({
   ],
   resolve: {
     dedupe: ['react', 'react-dom', 'react-router-dom'],
-    alias: command === 'serve' ? {
-      react: path.resolve(rootNodeModules, 'react'),
-      'react-dom': path.resolve(rootNodeModules, 'react-dom'),
-      'react-router-dom': path.resolve(rootNodeModules, 'react-router-dom'),
-    } : undefined,
+    alias: [
+      ...federationSafeAliases,
+      ...(command === 'serve'
+        ? Object.entries({
+            react: path.resolve(rootNodeModules, 'react'),
+            'react-dom': path.resolve(rootNodeModules, 'react-dom'),
+            'react-router-dom': path.resolve(rootNodeModules, 'react-router-dom'),
+          }).map(([find, replacement]) => ({ find, replacement }))
+        : []),
+    ],
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],

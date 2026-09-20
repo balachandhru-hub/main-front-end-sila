@@ -1,4 +1,5 @@
 import axiosInstance from "./axiosInstance";
+import type { BuyerDashboardAnalytics } from '@vosox/shared-ui';
 import type {
   CreateRFQPayload,
   CreateRFQResponse,
@@ -1284,4 +1285,30 @@ export const createItemMaster = async (
 
     throw new Error(`${errMsg} (${status})`);
   }
+};
+
+/** Aggregated sourcing figures for the buyer dashboard (GET /api/v1/buyer/dashboard-analytics). */
+export const fetchBuyerDashboardAnalytics = async (): Promise<BuyerDashboardAnalytics> => {
+  // Users only ever see a neutral message; the technical reason goes to the console.
+  const unavailable = (detail: string, cause?: unknown): Error => {
+    console.warn(`[dashboard-analytics] /api/v1/buyer/dashboard-analytics: ${detail}`, cause ?? '');
+    return new Error('Dashboard figures are temporarily unavailable.');
+  };
+
+  let response;
+  try {
+    response = await axiosInstance.get<BuyerDashboardAnalytics>('/api/v1/buyer/dashboard-analytics');
+  } catch (error: any) {
+    if (!error?.response) throw unavailable('server unreachable', error);
+    if (error.response.status === 404) {
+      throw unavailable('endpoint not found (404) - deploy the latest Buyer API', error.response.data);
+    }
+    throw unavailable(`request failed (${error.response.status})`, error.response.data);
+  }
+
+  // An older server returns a different response shape; treat it as unavailable rather than crash.
+  if (!Array.isArray(response.data?.rfqsByDepartment)) {
+    throw unavailable('unexpected response shape - deploy the latest Buyer API', response.data);
+  }
+  return response.data;
 };

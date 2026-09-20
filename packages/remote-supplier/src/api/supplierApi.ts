@@ -1,4 +1,5 @@
 import supplierInstance from './supplierInstance';
+import type { SupplierDashboardAnalytics } from '@vosox/shared-ui';
 import type {
   SupplierProfileResponse,
   UpdateRejectedSupplierPayload,
@@ -1592,24 +1593,50 @@ export const downloadSupplierMessageAttachment = async (
   }
 };
 
-export interface UploadSupplierTermsPayload {
+/** Aggregated bidding figures for the supplier dashboard (GET /api/v1/supplier/dashboard-analytics). */
+export const fetchSupplierDashboardAnalytics = async (): Promise<SupplierDashboardAnalytics> => {
+  // Users only ever see a neutral message; the technical reason goes to the console.
+  const unavailable = (detail: string, cause?: unknown): Error => {
+    console.warn(`[dashboard-analytics] /api/v1/supplier/dashboard-analytics: ${detail}`, cause ?? '');
+    return new Error('Dashboard figures are temporarily unavailable.');
+  };
+
+  let response;
+  try {
+    response = await supplierInstance.get<SupplierDashboardAnalytics>('/api/v1/supplier/dashboard-analytics');
+  } catch (error: any) {
+    if (error?.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+    }
+    if (!error?.response) throw unavailable('server unreachable', error);
+    if (error.response.status === 404) {
+      throw unavailable('endpoint not found (404) - deploy the latest Supplier API', error.response.data);
+    }
+    throw unavailable(`request failed (${error.response.status})`, error.response.data);
+  }
+
+  // An older server returns a different response shape; treat it as unavailable rather than crash.
+  if (!Array.isArray(response.data?.quotationsByBuyer)) {
+    throw unavailable('unexpected response shape - deploy the latest Supplier API', response.data);
+  }
+  return response.data;
+};
+
+export const uploadSupplierTermsAndCondition = async (payload: {
   rfqId: string;
   termsAndCondition: boolean;
-  documents: RfqDocumentAssetDto[];
-}
-
-export const uploadSupplierTermsAndCondition = async (
-  payload: UploadSupplierTermsPayload
-): Promise<any | ErrorResponseDto> => {
+  documents?: any[];
+  assetUpload?: any;
+} | any) => {
   try {
-    const bodyData = Array.isArray(payload.documents)
-      ? payload.documents[0]
-      : payload.documents;
+    const rfqId = typeof payload === 'object' && payload.rfqId ? payload.rfqId : payload;
+    const termsAndCondition = typeof payload === 'object' && payload.termsAndCondition !== undefined ? payload.termsAndCondition : true;
+    const assetData = (payload && typeof payload === 'object')
+      ? (payload.assetUpload || (Array.isArray(payload.documents) ? payload.documents[0] : payload.documents) || payload)
+      : {};
 
-    const response = await supplierInstance.post(
-      `/api/v1/supplier/supplier-terms-condition?rfqId=${payload.rfqId}&termsAndCondition=${payload.termsAndCondition}`,
-      bodyData
-    );
+    const url = `/api/v1/supplier/supplier-terms-condition?rfqId=${encodeURIComponent(rfqId)}&termsAndCondition=${Boolean(termsAndCondition)}`;
+    const response = await supplierInstance.post(url, assetData);
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 401) {
@@ -1620,20 +1647,13 @@ export const uploadSupplierTermsAndCondition = async (
         description: 'You are not authorized to access this resource. Please login again.',
       };
     }
-
     if (error.response && error.response.data) {
-      const errData = error.response.data;
-      return {
-        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
-        message: errData.message || 'Failed to update supplier terms & conditions',
-        description: errData.description || 'No details provided',
-      };
+      return error.response.data;
     }
-
     return {
       statusCode: 500,
-      message: 'Unexpected Error',
-      description: 'Something went wrong while updating supplier terms & conditions.',
+      message: error.message || 'Failed to upload supplier terms & conditions',
     };
   }
 };
+

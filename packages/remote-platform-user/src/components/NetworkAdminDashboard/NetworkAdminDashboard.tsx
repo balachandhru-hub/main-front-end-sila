@@ -4,7 +4,17 @@ import type { User, UserRole } from '../../types';
 import { useNetworkAdminAuthStore } from '../../store/useAuthStore';
 import UserListTable from '../UserListTable/UserListTable';
 import CreateUserModal from '../CreateUserModal/CreateUserModal';
-import { ToastContainer, toastService } from '@vosox/shared-ui';
+import {
+  Button,
+  ConfirmDialog,
+  EmptyState,
+  KpiCard,
+  Loader,
+  PageHeader,
+  SearchInput,
+  ToastContainer,
+  toastService,
+} from '@vosox/shared-ui';
 import Header from '../Header';
 import {
   getOrganizationUsers,
@@ -17,8 +27,9 @@ import {
   FaUsers,
   FaUserCheck,
   FaLayerGroup,
-  FaSearch,
   FaPlus,
+  FaLock,
+  FaExclamationCircle,
 } from 'react-icons/fa';
 import './NetworkAdminDashboard.css';
 
@@ -150,8 +161,7 @@ const NetworkAdminDashboard: React.FC = () => {
   if (isLoading) {
     return (
       <div className="nad-loading-container">
-        <div className="nad-spinner"></div>
-        <p>Loading dashboard...</p>
+        <Loader message="Loading dashboard..." />
       </div>
     );
   }
@@ -159,11 +169,16 @@ const NetworkAdminDashboard: React.FC = () => {
   if (!currentUser) {
     return (
       <div className="nad-not-auth-container">
-        <h2>Not Authenticated</h2>
-        <p>Please login first to access this dashboard.</p>
-        <button onClick={() => navigate('/login')} className="nad-redirect-btn">
-          Go to Login
-        </button>
+        <EmptyState
+          title="Not Authenticated"
+          description="Please login first to access this dashboard."
+          icon={<FaLock aria-hidden="true" />}
+          action={
+            <Button onClick={() => navigate('/login')} className="nad-redirect-btn">
+              Go to Login
+            </Button>
+          }
+        />
       </div>
     );
   }
@@ -194,93 +209,59 @@ const NetworkAdminDashboard: React.FC = () => {
   const allFilteredUsers = [...filteredAdministrators, ...filteredUsers];
 
   return (
-    <div className="nad-page" style={{ paddingTop: "5.25rem" }}>
+    <Header>
       <ToastContainer />
-
-      <Header />
 
       <div className="nad-shell">
         <div className="nad-main">
-          <main className="nad-content">
-            <header className="nad-content-header">
-              <h1 className="nad-title">{sectionInfo.title}</h1>
-              <p className="nad-subtitle">{sectionInfo.subtitle}</p>
-            </header>
+          <div className="nad-content">
+            <PageHeader
+              className="nad-content-header"
+              title={sectionInfo.title}
+              description={sectionInfo.subtitle}
+            />
 
-            <section className="nad-stats-grid">
-              <div className="nad-stat-card">
-                <div className="nad-stat-icon-wrapper nad-stat-icon-blue">
-                  <FaUserShield />
-                </div>
-                <div className="nad-stat-info">
-                  <span className="nad-stat-value">{administrators.length}</span>
-                  <span className="nad-stat-label">{adminLabel}</span>
-                </div>
-              </div>
-
-              <div className="nad-stat-card">
-                <div className="nad-stat-icon-wrapper nad-stat-icon-indigo">
-                  <FaUsers />
-                </div>
-                <div className="nad-stat-info">
-                  <span className="nad-stat-value">{regularUsers.length}</span>
-                  <span className="nad-stat-label">{userLabel}</span>
-                </div>
-              </div>
-
-              <div className="nad-stat-card">
-                <div className="nad-stat-icon-wrapper nad-stat-icon-green">
-                  <FaUserCheck />
-                </div>
-                <div className="nad-stat-info">
-                  <span className="nad-stat-value">{activeCount}</span>
-                  <span className="nad-stat-label">Active Users</span>
-                </div>
-              </div>
-
-              <div className="nad-stat-card">
-                <div className="nad-stat-icon-wrapper nad-stat-icon-orange">
-                  <FaLayerGroup />
-                </div>
-                <div className="nad-stat-info">
-                  <span className="nad-stat-value">{allUsers.length}</span>
-                  <span className="nad-stat-label">Total Users</span>
-                </div>
-              </div>
+            <section className="nad-stats-grid sila-kpi-grid" aria-label="User summary">
+              <KpiCard
+                className="nad-stat-card"
+                tone="primary"
+                icon={<FaUserShield />}
+                label={adminLabel}
+                value={administrators.length}
+              />
+              <KpiCard
+                className="nad-stat-card"
+                icon={<FaUsers />}
+                label={userLabel}
+                value={regularUsers.length}
+              />
+              <KpiCard
+                className="nad-stat-card"
+                icon={<FaUserCheck />}
+                label="Active Users"
+                value={activeCount}
+              />
+              <KpiCard
+                className="nad-stat-card"
+                icon={<FaLayerGroup />}
+                label="Total Users"
+                value={allUsers.length}
+              />
             </section>
 
             <div className="nad-controls-bar">
-              <div className="nad-search-wrapper">
-                <FaSearch className="nad-search-icon" />
-                <input
-                  type="text"
-                  placeholder="Search by name, email or username..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="nad-search-input"
-                  aria-label="Search users"
-                />
-              </div>
+              <SearchInput
+                containerClassName="nad-search-wrapper"
+                className="nad-search-input"
+                placeholder="Search by name, email or username..."
+                label="Search users"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
 
               <div className="nad-action-buttons">
-                <button
-                  className="nad-create-btn"
-                  onClick={() => {
-                    setModalCreateRole(
-                      currentUser.userRole === 'BUYER_NETWORK_ADMIN'
-                        ? 'BUYER_ADMINISTRATOR'
-                        : 'SUPPLIER_ADMINISTRATOR'
-                    );
-                    setIsModalOpen(true);
-                  }}
-                  disabled={isCreatingUser}
-                  title="Create a new administrator user"
-                >
-                  <FaPlus />
-                  Create {adminLabel.slice(0, -1)}
-                </button>
-
-                <button
+                <Button
+                  variant="secondary"
                   className="nad-create-btn nad-create-user-btn"
                   onClick={() => {
                     setModalCreateRole(
@@ -293,22 +274,41 @@ const NetworkAdminDashboard: React.FC = () => {
                   disabled={isCreatingUser}
                   title="Create a new regular user"
                 >
-                  <FaPlus />
+                  <FaPlus aria-hidden="true" />
                   Create {userLabel.slice(0, -1)}
-                </button>
+                </Button>
+
+                <Button
+                  className="nad-create-btn"
+                  onClick={() => {
+                    setModalCreateRole(
+                      currentUser.userRole === 'BUYER_NETWORK_ADMIN'
+                        ? 'BUYER_ADMINISTRATOR'
+                        : 'SUPPLIER_ADMINISTRATOR'
+                    );
+                    setIsModalOpen(true);
+                  }}
+                  disabled={isCreatingUser}
+                  title="Create a new administrator user"
+                >
+                  <FaPlus aria-hidden="true" />
+                  Create {adminLabel.slice(0, -1)}
+                </Button>
               </div>
             </div>
 
             {error && (
-              <div className="nad-alert-error">
-                <strong>Error:</strong> {error}
+              <div className="nad-alert-error sila-alert sila-alert--danger" role="alert">
+                <FaExclamationCircle className="nad-alert-icon" aria-hidden="true" />
+                <span>
+                  <strong className="sila-alert-title">Error:</strong> {error}
+                </span>
               </div>
             )}
 
             {isLoadingData ? (
-              <div className="nad-loading-data">
-                <div className="nad-spinner"></div>
-                <p>Please wait...</p>
+              <div className="nad-loading-data sila-card">
+                <Loader message="Please wait..." />
               </div>
             ) : (
               <div className="nad-lists-section">
@@ -319,7 +319,7 @@ const NetworkAdminDashboard: React.FC = () => {
                 />
               </div>
             )}
-          </main>
+          </div>
         </div>
       </div>
 
@@ -331,37 +331,26 @@ const NetworkAdminDashboard: React.FC = () => {
         isLoading={isCreatingUser}
       />
 
-      {isDeleteModalOpen && (
-        <div className="nad-modal-overlay">
-          <div className="nad-delete-modal">
-            <h3>Delete User</h3>
-            <p>Are you sure you want to delete <strong>{userToDelete?.name}</strong>?</p>
-            <p className="nad-delete-warning">This action cannot be undone.</p>
-
-            <div className="nad-delete-actions">
-              <button
-                className="nad-delete-cancel-btn"
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  setUserToDelete(null);
-                }}
-                disabled={isDeletingUser}
-              >
-                Cancel
-              </button>
-
-              <button
-                className="nad-delete-confirm-btn"
-                onClick={confirmDeleteUser}
-                disabled={isDeletingUser}
-              >
-                {isDeletingUser ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <ConfirmDialog
+        open={isDeleteModalOpen}
+        title="Delete User"
+        tone="danger"
+        busy={isDeletingUser}
+        confirmLabel={isDeletingUser ? 'Deleting...' : 'Delete'}
+        cancelLabel="Cancel"
+        onConfirm={confirmDeleteUser}
+        onCancel={() => {
+          setIsDeleteModalOpen(false);
+          setUserToDelete(null);
+        }}
+        message={
+          <>
+            Are you sure you want to delete <strong>{userToDelete?.name}</strong>?
+            <span className="nad-delete-warning">This action cannot be undone.</span>
+          </>
+        }
+      />
+    </Header>
   );
 };
 

@@ -1,16 +1,6 @@
 import React, { useState } from "react";
+import { FaMinus, FaPlus } from "react-icons/fa";
 import "./QuotationSummaryTable.css";
-
-/* ---------------------------------- RFQ Item Quotation Table Column Widths ---------------------------------- */
-
-const RFQ_EXPAND_COL_WIDTH = 48;
-const RFQ_MATERIAL_COL_WIDTH = 220;
-const RFQ_LN_COL_WIDTH = 70;
-const RFQ_CODE_COL_WIDTH = 120;
-const RFQ_QTY_COL_WIDTH = 90;
-const RFQ_RATE_COL_WIDTH = 90;
-const RFQ_AMOUNT_COL_WIDTH = 100;
-const RFQ_LL_COL_WIDTH = 70;
 
 /* ---------------------------------- RFQ Item / Supplier Quotation Item Types ---------------------------------- */
 
@@ -159,34 +149,35 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
   const supplierGroupColSpan = showLLColumn ? 3 : 2;
   // Base columns: Expand, Material Info, LN, Code, Qty.
   const BASE_COLUMN_COUNT = 5;
-  const quotedMinTableWidth = showSupplierColumns
-    ? RFQ_EXPAND_COL_WIDTH + RFQ_MATERIAL_COL_WIDTH + RFQ_LN_COL_WIDTH + RFQ_CODE_COL_WIDTH + RFQ_QTY_COL_WIDTH +
-      quotedSuppliers.length * (RFQ_RATE_COL_WIDTH + RFQ_AMOUNT_COL_WIDTH + (showLLColumn ? RFQ_LL_COL_WIDTH : 0))
-    : undefined;
-
-  const toColPercent = (px: number) =>
-    `${(px / (quotedMinTableWidth as number)) * 100}%`;
+  // Column widths live in QuotationSummaryTable.css; the table only reports how many suppliers it shows.
+  const quotedTableClass = [
+    "qst-items-table",
+    showSupplierColumns && "qst-items-table--quoted",
+    showSupplierColumns && showLLColumn && "qst-items-table--with-ll",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <div>
-      <div className="qst-section-title" style={{ marginBottom: '10px' }}>Quotation Summary</div>
-      <div className="qst-table-container" style={{ maxHeight: '360px', overflowY: 'auto' }}>
+    <div className="qst-root">
+      <div className="qst-section-title qst-summary-title">Quotation Summary</div>
+      <div className="qst-table-container qst-table-scroll">
         <table
-          className="qst-items-table"
-          style={showSupplierColumns ? { tableLayout: 'fixed', width: '100%', minWidth: quotedMinTableWidth } : undefined}
+          className={quotedTableClass}
+          style={showSupplierColumns ? ({ '--qst-suppliers': quotedSuppliers.length } as React.CSSProperties) : undefined}
         >
           {showSupplierColumns && (
             <colgroup>
-              <col style={{ width: toColPercent(RFQ_EXPAND_COL_WIDTH) }} />
-              <col style={{ width: toColPercent(RFQ_MATERIAL_COL_WIDTH) }} />
-              <col style={{ width: toColPercent(RFQ_LN_COL_WIDTH) }} />
-              <col style={{ width: toColPercent(RFQ_CODE_COL_WIDTH) }} />
-              <col style={{ width: toColPercent(RFQ_QTY_COL_WIDTH) }} />
+              <col className="qst-col--expand" />
+              <col className="qst-col--material" />
+              <col className="qst-col--ln" />
+              <col className="qst-col--code" />
+              <col className="qst-col--qty" />
               {quotedSuppliers.map((quote, sIdx) => (
                 <React.Fragment key={`col-${quote.quotationId || sIdx}`}>
-                  <col style={{ width: toColPercent(RFQ_RATE_COL_WIDTH) }} />
-                  <col style={{ width: toColPercent(RFQ_AMOUNT_COL_WIDTH) }} />
-                  {showLLColumn && <col style={{ width: toColPercent(RFQ_LL_COL_WIDTH) }} />}
+                  <col className="qst-col--rate" />
+                  <col className="qst-col--amount" />
+                  {showLLColumn && <col className="qst-col--ll" />}
                 </React.Fragment>
               ))}
             </colgroup>
@@ -215,7 +206,7 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
                   </tr>
                 )}
                 <tr>
-                  <th className="qst-expand-header"></th>
+                  <th className="qst-expand-header"><span className="sila-visually-hidden">Expand</span></th>
                   <th>Material Info</th>
                   <th className="qst-align-right">LN</th>
                   <th>Code</th>
@@ -256,26 +247,26 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
                           aria-expanded={isExpanded}
                           aria-label={isExpanded ? "Collapse item details" : "Expand item details"}
                         >
-                          {isExpanded ? "-" : "+"}
+                          {isExpanded ? <FaMinus aria-hidden="true" /> : <FaPlus aria-hidden="true" />}
                         </button>
                       </td>
                     )}
                     <td>
-                      <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
+                      <div className="qst-item-desc">{item.description}</div>
                       {item.costCenter && (
-                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                        <div className="qst-item-meta">
                           Cost Center: {item.costCenter}
                         </div>
                       )}
                     </td>
                     <td className="qst-ll-cell">{lineNumber}</td>
                     <td>
-                      <div>
+                      <span className="sila-ref qst-item-code">
                         {item.materialCode || "N/A"}
-                      </div>
+                      </span>
                     </td>
                     <td className="qst-align-right">
-                      {item.quantity} <span>{item.uom}</span>
+                      {item.quantity} <span className="qst-uom">{item.uom}</span>
                     </td>
                     {showSupplierColumns && quotedSuppliers.map((quote, sIdx) => {
                       const matchedItem = getSupplierQuotationItem(quote, item);
@@ -303,7 +294,7 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
                               <span>Tax:</span>
                               <span>{formatTypedValue(matchedItem?.tax, matchedItem?.taxType, quote.currency)}</span>
                               <span>Discount:</span>
-                              <span style={{ color: '#dc2626' }}>{formatTypedDiscount(matchedItem?.discount, matchedItem?.discountType, quote.currency)}</span>
+                              <span className="qst-negative">{formatTypedDiscount(matchedItem?.discount, matchedItem?.discountType, quote.currency)}</span>
                               <span>Delivery Charge:</span>
                               <span>{formatTypedValue(matchedItem?.deliveryCharge, matchedItem?.deliveryType, quote.currency)}</span>
                               <span>Subtotal:</span>
@@ -329,7 +320,7 @@ const QuotationSummaryTable: React.FC<QuotationSummaryTableProps> = ({ rfq }) =>
                     aria-expanded={isSummaryExpanded}
                     aria-label={isSummaryExpanded ? "Collapse summary" : "Expand summary"}
                   >
-                    {isSummaryExpanded ? "-" : "+"}
+                    {isSummaryExpanded ? <FaMinus aria-hidden="true" /> : <FaPlus aria-hidden="true" />}
                   </button>
                 </td>
                 <td colSpan={BASE_COLUMN_COUNT - 1}></td>

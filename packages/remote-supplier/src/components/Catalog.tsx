@@ -17,7 +17,7 @@ import {
     type UnitItem,
     type CatalogDetailResponseItem,
 } from "../api/supplierApi";
-import { isErrorResponse, Button } from '@vosox/shared-ui';
+import { isErrorResponse, Button, EmptyState, Loader, Pagination } from '@vosox/shared-ui';
 import type { CatalogAssetDto, CatalogDetailDto, SupplierCatalogListItem } from "../dto/supplierDto";
 
 /* ============================== Types ============================== */
@@ -607,7 +607,7 @@ const Catalog: React.FC<CatalogProps> = ({
             const entityType = entityTypes.find((e) => e.key === 'SUPPLIER')?.key || 'SUPPLIER';
 
             const assets: CatalogAssetDto[] = await Promise.all(
-                catalogFiles.map(async (file, index) => {
+                catalogFiles.map(async (file) => {
                     const fileBytes = await fileToBase64(file);
                     return {
                         entityType: entityType,
@@ -616,7 +616,8 @@ const Catalog: React.FC<CatalogProps> = ({
                         fileBytes: fileBytes,
                         fileName: file.name,
                         contentType: file.type,
-                        isSingletonAsset: index === 0,
+                        // Never a singleton: that would deactivate files this catalog still links to.
+                        isSingletonAsset: false,
                     };
                 })
             );
@@ -814,29 +815,35 @@ const Catalog: React.FC<CatalogProps> = ({
             {/* Create Catalog Modal */}
             {showCreateCatalogModal && createPortal(
                 <div className="pud-modal-overlay" onClick={closeCreateCatalogModal}>
-                    <div className="pud-modal pud-modal-catalog" onClick={(e) => e.stopPropagation()}>
+                    <div
+                        className="pud-modal pud-modal-catalog"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="pud-create-catalog-title"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="pud-modal-header">
-                            <button className="pud-modal-close" onClick={closeCreateCatalogModal} title="Close">
+                            <button type="button" className="pud-modal-close" onClick={closeCreateCatalogModal} title="Close" aria-label="Close">
                                 <IconClose />
                             </button>
                             <span className="pud-modal-badge">
                                 <NavIconCatalog /> New Catalog Item
                             </span>
-                            <h2 className="pud-modal-name">Create Catalog</h2>
+                            <h2 className="pud-modal-name" id="pud-create-catalog-title">Create Catalog</h2>
                             <div className="pud-modal-meta">
                                 <span>Add a product or service to your catalog</span>
                             </div>
                         </div>
 
-                        <form onSubmit={handleCreateCatalogSubmit}>
+                        <form onSubmit={handleCreateCatalogSubmit} className="pud-modal-form">
                             <div className="pud-modal-body">
                                 {createCatalogSuccess && (
-                                    <div className="pud-alert pud-alert-success">
+                                    <div className="pud-alert pud-alert-success" role="status">
                                         <IconCheckCircle /> Catalog created successfully!
                                     </div>
                                 )}
                                 {createCatalogError && (
-                                    <div className="pud-alert pud-alert-error">{createCatalogError}</div>
+                                    <div className="pud-alert pud-alert-error" role="alert">{createCatalogError}</div>
                                 )}
 
                                 <div className="pud-catalog-form-grid">
@@ -845,8 +852,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field pud-catalog-form-full">
-                                        <label className="pud-catalog-form-label">Catalog Name *</label>
+                                        <label className="pud-catalog-form-label" htmlFor="catalog-catalog-name">Catalog Name<span className="sila-required" aria-hidden="true">*</span></label>
                                         <input
+                                            id="catalog-catalog-name"
                                             type="text"
                                             className="pud-catalog-form-input"
                                             value={catalogForm.catalogName}
@@ -857,8 +865,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field pud-catalog-form-full">
-                                        <label className="pud-catalog-form-label">Description</label>
+                                        <label className="pud-catalog-form-label" htmlFor="catalog-description">Description</label>
                                         <textarea
+                                            id="catalog-description"
                                             className="pud-catalog-form-textarea"
                                             value={catalogForm.description}
                                             onChange={(e) => updateCatalogField("description", e.target.value)}
@@ -868,8 +877,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Price</label>
+                                        <label className="pud-catalog-form-label" htmlFor="catalog-price">Price</label>
                                         <input
+                                            id="catalog-price"
                                             type="number"
                                             step="0.01"
                                             min="0"
@@ -881,8 +891,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Currency</label>
+                                        <label className="pud-catalog-form-label" htmlFor="catalog-currency">Currency</label>
                                         <select
+                                            id="catalog-currency"
                                             className="pud-catalog-form-select"
                                             value={catalogForm.currency}
                                             onChange={(e) => updateCatalogField("currency", e.target.value)}
@@ -898,8 +909,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Unit of Measure</label>
+                                        <label className="pud-catalog-form-label" htmlFor="catalog-unit-of-measure">Unit of Measure</label>
                                         <select
+                                            id="catalog-unit-of-measure"
                                             className="pud-catalog-form-select"
                                             value={catalogForm.unitOfMeasure}
                                             onChange={(e) => updateCatalogField("unitOfMeasure", e.target.value)}
@@ -917,8 +929,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Catalog Type</label>
+                                        <label className="pud-catalog-form-label" htmlFor="catalog-catalog-type">Catalog Type</label>
                                         <select
+                                            id="catalog-catalog-type"
                                             className="pud-catalog-form-select"
                                             value={catalogForm.catalogType}
                                             onChange={(e) => updateCatalogField("catalogType", e.target.value)}
@@ -936,8 +949,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Segment *</label>
+                                        <label className="pud-catalog-form-label" htmlFor="catalog-segment">Segment<span className="sila-required" aria-hidden="true">*</span></label>
                                         <select
+                                            id="catalog-segment"
                                             className="pud-catalog-form-select"
                                             value={catalogForm.segment}
                                             onChange={(e) => handleSegmentChange(e.target.value)}
@@ -955,8 +969,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Segment Title</label>
+                                        <label className="pud-catalog-form-label" htmlFor="catalog-segment-title">Segment Title</label>
                                         <input
+                                            id="catalog-segment-title"
                                             type="text"
                                             className="pud-catalog-form-input"
                                             value={catalogForm.segmentTitle}
@@ -966,8 +981,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Family *</label>
+                                        <label className="pud-catalog-form-label" htmlFor="catalog-family">Family<span className="sila-required" aria-hidden="true">*</span></label>
                                         <select
+                                            id="catalog-family"
                                             className="pud-catalog-form-select"
                                             value={catalogForm.family}
                                             onChange={(e) => handleFamilyChange(e.target.value)}
@@ -990,8 +1006,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Family Title</label>
+                                        <label className="pud-catalog-form-label" htmlFor="catalog-family-title">Family Title</label>
                                         <input
+                                            id="catalog-family-title"
                                             type="text"
                                             className="pud-catalog-form-input"
                                             value={catalogForm.familyTitle}
@@ -1001,8 +1018,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Class *</label>
+                                        <label className="pud-catalog-form-label" htmlFor="catalog-class">Class<span className="sila-required" aria-hidden="true">*</span></label>
                                         <select
+                                            id="catalog-class"
                                             className="pud-catalog-form-select"
                                             value={catalogForm.class}
                                             onChange={(e) => handleClassChange(e.target.value)}
@@ -1025,8 +1043,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Class Title</label>
+                                        <label className="pud-catalog-form-label" htmlFor="catalog-class-title">Class Title</label>
                                         <input
+                                            id="catalog-class-title"
                                             type="text"
                                             className="pud-catalog-form-input"
                                             value={catalogForm.classTitle}
@@ -1036,8 +1055,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Commodity *</label>
+                                        <label className="pud-catalog-form-label" htmlFor="catalog-commodity">Commodity<span className="sila-required" aria-hidden="true">*</span></label>
                                         <select
+                                            id="catalog-commodity"
                                             className="pud-catalog-form-select"
                                             value={catalogForm.commodity}
                                             onChange={(e) => handleCommodityChange(e.target.value)}
@@ -1060,8 +1080,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Commodity Title</label>
+                                        <label className="pud-catalog-form-label" htmlFor="catalog-commodity-title">Commodity Title</label>
                                         <input
+                                            id="catalog-commodity-title"
                                             type="text"
                                             className="pud-catalog-form-input"
                                             value={catalogForm.commodityTitle}
@@ -1088,8 +1109,9 @@ const Catalog: React.FC<CatalogProps> = ({
 
                                             {catalogForm.isPunchOut && (
                                                 <div className="pud-catalog-form-field pud-catalog-form-full">
-                                                    <label className="pud-catalog-form-label">PunchOut URL *</label>
+                                                    <label className="pud-catalog-form-label" htmlFor="catalog-punchout-url">PunchOut URL<span className="sila-required" aria-hidden="true">*</span></label>
                                                     <input
+                                                        id="catalog-punchout-url"
                                                         type="url"
                                                         className="pud-catalog-form-input"
                                                         value={catalogForm.punchOutUrl}
@@ -1107,10 +1129,19 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     <div className="pud-catalog-form-field pud-catalog-form-full">
-                                        <label className="pud-catalog-form-label">Upload Images *</label>
+                                        <span className="pud-catalog-form-label" id="catalog-upload-images-label">Upload Images<span className="sila-required" aria-hidden="true">*</span></span>
                                         <div
                                             className={`pud-catalog-dropzone${isDraggingCatalogFile ? " pud-catalog-dropzone-active" : ""}`}
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-labelledby="catalog-upload-images-label"
                                             onClick={() => catalogFileInputRef.current?.click()}
+                                            onKeyDown={(e) => {
+                                                if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                                                    e.preventDefault();
+                                                    catalogFileInputRef.current?.click();
+                                                }
+                                            }}
                                             onDragOver={(e) => { e.preventDefault(); setIsDraggingCatalogFile(true); }}
                                             onDragLeave={() => setIsDraggingCatalogFile(false)}
                                             onDrop={(e) => {
@@ -1144,19 +1175,22 @@ const Catalog: React.FC<CatalogProps> = ({
                                                                 type="button"
                                                                 onClick={() => handleRemoveCatalogFile(index)}
                                                                 title="Remove image"
+                                                                aria-label={`Remove image ${index + 1}`}
                                                                 className="pud-file-button"
                                                             >
                                                                 <IconClose className="closeIcon" />
                                                             </button>
                                                         </div>
                                                     ))}
-                                                    <div
+                                                    <button
+                                                        type="button"
                                                         onClick={(e) => { e.stopPropagation(); catalogFileInputRef.current?.click(); }}
                                                         className="pud-add-img"
                                                         title="Add more images"
+                                                        aria-label="Add more images"
                                                     >
                                                         <IconPlusCircle className="iconPlus" />
-                                                    </div>
+                                                    </button>
                                                 </div>
                                             ) : (
                                                 <div className="pud-catalog-dropzone-icon"><IconUploadCloudLarge /></div>
@@ -1175,12 +1209,12 @@ const Catalog: React.FC<CatalogProps> = ({
                             </div>
 
                             <div className="pud-modal-footer">
-                                <button type="button" className="pud-btn pud-btn-outline" onClick={closeCreateCatalogModal}>
+                                <button type="button" className="pud-btn pud-btn-outline sila-btn sila-btn--secondary" onClick={closeCreateCatalogModal}>
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="pud-btn pud-btn-message"
+                                    className="pud-btn pud-btn-message sila-btn sila-btn--primary"
                                     disabled={creatingCatalog || catalogFiles.length === 0}
                                 >
                                     {creatingCatalog ? "Saving..." : "Save Catalog"}
@@ -1195,15 +1229,21 @@ const Catalog: React.FC<CatalogProps> = ({
             {/* Upload Catalog Modal */}
             {showUploadCatalogModal && createPortal(
                 <div className="pud-modal-overlay" onClick={closeUploadCatalogModal}>
-                    <div className="pud-modal pud-modal-upload" onClick={(e) => e.stopPropagation()}>
+                    <div
+                        className="pud-modal pud-modal-upload"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="pud-upload-catalog-title"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="pud-modal-header">
-                            <button className="pud-modal-close" onClick={closeUploadCatalogModal} title="Close">
+                            <button type="button" className="pud-modal-close" onClick={closeUploadCatalogModal} title="Close" aria-label="Close">
                                 <IconClose />
                             </button>
                             <span className="pud-modal-badge">
                                 <IconUploadCloud /> Bulk Upload
                             </span>
-                            <h2 className="pud-modal-name">Upload Catalog</h2>
+                            <h2 className="pud-modal-name" id="pud-upload-catalog-title">Upload Catalog</h2>
                             <div className="pud-modal-meta">
                                 <span>Add files or images to your catalog</span>
                             </div>
@@ -1211,17 +1251,26 @@ const Catalog: React.FC<CatalogProps> = ({
 
                         <div className="pud-modal-body">
                             {uploadCatalogSuccess && (
-                                <div className="pud-alert pud-alert-success">
+                                <div className="pud-alert pud-alert-success" role="status">
                                     <IconCheckCircle /> Files uploaded successfully!
                                 </div>
                             )}
                             {uploadCatalogError && (
-                                <div className="pud-alert pud-alert-error">{uploadCatalogError}</div>
+                                <div className="pud-alert pud-alert-error" role="alert">{uploadCatalogError}</div>
                             )}
 
                             <div
                                 className={`pud-catalog-dropzone pud-catalog-dropzone-large${isDraggingUploadFiles ? " pud-catalog-dropzone-active" : ""}`}
+                                role="button"
+                                tabIndex={0}
+                                aria-label="Choose files to upload"
                                 onClick={() => uploadCatalogInputRef.current?.click()}
+                                onKeyDown={(e) => {
+                                    if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                                        e.preventDefault();
+                                        uploadCatalogInputRef.current?.click();
+                                    }
+                                }}
                                 onDragOver={(e) => { e.preventDefault(); setIsDraggingUploadFiles(true); }}
                                 onDragLeave={() => setIsDraggingUploadFiles(false)}
                                 onDrop={(e) => {
@@ -1271,6 +1320,7 @@ const Catalog: React.FC<CatalogProps> = ({
                                                 className="pud-catalog-file-remove"
                                                 onClick={() => handleRemoveUploadCatalogFile(index)}
                                                 title="Remove"
+                                                aria-label={`Remove ${file.name}`}
                                             >
                                                 <IconClose />
                                             </button>
@@ -1281,12 +1331,12 @@ const Catalog: React.FC<CatalogProps> = ({
                         </div>
 
                         <div className="pud-modal-footer">
-                            <button type="button" className="pud-btn pud-btn-outline" onClick={closeUploadCatalogModal}>
+                            <button type="button" className="pud-btn pud-btn-outline sila-btn sila-btn--secondary" onClick={closeUploadCatalogModal}>
                                 Cancel
                             </button>
                             <button
                                 type="button"
-                                className="pud-btn pud-btn-message"
+                                className="pud-btn pud-btn-message sila-btn sila-btn--primary"
                                 disabled={uploadingCatalog || uploadCatalogFiles.length === 0}
                                 onClick={handleUploadCatalogSubmit}
                             >
@@ -1308,7 +1358,7 @@ const Catalog: React.FC<CatalogProps> = ({
                                     <div>
                                         <button
                                             type="button"
-                                            className="pud-btn pud-btn-outline"
+                                            className="pud-btn pud-btn-outline sila-btn sila-btn--secondary"
                                             onClick={() => setShowPunchOutFullPage(false)}
                                         >
                                             <IconChevronLeft /> Back to {selectedCatalogItem.catalogName}
@@ -1339,9 +1389,9 @@ const Catalog: React.FC<CatalogProps> = ({
                                                     href={punchOutPreviewUrl}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="pud-btn pud-btn-message"
+                                                    className="pud-btn pud-btn-message sila-btn sila-btn--primary"
                                                 >
-                                                    <IconExternalLink className="pud-icon-mr" /> Open in New Tab
+                                                    <IconExternalLink /> Open in New Tab
                                                 </a>
                                             </div>
                                         ) : (
@@ -1362,7 +1412,7 @@ const Catalog: React.FC<CatalogProps> = ({
                                     <div>
                                         <button
                                             type="button"
-                                            className="pud-btn pud-btn-outline"
+                                            className="pud-btn pud-btn-outline sila-btn sila-btn--secondary"
                                             onClick={closeCatalogDetail}
                                         >
                                             <IconChevronLeft /> Back to Catalog
@@ -1376,16 +1426,19 @@ const Catalog: React.FC<CatalogProps> = ({
                                             {loadingCatalogDetail || loadingSelectedImages ? (
                                                 <div className="pud-spinner" />
                                             ) : catalogDetailError ? (
-                                                <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
-                                                    <div style={{ fontSize: '15px', marginBottom: '16px' }}>{catalogDetailError}</div>
-                                                    <button
-                                                        type="button"
-                                                        className="pud-btn pud-btn-outline"
-                                                        onClick={() => selectedCatalogItem && openCatalogDetail(selectedCatalogItem.catalogId)}
-                                                    >
-                                                        Retry Loading
-                                                    </button>
-                                                </div>
+                                                <EmptyState
+                                                    variant="error"
+                                                    title={catalogDetailError}
+                                                    action={
+                                                        <button
+                                                            type="button"
+                                                            className="pud-btn pud-btn-outline sila-btn sila-btn--secondary"
+                                                            onClick={() => selectedCatalogItem && openCatalogDetail(selectedCatalogItem.catalogId)}
+                                                        >
+                                                            Retry Loading
+                                                        </button>
+                                                    }
+                                                />
                                             ) : selectedCatalogImages.length > 0 ? (
                                                 <img
                                                     src={selectedCatalogImages[selectedImageIndex]}
@@ -1402,6 +1455,7 @@ const Catalog: React.FC<CatalogProps> = ({
                                                         type="button"
                                                         onClick={goToPrevImage}
                                                         title="Previous image"
+                                                        aria-label="Previous image"
                                                         className="pud-catalog-image-nav pud-catalog-image-nav-prev"
                                                     >
                                                         <IconChevronLeft />
@@ -1410,6 +1464,7 @@ const Catalog: React.FC<CatalogProps> = ({
                                                         type="button"
                                                         onClick={goToNextImage}
                                                         title="Next image"
+                                                        aria-label="Next image"
                                                         className="pud-catalog-image-nav pud-catalog-image-nav-next"
                                                     >
                                                         <IconChevronRight />
@@ -1421,13 +1476,16 @@ const Catalog: React.FC<CatalogProps> = ({
                                         {selectedCatalogImages.length > 1 && (
                                             <div className="pud-catalog-thumb-row">
                                                 {selectedCatalogImages.map((src, idx) => (
-                                                    <div
+                                                    <button
+                                                        type="button"
                                                         key={idx}
                                                         onClick={() => setSelectedImageIndex(idx)}
                                                         className={`pud-catalog-thumb${idx === selectedImageIndex ? " pud-catalog-thumb-active" : ""}`}
+                                                        aria-label={`Show image ${idx + 1}`}
+                                                        aria-pressed={idx === selectedImageIndex}
                                                     >
-                                                        <img src={src} alt={`thumb-${idx}`} className="pud-catalog-thumb-img" />
-                                                    </div>
+                                                        <img src={src} alt="" className="pud-catalog-thumb-img" />
+                                                    </button>
                                                 ))}
                                             </div>
                                         )}
@@ -1462,10 +1520,11 @@ const Catalog: React.FC<CatalogProps> = ({
 
                                         {selectedCatalogItem.isPunchOut && selectedCatalogItem.punchOutUrl && (
                                             <button
-                                                className="pud-btn pud-btn-message"
+                                                type="button"
+                                                className="pud-btn pud-btn-message sila-btn sila-btn--primary pud-catalog-detail-cta"
                                                 onClick={() => handlePunchOutPreview(selectedCatalogItem.punchOutUrl)}
                                             >
-                                                <IconExternalLink className="pud-icon-mr" /> View Catalog
+                                                <IconExternalLink /> View Catalog
                                             </button>
                                         )}
 
@@ -1520,8 +1579,8 @@ const Catalog: React.FC<CatalogProps> = ({
                             <div className="pud-catalog-fullview-header">
                                 <div>
                                     <h1 className="pud-title">Your Catalogs</h1>
-                                    <p className="pud-subtitle">
-                                        <IconGrid /> {catalogList.length} {catalogList.length === 1 ? "Item" : "Items"} in your supplier catalog
+                                    <p className="pud-subtitle pud-catalog-count">
+                                        <IconGrid aria-hidden="true" /> {catalogList.length} {catalogList.length === 1 ? "Item" : "Items"} in your supplier catalog
                                     </p>
                                 </div>
                                 <div className="pud-catalog-fullview-actions">
@@ -1548,36 +1607,34 @@ const Catalog: React.FC<CatalogProps> = ({
 
                             {loadingCatalogList ? (
                                 <div className="pud-catalog-state-center">
-                                    <div className="pud-catalog-state-loading-inner">
-                                        <div className="pud-spinner" />
-                                        <span>Loading your catalogs...</span>
-                                    </div>
+                                    <Loader size={24} message="Loading your catalogs..." />
                                 </div>
                             ) : catalogListError ? (
                                 <div className="pud-catalog-state-center pud-catalog-state-padded">
-                                    <div className="pud-catalog-state-error-inner">
-                                        {catalogListError}
-                                        <div className="pud-catalog-state-error-retry">
+                                    <EmptyState
+                                        variant="error"
+                                        title={catalogListError}
+                                        action={
                                             <button
                                                 type="button"
-                                                className="pud-btn pud-btn-outline"
+                                                className="pud-btn pud-btn-outline sila-btn sila-btn--secondary"
                                                 onClick={loadCatalogList}
                                             >
                                                 Retry
                                             </button>
-                                        </div>
-                                    </div>
+                                        }
+                                    />
                                 </div>
                             ) : catalogList.length === 0 ? (
                                 <div className="pud-catalog-empty-state">
-                                    <div className="pud-catalog-dropzone-icon"><IconGridLarge /></div>
-                                    <div className="pud-catalog-dropzone-text">No catalogs yet</div>
-                                    <div className="pud-catalog-dropzone-subtext">
-                                        {isAdmin
+                                    <EmptyState
+                                        icon={<IconGrid />}
+                                        title="No catalogs yet"
+                                        description={isAdmin
                                             ? 'Use "Create Catalog" or "Upload Catalog" to add your first item.'
                                             : 'No catalogs are currently available.'
                                         }
-                                    </div>
+                                    />
                                 </div>
                             ) : (
                                 <>
@@ -1587,7 +1644,14 @@ const Catalog: React.FC<CatalogProps> = ({
                                                 className="pud-catalog-card"
                                                 key={item.id}
                                                 onClick={() => openCatalogDetail(item.id)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter" || e.key === " ") {
+                                                        e.preventDefault();
+                                                        openCatalogDetail(item.id);
+                                                    }
+                                                }}
                                                 role="button"
+                                                tabIndex={0}
                                                 title={`View ${item.catalogName}`}
                                             >
                                                 <div className="pud-catalog-card-media">
@@ -1597,7 +1661,7 @@ const Catalog: React.FC<CatalogProps> = ({
                                                         return imageSrc ? (
                                                             <img src={imageSrc} alt={item.catalogName} />
                                                         ) : (
-                                                            <div className="pud-catalog-card-media-placeholder"><IconFileGeneric /></div>
+                                                            <div className="pud-catalog-card-media-placeholder" aria-hidden="true"><IconFileGeneric /></div>
                                                         );
                                                     })()}
                                                 </div>
@@ -1622,27 +1686,13 @@ const Catalog: React.FC<CatalogProps> = ({
                                     </div>
 
                                     {catalogList.length > CATALOG_PAGE_SIZE && (
-                                        <div className="pud-catalog-pagination">
-                                            <button
-                                                type="button"
-                                                className="pud-btn pud-btn-outline"
-                                                disabled={catalogPage === 0}
-                                                onClick={() => setCatalogPage((p) => Math.max(0, p - 1))}
-                                            >
-                                                <IconChevronLeft /> Previous
-                                            </button>
-                                            <span className="pud-catalog-pagination-info">
-                                                Page {catalogPage + 1} of {catalogTotalPages}
-                                            </span>
-                                            <button
-                                                type="button"
-                                                className="pud-btn pud-btn-outline"
-                                                disabled={catalogPage >= catalogTotalPages - 1}
-                                                onClick={() => setCatalogPage((p) => Math.min(catalogTotalPages - 1, p + 1))}
-                                            >
-                                                Next <IconChevronRight />
-                                            </button>
-                                        </div>
+                                        <Pagination
+                                            className="pud-catalog-pagination"
+                                            page={catalogPage + 1}
+                                            totalPages={catalogTotalPages}
+                                            onPrevious={() => setCatalogPage((p) => Math.max(0, p - 1))}
+                                            onNext={() => setCatalogPage((p) => Math.min(catalogTotalPages - 1, p + 1))}
+                                        />
                                     )}
                                 </>
                             )}

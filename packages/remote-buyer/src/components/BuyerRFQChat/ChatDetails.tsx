@@ -27,18 +27,18 @@ const ChatDetails: React.FC<ChatDetailsProps> = ({
         <button type="button" className="brcd-back-btn" onClick={onBack} aria-label="Back to conversation">
           <IconChevronLeft />
         </button>
-        <div className="brcd-header-title">Chat Details</div>
+        <h3 className="brcd-header-title">Chat Details</h3>
       </div>
 
       <div className="brcd-body">
         <div className="brcd-hero">
-          <div className="brc-supplier-avatar brcd-hero-avatar">{getInitials(supplier.supplierName)}</div>
+          <div className="brc-supplier-avatar brcd-hero-avatar" aria-hidden="true">{getInitials(supplier.supplierName)}</div>
           <div className="brcd-hero-name">{supplier.supplierName}</div>
           <div className="brcd-hero-sub">Supplier</div>
         </div>
 
         <div className="brcd-section">
-          <div className="brcd-section-title">Supplier</div>
+          <h4 className="brcd-section-title">Supplier</h4>
           <div className="brcd-field">
             <span className="brcd-field-label">Name</span>
             <span className="brcd-field-value">{supplier.supplierName}</span>
@@ -46,14 +46,14 @@ const ChatDetails: React.FC<ChatDetailsProps> = ({
         </div>
 
         <div className="brcd-section">
-          <div className="brcd-section-title">Chat participants</div>
+          <h4 className="brcd-section-title">Chat participants</h4>
 
           <div className="brcd-participant-group-label">Buyer</div>
           {isLoadingBuyerProfile ? (
-            <div className="brcd-empty-note">Loading buyer details...</div>
+            <div className="brcd-empty-note" role="status">Loading buyer details...</div>
           ) : buyerProfile ? (
             <div className="brc-participant-row">
-              <div className="brc-supplier-avatar brc-participant-avatar">{getInitials(buyerDisplayName)}</div>
+              <div className="brc-supplier-avatar brc-participant-avatar" aria-hidden="true">{getInitials(buyerDisplayName)}</div>
               <div className="brc-participant-info">
                 <div className="brc-participant-name">{buyerDisplayName} (You)</div>
                 <div className="brc-participant-email">{buyerProfile.email}</div>
@@ -71,7 +71,7 @@ const ChatDetails: React.FC<ChatDetailsProps> = ({
           ) : (
             observedParticipants.map((participant) => (
               <div key={participant.userId} className="brc-participant-row">
-                <div className="brc-supplier-avatar brc-participant-avatar">{getInitials(participant.name)}</div>
+                <div className="brc-supplier-avatar brc-participant-avatar" aria-hidden="true">{getInitials(participant.name)}</div>
                 <div className="brc-participant-info">
                   <div className="brc-participant-name">{participant.name}</div>
                 </div>

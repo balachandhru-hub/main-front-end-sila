@@ -5,6 +5,7 @@ import {
     type MasterApprovalFlowDto,
 } from "../../api/itemmasterapi";
 import { toastService } from "@vosox/shared-ui";
+import { FaTimes } from "react-icons/fa";
 import "./ItemMasterModal.css";
 
 interface ItemMasterModalProps {
@@ -192,11 +193,14 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
         >
             <div
                 className="item-master-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="item-master-modal-title"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="item-master-modal-header">
                     <div>
-                        <h2 className="item-master-modal-title">
+                        <h2 className="item-master-modal-title" id="item-master-modal-title">
                             Add Item Master
                         </h2>
 
@@ -212,7 +216,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                         disabled={isSubmitting}
                         aria-label="Close"
                     >
-                        ×
+                        <FaTimes aria-hidden="true" />
                     </button>
                 </div>
 
@@ -221,10 +225,11 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     onSubmit={handleSubmit}
                 >
                     <div className="item-master-modal-body">
+                    <h3 className="item-master-section-title">Material Details</h3>
                     {/* Material Code */}
                     <div className="item-master-field">
                         <label htmlFor="item-master-material-code">
-                            MATERIAL CODE <span>*</span>
+                            Material Code <span aria-hidden="true">*</span>
                         </label>
 
                         <input
@@ -237,6 +242,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                     ? "item-master-input-error"
                                     : ""
                             }
+                            aria-required="true"
+                            aria-invalid={!!errors.materialCode}
+                            aria-describedby={errors.materialCode ? "item-master-materialCode-error" : undefined}
                             onChange={(e) => {
                                 setMaterialCode(e.target.value);
                                 clearFieldError(setErrors, "materialCode");
@@ -244,7 +252,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                         />
 
                         {errors.materialCode && (
-                            <div className="item-master-error">
+                            <div className="item-master-error" id="item-master-materialCode-error">
                                 {errors.materialCode}
                             </div>
                         )}
@@ -254,7 +262,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     <div className="item-master-fields-row">
                         <div className="item-master-field">
                             <label htmlFor="item-master-material-group">
-                                MATERIAL GROUP <span>*</span>
+                                Material Group <span aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -267,6 +275,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                         ? "item-master-input-error"
                                         : ""
                                 }
+                                aria-required="true"
+                                aria-invalid={!!errors.materialGroup}
+                                aria-describedby={errors.materialGroup ? "item-master-materialGroup-error" : undefined}
                                 onChange={(e) => {
                                     setMaterialGroup(e.target.value);
                                     clearFieldError(setErrors, "materialGroup");
@@ -274,7 +285,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             />
 
                             {errors.materialGroup && (
-                                <div className="item-master-error">
+                                <div className="item-master-error" id="item-master-materialGroup-error">
                                     {errors.materialGroup}
                                 </div>
                             )}
@@ -282,7 +293,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
 
                         <div className="item-master-field">
                             <label htmlFor="item-master-product-type">
-                                PRODUCT TYPE <span>*</span>
+                                Product Type <span aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -295,6 +306,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                         ? "item-master-input-error"
                                         : ""
                                 }
+                                aria-required="true"
+                                aria-invalid={!!errors.productType}
+                                aria-describedby={errors.productType ? "item-master-productType-error" : undefined}
                                 onChange={(e) => {
                                     setProductType(e.target.value);
                                     clearFieldError(setErrors, "productType");
@@ -302,7 +316,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             />
 
                             {errors.productType && (
-                                <div className="item-master-error">
+                                <div className="item-master-error" id="item-master-productType-error">
                                     {errors.productType}
                                 </div>
                             )}
@@ -312,7 +326,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     {/* Description */}
                     <div className="item-master-field">
                         <label htmlFor="item-master-description">
-                            DESCRIPTION <span>*</span>
+                            Description <span aria-hidden="true">*</span>
                         </label>
 
                         <input
@@ -325,6 +339,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                     ? "item-master-input-error"
                                     : ""
                             }
+                            aria-required="true"
+                            aria-invalid={!!errors.description}
+                            aria-describedby={errors.description ? "item-master-description-error" : undefined}
                             onChange={(e) => {
                                 setDescription(e.target.value);
                                 clearFieldError(setErrors, "description");
@@ -332,19 +349,20 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                         />
 
                         {errors.description && (
-                            <div className="item-master-error">
+                            <div className="item-master-error" id="item-master-description-error">
                                 {errors.description}
                             </div>
                         )}
                     </div>
 
                     <hr className="item-master-section-divider" />
+                    <h3 className="item-master-section-title">Units of Measure</h3>
 
                     {/* Base UOM, Order UOM */}
                     <div className="item-master-fields-row">
                         <div className="item-master-field">
                             <label htmlFor="item-master-base-uom">
-                                BASE UNIT OF MEASURE <span>*</span>
+                                Base Unit of Measure <span aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -357,6 +375,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                         ? "item-master-input-error"
                                         : ""
                                 }
+                                aria-required="true"
+                                aria-invalid={!!errors.baseUnitOfMeasure}
+                                aria-describedby={errors.baseUnitOfMeasure ? "item-master-baseUnitOfMeasure-error" : undefined}
                                 onChange={(e) => {
                                     setBaseUnitOfMeasure(e.target.value);
                                     clearFieldError(setErrors, "baseUnitOfMeasure");
@@ -364,7 +385,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             />
 
                             {errors.baseUnitOfMeasure && (
-                                <div className="item-master-error">
+                                <div className="item-master-error" id="item-master-baseUnitOfMeasure-error">
                                     {errors.baseUnitOfMeasure}
                                 </div>
                             )}
@@ -372,7 +393,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
 
                         <div className="item-master-field">
                             <label htmlFor="item-master-order-uom">
-                                ORDER UNIT OF MEASURE <span>*</span>
+                                Order Unit of Measure <span aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -385,6 +406,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                         ? "item-master-input-error"
                                         : ""
                                 }
+                                aria-required="true"
+                                aria-invalid={!!errors.orderUnitOfMeasure}
+                                aria-describedby={errors.orderUnitOfMeasure ? "item-master-orderUnitOfMeasure-error" : undefined}
                                 onChange={(e) => {
                                     setOrderUnitOfMeasure(e.target.value);
                                     clearFieldError(setErrors, "orderUnitOfMeasure");
@@ -392,7 +416,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             />
 
                             {errors.orderUnitOfMeasure && (
-                                <div className="item-master-error">
+                                <div className="item-master-error" id="item-master-orderUnitOfMeasure-error">
                                     {errors.orderUnitOfMeasure}
                                 </div>
                             )}
@@ -403,7 +427,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     <div className="item-master-fields-row">
                         <div className="item-master-field">
                             <label htmlFor="item-master-alternate-uom">
-                                ALTERNATE UNIT OF MEASURE <span>*</span>
+                                Alternate Unit of Measure <span aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -416,6 +440,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                         ? "item-master-input-error"
                                         : ""
                                 }
+                                aria-required="true"
+                                aria-invalid={!!errors.alternateUnitOfMeasure}
+                                aria-describedby={errors.alternateUnitOfMeasure ? "item-master-alternateUnitOfMeasure-error" : undefined}
                                 onChange={(e) => {
                                     setAlternateUnitOfMeasure(e.target.value);
                                     clearFieldError(setErrors, "alternateUnitOfMeasure");
@@ -423,7 +450,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             />
 
                             {errors.alternateUnitOfMeasure && (
-                                <div className="item-master-error">
+                                <div className="item-master-error" id="item-master-alternateUnitOfMeasure-error">
                                     {errors.alternateUnitOfMeasure}
                                 </div>
                             )}
@@ -431,7 +458,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
 
                         <div className="item-master-field">
                             <label htmlFor="item-master-valuation-class">
-                                VALUATION CLASS <span>*</span>
+                                Valuation Class <span aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -444,6 +471,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                         ? "item-master-input-error"
                                         : ""
                                 }
+                                aria-required="true"
+                                aria-invalid={!!errors.valuationClass}
+                                aria-describedby={errors.valuationClass ? "item-master-valuationClass-error" : undefined}
                                 onChange={(e) => {
                                     setValuationClass(e.target.value);
                                     clearFieldError(setErrors, "valuationClass");
@@ -451,7 +481,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             />
 
                             {errors.valuationClass && (
-                                <div className="item-master-error">
+                                <div className="item-master-error" id="item-master-valuationClass-error">
                                     {errors.valuationClass}
                                 </div>
                             )}
@@ -461,7 +491,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     {/* Unit of Measure Mapping */}
                     <div className="item-master-field">
                         <label htmlFor="item-master-uom-mapping">
-                            UNIT OF MEASURE MAPPING <span>*</span>
+                            Unit of Measure Mapping <span aria-hidden="true">*</span>
                         </label>
 
                         <input
@@ -474,6 +504,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                     ? "item-master-input-error"
                                     : ""
                             }
+                            aria-required="true"
+                            aria-invalid={!!errors.unitOfMeasureMapping}
+                            aria-describedby={errors.unitOfMeasureMapping ? "item-master-unitOfMeasureMapping-error" : undefined}
                             onChange={(e) => {
                                 setUnitOfMeasureMapping(e.target.value);
                                 clearFieldError(setErrors, "unitOfMeasureMapping");
@@ -481,7 +514,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                         />
 
                         {errors.unitOfMeasureMapping && (
-                            <div className="item-master-error">
+                            <div className="item-master-error" id="item-master-unitOfMeasureMapping-error">
                                 {errors.unitOfMeasureMapping}
                             </div>
                         )}
@@ -491,7 +524,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     <div className="item-master-fields-row">
                         <div className="item-master-field">
                             <label htmlFor="item-master-sub-unit">
-                                SUB UNIT
+                                Sub Unit
                             </label>
 
                             <input
@@ -505,7 +538,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
 
                         <div className="item-master-field">
                             <label htmlFor="item-master-micro-unit">
-                                MICRO UNIT
+                                Micro Unit
                             </label>
 
                             <input
@@ -519,11 +552,12 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     </div>
 
                     <hr className="item-master-section-divider" />
+                    <h3 className="item-master-section-title">Approval</h3>
 
                     {/* Approval Flow */}
                     <div className="item-master-field">
                         <label htmlFor="item-master-approval-flow">
-                            APPROVAL FLOW <span>*</span>
+                            Approval Flow <span aria-hidden="true">*</span>
                         </label>
 
                         <select
@@ -535,6 +569,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                     ? "item-master-input-error"
                                     : ""
                             }
+                            aria-required="true"
+                            aria-invalid={!!errors.approvalFlowId}
+                            aria-describedby={errors.approvalFlowId ? "item-master-approvalFlowId-error" : undefined}
                             onChange={(e) => {
                                 setApprovalFlowId(e.target.value);
                                 clearFieldError(setErrors, "approvalFlowId");
@@ -554,13 +591,13 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                         </select>
 
                         {errors.approvalFlowId && (
-                            <div className="item-master-error">
+                            <div className="item-master-error" id="item-master-approvalFlowId-error">
                                 {errors.approvalFlowId}
                             </div>
                         )}
 
                         {approvalFlowError && (
-                            <div className="item-master-field-hint item-master-field-hint-error">
+                            <div className="item-master-field-hint item-master-field-hint-error" role="alert">
                                 {approvalFlowError}
                             </div>
                         )}
@@ -569,7 +606,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     {/* Comment */}
                     <div className="item-master-field">
                         <label htmlFor="item-master-comment">
-                            COMMENT <span>*</span>
+                            Comment <span aria-hidden="true">*</span>
                         </label>
 
                         <textarea
@@ -582,6 +619,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                     ? "item-master-input-error"
                                     : ""
                             }
+                            aria-required="true"
+                            aria-invalid={!!errors.comment}
+                            aria-describedby={errors.comment ? "item-master-comment-error" : undefined}
                             onChange={(e) => {
                                 setComment(e.target.value);
                                 clearFieldError(setErrors, "comment");
@@ -589,7 +629,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                         />
 
                         {errors.comment && (
-                            <div className="item-master-error">
+                            <div className="item-master-error" id="item-master-comment-error">
                                 {errors.comment}
                             </div>
                         )}
@@ -600,7 +640,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     <div className="item-master-modal-footer">
                         <button
                             type="button"
-                            className="item-master-cancel-btn"
+                            className="item-master-cancel-btn sila-btn sila-btn--secondary"
                             onClick={handleClose}
                             disabled={isSubmitting}
                         >
@@ -609,7 +649,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
 
                         <button
                             type="submit"
-                            className="item-master-create-btn"
+                            className="item-master-create-btn sila-btn sila-btn--primary"
                             disabled={isSubmitting}
                         >
                             {isSubmitting

@@ -1,195 +1,290 @@
+/* Sign-in page. Scoped to .vx-* (host-only). */
+
 .vx-page {
     min-height: 100vh;
-    background: #f5f7fb;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     display: flex;
     flex-direction: column;
+    background: var(--sila-bg);
+    font-family: var(--sila-font);
+    color: var(--sila-text);
 }
 
-/* ---- Header Styles are now in Header.css ---- */
-
-.vx-logo-img--boxed {
-    height: 70px;
-    width: 150px;
-}
+/* ---- Header styles live in Header.css ---- */
 
 /* ---- Main / Card ---- */
 .vx-main {
-    display: flex;
-    justify-content: center;
-    align-items: center;
     flex: 1;
-    padding: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sila-space-10) var(--sila-space-4);
 }
 
 .vx-card {
     display: flex;
     width: 100%;
-    max-width: 800px;
-    min-height: 450px;
-    background: #ffffff;
-    border-radius: 20px;
+    max-width: 55rem;
+    min-height: 30rem;
+    background: var(--sila-surface);
+    border: 0.0625rem solid var(--sila-border);
+    border-radius: var(--sila-radius-md);
+    box-shadow: var(--sila-shadow-sm);
     overflow: hidden;
-    box-shadow: 0 20px 45px rgba(20, 40, 90, 0.12);
 }
 
-/* ---- Left panel ---- */
+/* ---- Brand panel ---- */
 .vx-left {
-    flex: 0 0 44%;
-    background: linear-gradient(135deg, #4a8cf7 0%, var(--primary-color, #2f7cf6) 45%, var(--accent-color, #1554c9) 100%);
-    padding: 80px 36px 40px 36px;
+    flex: 0 0 40%;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
-    color: #ffffff;
+    gap: var(--sila-space-3);
+    padding: var(--sila-space-10) var(--sila-space-8);
+    background: var(--sila-primary);
+    color: var(--sila-text-inverse);
 }
 
-.vx-left-logo-box {
-    background: #ffffff;
-    border-radius: 12px;
-    width: 130px;
-    height: 70px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 60px;
+.vx-left-overline {
+    font-size: var(--sila-text-2xs);
+    font-weight: var(--sila-weight-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.72);
 }
 
 .vx-left-title {
-    font-size: 22px;
-    font-weight: 700;
-    line-height: 1.2;
-    margin: 0 0 16px 0;
-    max-width: 279px;
+    margin: 0;
+    max-width: 18.75rem;
+    font-size: var(--sila-text-xl);
+    font-weight: var(--sila-weight-semibold);
+    line-height: var(--sila-leading-tight);
+    letter-spacing: -0.01em;
+    color: var(--sila-text-inverse);
 }
 
 .vx-left-text {
-    font-size: 13.5px;
-    line-height: 1.3;
-    color: rgba(255, 255, 255, 0.88);
     margin: 0;
-    max-width: 279px;
+    max-width: 18.75rem;
+    font-size: var(--sila-text-sm);
+    line-height: var(--sila-leading);
+    color: rgba(255, 255, 255, 0.82);
 }
 
-/* ---- Right panel ---- */
+.vx-left-foot {
+    display: flex;
+    align-items: center;
+    gap: var(--sila-space-2);
+    margin: auto 0 0;
+    padding-top: var(--sila-space-4);
+    border-top: 0.0625rem solid rgba(255, 255, 255, 0.18);
+    font-size: var(--sila-text-xs);
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.vx-left-foot svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    flex-shrink: 0;
+}
+
+/* ---- Form panel ---- */
 .vx-right {
     flex: 1;
-    padding: 80px 40px 44px 40px;
     display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sila-space-10) var(--sila-space-8);
+    min-width: 0;
 }
 
-.vx-title {
-    font-size: 24px;
-    font-weight: 700;
-    color: #111827;
-    margin: 0 0 6px 0;
+.vx-right-inner {
+    width: 100%;
+    max-width: 22.5rem;
 }
 
+.vx-title,
 .vx-title-sec {
-    font-size: 24px;
-    font-weight: 700;
-    color: #111827;
-    margin: 0 0 6px 0;
+    padding: 0 0 var(--sila-space-1);
+    font-size: var(--sila-text-2xl);
+    font-weight: var(--sila-weight-semibold);
+    line-height: var(--sila-leading-tight);
+    letter-spacing: -0.015em;
+    color: var(--sila-text);
 }
 
-.vx-subtitle {
-    font-size: 13.5px;
-    color: #6b7280;
-    margin: 0 0 86px 0;
-}
-
+.vx-subtitle,
 .vx-subtitle-sec {
-    font-size: 13.5px;
-    color: #6b7280;
-    margin: 0 0 26px 0;
+    padding: 0 0 var(--sila-space-6);
+    font-size: var(--sila-text-sm);
+    color: var(--sila-text-muted);
+}
+
+.vx-alert {
+    align-items: center;
+    gap: var(--sila-space-2);
+    padding-bottom: var(--sila-space-4);
+    color: var(--sila-danger-strong);
+}
+
+.vx-alert-icon {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex-shrink: 0;
+    color: var(--sila-danger);
 }
 
 /* ---- Role selection ---- */
 .vx-role-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-bottom: 26px;
+    gap: var(--sila-space-3);
+    padding-bottom: var(--sila-space-6);
 }
 
 .vx-role-card {
+    position: relative;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 22px 12px;
-    border-radius: 12px;
-    border: 1.5px solid #e2e5eb;
-    background: #ffffff;
+    align-items: flex-start;
+    gap: var(--sila-space-3);
+    padding: var(--sila-space-4);
+    font: inherit;
+    text-align: left;
+    color: var(--sila-text-secondary);
+    background: var(--sila-surface);
+    border: 0.0625rem solid var(--sila-border-strong);
+    border-radius: var(--sila-radius-md);
     cursor: pointer;
-    transition: border-color 0.15s ease, background 0.15s ease;
-    color: #374151;
+    transition: var(--sila-transition);
 }
 
 .vx-role-card:hover {
-    border-color: #b9cef9;
+    border-color: var(--sila-primary-border);
+    background: var(--sila-surface-subtle);
 }
 
-.vx-role-card--active {
-    border-color: var(--primary-color, #2f7cf6);
-    background: #f2f7ff;
-    color: var(--primary-color, #2f7cf6);
+.vx-role-card:focus-visible {
+    outline: none;
+    box-shadow: var(--sila-focus-ring);
+}
+
+.vx-role-card--active,
+.vx-role-card--active:hover {
+    border-color: var(--sila-primary);
+    background: var(--sila-primary-soft);
+    color: var(--sila-text);
+    box-shadow: inset 0 0 0 0.0625rem var(--sila-primary);
 }
 
 .vx-role-icon {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--sila-radius);
+    background: var(--sila-surface-hover);
+    color: var(--sila-text-muted);
 }
 
-.vx-role-icon img {
-    width: 48px;
-    height: 48px;
-    object-fit: contain;
+.vx-role-icon svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.vx-role-card--active .vx-role-icon {
+    background: var(--sila-surface);
+    color: var(--sila-primary);
 }
 
 .vx-role-label {
-    font-size: 13.5px;
-    font-weight: 600;
+    font-size: var(--sila-text-md);
+    font-weight: var(--sila-weight-semibold);
+}
+
+.vx-role-radio {
+    position: absolute;
+    top: var(--sila-space-3);
+    right: var(--sila-space-3);
+    width: 1rem;
+    height: 1rem;
+    border: 0.0938rem solid var(--sila-border-strong);
+    border-radius: 50%;
+    background: var(--sila-surface);
+}
+
+.vx-role-card--active .vx-role-radio {
+    border: 0.3125rem solid var(--sila-primary);
 }
 
 /* ---- Form fields ---- */
 .vx-field {
-    margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sila-space-1-5);
+    padding-bottom: var(--sila-space-4);
 }
 
 .vx-label {
+    font-size: var(--sila-text-sm);
+    font-weight: var(--sila-weight-medium);
+    color: var(--sila-text-secondary);
+    line-height: var(--sila-leading-tight);
+}
+
+.vx-input-wrap {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 7px;
 }
 
-.vx-input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 11px 14px;
-    border-radius: 8px;
-    border: 1px solid #d8dce3;
-    font-size: 13.5px;
-    color: #111827;
+.vx-input-icon {
+    position: absolute;
+    left: 0.75rem;
+    width: 0.8125rem;
+    height: 0.8125rem;
+    color: var(--sila-text-subtle);
+    pointer-events: none;
+}
+
+.vx-input.sila-input {
+    height: var(--sila-control-height-lg);
+    padding-left: 2.125rem;
+}
+
+.vx-input--password.sila-input {
+    padding-right: 2.625rem;
+}
+
+.vx-pw-toggle {
+    position: absolute;
+    right: 0.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--sila-radius-sm);
+    background: transparent;
+    color: var(--sila-text-muted);
+    cursor: pointer;
+    transition: var(--sila-transition);
+}
+
+.vx-pw-toggle:hover {
+    background: var(--sila-surface-hover);
+    color: var(--sila-text);
+}
+
+.vx-pw-toggle:focus-visible {
     outline: none;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: var(--sila-focus-ring);
 }
 
-.vx-input:focus {
-    border-color: var(--primary-color, #2f7cf6);
-    box-shadow: 0 0 0 3px rgba(47, 124, 246, 0.12);
-}
-
-.vx-input::placeholder {
-    color: #9aa1ac;
+.vx-pw-toggle svg {
+    width: 0.9375rem;
+    height: 0.9375rem;
 }
 
 /* ---- Row utilities ---- */
@@ -197,68 +292,117 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 22px;
+    gap: var(--sila-space-3);
+    padding: var(--sila-space-1) 0 var(--sila-space-5);
 }
 
 .vx-checkbox {
-    display: flex;
+    position: relative;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: #4b5563;
+    gap: var(--sila-space-2);
+    font-size: var(--sila-text-sm);
+    color: var(--sila-text-secondary);
     cursor: pointer;
     user-select: none;
 }
 
+.vx-checkbox-input {
+    position: absolute;
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
 .vx-checkbox-box {
-    width: 16px;
-    height: 16px;
-    border-radius: 4px;
-    border: 1.5px solid #c6cbd3;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 1rem;
+    height: 1rem;
     flex-shrink: 0;
+    border: 0.0625rem solid var(--sila-border-strong);
+    border-radius: var(--sila-radius-xs);
+    background: var(--sila-surface);
+    color: var(--sila-text-inverse);
+    transition: var(--sila-transition);
+}
+
+.vx-checkbox-input:focus-visible + .vx-checkbox-box {
+    box-shadow: var(--sila-focus-ring);
+    border-color: var(--sila-primary);
 }
 
 .vx-checkbox-box--checked {
-    background: var(--primary-color, #2f7cf6);
-    border-color: var(--primary-color, #2f7cf6);
+    background: var(--sila-primary);
+    border-color: var(--sila-primary);
 }
 
 .vx-link {
-    color: var(--primary-color, #2f7cf6);
-    font-size: 13px;
-    font-weight: 600;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: var(--sila-text-sm);
+    font-weight: var(--sila-weight-medium);
+    color: var(--sila-primary);
     text-decoration: none;
+    cursor: pointer;
 }
 
 .vx-link:hover {
+    color: var(--sila-primary-hover);
     text-decoration: underline;
 }
 
+.vx-link:focus-visible {
+    outline: 0.125rem solid var(--sila-primary);
+    outline-offset: 0.125rem;
+    border-radius: var(--sila-radius-xs);
+}
+
 .vx-footer-text {
+    margin: var(--sila-space-5) 0 0;
+    padding-top: var(--sila-space-4);
+    border-top: 0.0625rem solid var(--sila-border-subtle);
     text-align: center;
-    font-size: 13px;
-    color: #6b7280;
-    margin: 18px 0 0 0;
+    font-size: var(--sila-text-sm);
+    color: var(--sila-text-muted);
 }
 
 /* ---- Responsive ---- */
-@media (max-width: 720px) {
+@media (max-width: 48rem) {
+    .vx-main {
+        align-items: flex-start;
+        padding: var(--sila-space-6) var(--sila-space-4);
+    }
+
     .vx-card {
         flex-direction: column;
+        min-height: 0;
     }
 
     .vx-left {
         flex: none;
-        padding: 32px 28px;
+        padding: var(--sila-space-6);
+    }
+
+    .vx-left-foot {
+        display: none;
     }
 
     .vx-right {
-        padding: 32px 28px;
+        padding: var(--sila-space-6);
     }
 
+    .vx-right-inner {
+        max-width: none;
+    }
+}
+
+@media (max-width: 26.25rem) {
     .vx-role-grid {
         grid-template-columns: 1fr;
     }

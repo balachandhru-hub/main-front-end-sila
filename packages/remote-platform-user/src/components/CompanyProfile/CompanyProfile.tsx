@@ -12,6 +12,7 @@ import {
   FaInfoCircle,
   FaChevronUp,
   FaChevronDown,
+  FaChevronRight,
   FaCheck,
   FaTimes,
   FaFilePdf,
@@ -26,7 +27,6 @@ import {
   FaUserCircle,
   FaCog,
   FaEdit,
-  FaSpinner,
   FaTrash,
   FaCubes
 } from 'react-icons/fa';
@@ -68,7 +68,8 @@ import type {
 } from '../../dto/platformDto';
 import './CompanyProfile.css';
 import { FaPlus } from 'react-icons/fa6';
-import { isErrorResponse, toastService } from '@vosox/shared-ui';
+import { EmptyState, Loader, StatusBadge, isErrorResponse, toastService } from '@vosox/shared-ui';
+import type { StatusTone } from '@vosox/shared-ui';
 
 interface CompanyProfileProps {
   mode?: 'admin-review' | 'network-admin';
@@ -152,6 +153,19 @@ const statusLabelMap: Record<string, string> = {
   REJECTED: 'Rejected',
 };
 
+/* Badge tone for each status class above (unknown statuses fall back to "pending"). */
+const statusToneMap: Record<string, StatusTone> = {
+  'cp-status-pending': 'warning',
+  'cp-status-verified': 'success',
+  'cp-status-rejected': 'danger',
+};
+
+const YesNoBadge: React.FC<{ value?: boolean }> = ({ value }) => (
+  <span className={`sila-badge sila-badge--sm cp-status-pill ${value ? 'sila-badge--success' : 'sila-badge--neutral'}`}>
+    {value ? 'Yes' : 'No'}
+  </span>
+);
+
 const SectionHeader: React.FC<{
   icon: React.ReactNode;
   title: string;
@@ -159,12 +173,12 @@ const SectionHeader: React.FC<{
   onToggle: () => void;
   extra?: React.ReactNode;
 }> = ({ icon, title, isOpen, onToggle, extra }) => (
-  <div className="cp-card-title" onClick={onToggle} role="button" tabIndex={0}>
-    <span className="cp-card-icon">{icon}</span>
+  <button type="button" className="cp-card-title" onClick={onToggle} aria-expanded={isOpen}>
+    <span className="cp-card-icon" aria-hidden="true">{icon}</span>
     <span className="cp-card-title-text">{title}</span>
     {extra}
-    <span className="cp-card-chevron">{isOpen ? <FaChevronUp /> : <FaChevronDown />}</span>
-  </div>
+    <span className="cp-card-chevron" aria-hidden="true">{isOpen ? <FaChevronUp /> : <FaChevronDown />}</span>
+  </button>
 );
 
 const MaskedAccountNumber: React.FC<{ accountNumber?: string }> = ({ accountNumber }) => {
@@ -176,15 +190,16 @@ const MaskedAccountNumber: React.FC<{ accountNumber?: string }> = ({ accountNumb
       : accountNumber;
   return (
     <span className="cp-field-value cp-field-masked">
-      {revealed ? accountNumber : masked}
+      <span className="cp-field-mono">{revealed ? accountNumber : masked}</span>
       <button
         type="button"
         className="cp-icon-toggle"
         onClick={() => setRevealed((v) => !v)}
         aria-label="Toggle account number visibility"
+        aria-pressed={revealed}
         title={revealed ? 'Hide' : 'Show'}
       >
-        {revealed ? <FaEyeSlash /> : <FaEye />}
+        {revealed ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
       </button>
     </span>
   );
@@ -201,29 +216,36 @@ const ConfirmationModal: React.FC<{
   if (!isOpen) return null;
 
   return (
-    <div className="cp-confirmation-overlay" onClick={onCancel}>
-      <div className="cp-confirmation-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="cp-confirmation-header">
-          <h3 className="cp-confirmation-title">{title}</h3>
+    <div className="sila-overlay cp-confirmation-overlay" onClick={onCancel}>
+      <div
+        className="sila-modal cp-confirmation-modal"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="cp-confirmation-title"
+        aria-describedby="cp-confirmation-message"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sila-modal-header cp-confirmation-header">
+          <h3 id="cp-confirmation-title" className="sila-modal-title cp-confirmation-title">{title}</h3>
           <button
             type="button"
-            className="cp-confirmation-close"
+            className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm cp-confirmation-close"
             onClick={onCancel}
             aria-label="Close"
             disabled={isLoading}
           >
-            <FaTimes />
+            <FaTimes aria-hidden="true" />
           </button>
         </div>
 
-        <div className="cp-confirmation-body">
-          <p className="cp-confirmation-message">{message}</p>
+        <div className="sila-modal-body cp-confirmation-body">
+          <p id="cp-confirmation-message" className="sila-modal-text cp-confirmation-message">{message}</p>
         </div>
 
-        <div className="cp-confirmation-footer">
+        <div className="sila-modal-footer cp-confirmation-footer">
           <button
             type="button"
-            className="cp-confirmation-btn cp-confirmation-btn-cancel"
+            className="sila-btn sila-btn--secondary cp-confirmation-btn cp-confirmation-btn-cancel"
             onClick={onCancel}
             disabled={isLoading}
           >
@@ -231,18 +253,18 @@ const ConfirmationModal: React.FC<{
           </button>
           <button
             type="button"
-            className="cp-confirmation-btn cp-confirmation-btn-delete"
+            className="sila-btn sila-btn--danger cp-confirmation-btn cp-confirmation-btn-delete"
             onClick={onConfirm}
             disabled={isLoading}
           >
             {isLoading ? (
               <>
-                <FaSpinner className="cp-confirmation-spinner" />
+                <span className="sila-spinner" aria-hidden="true" />
                 Deleting...
               </>
             ) : (
               <>
-                <FaTrash />
+                <FaTrash aria-hidden="true" />
                 Yes, Delete
               </>
             )}
@@ -252,6 +274,7 @@ const ConfirmationModal: React.FC<{
     </div>
   );
 };
+
 
 const CompanyProfile: React.FC<CompanyProfileProps> = ({
   mode = 'admin-review',
@@ -802,27 +825,24 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
 
   if (isLoading) {
     return (
-      <div className="cp-loading-container">
-        <div className="cp-spinner"></div>
-        <p>Loading company profile...</p>
+      <div className="cp-page--platform cp-loading-container">
+        <Loader message="Loading company profile..." />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="cp-error-container">
-        <FaInfoCircle className="cp-error-icon" />
-        <p>{error}</p>
+      <div className="cp-page--platform cp-error-container">
+        <EmptyState variant="error" icon={<FaInfoCircle className="cp-error-icon" aria-hidden="true" />} title={error} />
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="cp-empty-container">
-        <FaBuilding className="cp-empty-icon" />
-        <p>No company profile found.</p>
+      <div className="cp-page--platform cp-empty-container">
+        <EmptyState icon={<FaBuilding className="cp-empty-icon" aria-hidden="true" />} title="No company profile found." />
       </div>
     );
   }
@@ -840,42 +860,90 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
   const isPending = statusUpper === 'PENDING_VERIFICATION' || statusUpper === 'PENDING' || statusUpper === '' || statusUpper === 'PENDING_REVIEW';
   const statusClass = statusClassMap[statusKey] || statusClassMap[statusUpper] || 'cp-status-pending';
   const statusLabel = statusLabelMap[statusKey] || statusLabelMap[statusUpper] || statusKey || '-';
+  const statusTone = statusToneMap[statusClass] || 'warning';
+
+  const statusBadge = (
+    <StatusBadge status={statusKey || 'PENDING'} label={statusLabel} tone={statusTone} dot />
+  );
+
+  const reviewActions =
+    mode === 'admin-review' && isPending && (onVerify || onReject) ? (
+      <div className="cp-header-actions">
+        {onVerify && (
+          <button
+            type="button"
+            className="sila-btn sila-btn--success"
+            title="Verify this company"
+            onClick={onVerify}
+            disabled={isStatusLoading}
+          >
+            <FaCheck aria-hidden="true" />
+            Verify
+          </button>
+        )}
+        {onReject && (
+          <button
+            type="button"
+            className="sila-btn sila-btn--secondary cp-btn-reject-action"
+            title="Reject this company"
+            onClick={onReject}
+            disabled={isStatusLoading}
+          >
+            <FaTimes aria-hidden="true" />
+            Reject
+          </button>
+        )}
+      </div>
+    ) : null;
 
   return (
-    <div className="cp-page">
+    <div className="cp-page cp-page--platform">
       {showHeader && (
-        <div className="cp-page-header cp-page-header-flex">
-          <div className="cp-page-header-left">
+        <div className="sila-page-header cp-page-header cp-page-header-flex">
+          <div className="sila-page-header-main cp-page-header-left">
             {onBack && (
               <button
+                type="button"
                 onClick={onBack}
                 title="Back to Dashboard"
-                className="cp-back-btn"
+                aria-label="Back to Dashboard"
+                className="sila-btn sila-btn--secondary sila-btn--icon sila-btn--sm sila-page-back cp-back-btn"
               >
-                <FaArrowLeft className="cp-back-btn-icon" /> Back
+                <FaArrowLeft className="cp-back-btn-icon" aria-hidden="true" />
               </button>
             )}
             <div>
-              <h1 className="cp-page-title">Company Details</h1>
-              <p className="cp-page-subtitle">View and manage {entityLabel.toLowerCase()} information</p>
+              <div className="sila-page-title-row">
+                <h1 className="sila-page-title cp-page-title">Company Details</h1>
+                {statusBadge}
+              </div>
+              <p className="sila-page-description cp-page-subtitle">View and manage {entityLabel.toLowerCase()} information</p>
             </div>
           </div>
 
-          {onSettingsClick && (
-            <button
-              className="plat-icon-btn cp-settings-btn"
-              onClick={onSettingsClick}
-              title="Settings"
-            >
-              <FaCog />
-            </button>
+          {(reviewActions || onSettingsClick) && (
+            <div className="sila-page-actions">
+              {reviewActions}
+              {onSettingsClick && (
+                <button
+                  type="button"
+                  className="sila-btn sila-btn--secondary sila-btn--icon cp-settings-btn"
+                  onClick={onSettingsClick}
+                  title="Settings"
+                  aria-label="Settings"
+                >
+                  <FaCog aria-hidden="true" />
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}
 
       {statusError && (
-        <div className="cp-status-error-banner">
-          {statusError}
+        <div className="sila-alert sila-alert--danger cp-status-error-banner" role="alert">
+          <FaInfoCircle className="cp-alert-icon" aria-hidden="true" />
+          <span>{statusError}</span>
         </div>
       )}
 
@@ -884,17 +952,18 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
           {onBack && !showHeader && (
             <div className="cp-back-btn-wrapper">
               <button
+                type="button"
                 onClick={onBack}
                 title="Back to Dashboard"
-                className="cp-back-btn cp-back-btn-sm"
+                className="sila-btn sila-btn--ghost sila-btn--sm cp-back-btn cp-back-btn-sm"
               >
-                <FaArrowLeft className="cp-back-btn-icon" /> Back
+                <FaArrowLeft className="cp-back-btn-icon" aria-hidden="true" /> Back
               </button>
             </div>
           )}
           <div className="cp-header-top">
             <div className="cp-header-left">
-              <div className="cp-org-icon">
+              <div className="cp-org-icon" aria-hidden="true">
                 <FaBuilding />
               </div>
               <div className="cp-org-info">
@@ -902,13 +971,13 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                 <div className="cp-org-contact">
                   {bp.email && (
                     <span className="cp-contact-item">
-                      <FaEnvelope />
+                      <FaEnvelope aria-hidden="true" />
                       {bp.email}
                     </span>
                   )}
                   {bp.phone && (
                     <span className="cp-contact-item">
-                      <FaPhone />
+                      <FaPhone aria-hidden="true" />
                       +91 {bp.phone}
                     </span>
                   )}
@@ -916,41 +985,13 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
               </div>
             </div>
 
-            {mode === 'admin-review' && isPending && (
-              <div className="cp-header-actions">
-                {onVerify && (
-                  <button
-                    className="cp-btn cp-btn-verify"
-                    title="Verify this company"
-                    onClick={onVerify}
-                    disabled={isStatusLoading}
-                  >
-                    <FaCheck />
-                    Verify
-                  </button>
-                )}
-                {onReject && (
-                  <button
-                    className="cp-btn cp-btn-reject"
-                    title="Reject this company"
-                    onClick={onReject}
-                    disabled={isStatusLoading}
-                  >
-                    <FaTimes />
-                    Reject
-                  </button>
-                )}
-              </div>
-            )}
+            {!showHeader && reviewActions}
           </div>
 
           <div className="cp-org-badges">
-            <span className={`cp-badge ${statusClass}`}>
-              <span className="cp-status-dot"></span>
-              {statusLabel}
-            </span>
-            {bp.businessType && <span className="cp-badge cp-badge-outline">{bp.businessType}</span>}
-            {bp.industry && <span className="cp-badge cp-badge-outline">{bp.industry}</span>}
+            {!showHeader && statusBadge}
+            {bp.businessType && <span className="sila-badge sila-badge--neutral">{bp.businessType}</span>}
+            {bp.industry && <span className="sila-badge sila-badge--neutral">{bp.industry}</span>}
           </div>
         </div>
 
@@ -1007,41 +1048,43 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                       </div>
                       <div className="cp-field">
                         <span className="cp-field-label">Employee Count</span>
-                        <span className="cp-field-value">{bp.employeeCount ?? '-'}</span>
+                        <span className="cp-field-value cp-field-num">{bp.employeeCount ?? '-'}</span>
                       </div>
                       <div className="cp-field">
                         <span className="cp-field-label">Annual Turnover</span>
-                        <span className="cp-field-value">{formatCurrency(bp.annualTurnover, bp.currency)}</span>
+                        <span className="cp-field-value cp-field-num">{formatCurrency(bp.annualTurnover, bp.currency)}</span>
                       </div>
                     </div>
 
                     <div className="cp-grid-column cp-address-box">
                       <div className="cp-field">
                         <span className="cp-field-label">Year Established</span>
-                        <span className="cp-field-value">{bp.yearEstablished ?? '-'}</span>
+                        <span className="cp-field-value cp-field-num">{bp.yearEstablished ?? '-'}</span>
                       </div>
                       <div className="cp-field">
                         <span className="cp-field-label">Currency</span>
                         <span className="cp-field-value">{bp.currency || '-'}</span>
                       </div>
                       <div className="cp-field">
-                        <span className="cp-field-label ">Description</span>
-                        <span className="cp-field-value">{bp.description || '-'}</span>
+                        <span className="cp-field-label">Description</span>
+                        <span className="cp-field-value cp-field-value-regular">{bp.description || '-'}</span>
                       </div>
                     </div>
 
                     <div className="cp-grid-column cp-address-box">
-                      <span className="cp-field-label cp-field-label-icon">
-                        <FaMapMarkerAlt />
-                        Address
-                      </span>
-                      <span className="cp-field-value">
-                        {bp.addressLine1 || '-'}
-                        <br />
-                        {bp.city || '-'}, {bp.state || '-'}
-                        <br />
-                        {bp.pinCode || '-'}, {bp.country || '-'}
-                      </span>
+                      <div className="cp-field">
+                        <span className="cp-field-label cp-field-label-icon">
+                          <FaMapMarkerAlt aria-hidden="true" />
+                          Address
+                        </span>
+                        <span className="cp-field-value">
+                          {bp.addressLine1 || '-'}
+                          <br />
+                          {bp.city || '-'}, {bp.state || '-'}
+                          <br />
+                          {bp.pinCode || '-'}, {bp.country || '-'}
+                        </span>
+                      </div>
                       <div className="cp-sub-grid">
                         <div className="cp-field">
                           <span className="cp-field-label">Country</span>
@@ -1068,39 +1111,43 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                 title="2. Business Registrations"
                 isOpen={openSections.registrations}
                 onToggle={() => toggleSection('registrations')}
+                extra={<span className="sila-count sila-count--neutral">{registrations.length}</span>}
               />
               {openSections.registrations && (
-                <div className="cp-section-box">
+                <div className="cp-section-box cp-section-box-flush">
                   {registrations.length === 0 ? (
                     <p className="cp-empty-inline">No registrations added</p>
                   ) : (
-                    <div className="cp-table-wrapper">
-                      <table className="cp-table">
+                    <div className="sila-table-wrap cp-table-wrapper">
+                      <table className="sila-table cp-table">
                         <thead>
                           <tr>
-                            <th>Type</th>
-                            <th>Number</th>
-                            <th>Name</th>
-                            <th>Expiry Date</th>
-                            <th>Document</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Number</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Expiry Date</th>
+                            <th scope="col">Document</th>
                           </tr>
                         </thead>
                         <tbody>
                           {registrations.map((reg, idx) => (
                             <tr key={idx}>
-                              <td>{reg.registrationType || '-'}</td>
-                              <td>{reg.registrationNumber || '-'}</td>
+                              <td className="sila-cell-strong">{reg.registrationType || '-'}</td>
+                              <td><span className="sila-ref">{reg.registrationNumber || '-'}</span></td>
                               <td>{reg.registrationName || '-'}</td>
-                              <td>{formatDate(reg.expiryDate)}</td>
+                              <td className="cp-cell-nowrap">{formatDate(reg.expiryDate)}</td>
                               <td>
                                 {reg.asset?.fileName || (reg.asset as any)?.id ? (
-                                  <div className="cp-doc-link-wrapper">
-                                    <span className="cp-doc-link" title={reg.asset?.fileName}>
+                                  <div className="sila-file cp-doc-link-wrapper">
+                                    <span className="sila-file-icon cp-doc-file-icon" aria-hidden="true">
                                       <FaFilePdf className="cp-pdf-icon" />
+                                    </span>
+                                    <span className="sila-file-name cp-doc-link" title={reg.asset?.fileName}>
                                       {reg.asset?.fileName || 'Document'}
                                     </span>
-                                    <span
-                                      className={`cp-doc-actions ${onViewDocument ? 'cp-doc-actions-clickable' : 'cp-doc-actions-default'}`}
+                                    <button
+                                      type="button"
+                                      className={`sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm cp-doc-actions ${onViewDocument ? 'cp-doc-actions-clickable' : 'cp-doc-actions-default'}`}
                                       onClick={() => {
                                         const assetId = reg.asset?.id || (reg.asset as any)?.id;
                                         if (assetId && onViewDocument) {
@@ -1108,12 +1155,13 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                                         }
                                       }}
                                       title="View Document"
+                                      aria-label={`View document ${reg.asset?.fileName || ''}`.trim()}
                                     >
-                                      <FaEye className="cp-eye-icon" />
-                                    </span>
+                                      <FaEye className="cp-eye-icon" aria-hidden="true" />
+                                    </button>
                                   </div>
                                 ) : (
-                                  '-'
+                                  <span className="sila-cell-muted">-</span>
                                 )}
                               </td>
                             </tr>
@@ -1135,8 +1183,8 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                   onToggle={() => toggleSection('bank')}
                   extra={
                     bankAccounts.some((a) => a.isPrimary) ? (
-                      <span className="cp-pill cp-pill-yes">
-                        <FaCheck /> Primary Account
+                      <span className="sila-badge sila-badge--sm sila-badge--success cp-pill">
+                        <FaCheck aria-hidden="true" /> Primary Account
                       </span>
                     ) : undefined
                   }
@@ -1144,11 +1192,12 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                 {isManageable && (
                   <button
                     type="button"
-                    className="cp-manage-btn"
+                    className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm cp-manage-btn"
                     title="Manage Bank Accounts"
+                    aria-label="Manage Bank Accounts"
                     onClick={openBankModal}
                   >
-                    <FaCog />
+                    <FaCog aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -1180,13 +1229,11 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                           </div>
                           <div className="cp-field">
                             <span className="cp-field-label">IFSC Code</span>
-                            <span className="cp-field-value">{acc.ifscCode || '-'}</span>
+                            <span className="cp-field-value cp-field-mono">{acc.ifscCode || '-'}</span>
                           </div>
                           <div className="cp-field">
                             <span className="cp-field-label">Primary Account</span>
-                            <span className={`cp-status-pill ${acc.isPrimary ? 'cp-pill-green' : 'cp-pill-red'}`}>
-                              {acc.isPrimary ? 'Yes' : 'No'}
-                            </span>
+                            <YesNoBadge value={acc.isPrimary} />
                           </div>
 
                           <div className="cp-field">
@@ -1195,13 +1242,11 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                           </div>
                           <div className="cp-field">
                             <span className="cp-field-label">SWIFT Code</span>
-                            <span className="cp-field-value">{acc.swiftCode || '-'}</span>
+                            <span className="cp-field-value cp-field-mono">{acc.swiftCode || '-'}</span>
                           </div>
                           <div className="cp-field">
                             <span className="cp-field-label">Verified</span>
-                            <span className={`cp-status-pill ${acc.isVerified ? 'cp-pill-green' : 'cp-pill-red'}`}>
-                              {acc.isVerified ? 'Yes' : 'No'}
-                            </span>
+                            <YesNoBadge value={acc.isVerified} />
                           </div>
                         </div>
                       </React.Fragment>
@@ -1222,11 +1267,12 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                 {isManageable && (
                   <button
                     type="button"
-                    className="cp-manage-btn"
+                    className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm cp-manage-btn"
                     title="Manage Delivery Locations"
+                    aria-label="Manage Delivery Locations"
                     onClick={openDispatchModal}
                   >
-                    <FaCog />
+                    <FaCog aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -1255,9 +1301,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                           </div>
                           <div className="cp-field">
                             <span className="cp-field-label">Default Location</span>
-                            <span className={`cp-status-pill ${loc.isDefault ? 'cp-pill-green' : 'cp-pill-red'}`}>
-                              {loc.isDefault ? 'Yes' : 'No'}
-                            </span>
+                            <YesNoBadge value={loc.isDefault} />
                           </div>
 
                           <div className="cp-field">
@@ -1274,8 +1318,6 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                               {loc.contactPhone ? `+91 ${loc.contactPhone}` : '-'}
                             </span>
                           </div>
-                          <div className="cp-field"></div>
-                          <div className="cp-field"></div>
                         </div>
                       </React.Fragment>
                     ))
@@ -1290,39 +1332,42 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                 title="5. Product Categories"
                 isOpen={openSections.categories}
                 onToggle={() => toggleSection('categories')}
+                extra={<span className="sila-count sila-count--neutral">{categories.length}</span>}
               />
               {openSections.categories && (
                 <div className="cp-section-box">
                   {categories.length === 0 ? (
                     <p className="cp-empty-inline">No categories added</p>
                   ) : (
-                    categories.map((cat, idx) => (
-                      <div className="cp-category-chain" key={idx}>
-                        <div className="cp-category-step">
-                          <span className="cp-category-label cp-category-label-segment">Segment</span>
-                          <span className="cp-field-value">{cat.segment ?? '-'}</span>
-                          <span className="cp-category-sub">{cat.segmentTitle || '-'}</span>
+                    <div className="cp-category-list">
+                      {categories.map((cat, idx) => (
+                        <div className="cp-category-chain" key={idx}>
+                          <div className="cp-category-step">
+                            <span className="cp-category-label cp-category-label-segment">Segment</span>
+                            <span className="cp-field-value cp-field-mono">{cat.segment ?? '-'}</span>
+                            <span className="cp-category-sub">{cat.segmentTitle || '-'}</span>
+                          </div>
+                          <span className="cp-category-arrow" aria-hidden="true"><FaChevronRight /></span>
+                          <div className="cp-category-step">
+                            <span className="cp-category-label cp-category-label-family">Family</span>
+                            <span className="cp-field-value cp-field-mono">{cat.family ?? '-'}</span>
+                            <span className="cp-category-sub">{cat.familyTitle || '-'}</span>
+                          </div>
+                          <span className="cp-category-arrow" aria-hidden="true"><FaChevronRight /></span>
+                          <div className="cp-category-step">
+                            <span className="cp-category-label cp-category-label-class">Class</span>
+                            <span className="cp-field-value cp-field-mono">{cat.class ?? '-'}</span>
+                            <span className="cp-category-sub">{cat.classTitle || '-'}</span>
+                          </div>
+                          <span className="cp-category-arrow" aria-hidden="true"><FaChevronRight /></span>
+                          <div className="cp-category-step">
+                            <span className="cp-category-label cp-category-label-commodity">Commodity</span>
+                            <span className="cp-field-value cp-field-mono">{cat.commodity ?? '-'}</span>
+                            <span className="cp-category-sub">{cat.commodityTitle || '-'}</span>
+                          </div>
                         </div>
-                        <span className="cp-category-arrow">→</span>
-                        <div className="cp-category-step">
-                          <span className="cp-category-label cp-category-label-family">Family</span>
-                          <span className="cp-field-value">{cat.family ?? '-'}</span>
-                          <span className="cp-category-sub">{cat.familyTitle || '-'}</span>
-                        </div>
-                        <span className="cp-category-arrow">→</span>
-                        <div className="cp-category-step">
-                          <span className="cp-category-label cp-category-label-class">Class</span>
-                          <span className="cp-field-value">{cat.class ?? '-'}</span>
-                          <span className="cp-category-sub">{cat.classTitle || '-'}</span>
-                        </div>
-                        <span className="cp-category-arrow">→</span>
-                        <div className="cp-category-step">
-                          <span className="cp-category-label cp-category-label-commodity">Commodity</span>
-                          <span className="cp-field-value">{cat.commodity ?? '-'}</span>
-                          <span className="cp-category-sub">{cat.commodityTitle || '-'}</span>
-                        </div>
-                      </div>
-                    ))
+                      ))}
+                    </div>
                   )}
                 </div>
               )}
@@ -1349,94 +1394,91 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
             )}
           </div>
 
-          <aside className="cp-side-col">
+          <aside className="cp-side-col" aria-label={`${entityLabel} Summary`}>
             <div className="cp-card cp-summary-card">
               <div className="cp-card-title cp-card-title-static">
-                <span className="cp-card-icon">
+                <span className="cp-card-icon" aria-hidden="true">
                   <FaInfoCircle />
                 </span>
-                <span className="cp-card-title-text">{entityLabel} Summary</span>
+                <h2 className="cp-card-title-text">{entityLabel} Summary</h2>
               </div>
 
               <div className="cp-summary-content">
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaBuilding className="cp-summary-icon" /> Organization Name
+                    <FaBuilding className="cp-summary-icon" aria-hidden="true" /> Organization Name
                   </span>
                   <span className="cp-summary-value">{bp.organizationName || '-'}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaInfoCircle className="cp-summary-icon" /> Status
+                    <FaInfoCircle className="cp-summary-icon" aria-hidden="true" /> Status
                   </span>
-                  <span className={`cp-status-dot-inline ${statusClass}`}>
-                    <span className="cp-status-dot"></span>
-                    {statusLabel}
-                  </span>
+                  <StatusBadge status={statusKey || 'PENDING'} label={statusLabel} tone={statusTone} size="sm" />
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaIndustry className="cp-summary-icon" /> Industry
+                    <FaIndustry className="cp-summary-icon" aria-hidden="true" /> Industry
                   </span>
                   <span className="cp-summary-value">{bp.industry || '-'}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaBriefcase className="cp-summary-icon" /> Business Type
+                    <FaBriefcase className="cp-summary-icon" aria-hidden="true" /> Business Type
                   </span>
                   <span className="cp-summary-value">{bp.businessType || '-'}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaUsers className="cp-summary-icon" /> Employees
+                    <FaUsers className="cp-summary-icon" aria-hidden="true" /> Employees
                   </span>
-                  <span className="cp-summary-value">{bp.employeeCount ?? '-'}</span>
+                  <span className="cp-summary-value cp-field-num">{bp.employeeCount ?? '-'}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaMoneyBillWave className="cp-summary-icon" /> Annual Turnover
+                    <FaMoneyBillWave className="cp-summary-icon" aria-hidden="true" /> Annual Turnover
                   </span>
-                  <span className="cp-summary-value">{formatCurrency(bp.annualTurnover, bp.currency)}</span>
+                  <span className="cp-summary-value cp-field-num">{formatCurrency(bp.annualTurnover, bp.currency)}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaCalendarAlt className="cp-summary-icon" /> Year Established
+                    <FaCalendarAlt className="cp-summary-icon" aria-hidden="true" /> Year Established
                   </span>
-                  <span className="cp-summary-value">{bp.yearEstablished ?? '-'}</span>
+                  <span className="cp-summary-value cp-field-num">{bp.yearEstablished ?? '-'}</span>
                 </div>
 
                 <div className="cp-divider" />
 
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaFileContract className="cp-summary-icon" /> Registrations
+                    <FaFileContract className="cp-summary-icon" aria-hidden="true" /> Registrations
                   </span>
-                  <span className="cp-summary-value">{registrations.length}</span>
+                  <span className="cp-summary-value cp-field-num">{registrations.length}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaUniversity className="cp-summary-icon" /> Bank Accounts
+                    <FaUniversity className="cp-summary-icon" aria-hidden="true" /> Bank Accounts
                   </span>
-                  <span className="cp-summary-value">{bankAccounts.length}</span>
+                  <span className="cp-summary-value cp-field-num">{bankAccounts.length}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaMapMarkerAlt className="cp-summary-icon" /> Delivery Locations
+                    <FaMapMarkerAlt className="cp-summary-icon" aria-hidden="true" /> Delivery Locations
                   </span>
-                  <span className="cp-summary-value">{dispatchLocations.length}</span>
+                  <span className="cp-summary-value cp-field-num">{dispatchLocations.length}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaTags className="cp-summary-icon" /> Product Categories
+                    <FaTags className="cp-summary-icon" aria-hidden="true" /> Product Categories
                   </span>
-                  <span className="cp-summary-value">{categories.length}</span>
+                  <span className="cp-summary-value cp-field-num">{categories.length}</span>
                 </div>
 
                 <div className="cp-divider" />
 
                 <div className="cp-summary-row cp-summary-row-stacked">
                   <span className="cp-summary-label">
-                    <FaUserCircle className="cp-summary-icon" /> Created By
+                    <FaUserCircle className="cp-summary-icon" aria-hidden="true" /> Created By
                   </span>
                   <span className="cp-summary-value cp-summary-value-link">{bp.email || '-'}</span>
                 </div>
@@ -1447,10 +1489,16 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
       </div>
 
       {isBankModalOpen && (
-        <div className="cp-modal-overlay" onClick={closeBankModal}>
-          <div className="cp-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="cp-modal-header">
-              <h3 className="cp-modal-title">
+        <div className="sila-overlay cp-modal-overlay" onClick={closeBankModal}>
+          <div
+            className="sila-modal sila-modal--lg cp-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cp-bank-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sila-modal-header cp-modal-header">
+              <h3 id="cp-bank-modal-title" className="sila-modal-title cp-modal-title">
                 {bankModalView === 'list'
                   ? 'Bank Accounts'
                   : editingBankAccount
@@ -1459,43 +1507,48 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
               </h3>
               <button
                 type="button"
-                className="cp-modal-close"
+                className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm cp-modal-close"
                 onClick={closeBankModal}
                 aria-label="Close"
               >
-                <FaTimes />
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
 
-            <div className="cp-modal-body">
+            <div className="sila-modal-body cp-modal-body">
               {bankModalView === 'list' ? (
                 <>
                   {bankListError && (
-                    <div className="cp-modal-error">{bankListError}</div>
+                    <div className="sila-alert sila-alert--danger cp-modal-error" role="alert">{bankListError}</div>
                   )}
 
-                  <button
-                    type="button"
-                    className="cp-btn cp-btn-add-location"
-                    onClick={openAddBankForm}
-                  >
-                    <FaPlus /> Add New Bank Account
-                  </button>
+                  <div className="cp-modal-toolbar">
+                    <button
+                      type="button"
+                      className="sila-btn sila-btn--primary sila-btn--sm cp-btn-add-location"
+                      onClick={openAddBankForm}
+                    >
+                      <FaPlus aria-hidden="true" /> Add New Bank Account
+                    </button>
+                  </div>
 
                   {bankAccounts.length === 0 ? (
-                    <p className="cp-empty-inline" style={{ marginTop: '12px' }}>
+                    <p className="cp-empty-inline cp-empty-inline-boxed">
                       No bank accounts added yet
                     </p>
                   ) : (
-                    <div className="cp-location-list">
+                    <ul className="cp-location-list">
                       {bankAccounts.map((acc, idx) => (
-                        <div className="cp-location-list-item" key={acc.id || idx}>
+                        <li className="cp-location-list-item" key={acc.id || idx}>
+                          <span className="cp-location-list-icon" aria-hidden="true">
+                            <FaUniversity />
+                          </span>
                           <div className="cp-location-list-info">
                             <div className="cp-location-list-name">
                               {acc.bankName || '-'}
                               {acc.isPrimary && (
-                                <span className="cp-pill cp-pill-yes cp-location-default-tag">
-                                  <FaCheck /> Primary
+                                <span className="sila-badge sila-badge--sm sila-badge--success cp-location-default-tag">
+                                  <FaCheck aria-hidden="true" /> Primary
                                 </span>
                               )}
                             </div>
@@ -1507,126 +1560,154 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                           <div className="cp-location-list-actions">
                             <button
                               type="button"
-                              className="cp-icon-action-btn"
+                              className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm cp-icon-action-btn"
                               title="Edit"
+                              aria-label={`Edit ${acc.bankName || 'bank account'}`}
                               onClick={() => openEditBankForm(acc)}
                               disabled={!acc.id}
                             >
-                              <FaEdit />
+                              <FaEdit aria-hidden="true" />
                             </button>
                             <button
                               type="button"
-                              className="cp-icon-action-btn cp-icon-action-btn-danger"
+                              className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm cp-icon-action-btn cp-icon-action-btn-danger"
                               title="Delete"
+                              aria-label={`Delete ${acc.bankName || 'bank account'}`}
                               onClick={() => openDeleteBankAccountConfirmation(acc)}
                               disabled={!acc.id}
                             >
-                              <FaTrash />
+                              <FaTrash aria-hidden="true" />
                             </button>
                           </div>
-                        </div>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   )}
                 </>
               ) : (
                 <form className="cp-dispatch-form" onSubmit={handleBankFormSubmit}>
                   {bankFormError && (
-                    <div className="cp-modal-error">{bankFormError}</div>
+                    <div className="sila-alert sila-alert--danger cp-modal-error" role="alert">{bankFormError}</div>
                   )}
 
                   <div className="cp-form-grid">
-                    <div className="cp-form-field">
-                      <label>Account Holder Name *</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-bank-holder">
+                        Account Holder Name<span className="sila-required" aria-hidden="true">*</span>
+                      </label>
                       <input
+                        id="cp-bank-holder"
+                        className="sila-input"
                         type="text"
                         value={bankForm.accountHolderName || ''}
                         onChange={(e) => handleBankFormChange('accountHolderName', e.target.value)}
                         required
                       />
                     </div>
-                    <div className="cp-form-field">
-                      <label>Bank Name *</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-bank-name">
+                        Bank Name<span className="sila-required" aria-hidden="true">*</span>
+                      </label>
                       <input
+                        id="cp-bank-name"
+                        className="sila-input"
                         type="text"
                         value={bankForm.bankName || ''}
                         onChange={(e) => handleBankFormChange('bankName', e.target.value)}
                         required
                       />
                     </div>
-                    <div className="cp-form-field">
-                      <label>Branch Name</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-bank-branch">Branch Name</label>
                       <input
+                        id="cp-bank-branch"
+                        className="sila-input"
                         type="text"
                         value={bankForm.branchName || ''}
                         onChange={(e) => handleBankFormChange('branchName', e.target.value)}
                       />
                     </div>
-                    <div className="cp-form-field">
-                      <label>Account Number *</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-bank-account-number">
+                        Account Number<span className="sila-required" aria-hidden="true">*</span>
+                      </label>
                       <input
+                        id="cp-bank-account-number"
+                        className="sila-input"
                         type="text"
                         value={bankForm.accountNumber || ''}
                         onChange={(e) => handleBankFormChange('accountNumber', e.target.value)}
                         required
                       />
                     </div>
-                    <div className="cp-form-field">
-                      <label>IFSC Code *</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-bank-ifsc">
+                        IFSC Code<span className="sila-required" aria-hidden="true">*</span>
+                      </label>
                       <input
+                        id="cp-bank-ifsc"
+                        className="sila-input"
                         type="text"
                         value={bankForm.ifscCode || ''}
                         onChange={(e) => handleBankFormChange('ifscCode', e.target.value)}
                         required
                       />
                     </div>
-                    <div className="cp-form-field">
-                      <label>SWIFT Code</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-bank-swift">SWIFT Code</label>
                       <input
+                        id="cp-bank-swift"
+                        className="sila-input"
                         type="text"
                         value={bankForm.swiftCode || ''}
                         onChange={(e) => handleBankFormChange('swiftCode', e.target.value)}
                       />
                     </div>
                     {isSupplier && (
-                      <div className="cp-form-field">
-                        <label>IBAN</label>
+                      <div className="sila-field cp-form-field">
+                        <label className="sila-label" htmlFor="cp-bank-iban">IBAN</label>
                         <input
+                          id="cp-bank-iban"
+                          className="sila-input"
                           type="text"
                           value={bankForm.iban || ''}
                           onChange={(e) => handleBankFormChange('iban', e.target.value)}
                         />
                       </div>
                     )}
-                    <div className="cp-form-field">
-                      <label>Currency</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-bank-currency">Currency</label>
                       <input
+                        id="cp-bank-currency"
+                        className="sila-input"
                         type="text"
                         value={bankForm.currency || ''}
                         onChange={(e) => handleBankFormChange('currency', e.target.value)}
                         placeholder="e.g. INR, USD"
                       />
                     </div>
-                    <div className="cp-form-field cp-form-field-checkbox">
-                      <label>
+                    <div className="sila-field sila-field--full cp-form-field cp-form-field-checkbox">
+                      <label className="cp-checkbox-label" htmlFor="cp-bank-primary">
                         <input
+                          id="cp-bank-primary"
                           type="checkbox"
                           checked={!!bankForm.isPrimary}
                           disabled={hasOtherPrimaryBank(editingBankAccount?.id)}
                           onChange={(e) => handleBankFormChange('isPrimary', e.target.checked)}
+                          aria-describedby={hasOtherPrimaryBank(editingBankAccount?.id) ? 'cp-bank-primary-hint' : undefined}
                         />
                         Set as Primary Account
                       </label>
                       {hasOtherPrimaryBank(editingBankAccount?.id) && (
-                        <span className="cp-form-hint">You already have a primary account</span>
+                        <span id="cp-bank-primary-hint" className="sila-help cp-form-hint">You already have a primary account</span>
                       )}
                     </div>
                   </div>
 
-                  <div className="cp-form-actions">
+                  <div className="sila-form-actions cp-form-actions">
                     <button
                       type="button"
-                      className="cp-btn cp-btn-cancel"
+                      className="sila-btn sila-btn--secondary cp-btn-cancel"
                       onClick={() => setBankModalView('list')}
                       disabled={isBankSubmitting}
                     >
@@ -1634,9 +1715,11 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                     </button>
                     <button
                       type="submit"
-                      className="cp-btn cp-btn-verify"
+                      className="sila-btn sila-btn--primary"
                       disabled={isBankSubmitting}
+                      aria-busy={isBankSubmitting || undefined}
                     >
+                      {isBankSubmitting && <span className="sila-spinner" aria-hidden="true" />}
                       {isBankSubmitting
                         ? 'Saving...'
                         : editingBankAccount
@@ -1652,10 +1735,16 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
       )}
 
       {isDispatchModalOpen && (
-        <div className="cp-modal-overlay" onClick={closeDispatchModal}>
-          <div className="cp-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="cp-modal-header">
-              <h3 className="cp-modal-title">
+        <div className="sila-overlay cp-modal-overlay" onClick={closeDispatchModal}>
+          <div
+            className="sila-modal sila-modal--lg cp-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cp-dispatch-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sila-modal-header cp-modal-header">
+              <h3 id="cp-dispatch-modal-title" className="sila-modal-title cp-modal-title">
                 {dispatchModalView === 'list'
                   ? 'Delivery Locations'
                   : editingLocation
@@ -1664,43 +1753,48 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
               </h3>
               <button
                 type="button"
-                className="cp-modal-close"
+                className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm cp-modal-close"
                 onClick={closeDispatchModal}
                 aria-label="Close"
               >
-                <FaTimes />
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
 
-            <div className="cp-modal-body">
+            <div className="sila-modal-body cp-modal-body">
               {dispatchModalView === 'list' ? (
                 <>
                   {dispatchListError && (
-                    <div className="cp-modal-error">{dispatchListError}</div>
+                    <div className="sila-alert sila-alert--danger cp-modal-error" role="alert">{dispatchListError}</div>
                   )}
 
-                  <button
-                    type="button"
-                    className="cp-btn cp-btn-add-location"
-                    onClick={openAddLocationForm}
-                  >
-                    <FaPlus /> Add New Location
-                  </button>
+                  <div className="cp-modal-toolbar">
+                    <button
+                      type="button"
+                      className="sila-btn sila-btn--primary sila-btn--sm cp-btn-add-location"
+                      onClick={openAddLocationForm}
+                    >
+                      <FaPlus aria-hidden="true" /> Add New Location
+                    </button>
+                  </div>
 
                   {dispatchLocations.length === 0 ? (
-                    <p className="cp-empty-inline" style={{ marginTop: '12px' }}>
+                    <p className="cp-empty-inline cp-empty-inline-boxed">
                       No delivery locations added yet
                     </p>
                   ) : (
-                    <div className="cp-location-list">
+                    <ul className="cp-location-list">
                       {dispatchLocations.map((loc, idx) => (
-                        <div className="cp-location-list-item" key={loc.id || idx}>
+                        <li className="cp-location-list-item" key={loc.id || idx}>
+                          <span className="cp-location-list-icon" aria-hidden="true">
+                            <FaMapMarkerAlt />
+                          </span>
                           <div className="cp-location-list-info">
                             <div className="cp-location-list-name">
                               {loc.locationName || '-'}
                               {loc.isDefault && (
-                                <span className="cp-pill cp-pill-yes cp-location-default-tag">
-                                  <FaCheck /> Default
+                                <span className="sila-badge sila-badge--sm sila-badge--success cp-location-default-tag">
+                                  <FaCheck aria-hidden="true" /> Default
                                 </span>
                               )}
                             </div>
@@ -1714,140 +1808,170 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                           <div className="cp-location-list-actions">
                             <button
                               type="button"
-                              className="cp-icon-action-btn"
+                              className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm cp-icon-action-btn"
                               title="Edit"
+                              aria-label={`Edit ${loc.locationName || 'location'}`}
                               onClick={() => openEditLocationForm(loc)}
                               disabled={!loc.id}
                             >
-                              <FaEdit />
+                              <FaEdit aria-hidden="true" />
                             </button>
                             <button
                               type="button"
-                              className="cp-icon-action-btn cp-icon-action-btn-danger"
+                              className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm cp-icon-action-btn cp-icon-action-btn-danger"
                               title="Delete"
+                              aria-label={`Delete ${loc.locationName || 'location'}`}
                               onClick={() => openDeleteLocationConfirmation(loc)}
                               disabled={!loc.id}
                             >
-                              <FaTrash />
+                              <FaTrash aria-hidden="true" />
                             </button>
                           </div>
-                        </div>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   )}
                 </>
               ) : (
                 <form className="cp-dispatch-form" onSubmit={handleDispatchFormSubmit}>
                   {dispatchFormError && (
-                    <div className="cp-modal-error">{dispatchFormError}</div>
+                    <div className="sila-alert sila-alert--danger cp-modal-error" role="alert">{dispatchFormError}</div>
                   )}
 
                   <div className="cp-form-grid">
-                    <div className="cp-form-field">
-                      <label>Location Name *</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-loc-name">
+                        Location Name<span className="sila-required" aria-hidden="true">*</span>
+                      </label>
                       <input
+                        id="cp-loc-name"
+                        className="sila-input"
                         type="text"
                         value={dispatchForm.locationName || ''}
                         onChange={(e) => handleDispatchFormChange('locationName', e.target.value)}
                         required
                       />
                     </div>
-                    <div className="cp-form-field">
-                      <label>Address Line 1 *</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-loc-address1">
+                        Address Line 1<span className="sila-required" aria-hidden="true">*</span>
+                      </label>
                       <input
+                        id="cp-loc-address1"
+                        className="sila-input"
                         type="text"
                         value={dispatchForm.addressLine1 || ''}
                         onChange={(e) => handleDispatchFormChange('addressLine1', e.target.value)}
                         required
                       />
                     </div>
-                    <div className="cp-form-field">
-                      <label>Address Line 2</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-loc-address2">Address Line 2</label>
                       <input
+                        id="cp-loc-address2"
+                        className="sila-input"
                         type="text"
                         value={dispatchForm.addressLine2 || ''}
                         onChange={(e) => handleDispatchFormChange('addressLine2', e.target.value)}
                       />
                     </div>
-                    <div className="cp-form-field">
-                      <label>City *</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-loc-city">
+                        City<span className="sila-required" aria-hidden="true">*</span>
+                      </label>
                       <input
+                        id="cp-loc-city"
+                        className="sila-input"
                         type="text"
                         value={dispatchForm.city || ''}
                         onChange={(e) => handleDispatchFormChange('city', e.target.value)}
                         required
                       />
                     </div>
-                    <div className="cp-form-field">
-                      <label>State</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-loc-state">State</label>
                       <input
+                        id="cp-loc-state"
+                        className="sila-input"
                         type="text"
                         value={dispatchForm.state || ''}
                         onChange={(e) => handleDispatchFormChange('state', e.target.value)}
                       />
                     </div>
-                    <div className="cp-form-field">
-                      <label>Country</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-loc-country">Country</label>
                       <input
+                        id="cp-loc-country"
+                        className="sila-input"
                         type="text"
                         value={dispatchForm.country || ''}
                         onChange={(e) => handleDispatchFormChange('country', e.target.value)}
                       />
                     </div>
-                    <div className="cp-form-field">
-                      <label>Pin Code</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-loc-pin">Pin Code</label>
                       <input
+                        id="cp-loc-pin"
+                        className="sila-input"
                         type="text"
                         value={dispatchForm.pinCode || ''}
                         onChange={(e) => handleDispatchFormChange('pinCode', e.target.value)}
                       />
                     </div>
-                    <div className="cp-form-field">
-                      <label>Contact Person</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-loc-contact-person">Contact Person</label>
                       <input
+                        id="cp-loc-contact-person"
+                        className="sila-input"
                         type="text"
                         value={dispatchForm.contactPerson || ''}
                         onChange={(e) => handleDispatchFormChange('contactPerson', e.target.value)}
                       />
                     </div>
                     {isSupplier && (
-                      <div className="cp-form-field">
-                        <label>Contact Email</label>
+                      <div className="sila-field cp-form-field">
+                        <label className="sila-label" htmlFor="cp-loc-contact-email">Contact Email</label>
                         <input
+                          id="cp-loc-contact-email"
+                          className="sila-input"
                           type="email"
                           value={dispatchForm.contactEmail || ''}
                           onChange={(e) => handleDispatchFormChange('contactEmail', e.target.value)}
                         />
                       </div>
                     )}
-                    <div className="cp-form-field">
-                      <label>Contact Phone</label>
+                    <div className="sila-field cp-form-field">
+                      <label className="sila-label" htmlFor="cp-loc-contact-phone">Contact Phone</label>
                       <input
+                        id="cp-loc-contact-phone"
+                        className="sila-input"
                         type="text"
                         value={dispatchForm.contactPhone || ''}
                         onChange={(e) => handleDispatchFormChange('contactPhone', e.target.value)}
                       />
                     </div>
-                    <div className="cp-form-field cp-form-field-checkbox">
-                      <label>
+                    <div className="sila-field sila-field--full cp-form-field cp-form-field-checkbox">
+                      <label className="cp-checkbox-label" htmlFor="cp-loc-default">
                         <input
+                          id="cp-loc-default"
                           type="checkbox"
                           checked={!!dispatchForm.isDefault}
                           disabled={hasOtherDefaultLocation(editingLocation?.id)}
                           onChange={(e) => handleDispatchFormChange('isDefault', e.target.checked)}
+                          aria-describedby={hasOtherDefaultLocation(editingLocation?.id) ? 'cp-loc-default-hint' : undefined}
                         />
                         Set as Default Location
                       </label>
                       {hasOtherDefaultLocation(editingLocation?.id) && (
-                        <span className="cp-form-hint">You already have a default location</span>
+                        <span id="cp-loc-default-hint" className="sila-help cp-form-hint">You already have a default location</span>
                       )}
                     </div>
                   </div>
 
-                  <div className="cp-form-actions">
+                  <div className="sila-form-actions cp-form-actions">
                     <button
                       type="button"
-                      className="cp-btn cp-btn-cancel"
+                      className="sila-btn sila-btn--secondary cp-btn-cancel"
                       onClick={() => setDispatchModalView('list')}
                       disabled={isDispatchSubmitting}
                     >
@@ -1855,9 +1979,11 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                     </button>
                     <button
                       type="submit"
-                      className="cp-btn cp-btn-verify"
+                      className="sila-btn sila-btn--primary"
                       disabled={isDispatchSubmitting}
+                      aria-busy={isDispatchSubmitting || undefined}
                     >
+                      {isDispatchSubmitting && <span className="sila-spinner" aria-hidden="true" />}
                       {isDispatchSubmitting
                         ? 'Saving...'
                         : editingLocation

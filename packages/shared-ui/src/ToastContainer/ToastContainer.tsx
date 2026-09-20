@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FaCheckCircle, FaExclamationCircle, FaInfoCircle, FaTimes } from 'react-icons/fa';
+import { FaCheckCircle, FaExclamationCircle, FaExclamationTriangle, FaInfoCircle, FaTimes } from 'react-icons/fa';
 import { toastService, type Toast } from '../services/toastservice';
 import './ToastContainer.css';
 
@@ -31,7 +31,7 @@ const ToastContainer: React.FC<ToastContainerProps> = () => {
       case 'error':
         return <FaExclamationCircle />;
       case 'warning':
-        return <FaExclamationCircle />;
+        return <FaExclamationTriangle />;
       case 'info':
       default:
         return <FaInfoCircle />;
@@ -39,17 +39,22 @@ const ToastContainer: React.FC<ToastContainerProps> = () => {
   };
 
   return (
-    <div className="nad-toast-container">
+    <div className="nad-toast-container" aria-live="polite" aria-relevant="additions">
       {toasts.map((toast) => (
-        <div key={toast.id} className={`nad-toast nad-toast-${toast.type}`}>
-          <div className="nad-toast-icon">{getIcon(toast.type)}</div>
+        <div
+          key={toast.id}
+          className={`nad-toast nad-toast-${toast.type}`}
+          role={toast.type === 'error' || toast.type === 'warning' ? 'alert' : 'status'}
+        >
+          <div className="nad-toast-icon" aria-hidden="true">{getIcon(toast.type)}</div>
           <div className="nad-toast-message">{toast.message}</div>
           <button
+            type="button"
             className="nad-toast-close"
             onClick={() => toastService.remove(toast.id)}
-            aria-label="Close"
+            aria-label="Dismiss notification"
           >
-            <FaTimes />
+            <FaTimes aria-hidden="true" />
           </button>
         </div>
       ))}

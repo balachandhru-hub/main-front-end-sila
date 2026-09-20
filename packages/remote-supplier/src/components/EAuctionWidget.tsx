@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './EAuctionWidget.css';
+import { FaArrowRight, FaBolt, FaEnvelope, FaKey, FaTimes } from 'react-icons/fa';
 import {
   fetchRFQMasterData,
   fetchRFQById,
@@ -652,7 +653,7 @@ export const EAuctionWidget: React.FC = () => {
       }
 
       const formattedBid = `$${Number(totalPriceQuote).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-      setBidSubmittedMessage(`✅ Live Bid of ${formattedBid} successfully submitted for ${selectedLot.name}! Your bid has been recorded.`);
+      setBidSubmittedMessage(`Live Bid of ${formattedBid} successfully submitted for ${selectedLot.name}! Your bid has been recorded.`);
       await fetchLiveBidsData();
       setTimeout(() => setBidSubmittedMessage(null), 6000);
     } catch (err: any) {
@@ -702,9 +703,10 @@ export const EAuctionWidget: React.FC = () => {
           <div className="eauction-preview-popover">
             <div className="eauction-preview-header">
               <div className="eauction-preview-title">
-                <span>⚡ Live e-Auction Bidding</span>
+                <FaBolt aria-hidden="true" />
+                <span>Live e-Auction Bidding</span>
               </div>
-              <span className="eauction-live-status">LIVE REVERSE AUCTION</span>
+              <span className="eauction-live-status">Live reverse auction</span>
             </div>
 
             {selectedLot ? (
@@ -717,30 +719,33 @@ export const EAuctionWidget: React.FC = () => {
               </div>
             ) : (
               <div className="eauction-preview-item">
-                <div className="eauction-preview-item-title" style={{ color: '#64748b', fontSize: '0.8125rem' }}>
+                <div className="eauction-preview-item-title eauction-preview-empty">
                   No active live bids available
                 </div>
               </div>
             )}
 
             <button
+              type="button"
               className="eauction-enter-btn"
               onClick={() => setIsModalOpen(true)}
             >
               <span>Enter Supplier Bidding Console</span>
-              <span>➔</span>
+              <FaArrowRight aria-hidden="true" />
             </button>
           </div>
         )}
 
         {/* Floating Bar Button */}
         <button
+          type="button"
           className="eauction-trigger-btn"
           onClick={() => setIsModalOpen(true)}
           title="Open Live e-Auction Bidding Console"
         >
-          <span className="eauction-pulse-dot" />
-          <span>⚡ Live e-Auction</span>
+          <span className="eauction-pulse-dot" aria-hidden="true" />
+          <FaBolt aria-hidden="true" className="eauction-trigger-icon" />
+          <span>Live e-Auction</span>
           <span className="eauction-badge-count">{auctions.length} Live</span>
         </button>
       </div>
@@ -750,6 +755,9 @@ export const EAuctionWidget: React.FC = () => {
         <div className="eauction-modal-overlay" onClick={handleCloseEauctionModal}>
           <div
             className="eauction-portal-container"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="eauction-portal-title"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Top Header Bar */}
@@ -759,17 +767,19 @@ export const EAuctionWidget: React.FC = () => {
                   <IconBoltFilled />
                 </div>
                 <div className="eauction-brand-text">
-                  <div className="eauction-portal-title">Live e-Auction Bidding Console</div>
-                  <span className="eauction-portal-subtitle">SILA Procurement • Real-Time Reverse Auction</span>
+                  <h2 className="eauction-portal-title" id="eauction-portal-title">Live e-Auction Bidding Console</h2>
+                  <span className="eauction-portal-subtitle">SILA Procurement · Real-time reverse auction</span>
                 </div>
               </div>
 
               <button
+                type="button"
                 className="eauction-portal-close"
                 onClick={handleCloseEauctionModal}
                 title="Close e-Auction Console"
+                aria-label="Close e-Auction Console"
               >
-                ✕
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
 
@@ -778,8 +788,8 @@ export const EAuctionWidget: React.FC = () => {
               {/* Left Sidebar: Live RFQ List */}
               <aside className="eauction-sidebar">
                 <div className="eauction-sidebar-header">
-                  <div className="eauction-panel-title-text">MY LIVE BID STATUS & RANKS</div>
-                  <span className="eauction-live-pill">REAL-TIME BIDDING ACTIVE</span>
+                  <div className="eauction-panel-title-text">My live bid status &amp; ranks</div>
+                  <span className="eauction-live-pill"><span className="eauction-live-pill-dot" aria-hidden="true" />Real-time bidding active</span>
                 </div>
 
                 <div className="eauction-sidebar-list">
@@ -803,9 +813,18 @@ export const EAuctionWidget: React.FC = () => {
                           key={auc.id}
                           className={`eauction-sidebar-item${isSelected ? ' is-selected' : ''}`}
                           onClick={() => setSelectedLot(auc)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setSelectedLot(auc);
+                            }
+                          }}
+                          role="button"
+                          tabIndex={0}
+                          aria-pressed={isSelected}
                         >
                           <div className="eauction-sidebar-item-title">{auc.name}</div>
-                          <div className="eauction-sidebar-item-code">{auc.itemCode}</div>
+                          <div className="eauction-sidebar-item-code sila-ref">{auc.itemCode}</div>
                         </div>
                       );
                     })
@@ -866,7 +885,7 @@ export const EAuctionWidget: React.FC = () => {
                   <div className="eauction-panel-light eauction-panel-column">
                     <div className="eauction-panel-head">
                       <div className="eauction-panel-title-text">
-                        LIVE BIDDING VIEW: <span className="eauction-live-lot-name">{selectedLot?.name || "No Active Tender Selected"}</span>
+                        Live bidding view: <span className="eauction-live-lot-name">{selectedLot?.name || "No Active Tender Selected"}</span>
                       </div>
                     </div>
 
@@ -923,9 +942,9 @@ export const EAuctionWidget: React.FC = () => {
                           <div>
                             <div className="eauction-detail-label">Lot Option</div>
                             {selectedRfqDetails.addLotOption ? (
-                              <span className="eauction-lot-badge">Allowed</span>
+                              <span className="eauction-lot-badge sila-badge sila-badge--success">Allowed</span>
                             ) : (
-                              <span className="eauction-lot-badge-disabled">Not Allowed</span>
+                              <span className="eauction-lot-badge-disabled sila-badge sila-badge--neutral">Not Allowed</span>
                             )}
                           </div>
                         </div>
@@ -939,7 +958,7 @@ export const EAuctionWidget: React.FC = () => {
                           Material Details {selectedRfqDetails?.addLotOption ? "(Single Lot Bidding)" : "(Line Item Bidding)"}
                         </span>
                         {selectedRfqDetails?.addLotOption && headerRank !== "" && (
-                          <span className="eauction-rank-badge-pill">Rank: {headerRank}</span>
+                          <span className="eauction-rank-badge-pill sila-badge sila-badge--info">Rank: {headerRank}</span>
                         )}
                       </div>
 
@@ -1004,6 +1023,7 @@ export const EAuctionWidget: React.FC = () => {
                                   <input
                                     type="number"
                                     className="eauction-bulk-value-input"
+                                    aria-label="Bulk value"
                                     value={bulkValue}
                                     onChange={(e) => setBulkValue(e.target.value)}
                                     placeholder="Enter value"
@@ -1014,6 +1034,7 @@ export const EAuctionWidget: React.FC = () => {
                                   <button
                                     type="button"
                                     className={bulkValueType === "PERCENTAGE" ? "active" : ""}
+                                    aria-pressed={bulkValueType === "PERCENTAGE"}
                                     onClick={() => setBulkValueType("PERCENTAGE")}
                                   >
                                     Percentage
@@ -1021,6 +1042,7 @@ export const EAuctionWidget: React.FC = () => {
                                   <button
                                     type="button"
                                     className={bulkValueType === "AMOUNT" ? "active" : ""}
+                                    aria-pressed={bulkValueType === "AMOUNT"}
                                     onClick={() => setBulkValueType("AMOUNT")}
                                   >
                                     Amount
@@ -1161,8 +1183,8 @@ export const EAuctionWidget: React.FC = () => {
                                           onChange={(e) => handleLineItemFieldChange(itemKey, "deliveryType", e.target.value)}
                                           className="eauction-line-select"
                                         >
-                                          <option value="PERCENTAGE">PERCENTAGE</option>
-                                          <option value="AMOUNT">AMOUNT</option>
+                                          <option value="PERCENTAGE">Percentage</option>
+                                          <option value="AMOUNT">Amount</option>
                                         </select>
                                       </td>
                                       <td>
@@ -1182,8 +1204,8 @@ export const EAuctionWidget: React.FC = () => {
                                           onChange={(e) => handleLineItemFieldChange(itemKey, "discountType", e.target.value)}
                                           className="eauction-line-select"
                                         >
-                                          <option value="PERCENTAGE">PERCENTAGE</option>
-                                          <option value="AMOUNT">AMOUNT</option>
+                                          <option value="PERCENTAGE">Percentage</option>
+                                          <option value="AMOUNT">Amount</option>
                                         </select>
                                       </td>
                                       <td>
@@ -1203,8 +1225,8 @@ export const EAuctionWidget: React.FC = () => {
                                           onChange={(e) => handleLineItemFieldChange(itemKey, "taxType", e.target.value)}
                                           className="eauction-line-select"
                                         >
-                                          <option value="PERCENTAGE">PERCENTAGE</option>
-                                          <option value="AMOUNT">AMOUNT</option>
+                                          <option value="PERCENTAGE">Percentage</option>
+                                          <option value="AMOUNT">Amount</option>
                                         </select>
                                       </td>
                                       <td className="eauction-col-right">
@@ -1264,14 +1286,16 @@ export const EAuctionWidget: React.FC = () => {
                               value={totalPriceQuote}
                               onChange={(e) => setTotalPriceQuote(e.target.value)}
                               className="eauction-total-quote-input"
+                              aria-label="Total price quote"
                             />
                           </div>
                           <button
+                            type="button"
                             className={`eauction-btn-submit-bid eauction-btn-submit-bid--inline${submittingBid ? ' is-loading' : ''}`}
                             onClick={handleSubmitLiveBid}
                             disabled={submittingBid}
                           >
-                            {submittingBid ? "Submitting Live Bid..." : "⚡ SUBMIT LIVE BID"}
+                            {submittingBid ? "Submitting Live Bid..." : <><FaBolt aria-hidden="true" /> Submit Live Bid</>}
                           </button>
                         </div>
                       </div>
@@ -1281,7 +1305,7 @@ export const EAuctionWidget: React.FC = () => {
                   {/* Right Column: Supplier Live Bidding Submission Panel (Single Lot Bidding only) */}
                   {selectedRfqDetails?.addLotOption !== false && (
                     <div className="eauction-panel-light eauction-panel-column">
-                      <div className="eauction-panel-title-text">SUBMIT COMPETITIVE BID</div>
+                      <div className="eauction-panel-title-text">Submit competitive bid</div>
 
                       {submitBidError && (
                         <div className="eauction-alert eauction-alert--error">
@@ -1299,8 +1323,9 @@ export const EAuctionWidget: React.FC = () => {
                       <div className="eauction-supplier-bid-box">
                         <div className="eauction-bid-field-grid">
                           <div className="eauction-bid-field">
-                            <label className="eauction-bid-field-label">Delivery Charge</label>
+                            <label className="eauction-bid-field-label" htmlFor="eauction-bid-delivery-charge">Delivery Charge</label>
                             <input
+                              id="eauction-bid-delivery-charge"
                               type="number"
                               className="eauction-bid-field-input"
                               value={deliveryCharge}
@@ -1309,19 +1334,21 @@ export const EAuctionWidget: React.FC = () => {
                             />
                           </div>
                           <div className="eauction-bid-field">
-                            <label className="eauction-bid-field-label">Delivery Type</label>
+                            <label className="eauction-bid-field-label" htmlFor="eauction-bid-delivery-type">Delivery Type</label>
                             <select
+                              id="eauction-bid-delivery-type"
                               className="eauction-bid-field-input"
                               value={deliveryType}
                               onChange={(e) => setDeliveryType(e.target.value)}
                             >
-                              <option value="PERCENTAGE">PERCENTAGE</option>
-                              <option value="AMOUNT">AMOUNT</option>
+                              <option value="PERCENTAGE">Percentage</option>
+                              <option value="AMOUNT">Amount</option>
                             </select>
                           </div>
                           <div className="eauction-bid-field">
-                            <label className="eauction-bid-field-label">Discount</label>
+                            <label className="eauction-bid-field-label" htmlFor="eauction-bid-discount">Discount</label>
                             <input
+                              id="eauction-bid-discount"
                               type="number"
                               className="eauction-bid-field-input"
                               value={discount}
@@ -1330,19 +1357,21 @@ export const EAuctionWidget: React.FC = () => {
                             />
                           </div>
                           <div className="eauction-bid-field">
-                            <label className="eauction-bid-field-label">Discount Type</label>
+                            <label className="eauction-bid-field-label" htmlFor="eauction-bid-discount-type">Discount Type</label>
                             <select
+                              id="eauction-bid-discount-type"
                               className="eauction-bid-field-input"
                               value={discountType}
                               onChange={(e) => setDiscountType(e.target.value)}
                             >
-                              <option value="PERCENTAGE">PERCENTAGE</option>
-                              <option value="AMOUNT">AMOUNT</option>
+                              <option value="PERCENTAGE">Percentage</option>
+                              <option value="AMOUNT">Amount</option>
                             </select>
                           </div>
                           <div className="eauction-bid-field">
-                            <label className="eauction-bid-field-label">Tax</label>
+                            <label className="eauction-bid-field-label" htmlFor="eauction-bid-tax">Tax</label>
                             <input
+                              id="eauction-bid-tax"
                               type="number"
                               className="eauction-bid-field-input"
                               value={tax}
@@ -1351,14 +1380,15 @@ export const EAuctionWidget: React.FC = () => {
                             />
                           </div>
                           <div className="eauction-bid-field">
-                            <label className="eauction-bid-field-label">Tax Type</label>
+                            <label className="eauction-bid-field-label" htmlFor="eauction-bid-tax-type">Tax Type</label>
                             <select
+                              id="eauction-bid-tax-type"
                               className="eauction-bid-field-input"
                               value={taxType}
                               onChange={(e) => setTaxType(e.target.value)}
                             >
-                              <option value="PERCENTAGE">PERCENTAGE</option>
-                              <option value="AMOUNT">AMOUNT</option>
+                              <option value="PERCENTAGE">Percentage</option>
+                              <option value="AMOUNT">Amount</option>
                             </select>
                           </div>
                         </div>
@@ -1372,16 +1402,18 @@ export const EAuctionWidget: React.FC = () => {
                               value={totalPriceQuote}
                               onChange={(e) => setTotalPriceQuote(e.target.value)}
                               className="eauction-total-quote-input"
+                              aria-label="Total price quote"
                             />
                           </div>
                         </div>
 
                         <button
+                          type="button"
                           className={`eauction-btn-submit-bid${submittingBid ? ' is-loading' : ''}`}
                           onClick={handleSubmitLiveBid}
                           disabled={submittingBid}
                         >
-                          {submittingBid ? "Submitting Live Bid..." : "⚡ SUBMIT LIVE BID"}
+                          {submittingBid ? "Submitting Live Bid..." : <><FaBolt aria-hidden="true" /> Submit Live Bid</>}
                         </button>
                       </div>
                     </div>
@@ -1394,43 +1426,49 @@ export const EAuctionWidget: React.FC = () => {
       )}
       {/* OTP Verification Modals */}
       {otpStage === "send" && (
-        <div className="eauction-modal-overlay" onClick={() => setOtpStage("none")} style={{ zIndex: 99999 }}>
-          <div className="eauction-portal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', height: 'auto', background: '#ffffff', borderRadius: '0.75rem', padding: '1.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0057b8', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                ✉️ Verify It's You
-              </span>
-              <button style={{ background: 'none', border: 'none', fontSize: '1.125rem', cursor: 'pointer', color: '#64748b' }} onClick={() => setOtpStage("none")}>
-                ✕
+        <div className="sila-overlay eauction-otp-overlay" onClick={() => setOtpStage("none")}>
+          <div
+            className="sila-modal eauction-otp-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="eauction-otp-send-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sila-modal-header">
+              <h2 className="sila-modal-title eauction-otp-title" id="eauction-otp-send-title">
+                <FaEnvelope aria-hidden="true" /> Verify It's You
+              </h2>
+              <button
+                type="button"
+                className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm"
+                onClick={() => setOtpStage("none")}
+                aria-label="Close"
+              >
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
 
-            <div style={{ textAlign: 'center', paddingTop: '1.25rem', paddingBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' }}>
-                Confirm Live Bid Submission
-              </h3>
-              <p style={{ fontSize: '0.8125rem', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
+            <div className="sila-modal-body">
+              <h3 className="eauction-otp-heading">Confirm Live Bid Submission</h3>
+              <p className="sila-modal-text">
                 For security, we'll send a one-time verification code to your registered email before submitting your live competitive bid.
               </p>
               {otpError && (
-                <div style={{ color: '#ef4444', fontSize: '0.8125rem', marginTop: '0.75rem', fontWeight: 600 }}>{otpError}</div>
+                <p className="sila-error-text eauction-otp-error" role="alert">{otpError}</p>
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '0.625rem', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0' }}>
-              <button
-                type="button"
-                onClick={() => setOtpStage("none")}
-                style={{ flex: 1, padding: '0.5rem', border: '1px solid #cbd5e1', background: '#ffffff', borderRadius: '0.375rem', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}
-              >
+            <div className="sila-modal-footer">
+              <button type="button" className="sila-btn sila-btn--secondary" onClick={() => setOtpStage("none")}>
                 Cancel
               </button>
               <button
                 type="button"
+                className="sila-btn sila-btn--primary"
                 onClick={handleSendOtp}
                 disabled={sendingOtp}
-                style={{ flex: 1, padding: '0.5rem', border: 'none', background: '#0057b8', color: '#ffffff', borderRadius: '0.375rem', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer' }}
               >
+                {sendingOtp && <span className="sila-spinner" aria-hidden="true" />}
                 {sendingOtp ? "Sending..." : "Send OTP"}
               </button>
             </div>
@@ -1439,21 +1477,32 @@ export const EAuctionWidget: React.FC = () => {
       )}
 
       {otpStage === "verify" && (
-        <div className="eauction-modal-overlay" onClick={() => setOtpStage("none")} style={{ zIndex: 99999 }}>
-          <div className="eauction-portal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', height: 'auto', background: '#ffffff', borderRadius: '0.75rem', padding: '1.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0057b8', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                🔑 Enter Verification Code
-              </span>
-              <button style={{ background: 'none', border: 'none', fontSize: '1.125rem', cursor: 'pointer', color: '#64748b' }} onClick={() => setOtpStage("none")}>
-                ✕
+        <div className="sila-overlay eauction-otp-overlay" onClick={() => setOtpStage("none")}>
+          <div
+            className="sila-modal eauction-otp-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="eauction-otp-verify-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sila-modal-header">
+              <h2 className="sila-modal-title eauction-otp-title" id="eauction-otp-verify-title">
+                <FaKey aria-hidden="true" /> Enter Verification Code
+              </h2>
+              <button
+                type="button"
+                className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm"
+                onClick={() => setOtpStage("none")}
+                aria-label="Close"
+              >
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
 
-            <div style={{ paddingTop: '1.25rem', paddingBottom: '0.5rem' }}>
-              <p style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '1rem', textAlign: 'center', lineHeight: 1.4 }}>
+            <div className="sila-modal-body">
+              <p className="sila-modal-text eauction-otp-intro">
                 We've sent a 6-digit verification code to your email. It expires in{" "}
-                <strong style={{ color: otpRemaining <= 30 ? '#ef4444' : '#1e293b' }}>
+                <strong className={`eauction-otp-timer${otpRemaining <= 30 ? " is-urgent" : ""}`}>
                   {formatOtpTimer(otpRemaining)}
                 </strong>.
               </p>
@@ -1461,64 +1510,44 @@ export const EAuctionWidget: React.FC = () => {
                 type="text"
                 inputMode="numeric"
                 maxLength={6}
+                className="sila-input eauction-otp-input"
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
                 placeholder="Enter OTP Code"
-                style={{
-                  width: '100%',
-                  padding: '0.625rem',
-                  border: '1.5px solid #cbd5e1',
-                  borderRadius: '0.375rem',
-                  fontSize: '1.25rem',
-                  letterSpacing: '4px',
-                  textAlign: 'center',
-                  fontWeight: 700,
-                  color: '#0f172a',
-                  outline: 'none',
-                }}
+                aria-label="One-time verification code"
+                aria-invalid={otpRemaining <= 0 || Boolean(otpError) || undefined}
               />
               {otpRemaining <= 0 ? (
-                <div style={{ color: '#ef4444', fontSize: '0.8125rem', marginTop: '0.625rem', textAlign: 'center' }}>
+                <p className="sila-error-text eauction-otp-error" role="alert">
                   Code expired. Please resend the OTP.
-                </div>
+                </p>
               ) : otpError ? (
-                <div style={{ color: '#ef4444', fontSize: '0.8125rem', marginTop: '0.625rem', textAlign: 'center' }}>{otpError}</div>
+                <p className="sila-error-text eauction-otp-error" role="alert">{otpError}</p>
               ) : null}
 
-              <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+              <div className="eauction-otp-resend">
                 <button
                   type="button"
+                  className="sila-btn sila-btn--ghost sila-btn--sm"
                   onClick={handleSendOtp}
                   disabled={sendingOtp || otpRemaining > 0}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                    color: otpRemaining > 0 ? '#94a3b8' : '#0057b8',
-                    fontSize: '0.8125rem',
-                    fontWeight: 600,
-                    cursor: otpRemaining > 0 ? 'not-allowed' : 'pointer',
-                  }}
                 >
                   Resend OTP Code
                 </button>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.625rem', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0', marginTop: '0.5rem' }}>
-              <button
-                type="button"
-                onClick={() => setOtpStage("none")}
-                style={{ flex: 1, padding: '0.5rem', border: '1px solid #cbd5e1', background: '#ffffff', borderRadius: '0.375rem', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}
-              >
+            <div className="sila-modal-footer">
+              <button type="button" className="sila-btn sila-btn--secondary" onClick={() => setOtpStage("none")}>
                 Cancel
               </button>
               <button
                 type="button"
+                className="sila-btn sila-btn--primary"
                 onClick={handleVerifyOtp}
                 disabled={verifyingOtp || !otpCode.trim()}
-                style={{ flex: 1, padding: '0.5rem', border: 'none', background: '#047857', color: '#ffffff', borderRadius: '0.375rem', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', opacity: (verifyingOtp || !otpCode.trim()) ? 0.7 : 1 }}
               >
+                {verifyingOtp && <span className="sila-spinner" aria-hidden="true" />}
                 {verifyingOtp ? "Verifying..." : "Verify & Submit Bid"}
               </button>
             </div>

@@ -6,7 +6,9 @@ const Header: React.FC = () => {
   return (
     <header className="vx-header">
       <div className="vx-header-inner">
-        <img src={sila_logo} alt="SILA" className="vx-logo-img" />
+        <span className="vx-header-brand">
+          <img src={sila_logo} alt="SILA" className="vx-logo-img" />
+        </span>
       </div>
     </header>
   );

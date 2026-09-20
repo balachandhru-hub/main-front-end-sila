@@ -1,32 +1,37 @@
+/* Shared toast stack. Loaded in every remote — keep all selectors under .nad-toast*. */
+
 .nad-toast-container {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 2000;
-  pointer-events: none;
+  top: calc(var(--sila-topbar-height) + var(--sila-space-3));
+  right: var(--sila-space-4);
+  z-index: var(--sila-z-toast);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sila-space-2);
+  width: 22.5rem;
+  max-width: calc(100vw - 2rem);
+  pointer-events: none;
+  font-family: var(--sila-font);
 }
 
 .nad-toast {
+  position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 14px 16px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 20px -5px rgba(0, 0, 0, 0.08);
-  min-width: 300px;
-  max-width: 400px;
-  animation: nadToastIn 0.25s ease;
+  gap: 0.625rem;
+  padding: var(--sila-space-3) var(--sila-space-2) var(--sila-space-3) var(--sila-space-4);
+  background: var(--sila-surface);
+  border: 0.0625rem solid var(--sila-border);
+  border-left: 0.1875rem solid var(--sila-primary);
+  border-radius: var(--sila-radius);
+  box-shadow: var(--sila-shadow-lg);
   pointer-events: auto;
+  animation: nadToastIn var(--sila-duration-slow) var(--sila-ease);
 }
 
 @keyframes nadToastIn {
   from {
-    transform: translateX(24px);
+    transform: translateX(0.75rem);
     opacity: 0;
   }
   to {
@@ -35,73 +40,78 @@
   }
 }
 
+.nad-toast-success { border-left-color: var(--sila-success); }
+.nad-toast-error   { border-left-color: var(--sila-danger); }
+.nad-toast-warning { border-left-color: var(--sila-warning); }
+.nad-toast-info    { border-left-color: var(--sila-primary); }
+
 .nad-toast-icon {
-  font-size: 18px;
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-top: 1px;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1.25rem;
+  font-size: 0.9375rem;
+  color: var(--sila-primary);
 }
 
-.nad-toast-success .nad-toast-icon {
-  color: #16a34a;
-  background-color: #f0fdf4;
-}
-
-.nad-toast-error .nad-toast-icon {
-  color: #dc2626;
-  background-color: #fef2f2;
-}
-
-.nad-toast-warning .nad-toast-icon {
-  color: #d97706;
-  background-color: #fffbeb;
-}
-
-.nad-toast-info .nad-toast-icon {
-  color: #3182ce;
-  background-color: #ebf8ff;
-}
+.nad-toast-success .nad-toast-icon { color: var(--sila-success); }
+.nad-toast-error .nad-toast-icon   { color: var(--sila-danger); }
+.nad-toast-warning .nad-toast-icon { color: var(--sila-warning); }
+.nad-toast-info .nad-toast-icon    { color: var(--sila-primary); }
 
 .nad-toast-message {
-  color: #2d3748;
-  font-size: 0.9rem;
-  font-weight: 500;
-  line-height: 1.4;
-  flex-grow: 1;
-  padding-top: 3px;
+  flex: 1;
+  min-width: 0;
+  padding-top: 0.0625rem;
+  font-size: var(--sila-text-sm);
+  font-weight: var(--sila-weight-medium);
+  line-height: var(--sila-leading);
+  color: var(--sila-text);
+  overflow-wrap: anywhere;
 }
 
 .nad-toast-close {
-  background: none;
-  border: none;
-  color: #a0aec0;
-  cursor: pointer;
-  font-size: 14px;
-  padding: 4px;
-  border-radius: 6px;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: -0.125rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--sila-radius-sm);
+  background: none;
+  font-size: 0.6875rem;
+  color: var(--sila-text-subtle);
+  cursor: pointer;
+  transition: var(--sila-transition);
 }
 
 .nad-toast-close:hover {
-  background-color: #f1f5f9;
-  color: #4b5563;
+  background: var(--sila-surface-hover);
+  color: var(--sila-text-secondary);
 }
 
-@media (max-width: 480px) {
-  .nad-toast-container {
-    top: 12px;
-    right: 12px;
-    left: 12px;
-  }
+.nad-toast-close:focus-visible {
+  outline: none;
+  box-shadow: var(--sila-focus-ring);
+}
 
+@media (max-width: 30rem) {
+  .nad-toast-container {
+    top: var(--sila-space-3);
+    right: var(--sila-space-3);
+    left: var(--sila-space-3);
+    width: auto;
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
   .nad-toast {
-    min-width: 0;
-    max-width: 100%;
+    animation: none;
   }
 }

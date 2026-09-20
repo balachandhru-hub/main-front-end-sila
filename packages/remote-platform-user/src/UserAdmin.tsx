@@ -1,9 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Loader, ToastContainer, toastService as toast } from '@vosox/shared-ui';
+import {
+  Button,
+  EmptyState,
+  Loader,
+  PageHeader,
+  SearchInput,
+  ToastContainer,
+  toastService as toast,
+} from '@vosox/shared-ui';
 import { createBusinessUser, getOrganizationUsers } from './api/departmentcostapi';
 import { Country } from 'country-state-city';
-import { CiMail } from 'react-icons/ci';
-import { FaUser, FaLock, FaEye, FaEyeSlash, FaPhone, FaMapMarkerAlt, FaGlobe, FaSearch, FaPlus } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaPlus, FaTimes, FaUsers, FaExclamationCircle } from 'react-icons/fa';
 import './UserAdmin.css';
 import { useNetworkAdminAuthStore } from './store/useAuthStore';
 
@@ -254,6 +261,41 @@ const UserAdmin: React.FC = () => {
     );
   }, [searchQuery, users]);
 
+  const renderPasswordField = (
+    id: string,
+    name: 'password' | 'confirmPassword',
+    label: string,
+    placeholder: string,
+    visible: boolean,
+    toggle: () => void
+  ) => (
+    <div className="user-admin-form-group">
+      <label htmlFor={id} className="user-admin-label">
+        {label} <span className="sila-required" aria-hidden="true">*</span>
+      </label>
+      <div className="user-admin-password-wrapper">
+        <input
+          id={id}
+          type={visible ? 'text' : 'password'}
+          name={name}
+          value={formData[name]}
+          onChange={handleInputChange}
+          placeholder={placeholder}
+          className="user-admin-input user-admin-input--with-toggle"
+          aria-required="true"
+        />
+        <button
+          type="button"
+          onClick={toggle}
+          className="user-admin-password-toggle"
+          aria-label={visible ? 'Hide password' : 'Show password'}
+        >
+          {visible ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="ua-dashboard">
       <ToastContainer
@@ -268,203 +310,216 @@ const UserAdmin: React.FC = () => {
         pauseOnHover
       />
 
-      <div className="ua-content-wrapper">
-        <header className="ua-header">
-          <h1 className="ua-title">{getPageTitle()}</h1>
-          <p className="ua-subtitle">{getPageSubtitle()}</p>
-        </header>
+      <PageHeader className="ua-header" title={getPageTitle()} description={getPageSubtitle()} />
 
+      <div className="ua-content-wrapper">
         <div className="ua-controls-bar">
-          <div className="ua-search-wrapper">
-            <FaSearch className="ua-search-icon" />
-            <input
-              type="text"
-              placeholder="Search by name, email, username, phone or country..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="ua-search-input"
-            />
-          </div>
+          <SearchInput
+            containerClassName="ua-search-wrapper"
+            className="ua-search-input"
+            placeholder="Search by name, email, username, phone or country..."
+            label="Search users"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
 
           <div className="ua-action-buttons">
-            <button className="ua-create-btn" onClick={handleCreateClick} disabled={isLoading}>
-              <FaPlus />
+            <Button className="ua-create-btn" onClick={handleCreateClick} disabled={isLoading}>
+              <FaPlus aria-hidden="true" />
               Create {getUserTypeDisplayName()}
-            </button>
+            </Button>
           </div>
         </div>
 
         {listLoading ? (
           <div className="ua-loading-data">
-            <div className="ua-spinner"></div>
-            <p>Loading your data...</p>
+            <Loader message="Loading your data..." />
           </div>
         ) : filteredUsers.length === 0 ? (
-          <div className="ua-empty-state">
-            {searchQuery ? 'No users match your search.' : 'No users found.'}
-          </div>
+          <EmptyState
+            className="ua-empty-state"
+            icon={<FaUsers aria-hidden="true" />}
+            title={searchQuery ? 'No users match your search.' : 'No users found.'}
+          />
         ) : (
-          <div className="ua-table-wrapper">
-            <table className="ua-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Username</th>
-                  <th>User Role</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.personId}>
-                    <td>
-                      <div className="ua-cell-name">{user.name}</div>
-                    </td>
-                    <td>{user.email}</td>
-                    <td>{user.userName}</td>
-                    <td>
-                      <span className="ua-role-badge">{user.roleName}</span>
-                    </td>
+          <>
+            <div className="ua-table-wrapper sila-table-wrap">
+              <table className="ua-table sila-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Username</th>
+                    <th scope="col">User Role</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((user) => (
+                    <tr key={user.personId}>
+                      <td>
+                        <div className="ua-cell-name">{user.name}</div>
+                      </td>
+                      <td>{user.email}</td>
+                      <td className="ua-cell-muted">{user.userName}</td>
+                      <td>
+                        <span className="ua-role-badge sila-badge sila-badge--neutral">{user.roleName}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="ua-table-footer sila-pagination">
+              <span>
+                Showing {filteredUsers.length} of {users.length} users
+              </span>
+            </div>
+          </>
         )}
       </div>
 
       {showModal && (
         <div className="user-admin-modal-overlay" onClick={handleCloseModal}>
-          <div className="user-admin-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="user-admin-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ua-create-user-title"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="user-admin-modal-header">
-              <h2>Create {getUserTypeDisplayName()}</h2>
-              <button className="user-admin-modal-close" onClick={handleCloseModal}>
-                ✕
+              <h2 id="ua-create-user-title">Create {getUserTypeDisplayName()}</h2>
+              <button
+                type="button"
+                className="user-admin-modal-close"
+                onClick={handleCloseModal}
+                aria-label="Close dialog"
+              >
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
 
             <form className="user-admin-form">
-              {error && <div className="user-admin-error">{error}</div>}
-
-              <div className="user-admin-form-group">
-                <label className="user-admin-label"><FaUser /> Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="Enter full name"
-                  className="user-admin-input"
-                />
-              </div>
-
-              <div className="user-admin-form-group">
-                <label className="user-admin-label"><CiMail /> Email Address</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="Enter email address"
-                  className="user-admin-input"
-                />
-              </div>
-
-              <div className="user-admin-form-group">
-                <label className="user-admin-label"><FaUser /> Username</label>
-                <input
-                  type="text"
-                  name="userName"
-                  value={formData.userName}
-                  onChange={handleInputChange}
-                  placeholder="Enter username"
-                  className="user-admin-input"
-                />
-              </div>
-
-              <div className="user-admin-form-group">
-                <label className="user-admin-label"><FaPhone /> Phone</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  placeholder="Enter 10-digit phone number"
-                  className="user-admin-input"
-                />
-              </div>
-
-              <div className="user-admin-form-group">
-                <label className="user-admin-label"><FaGlobe /> Country</label>
-                <select
-                  name="country"
-                  value={formData.country}
-                  onChange={handleInputChange}
-                  className="user-admin-input user-admin-select"
-                >
-                  <option value="">Select Country</option>
-                  {Country.getAllCountries().map((c) => (
-                    <option key={c.isoCode} value={c.isoCode}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="user-admin-form-group">
-                <label className="user-admin-label"><FaMapMarkerAlt /> Address</label>
-                <input
-                  type="text"
-                  name="addressLine"
-                  value={formData.addressLine}
-                  onChange={handleInputChange}
-                  placeholder="Enter address"
-                  className="user-admin-input"
-                />
-              </div>
-
-              <div className="user-admin-form-group">
-                <label className="user-admin-label"><FaLock /> Password</label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="Enter password"
-                    className="user-admin-input"
-                    style={{ paddingRight: '40px' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="user-admin-password-toggle"
-                  >
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
-                  </button>
+              {error && (
+                <div className="user-admin-error sila-alert sila-alert--danger" role="alert">
+                  <FaExclamationCircle className="user-admin-error-icon" aria-hidden="true" />
+                  <span>{error}</span>
                 </div>
-              </div>
+              )}
 
-              <div className="user-admin-form-group">
-                <label className="user-admin-label"><FaLock /> Confirm Password</label>
-                <div style={{ position: 'relative' }}>
+              <div className="user-admin-form-grid">
+                <div className="user-admin-form-group">
+                  <label htmlFor="ua-name" className="user-admin-label">
+                    Name <span className="sila-required" aria-hidden="true">*</span>
+                  </label>
                   <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
+                    id="ua-name"
+                    type="text"
+                    name="name"
+                    value={formData.name}
                     onChange={handleInputChange}
-                    placeholder="Confirm password"
+                    placeholder="Enter full name"
                     className="user-admin-input"
-                    style={{ paddingRight: '40px' }}
+                    aria-required="true"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="user-admin-password-toggle"
-                  >
-                    {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-                  </button>
                 </div>
+
+                <div className="user-admin-form-group">
+                  <label htmlFor="ua-email" className="user-admin-label">
+                    Email Address <span className="sila-required" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="ua-email"
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="Enter email address"
+                    className="user-admin-input"
+                    aria-required="true"
+                  />
+                </div>
+
+                <div className="user-admin-form-group">
+                  <label htmlFor="ua-username" className="user-admin-label">
+                    Username <span className="sila-required" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="ua-username"
+                    type="text"
+                    name="userName"
+                    value={formData.userName}
+                    onChange={handleInputChange}
+                    placeholder="Enter username"
+                    className="user-admin-input"
+                    aria-required="true"
+                  />
+                </div>
+
+                <div className="user-admin-form-group">
+                  <label htmlFor="ua-phone" className="user-admin-label">
+                    Phone <span className="sila-required" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="ua-phone"
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="Enter 10-digit phone number"
+                    className="user-admin-input"
+                    aria-required="true"
+                  />
+                </div>
+
+                <div className="user-admin-form-group">
+                  <label htmlFor="ua-country" className="user-admin-label">
+                    Country <span className="sila-required" aria-hidden="true">*</span>
+                  </label>
+                  <select
+                    id="ua-country"
+                    name="country"
+                    value={formData.country}
+                    onChange={handleInputChange}
+                    className="user-admin-input user-admin-select"
+                    aria-required="true"
+                  >
+                    <option value="">Select Country</option>
+                    {Country.getAllCountries().map((c) => (
+                      <option key={c.isoCode} value={c.isoCode}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="user-admin-form-group">
+                  <label htmlFor="ua-address" className="user-admin-label">
+                    Address <span className="sila-required" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="ua-address"
+                    type="text"
+                    name="addressLine"
+                    value={formData.addressLine}
+                    onChange={handleInputChange}
+                    placeholder="Enter address"
+                    className="user-admin-input"
+                    aria-required="true"
+                  />
+                </div>
+
+                {renderPasswordField('ua-password', 'password', 'Password', 'Enter password', showPassword, () =>
+                  setShowPassword(!showPassword)
+                )}
+                {renderPasswordField(
+                  'ua-confirm-password',
+                  'confirmPassword',
+                  'Confirm Password',
+                  'Confirm password',
+                  showConfirmPassword,
+                  () => setShowConfirmPassword(!showConfirmPassword)
+                )}
               </div>
             </form>
             <footer className="user-admin-footer">
@@ -472,7 +527,6 @@ const UserAdmin: React.FC = () => {
                 <Button
                   type="button"
                   variant="secondary"
-                  size="lg"
                   onClick={handleCloseModal}
                   disabled={isLoading}
                 >
@@ -481,7 +535,6 @@ const UserAdmin: React.FC = () => {
                 <Button
                   type="submit"
                   variant="primary"
-                  size="lg"
                   disabled={isLoading}
                   onClick={handleSubmit}
                 >
@@ -491,8 +544,8 @@ const UserAdmin: React.FC = () => {
             </footer>
 
             {isLoading && (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.8)', borderRadius: '12px' }}>
-                <Loader color="#2f7cf6" />
+              <div className="user-admin-loading-overlay">
+                <Loader />
               </div>
             )}
           </div>

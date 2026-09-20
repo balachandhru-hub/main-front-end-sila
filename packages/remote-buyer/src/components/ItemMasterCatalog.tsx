@@ -5,7 +5,8 @@ import {
     type ItemMasterDto,
     type ItemMasterDetailDto,
 } from "../api/Buyerapi";
-import { isErrorResponse, toastService } from "@vosox/shared-ui";
+import { EmptyState, Loader, isErrorResponse, toastService } from "@vosox/shared-ui";
+import { FaPlus } from "react-icons/fa";
 import ItemMasterModal from "./ItemMasterModal";
 import "./ItemMasterCatalog.css";
 
@@ -26,7 +27,7 @@ const DETAIL_FIELDS: { key: keyof ItemMasterDetailDto; label: string }[] = [
 ];
 
 const IconChevronLeft = () => (
-    <svg className="back-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className="back-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="15 18 9 12 15 6" />
     </svg>
 );
@@ -98,9 +99,9 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
     return (
         <div className="imc-container">
             {error && (
-                <div className="imc-error-banner">
+                <div className="imc-error-banner" role="alert">
                     <span>{error}</span>
-                    <button type="button" className="imc-btn-retry" onClick={fetchItemMasters}>
+                    <button type="button" className="imc-btn-retry sila-btn sila-btn--secondary sila-btn--sm" onClick={fetchItemMasters}>
                         Retry
                     </button>
                 </div>
@@ -129,11 +130,10 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
 
                     {detailLoading ? (
                         <div className="imc-loading-state">
-                            <div className="imc-spinner" />
-                            <span>Loading details...</span>
+                            <Loader size={28} message="Loading details..." />
                         </div>
                     ) : detailError ? (
-                        <div className="imc-error-banner">
+                        <div className="imc-error-banner" role="alert">
                             <span>{detailError}</span>
                         </div>
                     ) : selectedItemDetail ? (
@@ -162,46 +162,57 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
                         </div>
 
                         <div className="imc-header-actions">
-                            <button type="button" className="imc-btn-primary" onClick={handleAddItemMasterClick}>
-                                + Add Item Master
-                            </button>
-
                             {onClose && (
-                                <button type="button" className="imc-btn-secondary" onClick={onClose}>
+                                <button type="button" className="imc-btn-secondary sila-btn sila-btn--secondary" onClick={onClose}>
                                     Close
                                 </button>
                             )}
+
+                            <button type="button" className="imc-btn-primary sila-btn sila-btn--primary" onClick={handleAddItemMasterClick}>
+                                <FaPlus aria-hidden="true" />
+                                Add Item Master
+                            </button>
                         </div>
                     </div>
 
                     {loading ? (
                         <div className="imc-loading-state">
-                            <div className="imc-spinner" />
-                            <span>Loading item masters...</span>
+                            <Loader size={28} message="Loading item masters..." />
                         </div>
                     ) : itemMasters.length === 0 ? (
-                        <div className="imc-empty-state">
-                            <p>No item masters found.</p>
-                            <button type="button" className="imc-btn-primary" onClick={handleAddItemMasterClick}>
-                                + Add Item Master
-                            </button>
-                        </div>
+                        <EmptyState
+                            className="imc-empty-state"
+                            title="No item masters found."
+                            action={
+                                <button type="button" className="imc-btn-primary sila-btn sila-btn--primary" onClick={handleAddItemMasterClick}>
+                                    <FaPlus aria-hidden="true" />
+                                    Add Item Master
+                                </button>
+                            }
+                        />
                     ) : (
                         <div className="item-master-table-container">
                             <table className="item-master-table">
                                 <thead>
                                     <tr>
-                                        <th style={{ width: "64px" }}>S.NO</th>
-                                        <th>MATERIAL</th>
-                                        <th>DESCRIPTION</th>
-                                        <th>GROUP</th>
+                                        <th scope="col" className="imc-col-index">S.No</th>
+                                        <th scope="col">Material</th>
+                                        <th scope="col">Description</th>
+                                        <th scope="col">Group</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {itemMasters.map((item, index) => (
-                                        <tr key={item.id} onClick={() => handleRowClick(item.id)}>
-                                            <td>{index + 1}</td>
-                                            <td>{item.materialCode}</td>
+                                        <tr
+                                            key={item.id}
+                                            tabIndex={0}
+                                            onClick={() => handleRowClick(item.id)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") handleRowClick(item.id);
+                                            }}
+                                        >
+                                            <td className="imc-col-index">{index + 1}</td>
+                                            <td><span className="sila-ref">{item.materialCode}</span></td>
                                             <td>{item.description}</td>
                                             <td>{item.materialGroup}</td>
                                         </tr>

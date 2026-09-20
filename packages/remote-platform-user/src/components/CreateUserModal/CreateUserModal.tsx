@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { FaEye, FaEyeSlash, FaChevronDown, FaSearch } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaChevronDown, FaSearch, FaTimes } from 'react-icons/fa';
 import type { User, UserRole } from '../../types';
 import { ROLE_ID_MAPPING } from '../../constants/roleMapping';
 import { getCountries } from '../../api/networkAdminApi';
@@ -277,263 +277,300 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
 
   return (
     <div className="nad-modal-overlay" onClick={handleClose}>
-      <div className="nad-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="nad-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="nad-create-user-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="nad-modal-header">
-          <h2 className="nad-modal-title">Create New User</h2>
+          <h2 id="nad-create-user-title" className="nad-modal-title">Create New User</h2>
           <button
+            type="button"
             className="nad-modal-close"
             onClick={handleClose}
             disabled={isLoading}
             aria-label="Close"
           >
-            ✕
+            <FaTimes aria-hidden="true" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="nad-modal-form">
-          <div className="nad-form-row">
+          <div className="nad-modal-body">
+            <div className="nad-form-row">
+              <div className="nad-form-group">
+                <label htmlFor="name" className="nad-label">
+                  Full Name <span className="nad-required sila-required" aria-hidden="true">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="John Doe"
+                  disabled={isLoading}
+                  aria-invalid={formErrors.name ? true : undefined}
+                  aria-describedby={formErrors.name ? 'name-error' : undefined}
+                  className={`nad-input ${formErrors.name ? 'error' : ''}`}
+                />
+                {formErrors.name && <span id="name-error" className="nad-error-text sila-error-text">{formErrors.name}</span>}
+              </div>
+
+              <div className="nad-form-group">
+                <label htmlFor="email" className="nad-label">
+                  Email Address <span className="nad-required sila-required" aria-hidden="true">*</span>
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="john@example.com"
+                  disabled={isLoading}
+                  aria-invalid={formErrors.email ? true : undefined}
+                  aria-describedby={formErrors.email ? 'email-error' : undefined}
+                  className={`nad-input ${formErrors.email ? 'error' : ''}`}
+                />
+                {formErrors.email && <span id="email-error" className="nad-error-text sila-error-text">{formErrors.email}</span>}
+              </div>
+            </div>
+
+            <div className="nad-form-row">
+              <div className="nad-form-group">
+                <label htmlFor="phone" className="nad-label">
+                  Phone Number <span className="nad-required sila-required" aria-hidden="true">*</span>
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="+1 (555) 000-0000"
+                  disabled={isLoading}
+                  aria-invalid={formErrors.phone ? true : undefined}
+                  aria-describedby={formErrors.phone ? 'phone-error' : undefined}
+                  className={`nad-input ${formErrors.phone ? 'error' : ''}`}
+                />
+                {formErrors.phone && <span id="phone-error" className="nad-error-text sila-error-text">{formErrors.phone}</span>}
+              </div>
+
+              <div className="nad-form-group">
+                <label htmlFor="country" className="nad-label">
+                  Country <span className="nad-required sila-required" aria-hidden="true">*</span>
+                </label>
+                <div className="nad-country-select" ref={dropdownRef}>
+                  <button
+                    type="button"
+                    id="country"
+                    className={`nad-select-trigger ${formErrors.country ? 'error' : ''}`}
+                    aria-haspopup="listbox"
+                    aria-expanded={isCountryDropdownOpen}
+                    aria-invalid={formErrors.country ? true : undefined}
+                    aria-describedby={formErrors.country ? 'country-error' : undefined}
+                    onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
+                    disabled={isLoading}
+                  >
+                    <span className="nad-select-value">
+                      {selectedCountryLabel || 'Select a country'}
+                    </span>
+                    <FaChevronDown
+                      className={`nad-select-icon ${isCountryDropdownOpen ? 'open' : ''}`}
+                      aria-hidden="true"
+                    />
+                  </button>
+
+                  {isCountryDropdownOpen && (
+                    <div className="nad-dropdown">
+                      <div className="nad-search-countries-wrapper">
+                        <FaSearch className="nad-search-icon" aria-hidden="true" />
+                        <input
+                          ref={searchInputRef}
+                          type="text"
+                          placeholder="Search countries..."
+                          value={countrySearchQuery}
+                          onChange={(e) => setCountrySearchQuery(e.target.value)}
+                          className="nad-search-field"
+                          aria-label="Search countries"
+                        />
+                      </div>
+
+                      <div
+                        className="nad-options-list"
+                        ref={countryListRef}
+                        onScroll={handleCountryScroll}
+                      >
+                        {countries.length === 0 && !isLoadingCountries ? (
+                          <div className="nad-no-results">
+                            {countrySearchQuery ? 'No countries found' : 'No countries available'}
+                          </div>
+                        ) : (
+                          countries.map((country) => (
+                            <button
+                              key={country.id}
+                              type="button"
+                              className={`nad-option ${
+                                formData.country === country.countryName ? 'selected' : ''
+                              }`}
+                              onClick={() => handleCountrySelect(country)}
+                            >
+                              <span>{country.countryName}</span>
+                              <span className="nad-country-code">{country.countryCode}</span>
+                            </button>
+                          ))
+                        )}
+
+                        {isLoadingCountries && (
+                          <div className="nad-loading" role="status">
+                            <span className="nad-spinner sila-spinner" aria-hidden="true"></span>
+                            <span className="sila-visually-hidden">Loading countries</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {formErrors.country && <span id="country-error" className="nad-error-text sila-error-text">{formErrors.country}</span>}
+              </div>
+            </div>
+
             <div className="nad-form-group">
-              <label htmlFor="name" className="nad-label">
-                Full Name <span className="nad-required">*</span>
+              <label htmlFor="addressLine" className="nad-label">
+                Address <span className="nad-required sila-required" aria-hidden="true">*</span>
               </label>
               <input
                 type="text"
-                id="name"
-                name="name"
-                value={formData.name}
+                id="addressLine"
+                name="addressLine"
+                value={formData.addressLine}
                 onChange={handleChange}
-                placeholder="John Doe"
+                placeholder="123 Main Street, Apt 4B"
                 disabled={isLoading}
-                className={`nad-input ${formErrors.name ? 'error' : ''}`}
+                aria-invalid={formErrors.addressLine ? true : undefined}
+                  aria-describedby={formErrors.addressLine ? 'addressLine-error' : undefined}
+                  className={`nad-input ${formErrors.addressLine ? 'error' : ''}`}
               />
-              {formErrors.name && <span className="nad-error-text">{formErrors.name}</span>}
+              {formErrors.addressLine && (
+                <span id="addressLine-error" className="nad-error-text sila-error-text">{formErrors.addressLine}</span>
+              )}
             </div>
 
-            <div className="nad-form-group">
-              <label htmlFor="email" className="nad-label">
-                Email Address <span className="nad-required">*</span>
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="john@example.com"
-                disabled={isLoading}
-                className={`nad-input ${formErrors.email ? 'error' : ''}`}
-              />
-              {formErrors.email && <span className="nad-error-text">{formErrors.email}</span>}
-            </div>
-          </div>
-
-          <div className="nad-form-row">
-            <div className="nad-form-group">
-              <label htmlFor="phone" className="nad-label">
-                Phone Number <span className="nad-required">*</span>
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="+1 (555) 000-0000"
-                disabled={isLoading}
-                className={`nad-input ${formErrors.phone ? 'error' : ''}`}
-              />
-              {formErrors.phone && <span className="nad-error-text">{formErrors.phone}</span>}
-            </div>
-
-            <div className="nad-form-group">
-              <label htmlFor="country" className="nad-label">
-                Country <span className="nad-required">*</span>
-              </label>
-              <div className="nad-country-select" ref={dropdownRef}>
-                <button
-                  type="button"
-                  className={`nad-select-trigger ${formErrors.country ? 'error' : ''}`}
-                  onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
+            <div className="nad-form-row">
+              <div className="nad-form-group">
+                <label htmlFor="userName" className="nad-label">
+                  Username <span className="nad-required sila-required" aria-hidden="true">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="userName"
+                  name="userName"
+                  value={formData.userName}
+                  onChange={handleChange}
+                  placeholder="johndoe123"
                   disabled={isLoading}
-                >
-                  <span className="nad-select-value">
-                    {selectedCountryLabel || 'Select a country'}
-                  </span>
-                  <FaChevronDown
-                    className={`nad-select-icon ${isCountryDropdownOpen ? 'open' : ''}`}
-                  />
-                </button>
-
-                {isCountryDropdownOpen && (
-                  <div className="nad-dropdown">
-                    <div className="nad-search-countries-wrapper">
-                      <FaSearch className="nad-search-icon" />
-                      <input
-                        ref={searchInputRef}
-                        type="text"
-                        placeholder="Search countries..."
-                        value={countrySearchQuery}
-                        onChange={(e) => setCountrySearchQuery(e.target.value)}
-                        className="nad-search-field"
-                      />
-                    </div>
-
-                    <div
-                      className="nad-options-list"
-                      ref={countryListRef}
-                      onScroll={handleCountryScroll}
-                    >
-                      {countries.length === 0 && !isLoadingCountries ? (
-                        <div className="nad-no-results">
-                          {countrySearchQuery ? 'No countries found' : 'No countries available'}
-                        </div>
-                      ) : (
-                        countries.map((country) => (
-                          <button
-                            key={country.id}
-                            type="button"
-                            className={`nad-option ${
-                              formData.country === country.countryName ? 'selected' : ''
-                            }`}
-                            onClick={() => handleCountrySelect(country)}
-                          >
-                            <span>{country.countryName}</span>
-                            <span className="nad-country-code">{country.countryCode}</span>
-                          </button>
-                        ))
-                      )}
-
-                      {isLoadingCountries && (
-                        <div className="nad-loading">
-                          <div className="nad-spinner"></div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  aria-invalid={formErrors.userName ? true : undefined}
+                  aria-describedby={formErrors.userName ? 'userName-error' : undefined}
+                  className={`nad-input ${formErrors.userName ? 'error' : ''}`}
+                />
+                {formErrors.userName && (
+                  <span id="userName-error" className="nad-error-text sila-error-text">{formErrors.userName}</span>
                 )}
               </div>
-              {formErrors.country && <span className="nad-error-text">{formErrors.country}</span>}
             </div>
-          </div>
 
-          <div className="nad-form-group">
-            <label htmlFor="addressLine" className="nad-label">
-              Address <span className="nad-required">*</span>
-            </label>
-            <input
-              type="text"
-              id="addressLine"
-              name="addressLine"
-              value={formData.addressLine}
-              onChange={handleChange}
-              placeholder="123 Main Street, Apt 4B"
-              disabled={isLoading}
-              className={`nad-input ${formErrors.addressLine ? 'error' : ''}`}
-            />
-            {formErrors.addressLine && (
-              <span className="nad-error-text">{formErrors.addressLine}</span>
-            )}
-          </div>
-
-          <div className="nad-form-row">
-            <div className="nad-form-group">
-              <label htmlFor="userName" className="nad-label">
-                Username <span className="nad-required">*</span>
-              </label>
-              <input
-                type="text"
-                id="userName"
-                name="userName"
-                value={formData.userName}
-                onChange={handleChange}
-                placeholder="johndoe123"
-                disabled={isLoading}
-                className={`nad-input ${formErrors.userName ? 'error' : ''}`}
-              />
-              {formErrors.userName && (
-                <span className="nad-error-text">{formErrors.userName}</span>
-              )}
-            </div>
-          </div>
-
-          <div className="nad-form-row">
-            <div className="nad-form-group">
-              <label htmlFor="password" className="nad-label">
-                Password <span className="nad-required">*</span>
-              </label>
-              <div className="nad-password-wrapper">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Min. 6 characters"
-                  disabled={isLoading}
-                  autoComplete="new-password"
-                  data-lpignore="true"
+            <div className="nad-form-row">
+              <div className="nad-form-group">
+                <label htmlFor="password" className="nad-label">
+                  Password <span className="nad-required sila-required" aria-hidden="true">*</span>
+                </label>
+                <div className="nad-password-wrapper">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Min. 6 characters"
+                    disabled={isLoading}
+                    autoComplete="new-password"
+                    data-lpignore="true"
+                    aria-invalid={formErrors.password ? true : undefined}
+                  aria-describedby={formErrors.password ? 'password-error' : undefined}
                   className={`nad-input ${formErrors.password ? 'error' : ''}`}
-                />
-                <button
-                  type="button"
-                  className="nad-toggle-password"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                  tabIndex={-1}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
-                </button>
+                  />
+                  <button
+                    type="button"
+                    className="nad-toggle-password"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
+                    tabIndex={-1}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
+                  </button>
+                </div>
+                {formErrors.password && (
+                  <span id="password-error" className="nad-error-text sila-error-text">{formErrors.password}</span>
+                )}
               </div>
-              {formErrors.password && (
-                <span className="nad-error-text">{formErrors.password}</span>
-              )}
+
+              <div className="nad-form-group">
+                <label htmlFor="confirmPassword" className="nad-label">
+                  Confirm Password <span className="nad-required sila-required" aria-hidden="true">*</span>
+                </label>
+                <div className="nad-password-wrapper">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="Confirm password"
+                    disabled={isLoading}
+                    autoComplete="new-password"
+                    data-lpignore="true"
+                    aria-invalid={formErrors.confirmPassword ? true : undefined}
+                  aria-describedby={formErrors.confirmPassword ? 'confirmPassword-error' : undefined}
+                  className={`nad-input ${formErrors.confirmPassword ? 'error' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    className="nad-toggle-password"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    disabled={isLoading}
+                    tabIndex={-1}
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
+                  </button>
+                </div>
+                {formErrors.confirmPassword && (
+                  <span id="confirmPassword-error" className="nad-error-text sila-error-text">{formErrors.confirmPassword}</span>
+                )}
+              </div>
             </div>
 
-            <div className="nad-form-group">
-              <label htmlFor="confirmPassword" className="nad-label">
-                Confirm Password <span className="nad-required">*</span>
-              </label>
-              <div className="nad-password-wrapper">
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Confirm password"
-                  disabled={isLoading}
-                  autoComplete="new-password"
-                  data-lpignore="true"
-                  className={`nad-input ${formErrors.confirmPassword ? 'error' : ''}`}
-                />
-                <button
-                  type="button"
-                  className="nad-toggle-password"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  disabled={isLoading}
-                  tabIndex={-1}
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-                </button>
-              </div>
-              {formErrors.confirmPassword && (
-                <span className="nad-error-text">{formErrors.confirmPassword}</span>
-              )}
-            </div>
           </div>
 
           <div className="nad-modal-footer">
             <button
               type="button"
-              className="nad-btn-cancel"
+              className="nad-btn-cancel sila-btn sila-btn--secondary"
               onClick={handleClose}
               disabled={isLoading}
             >
               Cancel
             </button>
-            <button type="submit" className="nad-btn-submit" disabled={isLoading}>
+            <button
+              type="submit"
+              className="nad-btn-submit sila-btn sila-btn--primary"
+              disabled={isLoading}
+            >
+              {isLoading && <span className="sila-spinner" aria-hidden="true" />}
               {isLoading ? 'Creating...' : 'Create User'}
             </button>
           </div>

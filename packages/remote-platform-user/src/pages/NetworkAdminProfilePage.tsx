@@ -10,16 +10,12 @@ import Header from '../components/Header';
 const NetworkAdminProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const authLoading = useNetworkAdminAuthStore((state) => state.isLoading);
-  const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   // Sourced from the store, which fetches it once (on login and on reload) via
   // initializeFromSession - no per-page fetch, no local cache.
   const personDetail = useNetworkAdminAuthStore((state) => state.personDetail);
   const personDetailLoading = useNetworkAdminAuthStore((state) => state.personDetailLoading);
   const setPersonDetail = useNetworkAdminAuthStore((state) => state.setPersonDetail);
-  const networkAdminHome =
-    currentUser?.userRole === 'SUPPLIER_NETWORK_ADMIN'
-      ? '/platform-user/supplier-network-admin'
-      : '/platform-user/buyer-network-admin';
+  const networkAdminHome = '/dashboard';
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,8 +40,7 @@ const NetworkAdminProfilePage: React.FC = () => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg-color)' }}>
-      <Header />
+    <Header>
       <ProfileView
         personDetail={personDetail as unknown as PersonDetail | null}
         loading={personDetailLoading}
@@ -54,7 +49,7 @@ const NetworkAdminProfilePage: React.FC = () => {
         onSave={handleSave}
         onBack={() => navigate(networkAdminHome)}
       />
-    </div>
+    </Header>
   );
 };
 

@@ -1,4 +1,15 @@
 import React, { useState } from 'react';
+import {
+  FaAddressBook,
+  FaArrowRight,
+  FaBolt,
+  FaBoxes,
+  FaCheck,
+  FaMobileAlt,
+  FaTimes,
+  FaTrophy,
+  FaUser,
+} from 'react-icons/fa';
 import './EAuctionWidget.css';
 
 /* ---------------------------------- Interfaces ---------------------------------- */
@@ -104,25 +115,29 @@ export const EAuctionWidget: React.FC = () => {
 
   const handleConfirmAward = () => {
     setAwardedSupplier(selectedLot.leadSupplier);
-    alert(`🎉 Award confirmed for ${selectedLot.name} to ${selectedLot.leadSupplier}! Contract generation initialized.`);
+    alert(`Award confirmed for ${selectedLot.name} to ${selectedLot.leadSupplier}! Contract generation initialized.`);
   };
 
   return (
     <>
-      {/* Bottom Right Floating Trigger Widget with Green Border */}
+      {/* Bottom-left floating trigger widget */}
       <div
         className="eauction-floating-bar"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Hover Popover Preview Card */}
+        {/* Hover preview card */}
         {isHovered && !isModalOpen && (
           <div className="eauction-preview-popover">
             <div className="eauction-preview-header">
               <div className="eauction-preview-title">
-                <span>⚡ Live e-Auction Portal</span>
+                <FaBolt className="eauction-icon" aria-hidden="true" />
+                <span>Live e-Auction Portal</span>
               </div>
-              <span className="eauction-live-status">LIVE SOURCING</span>
+              <span className="eauction-live-status">
+                <span className="eauction-live-dot" aria-hidden="true" />
+                Live sourcing
+              </span>
             </div>
 
             <div className="eauction-preview-item">
@@ -134,74 +149,91 @@ export const EAuctionWidget: React.FC = () => {
             </div>
 
             <button
+              type="button"
               className="eauction-enter-btn"
               onClick={() => setIsModalOpen(true)}
             >
               <span>Enter Live Bidding Console</span>
-              <span>➔</span>
+              <FaArrowRight className="eauction-icon" aria-hidden="true" />
             </button>
           </div>
         )}
 
-        {/* Floating Bar Button */}
+        {/* Floating bar button */}
         <button
+          type="button"
           className="eauction-trigger-btn"
           onClick={() => setIsModalOpen(true)}
           title="Open SAP Ariba Live e-Auction Console"
         >
-          <span className="eauction-pulse-dot" />
-          <span>⚡ Live e-Auction</span>
+          <span className="eauction-pulse-dot" aria-hidden="true" />
+          <FaBolt className="eauction-icon eauction-icon--brand" aria-hidden="true" />
+          <span>Live e-Auction</span>
           <span className="eauction-badge-count">{mockAuctions.length} Live</span>
         </button>
       </div>
 
-      {/* Full Live Portal Modal View */}
+      {/* Full live portal modal view */}
       {isModalOpen && (
         <div className="eauction-modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div
             className="eauction-portal-container"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="eauction-portal-title"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Top Header Bar */}
+            {/* Top header bar */}
             <div className="eauction-portal-header">
               <div className="eauction-brand">
-                <div className="eauction-logo-icon">e</div>
+                <div className="eauction-logo-icon" aria-hidden="true">e</div>
                 <div>
-                  <div className="eauction-portal-title">eAuction Portal</div>
-                  <div style={{ fontSize: '0.71875rem', color: '#e0f2fe' }}>SAP Ariba Live Sourcing v2.1</div>
+                  <div className="eauction-portal-title" id="eauction-portal-title">eAuction Portal</div>
+                  <div className="eauction-portal-subtitle">SAP Ariba Live Sourcing v2.1</div>
                 </div>
               </div>
 
               <div className="eauction-project-banner">
-                <span style={{ fontSize: '0.75rem', color: '#e0f2fe', textTransform: 'uppercase' }}>Current Sourcing Project:</span>
+                <span className="eauction-project-label">Current Sourcing Project:</span>
                 <span className="eauction-project-name">Global IT Hardware Refresh</span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <span style={{ fontSize: '0.8125rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  👤 Buyer: <strong>Alice W.</strong>
+              <div className="eauction-header-actions">
+                <span className="eauction-buyer">
+                  <FaUser className="eauction-icon" aria-hidden="true" />
+                  Buyer: <strong>Alice W.</strong>
                 </span>
                 <button
+                  type="button"
                   className="eauction-portal-close"
                   onClick={() => setIsModalOpen(false)}
                   title="Close e-Auction Console"
+                  aria-label="Close e-Auction Console"
                 >
-                  ✕
+                  <FaTimes aria-hidden="true" />
                 </button>
               </div>
             </div>
 
-            {/* Main Portal Body */}
+            {/* Main portal body */}
             <div className="eauction-portal-body">
-              {/* Left Sidebar Filters */}
+              {/* Left sidebar filters */}
               <div className="eauction-left-sidebar">
                 <div>
                   <div className="eauction-section-header">Live Auctions</div>
                   <div className="eauction-sidebar-menu">
-                    <div className="eauction-sidebar-item active">⚡ Quick Links</div>
-                    <div className="eauction-sidebar-item">📦 Quick Lots</div>
-                    <div className="eauction-sidebar-item">📱 Applications</div>
-                    <div className="eauction-sidebar-item">📇 Contacts</div>
+                    <div className="eauction-sidebar-item active" aria-current="true">
+                      <FaBolt className="eauction-icon" aria-hidden="true" /> Quick Links
+                    </div>
+                    <div className="eauction-sidebar-item">
+                      <FaBoxes className="eauction-icon" aria-hidden="true" /> Quick Lots
+                    </div>
+                    <div className="eauction-sidebar-item">
+                      <FaMobileAlt className="eauction-icon" aria-hidden="true" /> Applications
+                    </div>
+                    <div className="eauction-sidebar-item">
+                      <FaAddressBook className="eauction-icon" aria-hidden="true" /> Contacts
+                    </div>
                   </div>
                 </div>
 
@@ -223,106 +255,106 @@ export const EAuctionWidget: React.FC = () => {
                   </div>
                 </div>
 
-                <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+                <div className="eauction-sidebar-footer">
                   <div className="eauction-section-header">RFx Requests</div>
-                  <div style={{ fontSize: '0.78125rem', color: '#64748b' }}>
+                  <div className="eauction-sidebar-note">
                     3 Active RFQ Live Tenders
                   </div>
                 </div>
               </div>
 
-              {/* Main Content Workspace */}
+              {/* Main content workspace */}
               <div className="eauction-main-content">
-                {/* Active Bids & Rank Grid */}
+                {/* Active bids & rank grid */}
                 <div className="eauction-panel-light">
                   <div className="eauction-panel-head">
-                    <div className="eauction-panel-title-text">MY ACTIVE BIDS & RANKS</div>
-                    <span style={{ fontSize: '0.75rem', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '0.2rem 0.6rem', borderRadius: '0.375rem', fontWeight: 700 }}>
-                      REAL-TIME TABLE ACTIVE
+                    <div className="eauction-panel-title-text">My active bids &amp; ranks</div>
+                    <span className="eauction-realtime-tag">
+                      <span className="eauction-live-dot" aria-hidden="true" />
+                      Real-time table active
                     </span>
                   </div>
 
-                  <table className="eauction-table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Item ID/Name</th>
-                        <th>Category</th>
-                        <th>Closing In</th>
-                        <th>Current Lead Bid</th>
-                        <th>Rank #1 Lead</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {mockAuctions.map((auc, idx) => (
-                        <tr
-                          key={auc.id}
-                          style={{
-                            background: auc.id === selectedLot.id ? '#eff6ff' : 'transparent',
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => setSelectedLot(auc)}
-                        >
-                          <td>{idx + 1}</td>
-                          <td>
-                            <div style={{ fontWeight: 600, color: '#0f172a' }}>{auc.name}</div>
-                            <div style={{ fontSize: '0.71875rem', color: '#64748b' }}>{auc.itemCode}</div>
-                          </td>
-                          <td>{auc.category}</td>
-                          <td>
-                            <span className="eauction-timer">{auc.closingIn}</span>
-                          </td>
-                          <td>
-                            <span className="eauction-bid-price">{auc.currentBid}</span>
-                          </td>
-                          <td>
-                            <span className={`eauction-rank-badge rank-${auc.userRank}`}>
-                              {auc.userRank}
-                            </span>
-                            <span style={{ marginLeft: '0.5rem', fontSize: '0.78125rem', color: '#475569' }}>
-                              {auc.leadSupplier}
-                            </span>
-                          </td>
-                          <td>
-                            <button className="eauction-action-btn">VIEW LOT</button>
-                          </td>
+                  <div className="eauction-table-wrap">
+                    <table className="eauction-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">#</th>
+                          <th scope="col">Item ID/Name</th>
+                          <th scope="col">Category</th>
+                          <th scope="col">Closing In</th>
+                          <th scope="col" className="eauction-num">Current Lead Bid</th>
+                          <th scope="col">Rank #1 Lead</th>
+                          <th scope="col">Action</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {mockAuctions.map((auc, idx) => (
+                          <tr
+                            key={auc.id}
+                            className={`eauction-row${auc.id === selectedLot.id ? ' eauction-row--selected' : ''}`}
+                            tabIndex={0}
+                            aria-selected={auc.id === selectedLot.id}
+                            onClick={() => setSelectedLot(auc)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && e.target === e.currentTarget) setSelectedLot(auc);
+                            }}
+                          >
+                            <td className="eauction-cell-muted">{idx + 1}</td>
+                            <td>
+                              <div className="eauction-item-name">{auc.name}</div>
+                              <div className="eauction-item-code sila-ref">{auc.itemCode}</div>
+                            </td>
+                            <td>{auc.category}</td>
+                            <td>
+                              <span className="eauction-timer">{auc.closingIn}</span>
+                            </td>
+                            <td className="eauction-num">
+                              <span className="eauction-bid-price">{auc.currentBid}</span>
+                            </td>
+                            <td>
+                              <span className={`eauction-rank-badge rank-${auc.userRank}`}>
+                                {auc.userRank}
+                              </span>
+                              <span className="eauction-lead-supplier">
+                                {auc.leadSupplier}
+                              </span>
+                            </td>
+                            <td>
+                              <button type="button" className="eauction-action-btn">View lot</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
-                {/* Split Bottom Workspace */}
+                {/* Split bottom workspace */}
                 <div className="eauction-grid-split">
-                  {/* Left Column: Live Bidding View & Messaging */}
-                  <div className="eauction-panel-light" style={{ display: 'flex', flexDirection: 'column' }}>
+                  {/* Left column: live bidding view & messaging */}
+                  <div className="eauction-panel-light eauction-panel-column">
                     <div className="eauction-panel-head">
                       <div className="eauction-panel-title-text">
-                        LIVE BIDDING VIEW: <span style={{ color: '#0057b8' }}>{selectedLot.name}</span>
+                        Live bidding view: <span className="eauction-panel-title-accent">{selectedLot.name}</span>
                       </div>
-                      <span style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: 600 }}>LIVE MESSAGING ACTIVE</span>
+                      <span className="eauction-realtime-tag eauction-realtime-tag--info">Live messaging active</span>
                     </div>
 
-                    {/* Live Leaderboard Bids Popover (Matching Ref Image Overlay) */}
-                    <div className="eauction-bids-overlay-card" style={{ marginBottom: '1rem' }}>
-                      <div className="eauction-bids-title">LIVE SUPPLIER BIDS LEADERBOARD</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
+                    {/* Live leaderboard */}
+                    <div className="eauction-bids-overlay-card">
+                      <div className="eauction-bids-title">Live supplier bids leaderboard</div>
+                      <div className="eauction-leaderboard-grid">
                         {mockLeaderboard.map((bid) => (
                           <div
                             key={bid.rank}
-                            style={{
-                              background: '#ffffff',
-                              padding: '0.5rem',
-                              borderRadius: '0.375rem',
-                              border: bid.rank === 1 ? '1.5px solid #10b981' : '1px solid #cbd5e1',
-                            }}
+                            className={`eauction-leader-card${bid.rank === 1 ? ' eauction-leader-card--lead' : ''}`}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div className="eauction-leader-head">
                               <span className={`eauction-rank-badge rank-${bid.rank}`}>{bid.rank}</span>
-                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#047857' }}>{bid.bidAmount}</span>
+                              <span className="eauction-leader-amount">{bid.bidAmount}</span>
                             </div>
-                            <div style={{ fontSize: '0.71875rem', color: '#475569', marginTop: '0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500 }}>
+                            <div className="eauction-leader-name" title={bid.supplierName}>
                               {bid.supplierName}
                             </div>
                           </div>
@@ -330,55 +362,40 @@ export const EAuctionWidget: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Live Chat Discussion */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <div className="eauction-chat-timeline">
+                    {/* Live chat discussion */}
+                    <div className="eauction-chat">
+                      <div className="eauction-chat-timeline" aria-live="polite">
                         {chatMessages.map((msg) => (
                           <div key={msg.id} className="eauction-chat-msg">
-                            <div className={`eauction-chat-avatar ${msg.avatarClass}`}>
+                            <div className={`eauction-chat-avatar ${msg.avatarClass}`} aria-hidden="true">
                               {msg.sender.charAt(0)}
                             </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                                <strong style={{ color: '#0f172a', fontSize: '0.8125rem' }}>{msg.sender}</strong>
-                                <span style={{ color: '#64748b', fontSize: '0.71875rem' }}>{msg.time}</span>
+                            <div className="eauction-chat-content">
+                              <div className="eauction-chat-meta">
+                                <strong className="eauction-chat-sender">{msg.sender}</strong>
+                                <span className="eauction-chat-time">{msg.time}</span>
                               </div>
-                              <div style={{ color: '#334155', fontSize: '0.8125rem' }}>{msg.text}</div>
+                              <div className="eauction-chat-text">{msg.text}</div>
                             </div>
                           </div>
                         ))}
                       </div>
 
-                      {/* Chat Input */}
-                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                      {/* Chat input */}
+                      <div className="eauction-chat-compose">
                         <input
                           type="text"
+                          className="sila-input eauction-chat-input"
                           placeholder="Broadcast message to live e-Auction bidders..."
+                          aria-label="Broadcast message to live e-Auction bidders"
                           value={newMessageText}
                           onChange={(e) => setNewMessageText(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                          style={{
-                            flex: 1,
-                            background: '#ffffff',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '0.375rem',
-                            padding: '0.5rem 0.75rem',
-                            color: '#0f172a',
-                            fontSize: '0.8125rem',
-                          }}
                         />
                         <button
+                          type="button"
+                          className="sila-btn sila-btn--primary"
                           onClick={handleSendMessage}
-                          style={{
-                            background: '#0057b8',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '0.375rem',
-                            padding: '0.5rem 1rem',
-                            fontWeight: 700,
-                            fontSize: '0.8125rem',
-                            cursor: 'pointer',
-                          }}
                         >
                           Send
                         </button>
@@ -386,78 +403,68 @@ export const EAuctionWidget: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Right Column: Awarding Panel & History */}
-                  <div className="eauction-panel-light" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div className="eauction-panel-title-text">AWARDING PANEL</div>
+                  {/* Right column: awarding panel & history */}
+                  <div className="eauction-panel-light eauction-panel-column eauction-award-panel">
+                    <div className="eauction-panel-title-text">Awarding panel</div>
 
                     <div className="eauction-award-box">
-                      <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
-                        RANKED SUPPLIERS FOR AWARD
+                      <div className="eauction-overline">
+                        Ranked suppliers for award
                       </div>
 
-                      <div style={{ background: '#ffffff', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #cbd5e1' }}>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>AWARD LOT TO:</div>
-                        <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#047857', margin: '0.25rem 0' }}>
-                          🥇 {selectedLot.leadSupplier} ({selectedLot.currentBid})
+                      <div className="eauction-award-target">
+                        <div className="eauction-award-label">Award lot to:</div>
+                        <div className="eauction-award-supplier">
+                          <FaTrophy className="eauction-icon eauction-icon--success" aria-hidden="true" />
+                          <span>{selectedLot.leadSupplier} ({selectedLot.currentBid})</span>
                         </div>
                       </div>
 
                       <button
+                        type="button"
                         className="eauction-btn-confirm"
                         onClick={handleConfirmAward}
                       >
-                        {awardedSupplier === selectedLot.leadSupplier ? "✓ AWARD CONFIRMED" : "CONFIRM AWARD"}
+                        {awardedSupplier === selectedLot.leadSupplier ? (
+                          <>
+                            <FaCheck className="eauction-icon" aria-hidden="true" /> Award confirmed
+                          </>
+                        ) : (
+                          'Confirm award'
+                        )}
                       </button>
                     </div>
 
-                    <div style={{ flex: 1, background: '#f8fafc', borderRadius: '0.5rem', padding: '0.875rem', border: '1px solid #e2e8f0' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-                        AWARD HISTORY
+                    <div className="eauction-history">
+                      <div className="eauction-overline">
+                        Award history
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#334155', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '0.375rem' }}>
+                      <div className="eauction-history-list">
+                        <div className="eauction-history-item">
                           <strong>Lot 4010: Office Supplies</strong>
-                          <div style={{ color: '#047857', fontWeight: 600 }}>Awarded to Staples Business</div>
+                          <div className="eauction-history-status">Awarded to Staples Business</div>
                         </div>
-                        <div>
+                        <div className="eauction-history-item">
                           <strong>Lot 4008: IT Hardware Refurbish</strong>
-                          <div style={{ color: '#047857', fontWeight: 600 }}>Awarded to Meridian Logistics</div>
+                          <div className="eauction-history-status">Awarded to Meridian Logistics</div>
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div className="eauction-award-actions">
                       <button
-                        style={{
-                          flex: 1,
-                          padding: '0.5rem',
-                          background: '#f1f5f9',
-                          color: '#334155',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '0.375rem',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                        onClick={() => alert("📩 Award Notification dispatched to all participating bidders!")}
+                        type="button"
+                        className="sila-btn sila-btn--secondary sila-btn--sm"
+                        onClick={() => alert("Award Notification dispatched to all participating bidders!")}
                       >
-                        POST & NOTIFY
+                        Post &amp; notify
                       </button>
                       <button
-                        style={{
-                          flex: 1,
-                          padding: '0.5rem',
-                          background: '#0057b8',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '0.375rem',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                        onClick={() => alert("📄 SAP Ariba Award Contract PDF generated successfully!")}
+                        type="button"
+                        className="sila-btn sila-btn--primary sila-btn--sm"
+                        onClick={() => alert("SAP Ariba Award Contract PDF generated successfully!")}
                       >
-                        GENERATE CONTRACT
+                        Generate contract
                       </button>
                     </div>
                   </div>
