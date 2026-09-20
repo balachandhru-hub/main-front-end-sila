@@ -301,6 +301,8 @@ export interface RFQDetailItem {
   costCenterName: string;
   attachments: RFQDetailDocument[];
   questions: RFQQuestion[];
+  isAwarded?: boolean;
+  awardedSupplierId?: string;
 }
 
 export interface RFQSupplierQuotation {
@@ -471,6 +473,7 @@ export interface SupplierQuotationByIdItem {
   isLead?: boolean;
   currency?: string;
   rank?: string | number;
+  isAwarded?: boolean;
   supplierQuotationItems: {
     quotedPrice: number;
     supplierRFQItemId?: string;
@@ -487,6 +490,7 @@ export interface SupplierQuotationByIdItem {
     subTotal?: number;
     lineNumber?: number;
     rank?: string | number;
+    isAwarded?: boolean;
   }[];
 }
 

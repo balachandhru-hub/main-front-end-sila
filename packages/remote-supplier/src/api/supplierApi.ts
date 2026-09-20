@@ -1591,3 +1591,49 @@ export const downloadSupplierMessageAttachment = async (
     };
   }
 };
+
+export interface UploadSupplierTermsPayload {
+  rfqId: string;
+  termsAndCondition: boolean;
+  documents: RfqDocumentAssetDto[];
+}
+
+export const uploadSupplierTermsAndCondition = async (
+  payload: UploadSupplierTermsPayload
+): Promise<any | ErrorResponseDto> => {
+  try {
+    const bodyData = Array.isArray(payload.documents)
+      ? payload.documents[0]
+      : payload.documents;
+
+    const response = await supplierInstance.post(
+      `/api/v1/supplier/supplier-terms-condition?rfqId=${payload.rfqId}&termsAndCondition=${payload.termsAndCondition}`,
+      bodyData
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to update supplier terms & conditions',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while updating supplier terms & conditions.',
+    };
+  }
+};

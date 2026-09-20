@@ -303,6 +303,39 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
 
   const autoSelectLowest = () => {
     const newSel: Record<string, string> = {};
+
+    // 1. If RFQ is already awarded, pre-select based on isAwarded flag from API response payload
+    if (isRfqAwarded) {
+      if (isLotOption) {
+        const awardedQuotation = effectiveQuotations.find(
+          (q: any) => q.isAwarded === true
+        );
+        if (awardedQuotation) {
+          const suppId = awardedQuotation.quotationId || awardedQuotation.supplierId;
+          lineItems.forEach((item: any) => {
+            const itemId = item.id || item.itemId || item._id;
+            newSel[itemId] = suppId;
+          });
+        }
+      } else {
+        lineItems.forEach((item: any) => {
+          const itemId = item.id || item.itemId || item._id;
+          effectiveQuotations.forEach((q: any) => {
+            const qi = getQuoteItemForRfqItem(q, item);
+            if (qi?.isAwarded === true || q.isAwarded === true) {
+              newSel[itemId] = q.quotationId || q.supplierId;
+            }
+          });
+        });
+      }
+
+      if (Object.keys(newSel).length > 0) {
+        setSelections(newSel);
+        return;
+      }
+    }
+
+    // 2. Otherwise auto-select lowest (L1) per item or lot
     lineItems.forEach((item: any) => {
       const itemId = item.id || item.rfqItemId;
       let selectedQ: any = null;
@@ -327,7 +360,9 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
       if (selectedQ) newSel[itemId] = selectedQ.quotationId || selectedQ.supplierId;
     });
 
-    if (Object.keys(newSel).length === 0) {
+    if (Object.keys(newSel).length > 0) {
+      setSelections(newSel);
+    } else {
       const totals = effectiveQuotations.map((q: any) => ({
         q,
         total: (q.totalPrice !== undefined && q.totalPrice !== null)
@@ -343,10 +378,9 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         lineItems.forEach((item: any) => {
           newSel[item.id || item.rfqItemId] = suppId;
         });
+        setSelections(newSel);
       }
     }
-
-    setSelections(newSel);
   };
 
   useEffect(() => {
@@ -1609,7 +1643,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
       </div>
 
       {/* Create Contract Entry Card - Right Above RFQ Documents */}
-      <div
+      {isRfqAwarded && <div
         className="bca-section-card bca-contract-entry-card"
         style={{
           marginBottom: '24px',
@@ -1668,7 +1702,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         >
           {contractCreated ? '✓ Contract Workspace' : 'Create Contract'}
         </button>
-      </div>
+      </div>}
 
       {/* RFQ Documents Section */}
       {((rfq?.technicalSpecificationDocuments && rfq.technicalSpecificationDocuments.length > 0) ||

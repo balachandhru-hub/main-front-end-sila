@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./SupplierRfqQuotationSummary.css";
 import SupplierRFQChat from "./SupplierRFQChat/SupplierRFQChat";
+import ContractCreationView from "../../../remote-platform-user/src/components/ContractCreationView";
 import {
   fetchRFQById,
   fetchSupplierQuotationBySupplierId,
@@ -10,6 +11,7 @@ import {
   fetchMetadataReferenceList,
   sendOtp,
   verifyOtp,
+  uploadSupplierTermsAndCondition,
   type RFQDetailResponse,
   type SubmitQuotationPayload,
   type RfqDocumentAssetDto,
@@ -222,6 +224,8 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
   const [submittingQuote, setSubmittingQuote] = useState(false);
   const [submitQuoteError, setSubmitQuoteError] = useState<string | null>(null);
   const [submitQuoteSuccess, setSubmitQuoteSuccess] = useState(false);
+
+  const [showContractView, setShowContractView] = useState(false);
 
   useEffect(() => {
     if (selectedRfq) {
@@ -819,6 +823,29 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
     ownQuotation?.status === "SUBMITTED"
   );
 
+  const isRfqAwarded = Boolean(
+    selectedRfq?.status === "AWARDED" ||
+    ownQuotation?.isAwarded === true ||
+    (ownQuotation as any)?.status === "AWARDED" ||
+    ownQuotation?.supplierQuotationItems?.some((qi: any) => qi.isAwarded === true) ||
+    selectedRfq?.items?.some((it: any) => it.isAwarded === true && (it.awardedSupplierId === supplierId || !it.awardedSupplierId))
+  );
+
+  if (showContractView && selectedRfq) {
+    return (
+      <ContractCreationView
+        rfq={selectedRfq}
+        lineItems={selectedRfq.items || []}
+        effectiveQuotations={ownQuotation ? [ownQuotation] : (selectedRfq.supplierQuotation || [])}
+        role="supplier"
+        supplierId={supplierId || ownQuotation?.supplierId || undefined}
+        supplierName={ownQuotation?.supplierName || undefined}
+        onUploadSupplierTerms={uploadSupplierTermsAndCondition}
+        onBack={() => setShowContractView(false)}
+      />
+    );
+  }
+
   return (
     <>
       <div>
@@ -872,6 +899,18 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                 <span><IconPin /> Delivery: {selectedRfq.deliveryLocation}</span> */}
                 {supplierId && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+                    {isRfqAwarded && (
+                      <Button
+                        variant="primary"
+                        type="button"
+                        className="pud-btn pud-btn-primary"
+                        style={{ backgroundColor: "#2563EB", color: "#FFFFFF", fontWeight: 600 }}
+                        onClick={() => setShowContractView(true)}
+                        title="Review Contract"
+                      >
+                        Review Contract
+                      </Button>
+                    )}
                     <Button
                       variant="primary"
                       type="button"
