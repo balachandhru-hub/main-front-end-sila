@@ -641,3 +641,20 @@
     flex: 1;
   }
 }
+
+.sqs-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sila-space-2, 10px);
+  flex-wrap: wrap;
+}
+
+.sqs-btn-review-contract {
+  background-color: #2563eb;
+  color: #ffffff;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+

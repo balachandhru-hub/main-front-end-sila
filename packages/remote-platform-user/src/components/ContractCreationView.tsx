@@ -1,4 +1,28 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import { fetchBuyerAsset } from "../api/platformApi";
+import { Button } from "@vosox/shared-ui";
+import "./ContractCreationView.css";
+
+export interface RfqAssetAttachment {
+  id: string;
+  assetType?: string;
+  assetName?: string;
+  fileType?: string;
+  fileName?: string;
+}
+
+export interface TermsConditionStatusEntry {
+  termsAndCondition: boolean;
+  supplierId: string;
+  supplierName: string;
+  attachments: RfqAssetAttachment[];
+}
+
+export interface EsignStatusEntry {
+  supplierId: string;
+  supplierName: string;
+  attachments: RfqAssetAttachment[];
+}
 
 function fmtINR(val: number) {
   if (!val && val !== 0) return "—";
@@ -26,7 +50,35 @@ export interface ContractCreationViewProps {
   role?: "buyer" | "supplier";
   supplierId?: string;
   supplierName?: string;
-  onUploadSupplierTerms?: (payload: { rfqId: string; termsAndCondition: boolean; documents: any[] }) => Promise<any>;
+  onUploadSupplierTerms?: (payload: { rfqId: string; termsAndCondition: boolean; documents?: any[] }) => Promise<any>;
+  onUploadSupplierEsign?: (rfqId: string, payload: {
+    entityType?: string;
+    entityId?: string;
+    assetType?: string;
+    fileBytes?: string;
+    fileName?: string;
+    contentType?: string;
+    isSingletonAsset?: boolean;
+    id?: string;
+  }) => Promise<any>;
+  onUploadBuyerEsign?: (rfqId: string, payload: {
+    entityType?: string;
+    entityId?: string;
+    assetType?: string;
+    fileBytes?: string;
+    fileName?: string;
+    contentType?: string;
+    isSingletonAsset?: boolean;
+    id?: string;
+  }) => Promise<any>;
+  /** Buyer sets a status (e.g. "ACCEPTED") on the supplier's terms & conditions. Buyer role only. */
+  onAcceptSupplierTerms?: (rfqId: string, status: string) => Promise<any>;
+  /** Supplier sets a status (e.g. "ACCEPTED") on the buyer's terms & conditions. Supplier role only. */
+  onAcceptBuyerTerms?: (rfqId: string, status: string) => Promise<any>;
+  /** Fetches the latest per-supplier terms & conditions status/attachments for this RFQ. */
+  fetchTermsConditions?: (rfqId: string) => Promise<TermsConditionStatusEntry[] | { statusCode: number }>;
+  /** Fetches the latest per-supplier e-signature status/attachments for this RFQ. */
+  fetchESigns?: (rfqId: string) => Promise<EsignStatusEntry[] | { statusCode: number }>;
 }
 
 export interface SignDetails {
@@ -134,8 +186,8 @@ const SignaturePad: React.FC<{ onDraw: (dataUrl: string | null) => void }> = ({ 
       <div style={{ position: "relative", border: "1px dashed #60A5FA", borderRadius: "8px", background: "#EFF6FF", overflow: "hidden" }}>
         <canvas
           ref={canvasRef}
-          width={460}
-          height={130}
+          width={640}
+          height={220}
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
@@ -143,7 +195,7 @@ const SignaturePad: React.FC<{ onDraw: (dataUrl: string | null) => void }> = ({ 
           onTouchStart={startDrawing}
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
-          style={{ width: "100%", height: "130px", display: "block", cursor: "crosshair", touchAction: "none" }}
+          style={{ width: "100%", height: "220px", display: "block", cursor: "crosshair", touchAction: "none" }}
         />
         {isEmpty && (
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", color: "#93C5FD", fontSize: "12.5px", fontWeight: 500 }}>
@@ -180,8 +232,86 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   supplierId,
   supplierName,
   onUploadSupplierTerms,
+  onUploadSupplierEsign,
+  onUploadBuyerEsign,
+  onAcceptSupplierTerms,
+  onAcceptBuyerTerms,
+  fetchTermsConditions,
+  fetchESigns,
 }) => {
   const isSupplier = role === "supplier";
+  const rfqId: string | undefined = rfq?.rfqId || rfq?.id || (rfq as any)?._id;
+
+  // Real terms-condition / e-sign status per supplier, sourced from the RFQ payload
+  // (buyer's rfq-by-id already includes it) and refreshed via the dedicated status endpoints.
+  const [termsConditions, setTermsConditions] = useState<TermsConditionStatusEntry[]>(
+    (rfq as any)?.supplierTermsConditions || []
+  );
+  const [eSigns, setESigns] = useState<EsignStatusEntry[]>((rfq as any)?.supplierESigns || []);
+
+  useEffect(() => {
+    setTermsConditions((rfq as any)?.supplierTermsConditions || []);
+  }, [(rfq as any)?.supplierTermsConditions]);
+
+  useEffect(() => {
+    setESigns((rfq as any)?.supplierESigns || []);
+  }, [(rfq as any)?.supplierESigns]);
+
+  const refreshTermsConditions = async () => {
+    if (!fetchTermsConditions || !rfqId) return;
+    try {
+      const res = await fetchTermsConditions(rfqId);
+      if (Array.isArray(res)) setTermsConditions(res);
+    } catch (err) {
+      console.error("Failed to refresh terms & conditions status:", err);
+    }
+  };
+
+  const refreshESigns = async () => {
+    if (!fetchESigns || !rfqId) return;
+    try {
+      const res = await fetchESigns(rfqId);
+      if (Array.isArray(res)) setESigns(res);
+    } catch (err) {
+      console.error("Failed to refresh e-signature status:", err);
+    }
+  };
+
+  useEffect(() => {
+    refreshTermsConditions();
+    refreshESigns();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rfqId]);
+
+  const handleDownloadAsset = async (assetId: string, defaultName: string = "Document") => {
+    try {
+      const res = await fetchBuyerAsset(assetId);
+      if (res && "fileBytes" in res && res.fileBytes) {
+        const mime = (res as any).contentType || "application/pdf";
+        const base64Str = (res as any).fileBytes.includes(",") ? (res as any).fileBytes.split(",")[1] : (res as any).fileBytes;
+        const byteCharacters = atob(base64Str);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mime });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = (res as any).fileName || defaultName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        alert("Document file content not available for download.");
+      }
+    } catch (err) {
+      console.error("Failed to download document:", err);
+      alert("Unable to download document.");
+    }
+  };
 
   // Determine awarded suppliers
   const awardedSupplierIds = useMemo(() => {
@@ -339,7 +469,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         reader.readAsDataURL(supplierTcFile);
       });
 
-      const rfqId = rfq?.rfqId || rfq?.id || id;
+      const rfqId = rfq?.rfqId || rfq?.id || (rfq as any)?._id || id;
       const docAsset = {
         entityType: "SUPPLIER_TERMS_CONDITION",
         entityId: rfqId,
@@ -396,6 +526,38 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       [id]: { ...prev[id], ...patch },
     }));
   };
+
+  // Real terms-condition / e-sign status for the currently active supplier, when the API has data for it.
+  const activeTcEntry = activeContract
+    ? termsConditions.find((e) => e.supplierId === activeContract.supplierId)
+    : undefined;
+  const activeEsignEntry = activeContract
+    ? eSigns.find((e) => e.supplierId === activeContract.supplierId)
+    : undefined;
+
+  // The negotiation UI (radio choice / Accept Terms buttons) is hidden once the real API has a
+  // verdict for this supplier: termsAndCondition:false skips the whole review card and jumps
+  // straight to signing; termsAndCondition:true shows a read-only "already accepted" card, so
+  // both parties must be marked accepted here since the (now-hidden) Accept buttons can't do it.
+  useEffect(() => {
+    if (!activeContract) return;
+    if (activeContract.step !== "terms") return;
+    if (!activeTcEntry) return;
+    if (activeContract.buyerFinalAccepted && activeContract.supplierFinalAccepted) return;
+    if (activeTcEntry.termsAndCondition === false) {
+      updateContract(activeContract.supplierId, {
+        buyerFinalAccepted: true,
+        supplierFinalAccepted: true,
+        step: "sign",
+      });
+    } else if (activeTcEntry.termsAndCondition === true) {
+      updateContract(activeContract.supplierId, {
+        buyerFinalAccepted: true,
+        supplierFinalAccepted: true,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeContract?.step, activeContract?.supplierId, activeTcEntry?.termsAndCondition, activeContract?.buyerFinalAccepted, activeContract?.supplierFinalAccepted]);
 
   // Helper calculation for contract value per supplier
   const getContractValue = (id: string) => {
@@ -522,7 +684,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
           reader.readAsDataURL(supplierTcFile);
         });
 
-        const rfqId = rfq?.rfqId || rfq?.id || id;
+        const rfqId = rfq?.rfqId || rfq?.id || (rfq as any)?._id || id;
         const docAsset = {
           entityType: "SUPPLIER_TERMS_CONDITION",
           entityId: rfqId,
@@ -628,11 +790,51 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   };
 
   // Negotiation Actions
-  const handleBuyerAcceptFinal = (id: string) => {
+  const handleBuyerAcceptFinal = async (id: string) => {
+    const targetRfqId = rfq?.rfqId || rfq?.id || (rfq as any)?._id || id;
+    if (onAcceptSupplierTerms && targetRfqId) {
+      try {
+        await onAcceptSupplierTerms(targetRfqId, "ACCEPTED");
+        await refreshTermsConditions();
+      } catch (err) {
+        console.error("Failed to update supplier terms & conditions status:", err);
+      }
+    }
     updateContract(id, { buyerFinalAccepted: true });
   };
 
-  const handleSupplierAcceptFinal = (id: string) => {
+  const handleSupplierAcceptFinal = async (id: string) => {
+    const rfqId = rfq?.rfqId || rfq?.id || (rfq as any)?._id || id;
+    if (onUploadSupplierTerms && rfqId) {
+      setUploadingSupplierTc(true);
+      setSupplierTcStatusMsg(null);
+      try {
+        const res = await onUploadSupplierTerms({
+          rfqId: rfqId,
+          termsAndCondition: true,
+        });
+        if (res && "statusCode" in res && res.statusCode >= 400) {
+          setSupplierTcStatusMsg(res.message || "Failed to accept buyer terms & conditions.");
+          setUploadingSupplierTc(false);
+          return;
+        }
+        setSupplierTcStatusMsg("Success! Buyer terms & conditions accepted.");
+      } catch (err: any) {
+        setSupplierTcStatusMsg(err?.message || "Failed to accept terms.");
+        setUploadingSupplierTc(false);
+        return;
+      } finally {
+        setUploadingSupplierTc(false);
+      }
+    }
+    if (onAcceptBuyerTerms && rfqId) {
+      try {
+        await onAcceptBuyerTerms(rfqId, "ACCEPTED");
+      } catch (err) {
+        console.error("Failed to update buyer terms & conditions status:", err);
+      }
+    }
+    await refreshTermsConditions();
     updateContract(id, { supplierFinalAccepted: true });
   };
 
@@ -654,7 +856,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     );
   };
 
-  const confirmApplyESign = (id: string) => {
+  const confirmApplyESign = async (id: string) => {
     const c = contracts[id];
     if (!c) return;
     const timeStr = nowLabel();
@@ -679,6 +881,30 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         messages: [...c.messages, msg],
         step: isBuyerSigned ? "completed" : "sign",
       });
+
+      if (onUploadSupplierEsign) {
+        const targetRfqId = rfq?.rfqId || rfq?.id || activeContractId || id;
+        const rawBytes = drawnSignatureData
+          ? (drawnSignatureData.includes(",") ? drawnSignatureData.split(",")[1] : drawnSignatureData)
+          : "";
+        const nameSlug = (signerNameInput.trim() || supplierName || "supplier").toLowerCase().replace(/\s+/g, "_");
+        const payload = {
+          entityType: "SupplierEsign",
+          entityId: targetRfqId,
+          assetType: "SupplierEsign",
+          fileBytes: rawBytes,
+          fileName: `${nameSlug}_signature.png`,
+          contentType: "image/png",
+          isSingletonAsset: true,
+          id: targetRfqId,
+        };
+        try {
+          await onUploadSupplierEsign(targetRfqId, payload);
+          await refreshESigns();
+        } catch (err) {
+          console.error("Failed to upload supplier esign:", err);
+        }
+      }
     } else {
       const isSupplierSigned = c.supplierSigned;
       const signDetails: SignDetails = {
@@ -699,11 +925,35 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         messages: [...c.messages, msg],
         step: isSupplierSigned ? "completed" : "sign",
       });
+
+      if (onUploadBuyerEsign) {
+        const targetRfqId = rfq?.rfqId || rfq?.id || activeContractId || id;
+        const rawBytes = drawnSignatureData
+          ? (drawnSignatureData.includes(",") ? drawnSignatureData.split(",")[1] : drawnSignatureData)
+          : "";
+        const nameSlug = (signerNameInput.trim() || "buyer").toLowerCase().replace(/\s+/g, "_");
+        const payload = {
+          entityType: "BuyerEsign",
+          entityId: targetRfqId,
+          assetType: "BuyerEsign",
+          fileBytes: rawBytes,
+          fileName: `${nameSlug}_signature.png`,
+          contentType: "image/png",
+          isSingletonAsset: true,
+          id: targetRfqId,
+        };
+        try {
+          await onUploadBuyerEsign(targetRfqId, payload);
+          await refreshESigns();
+        } catch (err) {
+          console.error("Failed to upload buyer esign:", err);
+        }
+      }
     }
     setESignModalContractId(null);
   };
 
-  const handleUploadSignedContract = (id: string, fileName?: string) => {
+  const handleUploadSignedContract = (id: string, fileName?: string, fileObj?: File) => {
     const c = contracts[id];
     if (!c) return;
     const timeStr = nowLabel();
@@ -728,6 +978,32 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         messages: [...c.messages, msg],
         step: isBuyerSigned ? "completed" : "sign",
       });
+
+      if (onUploadSupplierEsign && fileObj) {
+        const targetRfqId = rfq?.rfqId || rfq?.id || activeContractId || id;
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const result = reader.result as string;
+          const fileBytes = result.includes(",") ? result.split(",")[1] : result;
+          const payload = {
+            entityType: "SupplierEsign",
+            entityId: targetRfqId,
+            assetType: "SupplierEsign",
+            fileBytes: fileBytes,
+            fileName: fileObj.name || "Signed_Contract_Supplier.pdf",
+            contentType: fileObj.type || "application/pdf",
+            isSingletonAsset: true,
+            id: targetRfqId,
+          };
+          try {
+            await onUploadSupplierEsign(targetRfqId, payload);
+            await refreshESigns();
+          } catch (err) {
+            console.error("Failed to upload supplier esign file:", err);
+          }
+        };
+        reader.readAsDataURL(fileObj);
+      }
     } else {
       const isSupplierSigned = c.supplierSigned;
       const signDetails: SignDetails = {
@@ -748,6 +1024,32 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         messages: [...c.messages, msg],
         step: isSupplierSigned ? "completed" : "sign",
       });
+
+      if (onUploadBuyerEsign && fileObj) {
+        const targetRfqId = rfq?.rfqId || rfq?.id || activeContractId || id;
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const result = reader.result as string;
+          const fileBytes = result.includes(",") ? result.split(",")[1] : result;
+          const payload = {
+            entityType: "BuyerEsign",
+            entityId: targetRfqId,
+            assetType: "BuyerEsign",
+            fileBytes: fileBytes,
+            fileName: fileObj.name || "Signed_Contract_Buyer.pdf",
+            contentType: fileObj.type || "application/pdf",
+            isSingletonAsset: true,
+            id: targetRfqId,
+          };
+          try {
+            await onUploadBuyerEsign(targetRfqId, payload);
+            await refreshESigns();
+          } catch (err) {
+            console.error("Failed to upload buyer esign file:", err);
+          }
+        };
+        reader.readAsDataURL(fileObj);
+      }
     }
   };
 
@@ -1460,7 +1762,8 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
           )}
 
           {/* Action Step: Terms Negotiation & Acceptance */}
-          {(activeContract.step === "terms" ||
+          {activeTcEntry?.termsAndCondition !== false &&
+            (activeContract.step === "terms" ||
             activeContract.step === "completed" ||
             (activeContract.step === "sign" && !(activeContract.buyerSigned && activeContract.supplierSigned))) && (
             <div style={{ border: "1px solid #E2E8F0", borderRadius: "8px", padding: "16px 18px", marginBottom: "14px" }}>
@@ -1487,10 +1790,63 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 </div>
               </div>
 
+              {/* Real Terms & Conditions status/attachments for this supplier, from the RFQ e-sign API */}
+              {activeTcEntry?.termsAndCondition === true && (
+                <div style={{ marginBottom: "14px", padding: "10px 14px", background: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: "8px", fontSize: "12px", fontWeight: 600, color: "#059669" }}>
+                  ✓ Terms &amp; Conditions accepted by {activeTcEntry.supplierName || getSupplierName(activeContract.supplierId)}.
+                </div>
+              )}
+
+              {/* Render Uploaded Terms & Conditions Documents */}
+              {(() => {
+                const apiAttachments = activeTcEntry?.attachments || [];
+                const legacyDocs = (rfq as any)?.termsConditionDocuments || (rfq as any)?.termsConditionDocument || [];
+                const docs = apiAttachments.length > 0 ? apiAttachments : legacyDocs;
+                if (!docs || docs.length === 0) return null;
+                return (
+                  <div style={{ marginBottom: "14px", padding: "12px 14px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "8px" }}>
+                    <div style={{ fontSize: "12.5px", fontWeight: 700, color: "#1E293B", marginBottom: "8px" }}>
+                      📄 Terms &amp; Conditions Documents:
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {docs.map((doc: any, idx: number) => (
+                        <div key={doc.id || idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "#FFFFFF", border: "1px solid #CBD5E1", borderRadius: "6px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ fontSize: "16px" }}>📎</span>
+                            <div>
+                              <div style={{ fontSize: "12.5px", fontWeight: 600, color: "#0F172A" }}>
+                                {doc.fileName || doc.assetName || `Terms_Document_${idx + 1}.pdf`}
+                              </div>
+                              {(doc.assetType || doc.fileType) && (
+                                <div style={{ fontSize: "10.5px", color: "#64748B", marginTop: "1px" }}>
+                                  {doc.assetType || doc.fileType}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {doc.id && (
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadAsset(doc.id, doc.fileName || doc.assetName || "Terms_Document.pdf")}
+                              style={{ background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE", borderRadius: "6px", padding: "5px 12px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+                            >
+                              Download
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {activeTcEntry?.termsAndCondition !== true && (
               <div style={{ fontSize: "11.5px", color: "#475569", marginBottom: "12px" }}>
                 Use the chat button at bottom right to discuss terms with {isSupplier ? "the buyer" : "the supplier"}.
               </div>
+              )}
 
+              {activeTcEntry?.termsAndCondition !== true && (
               <div style={{ marginBottom: "14px" }}>
                 {isSupplier ? (
                   <div>
@@ -1530,41 +1886,53 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
                     {/* IF YES: Show Accept Terms button */}
                     {supplierTcRadioChoice === "yes" && (
-                      <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-                        <button
-                          type="button"
-                          onClick={() => handleSupplierAcceptFinal(activeContractId)}
-                          style={{
-                            padding: "8px 18px",
-                            borderRadius: "6px",
-                            fontSize: "12.5px",
-                            fontWeight: 600,
-                            border: "none",
-                            cursor: "pointer",
-                            background: activeContract.supplierFinalAccepted ? "#ECFDF5" : "#2563EB",
-                            color: activeContract.supplierFinalAccepted ? "#059669" : "#FFFFFF",
-                          }}
-                        >
-                          {activeContract.supplierFinalAccepted ? "✓ Supplier Accepted" : "Accept Terms"}
-                        </button>
-
-                        {!activeContract.buyerFinalAccepted && (
+                      <div>
+                        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                           <button
                             type="button"
-                            onClick={() => handleBuyerAcceptFinal(activeContractId)}
+                            onClick={() => handleSupplierAcceptFinal(activeContractId)}
+                            disabled={uploadingSupplierTc}
                             style={{
-                              padding: "8px 16px",
+                              padding: "8px 18px",
                               borderRadius: "6px",
                               fontSize: "12.5px",
                               fontWeight: 600,
-                              border: "1px solid #E2E8F0",
-                              background: "#F1F5F9",
-                              color: "#0F172A",
-                              cursor: "pointer",
+                              border: "none",
+                              cursor: uploadingSupplierTc ? "not-allowed" : "pointer",
+                              background: activeContract.supplierFinalAccepted ? "#ECFDF5" : "#2563EB",
+                              color: activeContract.supplierFinalAccepted ? "#059669" : "#FFFFFF",
                             }}
                           >
-                            Simulate: Buyer Accepts
+                            {uploadingSupplierTc
+                              ? "Submitting..."
+                              : activeContract.supplierFinalAccepted
+                                ? "✓ Supplier Accepted"
+                                : "Accept Terms"}
                           </button>
+
+                          {!activeContract.buyerFinalAccepted && (
+                            <button
+                              type="button"
+                              onClick={() => handleBuyerAcceptFinal(activeContractId)}
+                              style={{
+                                padding: "8px 16px",
+                                borderRadius: "6px",
+                                fontSize: "12.5px",
+                                fontWeight: 600,
+                                border: "1px solid #E2E8F0",
+                                background: "#F1F5F9",
+                                color: "#0F172A",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Simulate: Buyer Accepts
+                            </button>
+                          )}
+                        </div>
+                        {supplierTcStatusMsg && (
+                          <div style={{ marginTop: "6px", fontSize: "11.5px", color: supplierTcStatusMsg.includes("Success") ? "#16A34A" : "#EF4444", fontWeight: 600 }}>
+                            {supplierTcStatusMsg}
+                          </div>
                         )}
                       </div>
                     )}
@@ -1661,6 +2029,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   </>
                 )}
               </div>
+              )}
 
               {/* Final Terms Acceptance Gate */}
               <div style={{ display: "flex", gap: "16px", marginBottom: "12px", flexWrap: "wrap" }}>
@@ -1719,6 +2088,57 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 Contract Signing
               </div>
 
+              {/* Terms & conditions didn't require negotiation for this supplier, so surface the
+                  implicit acceptance here since the "Contract Terms Review & Acceptance" card was skipped. */}
+              {activeTcEntry?.termsAndCondition === false && (
+                <div style={{ marginBottom: "14px", fontSize: "12px", fontWeight: 600, color: "#059669" }}>
+                  Supplier — Accepted ✓
+                </div>
+              )}
+
+              {/* Render Uploaded E-Signature Documents */}
+              {(() => {
+                const apiAttachments = activeEsignEntry?.attachments || [];
+                const legacyDocs = (rfq as any)?.eSignDocuments || (rfq as any)?.eSignDocument || [];
+                const docs = apiAttachments.length > 0 ? apiAttachments : legacyDocs;
+                if (!docs || docs.length === 0) return null;
+                return (
+                  <div style={{ marginBottom: "14px", padding: "12px 14px", background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: "8px" }}>
+                    <div style={{ fontSize: "12.5px", fontWeight: 700, color: "#166534", marginBottom: "8px" }}>
+                      ✍️ Uploaded E-Signature Documents:
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {docs.map((doc: any, idx: number) => (
+                        <div key={doc.id || idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "#FFFFFF", border: "1px solid #86EFAC", borderRadius: "6px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ fontSize: "16px" }}>🖋️</span>
+                            <div>
+                              <div style={{ fontSize: "12.5px", fontWeight: 600, color: "#0F172A" }}>
+                                {doc.fileName || doc.assetName || `E_Sign_Document_${idx + 1}.png`}
+                              </div>
+                              {(doc.assetType || doc.fileType) && (
+                                <div style={{ fontSize: "10.5px", color: "#166534", marginTop: "1px" }}>
+                                  {doc.assetType || doc.fileType}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {doc.id && (
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadAsset(doc.id, doc.fileName || doc.assetName || "E_Sign_Document.png")}
+                              style={{ background: "#2563EB", color: "#FFFFFF", border: "none", borderRadius: "6px", padding: "5px 12px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+                            >
+                              View / Download
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Hidden File Input for Upload Signed Contract */}
               <input
                 type="file"
@@ -1728,7 +2148,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    handleUploadSignedContract(activeContractId, file.name);
+                    handleUploadSignedContract(activeContractId, file.name, file);
                   }
                 }}
               />
@@ -1827,104 +2247,57 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 {isSupplier ? (
                   <>
-                    <button
-                      type="button"
+                    <Button
+                      variant={activeContract.supplierSigned ? "success" : "primary"}
+                      size="sm"
                       onClick={() => openESignModal(activeContractId)}
                       disabled={activeContract.supplierSigned}
-                      style={{
-                        padding: "8px 16px",
-                        borderRadius: "6px",
-                        fontSize: "12.5px",
-                        fontWeight: 600,
-                        border: "none",
-                        cursor: activeContract.supplierSigned ? "not-allowed" : "pointer",
-                        background: activeContract.supplierSigned ? "#ECFDF5" : "#2563EB",
-                        color: activeContract.supplierSigned ? "#059669" : "#FFFFFF",
-                      }}
                     >
                       {activeContract.supplierSigned ? "✓ Supplier Signed" : "E-Sign Contract"}
-                    </button>
-                    <button
-                      type="button"
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => {
                         const input = document.getElementById("signed-contract-upload-input");
                         if (input) input.click();
                       }}
                       disabled={activeContract.supplierSigned}
-                      style={{
-                        padding: "8px 16px",
-                        borderRadius: "6px",
-                        fontSize: "12.5px",
-                        fontWeight: 600,
-                        border: "1px solid #E2E8F0",
-                        background: "#FFFFFF",
-                        color: "#0F172A",
-                        cursor: activeContract.supplierSigned ? "not-allowed" : "pointer",
-                        opacity: activeContract.supplierSigned ? 0.6 : 1,
-                      }}
                     >
                       Upload Signed Contract
-                    </button>
+                    </Button>
 
                     {!activeContract.buyerSigned && (
-                      <button
-                        type="button"
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => handleBuyerSign(activeContractId)}
-                        style={{
-                          padding: "8px 16px",
-                          borderRadius: "6px",
-                          fontSize: "12.5px",
-                          fontWeight: 600,
-                          border: "1px solid #CBD5E1",
-                          background: "#F8FAFC",
-                          color: "#334155",
-                          cursor: "pointer",
-                        }}
                       >
                         Simulate: Buyer Signs
-                      </button>
+                      </Button>
                     )}
                   </>
                 ) : (
                   <>
-                    <button
-                      type="button"
+                    <Button
+                      variant={activeContract.buyerSigned ? "success" : "primary"}
+                      size="sm"
                       onClick={() => openESignModal(activeContractId)}
                       disabled={activeContract.buyerSigned}
-                      style={{
-                        padding: "8px 16px",
-                        borderRadius: "6px",
-                        fontSize: "12.5px",
-                        fontWeight: 600,
-                        border: "none",
-                        cursor: activeContract.buyerSigned ? "not-allowed" : "pointer",
-                        background: activeContract.buyerSigned ? "#ECFDF5" : "#2563EB",
-                        color: activeContract.buyerSigned ? "#059669" : "#FFFFFF",
-                      }}
                     >
                       {activeContract.buyerSigned ? "✓ Buyer Signed" : "E-Sign Contract"}
-                    </button>
-                    <button
-                      type="button"
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => {
                         const input = document.getElementById("signed-contract-upload-input");
                         if (input) input.click();
                       }}
                       disabled={activeContract.buyerSigned}
-                      style={{
-                        padding: "8px 16px",
-                        borderRadius: "6px",
-                        fontSize: "12.5px",
-                        fontWeight: 600,
-                        border: "1px solid #E2E8F0",
-                        background: "#FFFFFF",
-                        color: "#0F172A",
-                        cursor: activeContract.buyerSigned ? "not-allowed" : "pointer",
-                        opacity: activeContract.buyerSigned ? 0.6 : 1,
-                      }}
                     >
                       Upload Signed Contract
-                    </button>
+                    </Button>
 
                     {!activeContract.supplierSigned && (
                       <button
@@ -2200,8 +2573,8 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               background: "#FFFFFF",
               borderRadius: "12px",
               boxShadow: "0 20px 40px -8px rgba(0,0,0,0.25)",
-              width: "520px",
-              maxWidth: "92vw",
+              width: "680px",
+              maxWidth: "94vw",
               padding: "24px 26px",
             }}
           >
@@ -2209,33 +2582,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               E-Sign Contract ({isSupplier ? "Supplier" : "Buyer"})
             </div>
             <div style={{ fontSize: "12.5px", color: "#64748B", marginBottom: "16px" }}>
-              Please verify your details and draw your signature below to sign this contract.
-            </div>
-
-            {/* Signer details input fields */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", display: "block", marginBottom: "4px" }}>
-                  SIGNER NAME
-                </label>
-                <input
-                  type="text"
-                  value={signerNameInput}
-                  onChange={(e) => setSignerNameInput(e.target.value)}
-                  style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "12.5px" }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", display: "block", marginBottom: "4px" }}>
-                  DESIGNATION
-                </label>
-                <input
-                  type="text"
-                  value={signerDesignationInput}
-                  onChange={(e) => setSignerDesignationInput(e.target.value)}
-                  style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #CBD5E1", fontSize: "12.5px" }}
-                />
-              </div>
+              Draw your signature in the box below to sign this contract.
             </div>
 
             {/* Signature Drawing Pad Canvas */}

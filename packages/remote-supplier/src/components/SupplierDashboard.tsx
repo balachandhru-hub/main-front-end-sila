@@ -413,13 +413,19 @@ const SupplierDashboard: React.FC = () => {
     return { index, limit };
   };
 
-  const fetchAllRfqsPage = async (page: number): Promise<boolean> => {
-    if (!supplierId) {
-      const start = (page - 1) * RFQ_PAGE_SIZE;
-      const pageData = rfqs.slice(start, start + RFQ_PAGE_SIZE);
-      setAllRfqsList(pageData);
-      setHasNextRfqPage(start + RFQ_PAGE_SIZE < rfqs.length);
-      return pageData.length > 0;
+  const fetchAllRfqsPage = async (page: number, overrideSupplierId?: string | null): Promise<boolean> => {
+    const targetSuppId = overrideSupplierId !== undefined ? overrideSupplierId : supplierId;
+
+    if (!targetSuppId) {
+      if (rfqs.length > 0) {
+        const start = (page - 1) * RFQ_PAGE_SIZE;
+        const pageData = rfqs.slice(start, start + RFQ_PAGE_SIZE);
+        setAllRfqsList(pageData);
+        setHasNextRfqPage(start + RFQ_PAGE_SIZE < rfqs.length);
+        return pageData.length > 0;
+      }
+      setLoadingAllRfqs(true);
+      return false;
     }
 
     setLoadingAllRfqs(true);
@@ -428,9 +434,8 @@ const SupplierDashboard: React.FC = () => {
     try {
       const { index, limit } = getAllRfqsRange(page);
 
-
       const data = await fetchRFQMasterData({
-        supplierId,
+        supplierId: targetSuppId,
         index,
         limit,
       });
@@ -443,8 +448,6 @@ const SupplierDashboard: React.FC = () => {
       }
 
       setAllRfqsList(data);
-
-
       setHasNextRfqPage(data.length >= RFQ_PAGE_SIZE);
 
       return data.length > 0;
@@ -508,12 +511,17 @@ const SupplierDashboard: React.FC = () => {
   // The RFQ list has its own URL (/rfqs). When the URL changes by itself (Back/Forward,
   // reload, a shared link), bring the RFQ view in line with it.
   useEffect(() => {
-    if (activeNav === "rfqs" && rfqPageView === "dashboard") {
-      handleOpenAllRfqs();
+    if (activeNav === "rfqs") {
+      if (rfqPageView === "dashboard") {
+        setRfqPageView("allRfqs");
+      }
+      if (supplierId) {
+        fetchAllRfqsPage(allRfqsPage > 0 ? allRfqsPage : 1, supplierId);
+      }
     } else if (activeNav !== "rfqs" && rfqPageView === "allRfqs") {
       setRfqPageView("dashboard");
     }
-  }, [activeNav]);
+  }, [activeNav, supplierId]);
 
   const handleNavClick = (key: string) => {
     if (key === "rfqs") {

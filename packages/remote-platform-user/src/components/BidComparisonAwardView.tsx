@@ -2,7 +2,17 @@ import React, { useState, useMemo, useEffect } from "react";
 import "./BidComparisonAward.css";
 import { Button, QuestionAnswer, QuestionItem, QuestionList, QuestionProgress, StatusBadge } from "@vosox/shared-ui";
 import { FaArrowDown, FaArrowUp, FaCheck, FaChevronDown, FaChevronRight, FaFlag, FaListUl, FaUsers } from "react-icons/fa";
-import { fetchBuyerAsset, fetchSupplierAnswerAsset, getBidComparisonData, isBidComparisonError, awardRfq } from "../api/platformApi";
+import {
+  fetchBuyerAsset,
+  fetchSupplierAnswerAsset,
+  getBidComparisonData,
+  isBidComparisonError,
+  awardRfq,
+  fetchSupplierTermsConditionStatus,
+  updateSupplierTermsConditionStatus,
+  fetchBuyerRfqEsign,
+  uploadBuyerRfqEsign,
+} from "../api/platformApi";
 import type { BidComparisonResponseDto } from "../api/platformApi";
 import { ContractCreationView } from "./ContractCreationView";
 import { fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
@@ -682,6 +692,10 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           distinctSelected={distinctSelected}
           getQuoteItemForRfqItem={getQuoteItemForRfqItem}
           onBack={() => setScreen("award")}
+          fetchTermsConditions={fetchSupplierTermsConditionStatus}
+          fetchESigns={fetchBuyerRfqEsign}
+          onAcceptSupplierTerms={updateSupplierTermsConditionStatus}
+          onUploadBuyerEsign={uploadBuyerRfqEsign}
         />
       ) : (
         <>
