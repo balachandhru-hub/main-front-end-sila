@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./SupplierRfqQuotationSummary.css";
 import SupplierRFQChat from "./SupplierRFQChat/SupplierRFQChat";
+import ContractCreationView from "../../../remote-platform-user/src/components/ContractCreationView";
 import {
   fetchRFQById,
   fetchSupplierQuotationBySupplierId,
@@ -10,6 +11,11 @@ import {
   fetchMetadataReferenceList,
   sendOtp,
   verifyOtp,
+  uploadSupplierTermsAndCondition,
+  uploadSupplierEsign,
+  fetchInternalRfqTermsCondition,
+  updateBuyerTermsConditionStatus,
+  fetchInternalRfqEsign,
   type RFQDetailResponse,
   type SubmitQuotationPayload,
   type RfqDocumentAssetDto,
@@ -58,6 +64,15 @@ const IconDownload = () => (
 const IconMessageSquare = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+const IconContract = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
   </svg>
 );
 
@@ -222,6 +237,8 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
   const [submittingQuote, setSubmittingQuote] = useState(false);
   const [submitQuoteError, setSubmitQuoteError] = useState<string | null>(null);
   const [submitQuoteSuccess, setSubmitQuoteSuccess] = useState(false);
+
+  const [showContractView, setShowContractView] = useState(false);
 
   useEffect(() => {
     if (selectedRfq) {
@@ -825,6 +842,33 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
     ownQuotation?.status === "SUBMITTED"
   );
 
+  const isRfqAwarded = Boolean(
+    selectedRfq?.status === "AWARDED" ||
+    ownQuotation?.isAwarded === true ||
+    (ownQuotation as any)?.status === "AWARDED" ||
+    ownQuotation?.supplierQuotationItems?.some((qi: any) => qi.isAwarded === true) ||
+    selectedRfq?.items?.some((it: any) => it.isAwarded === true && (it.awardedSupplierId === supplierId || !it.awardedSupplierId))
+  );
+
+  if (showContractView && selectedRfq) {
+    return (
+      <ContractCreationView
+        rfq={{ ...selectedRfq, rfqId: selectedRfqId || (selectedRfq as any)?.rfqId, id: selectedRfqId || (selectedRfq as any)?.id }}
+        lineItems={selectedRfq.items || []}
+        effectiveQuotations={ownQuotation ? [ownQuotation] : (selectedRfq.supplierQuotation || [])}
+        role="supplier"
+        supplierId={supplierId || ownQuotation?.supplierId || undefined}
+        supplierName={ownQuotation?.supplierName || undefined}
+        onUploadSupplierTerms={uploadSupplierTermsAndCondition}
+        onUploadSupplierEsign={uploadSupplierEsign}
+        fetchTermsConditions={fetchInternalRfqTermsCondition}
+        fetchESigns={fetchInternalRfqEsign}
+        onAcceptBuyerTerms={updateBuyerTermsConditionStatus}
+        onBack={() => setShowContractView(false)}
+      />
+    );
+  }
+
   const formatDateTime = (value?: string | null) =>
     value
       ? new Date(value).toLocaleString("en-IN", {
@@ -904,16 +948,30 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
           backLabel="Back"
           meta={isLeadQuote ? <StatusBadge status="Leading" tone="success" label="Leading" /> : undefined}
           actions={
-            selectedRfq && supplierId ? (
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={() => setIsChatOpen(true)}
-                title="Chat with the buyer"
-              >
-                <IconMessageSquare /> Chat
-              </Button>
-            ) : undefined
+            <div className="sqs-header-actions">
+              {isRfqAwarded && (
+                <Button
+                  variant="primary"
+                  type="button"
+                  className="pud-btn sqs-btn-review-contract"
+                  onClick={() => setShowContractView(true)}
+                  title="Review Contract & Terms"
+                >
+                  <IconContract /> Review Contract
+                </Button>
+              )}
+              {selectedRfq && supplierId && (
+                <Button
+                  variant="primary"
+                  type="button"
+                  className="pud-btn pud-btn-outline pud-btn-chat"
+                  onClick={() => setIsChatOpen(true)}
+                  title="Chat with the buyer"
+                >
+                  <IconMessageSquare /> Chat
+                </Button>
+              )}
+            </div>
           }
         />
 

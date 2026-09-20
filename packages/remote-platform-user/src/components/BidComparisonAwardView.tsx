@@ -2,8 +2,19 @@ import React, { useState, useMemo, useEffect } from "react";
 import "./BidComparisonAward.css";
 import { Button, QuestionAnswer, QuestionItem, QuestionList, QuestionProgress, StatusBadge } from "@vosox/shared-ui";
 import { FaArrowDown, FaArrowUp, FaCheck, FaChevronDown, FaChevronRight, FaFlag, FaListUl, FaUsers } from "react-icons/fa";
-import { fetchBuyerAsset, fetchSupplierAnswerAsset, getBidComparisonData, isBidComparisonError, awardRfq } from "../api/platformApi";
+import {
+  fetchBuyerAsset,
+  fetchSupplierAnswerAsset,
+  getBidComparisonData,
+  isBidComparisonError,
+  awardRfq,
+  fetchSupplierTermsConditionStatus,
+  updateSupplierTermsConditionStatus,
+  fetchBuyerRfqEsign,
+  uploadBuyerRfqEsign,
+} from "../api/platformApi";
 import type { BidComparisonResponseDto } from "../api/platformApi";
+import { ContractCreationView } from "./ContractCreationView";
 import { fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
 
 
@@ -109,6 +120,9 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   const [awardingRfq, setAwardingRfq] = useState(false);
   const [awardSuccess, setAwardSuccess] = useState(false);
   const [awardError, setAwardError] = useState<string | null>(null);
+
+  const [contractCreated, setContractCreated] = useState(false);
+  const [screen, setScreen] = useState<"award" | "contract">("award");
 
   const questions: any[] = useMemo(() => Array.isArray(rfq?.questions) ? rfq.questions : [], [rfq]);
 
@@ -324,6 +338,39 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
 
   const autoSelectLowest = () => {
     const newSel: Record<string, string> = {};
+
+    // 1. If RFQ is already awarded, pre-select based on isAwarded flag from API response payload
+    if (isRfqAwarded) {
+      if (isLotOption) {
+        const awardedQuotation = effectiveQuotations.find(
+          (q: any) => q.isAwarded === true
+        );
+        if (awardedQuotation) {
+          const suppId = awardedQuotation.quotationId || awardedQuotation.supplierId;
+          lineItems.forEach((item: any) => {
+            const itemId = item.id || item.itemId || item._id;
+            newSel[itemId] = suppId;
+          });
+        }
+      } else {
+        lineItems.forEach((item: any) => {
+          const itemId = item.id || item.itemId || item._id;
+          effectiveQuotations.forEach((q: any) => {
+            const qi = getQuoteItemForRfqItem(q, item);
+            if (qi?.isAwarded === true || q.isAwarded === true) {
+              newSel[itemId] = q.quotationId || q.supplierId;
+            }
+          });
+        });
+      }
+
+      if (Object.keys(newSel).length > 0) {
+        setSelections(newSel);
+        return;
+      }
+    }
+
+    // 2. Otherwise auto-select lowest (L1) per item or lot
     lineItems.forEach((item: any) => {
       const itemId = item.id || item.rfqItemId;
       let selectedQ: any = null;
@@ -348,7 +395,9 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
       if (selectedQ) newSel[itemId] = selectedQ.quotationId || selectedQ.supplierId;
     });
 
-    if (Object.keys(newSel).length === 0) {
+    if (Object.keys(newSel).length > 0) {
+      setSelections(newSel);
+    } else {
       const totals = effectiveQuotations.map((q: any) => ({
         q,
         total: (q.totalPrice !== undefined && q.totalPrice !== null)
@@ -364,10 +413,9 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         lineItems.forEach((item: any) => {
           newSel[item.id || item.rfqItemId] = suppId;
         });
+        setSelections(newSel);
       }
     }
-
-    setSelections(newSel);
   };
 
   useEffect(() => {
@@ -634,6 +682,23 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
 
   return (
     <div className="bca-page">
+      {screen === "contract" ? (
+        <ContractCreationView
+          rfq={rfq}
+          lineItems={lineItems}
+          effectiveQuotations={effectiveQuotations}
+          displaySuppliers={displaySuppliers}
+          selections={selections}
+          distinctSelected={distinctSelected}
+          getQuoteItemForRfqItem={getQuoteItemForRfqItem}
+          onBack={() => setScreen("award")}
+          fetchTermsConditions={fetchSupplierTermsConditionStatus}
+          fetchESigns={fetchBuyerRfqEsign}
+          onAcceptSupplierTerms={updateSupplierTermsConditionStatus}
+          onUploadBuyerEsign={uploadBuyerRfqEsign}
+        />
+      ) : (
+        <>
       <div className="bca-page-header">
         <div className="bca-header-left">
           <button type="button" className="bca-back-circle-btn" onClick={onBack} title="Back" aria-label="Back">
@@ -1628,6 +1693,68 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         })()}
       </div>
 
+      {/* Create Contract Entry Card - Right Above RFQ Documents */}
+      {isRfqAwarded && <div
+        className="bca-section-card bca-contract-entry-card"
+        style={{
+          marginBottom: '24px',
+          padding: '36px 24px',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#ffffff',
+          borderRadius: '12px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+        }}
+      >
+        <div
+          style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: '#ECFDF5',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '16px',
+          }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+        <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#0f172a', margin: '0 0 8px 0' }}>
+          Award Completed
+        </h2>
+        <p style={{ fontSize: '14px', color: '#475569', margin: '0 0 24px 0', maxWidth: '540px', lineHeight: '1.5' }}>
+          The RFQ has been awarded. Continue to create the supplier contract.
+        </p>
+        <button
+          type="button"
+          className="bca-btn bca-btn-primary"
+          onClick={() => {
+            setContractCreated(true);
+            setScreen("contract");
+          }}
+          style={{
+            padding: '10px 24px',
+            fontSize: '14px',
+            fontWeight: 600,
+            borderRadius: '8px',
+            background: contractCreated ? '#059669' : '#2563eb',
+            color: '#ffffff',
+            border: 'none',
+            cursor: 'pointer',
+            boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)',
+          }}
+        >
+          {contractCreated ? '✓ Contract Workspace' : 'Create Contract'}
+        </button>
+      </div>}
+
       {/* RFQ Documents Section */}
       {((rfq?.technicalSpecificationDocuments && rfq.technicalSpecificationDocuments.length > 0) ||
         (rfq?.termsConditionDocuments && rfq.termsConditionDocuments.length > 0)) && (
@@ -1971,6 +2098,17 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                     >
                       Close
                     </button>
+                    <button
+                      className="bca-btn bca-btn-primary"
+                      onClick={() => {
+                        setShowAwardModal(false);
+                        setAwardSuccess(false);
+                        setContractCreated(true);
+                        setScreen("contract");
+                      }}
+                    >
+                      Create Contract
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -2030,6 +2168,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           </div>
         );
       })()}
+        </>
+      )}
     </div>
   );
 };

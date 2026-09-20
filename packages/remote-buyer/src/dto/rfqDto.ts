@@ -9,6 +9,27 @@ export interface RfqDocumentAssetDto {
   id?: string;
 }
 
+export interface RfqAssetAttachmentDto {
+  id: string;
+  assetType?: string;
+  assetName?: string;
+  fileType?: string;
+  fileName?: string;
+}
+
+export interface SupplierTermsConditionStatusDto {
+  termsAndCondition: boolean;
+  supplierId: string;
+  supplierName: string;
+  attachments: RfqAssetAttachmentDto[];
+}
+
+export interface SupplierEsignStatusDto {
+  supplierId: string;
+  supplierName: string;
+  attachments: RfqAssetAttachmentDto[];
+}
+
 export interface RfqQuestionOptionDto {
   id: string;
   label: string;
@@ -188,4 +209,6 @@ export interface BuyerRFQDetailResponse {
   supplierQuotation: BuyerSupplierQuotation[];
   supplierAnswers?: RfqSupplierAnswersDto | null;
   status?: string;
+  supplierESigns?: SupplierEsignStatusDto[];
+  supplierTermsConditions?: SupplierTermsConditionStatusDto[];
 }
