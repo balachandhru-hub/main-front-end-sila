@@ -183,7 +183,7 @@ const SignaturePad: React.FC<{ onDraw: (dataUrl: string | null) => void }> = ({ 
 
   return (
     <div>
-      <div style={{ position: "relative", border: "1px dashed #60A5FA", borderRadius: "8px", background: "#EFF6FF", overflow: "hidden" }}>
+      <div className="contract-sigpad-box">
         <canvas
           ref={canvasRef}
           width={640}
@@ -195,22 +195,22 @@ const SignaturePad: React.FC<{ onDraw: (dataUrl: string | null) => void }> = ({ 
           onTouchStart={startDrawing}
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
-          style={{ width: "100%", height: "220px", display: "block", cursor: "crosshair", touchAction: "none" }}
+          className="contract-sigpad-canvas"
         />
         {isEmpty && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", color: "#93C5FD", fontSize: "12.5px", fontWeight: 500 }}>
+          <div className="contract-sigpad-placeholder">
             ✍️ Draw your signature here with cursor / touchpad...
           </div>
         )}
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "6px" }}>
-        <span style={{ fontSize: "10.5px", color: "#64748B" }}>
+      <div className="contract-sigpad-footer">
+        <span className="contract-caption">
           {isEmpty ? "Canvas empty" : "Signature captured"}
         </span>
         <button
           type="button"
           onClick={clearCanvas}
-          style={{ background: "none", border: "none", fontSize: "11.5px", color: "#EF4444", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+          className="contract-sigpad-clear"
         >
           Clear Signature
         </button>
@@ -283,7 +283,11 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rfqId]);
 
-  const handleDownloadAsset = async (assetId: string, defaultName: string = "Document") => {
+  const [busyAssetId, setBusyAssetId] = useState<string | null>(null);
+
+  // Downloads the asset, or with `preview` opens it in a new tab (types the browser can't render download instead).
+  const handleDownloadAsset = async (assetId: string, defaultName: string = "Document", preview: boolean = false) => {
+    setBusyAssetId(assetId);
     try {
       const res = await fetchBuyerAsset(assetId);
       if (res && "fileBytes" in res && res.fileBytes) {
@@ -297,19 +301,26 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: mime });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = (res as any).fileName || defaultName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        if (preview) {
+          window.open(url, "_blank", "noopener,noreferrer");
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+        } else {
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = (res as any).fileName || defaultName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
       } else {
         alert("Document file content not available for download.");
       }
     } catch (err) {
       console.error("Failed to download document:", err);
-      alert("Unable to download document.");
+      alert(preview ? "Unable to preview document." : "Unable to download document.");
+    } finally {
+      setBusyAssetId(null);
     }
   };
 
@@ -432,8 +443,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       : awardedSupplierIds[0] || ""
   );
 
-  const [selectAllSuppliers, setSelectAllSuppliers] = useState(true);
-  const [sendSelection, setSendSelection] = useState<Record<string, boolean>>({});
+
 
   // Chat Drawer State
   const [chatOpen, setChatOpen] = useState(false);
@@ -452,6 +462,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const [includeSupplierTc, setIncludeSupplierTc] = useState(true);
   const [uploadingSupplierTc, setUploadingSupplierTc] = useState(false);
   const [supplierTcStatusMsg, setSupplierTcStatusMsg] = useState<string | null>(null);
+  const supplierTcStatusMsgClass = `contract-status-msg${supplierTcStatusMsg?.includes("Success") ? " contract-status-msg--success" : ""}`;
 
   const handleUploadSupplierTcFileDirect = async (id: string) => {
     if (!supplierTcFile || !onUploadSupplierTerms) return;
@@ -529,35 +540,45 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
   // Real terms-condition / e-sign status for the currently active supplier, when the API has data for it.
   const activeTcEntry = activeContract
-    ? termsConditions.find((e) => e.supplierId === activeContract.supplierId)
+    ? termsConditions.find((e) => String(e.supplierId) === String(activeContract.supplierId))
     : undefined;
   const activeEsignEntry = activeContract
-    ? eSigns.find((e) => e.supplierId === activeContract.supplierId)
+    ? eSigns.find((e) => String(e.supplierId) === String(activeContract.supplierId))
     : undefined;
 
-  // The negotiation UI (radio choice / Accept Terms buttons) is hidden once the real API has a
-  // verdict for this supplier: termsAndCondition:false skips the whole review card and jumps
-  // straight to signing; termsAndCondition:true shows a read-only "already accepted" card, so
-  // both parties must be marked accepted here since the (now-hidden) Accept buttons can't do it.
+  // The buyer's own Terms & Conditions documents attached to the RFQ.
+  const buyerTermsDocs: RfqAssetAttachment[] =
+    (rfq as any)?.termsConditionDocuments || (rfq as any)?.termsConditionDocument || [];
+
+  // termsAndCondition:false is also what the API returns before the supplier has answered, so only
+  // treat it as "No" (supplier uploaded their own terms) once the entry has attachments.
+  const tcDeclined =
+    activeTcEntry?.termsAndCondition === false && (activeTcEntry.attachments?.length ?? 0) > 0;
+
+  // When the supplier declined the buyer's terms, skip the terms negotiation card & jump straight to signing.
+  // When they accepted, mark both parties accepted since the Accept buttons are hidden for that state.
   useEffect(() => {
     if (!activeContract) return;
-    if (activeContract.step !== "terms") return;
-    if (!activeTcEntry) return;
-    if (activeContract.buyerFinalAccepted && activeContract.supplierFinalAccepted) return;
-    if (activeTcEntry.termsAndCondition === false) {
-      updateContract(activeContract.supplierId, {
-        buyerFinalAccepted: true,
-        supplierFinalAccepted: true,
-        step: "sign",
-      });
-    } else if (activeTcEntry.termsAndCondition === true) {
+    if (tcDeclined) {
+      if (activeContract.step === "terms" || activeContract.step === "details") {
+        updateContract(activeContract.supplierId, {
+          buyerFinalAccepted: true,
+          supplierFinalAccepted: true,
+          step: activeContract.buyerSigned && activeContract.supplierSigned ? "completed" : "sign",
+        });
+      }
+    } else if (
+      activeTcEntry?.termsAndCondition === true &&
+      activeContract.step === "terms" &&
+      !(activeContract.buyerFinalAccepted && activeContract.supplierFinalAccepted)
+    ) {
       updateContract(activeContract.supplierId, {
         buyerFinalAccepted: true,
         supplierFinalAccepted: true,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeContract?.step, activeContract?.supplierId, activeTcEntry?.termsAndCondition, activeContract?.buyerFinalAccepted, activeContract?.supplierFinalAccepted]);
+  }, [activeContract?.step, activeContract?.supplierId, tcDeclined, activeTcEntry?.termsAndCondition]);
 
   // Helper calculation for contract value per supplier
   const getContractValue = (id: string) => {
@@ -740,54 +761,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     updateContract(id, patch);
   };
 
-  // Send single contract
-  const sendContractToSupplier = (id: string) => {
-    updateContract(id, {
-      sent: true,
-      step: "terms",
-      messages: [
-        {
-          sender: "Supplier",
-          text: "We have received the contract details and are reviewing the terms.",
-          time: nowLabel(),
-        },
-      ],
-    });
-  };
 
-  // Bulk send contracts
-  const pendingContractIds = awardedSupplierIds.filter(
-    (id) => contracts[id] && contracts[id].step === "details" && !contracts[id].dateError
-  );
-
-  const selectedPendingCount = selectAllSuppliers
-    ? pendingContractIds.length
-    : pendingContractIds.filter((id) => sendSelection[id]).length;
-
-  const handleBulkSend = () => {
-    const updated = { ...contracts };
-    awardedSupplierIds.forEach((id) => {
-      const c = updated[id];
-      if (c && c.step === "details" && !c.dateError) {
-        if (selectAllSuppliers || sendSelection[id]) {
-          updated[id] = {
-            ...c,
-            sent: true,
-            step: "terms",
-            messages: [
-              {
-                sender: "Supplier",
-                text: "We have received the contract details and are reviewing the terms.",
-                time: nowLabel(),
-              },
-            ],
-          };
-        }
-      }
-    });
-    setContracts(updated);
-    setSendSelection({});
-  };
 
   // Negotiation Actions
   const handleBuyerAcceptFinal = async (id: string) => {
@@ -1053,54 +1027,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     }
   };
 
-  const handleSupplierSign = (id: string) => {
-    const c = contracts[id];
-    if (!c) return;
-    const isBuyerSigned = c.buyerSigned;
-    const timeStr = nowLabel();
-    const suppName = getSupplierName(c.supplierId);
-    const signDetails: SignDetails = {
-      signerName: suppName,
-      signerDesignation: "Authorized Representative",
-      signedAt: timeStr,
-      method: "e-sign",
-    };
-    const msg = {
-      sender: "Supplier",
-      text: `Supplier E-Signature applied by ${signDetails.signerName}.`,
-      time: timeStr,
-    };
-    updateContract(id, {
-      supplierSigned: true,
-      supplierSignDetails: signDetails,
-      messages: [...c.messages, msg],
-      step: isBuyerSigned ? "completed" : "sign",
-    });
-  };
-
-  const handleBuyerSign = (id: string) => {
-    const c = contracts[id];
-    if (!c) return;
-    const isSupplierSigned = c.supplierSigned;
-    const timeStr = nowLabel();
-    const signDetails: SignDetails = {
-      signerName: "ABCDEFGH",
-      signerDesignation: "Procurement Manager",
-      signedAt: timeStr,
-      method: "e-sign",
-    };
-    const msg = {
-      sender: "Buyer",
-      text: `Buyer E-Signature applied by ${signDetails.signerName}.`,
-      time: timeStr,
-    };
-    updateContract(id, {
-      buyerSigned: true,
-      buyerSignDetails: signDetails,
-      messages: [...c.messages, msg],
-      step: isSupplierSigned ? "completed" : "sign",
-    });
-  };
 
   // Chat messaging
   const handleSendChatMessage = (id: string) => {
@@ -1212,49 +1138,30 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   }, [activeContract, lineItems, effectiveQuotations, getQuoteItemForRfqItem, resolveQuoteItem, rfq]);
 
   return (
-    <div className="bca-contract-workspace" style={{ width: "100%", maxWidth: "100%", margin: "0", padding: "0 0 20px" }}>
+    <div className="bca-contract-workspace">
       {/* Top Back Navigation */}
       <button
         type="button"
         onClick={onBack}
-        style={{
-          background: "none",
-          border: "none",
-          color: "#2563EB",
-          fontSize: "13px",
-          fontWeight: 600,
-          cursor: "pointer",
-          marginBottom: "8px",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "6px",
-          padding: 0,
-        }}
+        className="contract-back-btn"
       >
         ← {isSupplier ? "Back to Quotation Summary" : "Back to Bid Comparison & Award"}
       </button>
 
       {/* Header and Step Chips */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "12px", flexWrap: "wrap" }}>
+      <div className="contract-header">
         <div>
-          <h1 style={{ fontSize: "22px", fontWeight: 700, color: "#0F172A", margin: "0 0 6px 0" }}>
+          <h1 className="contract-title">
             {isSupplier ? "Contract Review & Execution" : "Contract Creation"}
           </h1>
-          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <div className="contract-inline-group">
             {stepOrderLabels.map((label, i) => {
               const isActive = i === activeStepIdx;
               const isPast = i < activeStepIdx;
               return (
                 <span
                   key={label}
-                  style={{
-                    padding: "4px 14px",
-                    borderRadius: "9999px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    background: isActive ? "#2563EB" : isPast ? "#ECFDF5" : "#F1F5F9",
-                    color: isActive ? "#FFFFFF" : isPast ? "#059669" : "#64748B",
-                  }}
+                  className={`contract-step-chip${isActive ? " contract-step-chip--active" : isPast ? " contract-step-chip--past" : ""}`}
                 >
                   {label} {isPast && "✓"}
                 </span>
@@ -1264,60 +1171,11 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         </div>
       </div>
 
-      {/* Bulk Send Bar for Multi-Supplier Contracts (Buyer view) */}
-      {!isSupplier && awardedSupplierIds.length > 1 && pendingContractIds.length > 0 && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "12px",
-            flexWrap: "wrap",
-            background: "#EFF6FF",
-            border: "1px solid #BFDBFE",
-            borderRadius: "8px",
-            padding: "12px 16px",
-            marginBottom: "10px",
-          }}
-        >
-          <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 600, color: "#1E3A8A", cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={selectAllSuppliers}
-              onChange={() => {
-                setSelectAllSuppliers(!selectAllSuppliers);
-                setSendSelection({});
-              }}
-              style={{ width: "16px", height: "16px", accentColor: "#2563EB", cursor: "pointer" }}
-            />
-            Select All Suppliers
-          </label>
 
-          <button
-            type="button"
-            onClick={handleBulkSend}
-            disabled={selectedPendingCount === 0}
-            style={{
-              padding: "8px 18px",
-              borderRadius: "8px",
-              fontSize: "13px",
-              fontWeight: 600,
-              border: "none",
-              cursor: selectedPendingCount === 0 ? "not-allowed" : "pointer",
-              background: selectedPendingCount === 0 ? "#CBD5E1" : "#2563EB",
-              color: "#FFFFFF",
-            }}
-          >
-            {selectAllSuppliers
-              ? `Send to All Suppliers (${pendingContractIds.length})`
-              : `Send Selected Suppliers (${selectedPendingCount})`}
-          </button>
-        </div>
-      )}
 
       {/* Supplier Tabs */}
       {!isSupplier && awardedSupplierIds.length > 1 && (
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px" }}>
+        <div className="contract-supplier-tabs">
           {awardedSupplierIds.map((sid) => {
             const c = contracts[sid];
             const name = getSupplierName(sid);
@@ -1328,38 +1186,16 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
             else if (c?.step === "sign") statusText = "Awaiting Signature";
             else if (c?.step === "terms" && c.sent) statusText = "Awaiting Supplier Review";
 
-            const showCheck = !selectAllSuppliers && c?.step === "details" && !c?.dateError;
-
             return (
-              <div key={sid} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                {showCheck && (
-                  <input
-                    type="checkbox"
-                    checked={!!sendSelection[sid]}
-                    onChange={() =>
-                      setSendSelection((prev) => ({ ...prev, [sid]: !prev[sid] }))
-                    }
-                    style={{ width: "15px", height: "15px", accentColor: "#2563EB", cursor: "pointer" }}
-                  />
-                )}
+              <div key={sid} className="contract-inline-group">
                 <button
                   type="button"
                   onClick={() => setActiveContractId(sid)}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: "8px",
-                    fontSize: "12.5px",
-                    fontWeight: 600,
-                    border: `1px solid ${isSelected ? "#2563EB" : "#CBD5E1"}`,
-                    background: isSelected ? "#2563EB" : "#FFFFFF",
-                    color: isSelected ? "#FFFFFF" : "#334155",
-                    cursor: "pointer",
-                    textAlign: "left",
-                  }}
+                  className={`contract-supplier-tab${isSelected ? " contract-supplier-tab--selected" : ""}`}
                 >
                   {name} — {fmtINR(val)}
                   <br />
-                  <span style={{ fontSize: "11px", fontWeight: 500, opacity: 0.85 }}>
+                  <span className="contract-supplier-tab-status">
                     {statusText}
                   </span>
                 </button>
@@ -1371,51 +1207,42 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
       {/* Main Contract Details Workspace Card */}
       {activeContract && (
-        <div
-          style={{
-            background: "#FFFFFF",
-            borderRadius: "12px",
-            border: "1px solid #E2E8F0",
-            padding: "24px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-            marginBottom: "24px",
-          }}
-        >
-          <div style={{ fontSize: "14px", fontWeight: 700, color: "#1E3A8A", marginBottom: "16px" }}>
+        <div className="contract-workspace-card">
+          <div className="contract-workspace-title">
             Contract Details {`— ${getSupplierName(activeContract.supplierId)}`}
           </div>
 
           {/* Details Row Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.5fr 1fr 1fr 1fr", gap: "20px", marginBottom: "24px" }}>
+          <div className="contract-details-grid">
             <div>
-              <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", letterSpacing: "0.04em", marginBottom: "4px" }}>
+              <div className="contract-field-label">
                 RFQ TITLE
               </div>
-              <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#0F172A" }}>
+              <div className="contract-field-value">
                 {rfq?.title || rfq?.rfqNo || rfq?.name || "Office IT Equipment Procurement"}
               </div>
             </div>
 
             <div>
-              <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", letterSpacing: "0.04em", marginBottom: "4px" }}>
+              <div className="contract-field-label">
                 RFQ DESCRIPTION
               </div>
-              <div style={{ fontSize: "12.5px", color: "#334155", lineHeight: "1.4" }}>
+              <div className="contract-field-text">
                 {rfq?.description || "Procurement of laptops and accessories for the new office."}
               </div>
             </div>
 
             <div>
-              <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", letterSpacing: "0.04em", marginBottom: "4px" }}>
+              <div className="contract-field-label">
                 SUPPLIER
               </div>
-              <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#0F172A" }}>
+              <div className="contract-field-value">
                 {getSupplierName(activeContract.supplierId)}
               </div>
             </div>
 
             <div>
-              <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", letterSpacing: "0.04em", marginBottom: "4px" }}>
+              <div className="contract-field-label">
                 CONTRACT START DATE
               </div>
               <input
@@ -1423,20 +1250,12 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 value={activeContract.startDate}
                 onChange={(e) => handleStartDateChange(activeContract.supplierId, e.target.value)}
                 disabled={activeContract.buyerSigned && activeContract.supplierSigned}
-                style={{
-                  width: "100%",
-                  padding: "8px 10px",
-                  borderRadius: "6px",
-                  border: "1px solid #CBD5E1",
-                  fontSize: "12.5px",
-                  color: "#0F172A",
-                  background: "#FFFFFF",
-                }}
+                className="contract-date-input"
               />
             </div>
 
             <div>
-              <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", letterSpacing: "0.04em", marginBottom: "4px" }}>
+              <div className="contract-field-label">
                 CONTRACT END DATE
               </div>
               <input
@@ -1444,18 +1263,10 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 value={activeContract.endDate}
                 onChange={(e) => handleEndDateChange(activeContract.supplierId, e.target.value)}
                 disabled={activeContract.buyerSigned && activeContract.supplierSigned}
-                style={{
-                  width: "100%",
-                  padding: "8px 10px",
-                  borderRadius: "6px",
-                  border: "1px solid #CBD5E1",
-                  fontSize: "12.5px",
-                  color: "#0F172A",
-                  background: "#FFFFFF",
-                }}
+                className="contract-date-input"
               />
               {activeContract.dateError && (
-                <div style={{ fontSize: "11px", fontWeight: 600, color: "#DC2626", marginTop: "4px" }}>
+                <div className="contract-field-error">
                   End date cannot be earlier than start date.
                 </div>
               )}
@@ -1463,39 +1274,39 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
           </div>
 
           {/* Selected Line Items Section */}
-          <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#1E293B", margin: "0 0 12px 0" }}>
+          <h4 className="contract-section-title">
             Selected Line Items
           </h4>
 
-          <div style={{ overflowX: "auto", border: "1px solid #E2E8F0", borderRadius: "8px", marginBottom: "16px" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12.5px" }}>
+          <div className="contract-table-wrap">
+            <table className="contract-table">
               <thead>
-                <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #E2E8F0", color: "#475569" }}>
-                  <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 700, width: "36px" }}>#</th>
-                  <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 700 }}>Material</th>
-                  <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 700 }}>Cost Center / Code</th>
-                  <th style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, width: "60px" }}>Qty</th>
-                  <th style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, width: "60px" }}>UOM</th>
-                  <th style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700 }}>Unit Price</th>
-                  <th style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700 }}>Tax / Disc. / Del.</th>
-                  <th style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700 }}>Subtotal</th>
+                <tr className="contract-table-head-row">
+                  <th className="contract-th contract-th--index">#</th>
+                  <th className="contract-th">Material</th>
+                  <th className="contract-th">Cost Center / Code</th>
+                  <th className="contract-th contract-th--center">Qty</th>
+                  <th className="contract-th contract-th--center">UOM</th>
+                  <th className="contract-th contract-th--right">Unit Price</th>
+                  <th className="contract-th contract-th--right">Tax / Disc. / Del.</th>
+                  <th className="contract-th contract-th--right">Subtotal</th>
                 </tr>
               </thead>
               <tbody>
                 {activeLineItemRows.map((row) => (
-                  <tr key={row.idx} style={{ borderBottom: "1px solid #F1F5F9" }}>
-                    <td style={{ padding: "10px 12px", color: "#64748B" }}>{row.idx}</td>
-                    <td style={{ padding: "10px 12px", fontWeight: 600, color: "#0F172A" }}>{row.material}</td>
-                    <td style={{ padding: "10px 12px", color: "#475569" }}>{row.costCenterCode}</td>
-                    <td style={{ padding: "10px 12px", textAlign: "center", color: "#334155" }}>{row.qty}</td>
-                    <td style={{ padding: "10px 12px", textAlign: "center", color: "#334155" }}>{row.uom}</td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 600, color: "#0F172A" }}>
+                  <tr key={row.idx} className="contract-table-row">
+                    <td className="contract-td contract-td--muted">{row.idx}</td>
+                    <td className="contract-td contract-td--strong">{row.material}</td>
+                    <td className="contract-td contract-td--secondary">{row.costCenterCode}</td>
+                    <td className="contract-td contract-td--center">{row.qty}</td>
+                    <td className="contract-td contract-td--center">{row.uom}</td>
+                    <td className="contract-td contract-td--right contract-td--strong">
                       {fmtINR(row.unitPrice)}
                     </td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", color: "#64748B", fontSize: "11.5px" }}>
+                    <td className="contract-td contract-td--right contract-td--breakdown">
                       {row.breakdownStr}
                     </td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: "#0F172A" }}>
+                    <td className="contract-td contract-td--right contract-td--total">
                       {fmtINR(row.subtotal)}
                     </td>
                   </tr>
@@ -1504,57 +1315,64 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
             </table>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "flex-end", padding: "6px 0", marginBottom: "20px" }}>
-            <div
-              style={{
-                fontSize: "14px",
-                fontWeight: 600,
-                color: "#1E293B",
-                background: "#F1F5F9",
-                padding: "8px 16px",
-                borderRadius: "8px",
-              }}
-            >
+          <div className="contract-total-row">
+            <div className="contract-total-box">
               Total Contract Value:{" "}
-              <span style={{ color: "#2563EB", fontWeight: 800, fontSize: "15px" }}>
+              <span className="contract-total-value">
                 {fmtINR(getContractValue(activeContractId))}
               </span>
             </div>
           </div>
 
           {/* Terms & Conditions Attachment Card */}
-          <div style={{ fontSize: "13px", fontWeight: 700, margin: "0 0 10px 0" }}>
+          <div className="contract-subsection-title">
             Terms &amp; Conditions
           </div>
-          <div
-            style={{
-              border: "1px solid #E2E8F0",
-              borderRadius: "8px",
-              padding: "14px 18px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "12px",
-              flexWrap: "wrap",
-              marginBottom: "18px",
-            }}
-          >
+          <div className="contract-tc-card">
             <div>
-              <div style={{ fontSize: "12.5px", fontWeight: 600, marginBottom: "3px" }}>
+              <div className="contract-tc-name">
                 Contract Terms &amp; Conditions
               </div>
-              <div style={{ fontSize: "11.5px", color: "#475569" }}>
-                Terms_and_Conditions.pdf
-              </div>
-              <div style={{ marginTop: "4px" }}>
+              {buyerTermsDocs.length > 0 ? (
+                <div className="contract-tc-docs">
+                  {buyerTermsDocs.map((doc, idx) => {
+                    const docName = doc.fileName || doc.assetName || `Terms_Document_${idx + 1}`;
+                    return (
+                      <div key={doc.id || idx} className="contract-tc-doc">
+                        <span className="contract-doc-icon">📎</span>
+                        <span className="contract-doc-name">{docName}</span>
+                        {doc.id && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadAsset(doc.id, docName, true)}
+                              disabled={busyAssetId === doc.id}
+                              className="contract-btn contract-btn--outline contract-btn--xs"
+                            >
+                              Preview
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadAsset(doc.id, docName)}
+                              disabled={busyAssetId === doc.id}
+                              className="contract-btn contract-btn--soft contract-btn--xs"
+                            >
+                              Download
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="contract-tc-file">
+                  Terms_and_Conditions.pdf
+                </div>
+              )}
+              <div className="contract-tc-meta">
                 <span
-                  style={{
-                    fontSize: "10px",
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: "0.03em",
-                    color: activeContract.tcEdited ? "#D97706" : "#059669",
-                  }}
+                  className={`contract-tc-updated${activeContract.tcEdited ? " contract-tc-updated--edited" : ""}`}
                 >
                   {activeContract.tcEdited
                     ? `Last Updated: ${activeContract.tcLastUpdatedAt}`
@@ -1563,22 +1381,16 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <button
-                type="button"
-                onClick={() => alert(activeContract.tcContent)}
-                style={{
-                  padding: "7px 14px",
-                  borderRadius: "6px",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  border: "1px solid #E2E8F0",
-                  background: "#FFFFFF",
-                  cursor: "pointer",
-                }}
-              >
-                Preview
-              </button>
+            <div className="contract-actions">
+              {buyerTermsDocs.length === 0 && (
+                <button
+                  type="button"
+                  onClick={() => alert(activeContract.tcContent)}
+                  className="contract-btn contract-btn--outline contract-btn--md"
+                >
+                  Preview
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => openTcEditor(activeContractId)}
@@ -1586,15 +1398,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   (isSupplier ? activeContract.supplierFinalAccepted : activeContract.buyerFinalAccepted) ||
                   (activeContract.buyerSigned && activeContract.supplierSigned)
                 }
-                style={{
-                  padding: "7px 14px",
-                  borderRadius: "6px",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  border: "1px solid #E2E8F0",
-                  background: "#FFFFFF",
-                  cursor: "pointer",
-                }}
+                className="contract-btn contract-btn--outline contract-btn--md"
               >
                 Proposed Edits
               </button>
@@ -1603,54 +1407,23 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
           {/* Edit Terms Modal Overlay */}
           {activeContract.tcEditorOpen && (
-            <div
-              style={{
-                position: "fixed",
-                inset: 0,
-                background: "rgba(15, 23, 42, 0.5)",
-                backdropFilter: "blur(2px)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 60,
-              }}
-            >
-              <div
-                style={{
-                  background: "#FFFFFF",
-                  borderRadius: "12px",
-                  boxShadow: "0 20px 40px -8px rgba(0,0,0,0.25)",
-                  width: "560px",
-                  maxWidth: "90vw",
-                  padding: "24px 26px",
-                }}
-              >
-                <div style={{ fontSize: "16px", fontWeight: 700, marginBottom: "4px" }}>
+            <div className="contract-modal-overlay">
+              <div className="contract-modal contract-modal--terms">
+                <div className="contract-modal-title">
                   {isSupplier ? "Propose Edits & Upload Supplier Terms" : "Edit Terms & Conditions"}
                 </div>
-                <div style={{ fontSize: "12px", color: "#475569", marginBottom: "14px" }}>
+                <div className="contract-modal-subtitle">
                   Terms_and_Conditions.pdf
                 </div>
                 <textarea
                   rows={6}
                   value={activeContract.tcDraft}
                   onChange={(e) => updateContract(activeContractId, { tcDraft: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "12px",
-                    borderRadius: "8px",
-                    border: "1px solid #E2E8F0",
-                    fontSize: "12.5px",
-                    lineHeight: "1.6",
-                    color: "#334155",
-                    fontFamily: "inherit",
-                    resize: "vertical",
-                    boxSizing: "border-box",
-                  }}
+                  className="contract-tc-textarea"
                 />
                 {isSupplier && (
-                  <div style={{ marginTop: "14px", padding: "12px 14px", background: "#F8FAFC", borderRadius: "8px", border: "1px dashed #CBD5E1" }}>
-                    <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px", fontWeight: 600, color: "#1E293B", cursor: "pointer", marginBottom: "6px" }}>
+                  <div className="contract-dashed-box contract-dashed-box--modal">
+                    <label className="contract-check-label">
                       <input
                         type="checkbox"
                         checked={includeSupplierTc}
@@ -1658,7 +1431,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                       />
                       Include Supplier Terms &amp; Conditions Document
                     </label>
-                    <div style={{ fontSize: "11.5px", color: "#64748B", marginBottom: "8px" }}>
+                    <div className="contract-help-text">
                       Attach your company's custom terms and conditions document (PDF/DOCX) for buyer review.
                     </div>
                     <input
@@ -1670,49 +1443,32 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                           setSupplierTcStatusMsg(null);
                         }
                       }}
-                      style={{ fontSize: "12px", color: "#334155" }}
+                      className="contract-file-input"
                     />
                     {supplierTcFile && (
-                      <div style={{ marginTop: "6px", fontSize: "11.5px", color: "#2563EB", fontWeight: 600 }}>
+                      <div className="contract-selected-file">
                         📄 Selected file: {supplierTcFile.name} ({(supplierTcFile.size / 1024).toFixed(1)} KB)
                       </div>
                     )}
                     {supplierTcStatusMsg && (
-                      <div style={{ marginTop: "6px", fontSize: "11.5px", color: supplierTcStatusMsg.includes("Success") ? "#16A34A" : "#EF4444", fontWeight: 600 }}>
+                      <div className={supplierTcStatusMsgClass}>
                         {supplierTcStatusMsg}
                       </div>
                     )}
                   </div>
                 )}
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "16px" }}>
+                <div className="contract-modal-actions">
                   <button
                     type="button"
                     onClick={() => closeTcEditor(activeContractId)}
-                    style={{
-                      padding: "9px 16px",
-                      borderRadius: "8px",
-                      fontSize: "13px",
-                      fontWeight: 600,
-                      border: "1px solid #E2E8F0",
-                      background: "#FFFFFF",
-                      cursor: "pointer",
-                    }}
+                    className="contract-btn contract-btn--outline contract-btn--modal"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={() => saveTcEditor(activeContractId)}
-                    style={{
-                      padding: "9px 16px",
-                      borderRadius: "8px",
-                      fontSize: "13px",
-                      fontWeight: 600,
-                      border: "none",
-                      background: "#2563EB",
-                      color: "#FFFFFF",
-                      cursor: "pointer",
-                    }}
+                    className="contract-btn contract-btn--primary contract-btn--modal"
                   >
                     Save Changes
                   </button>
@@ -1721,69 +1477,21 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
             </div>
           )}
 
-          {/* Action Step: Details -> Send Contract to Supplier (Buyer view) */}
-          {!isSupplier && activeContract.step === "details" && (
-            <div
-              style={{
-                background: "#EFF6FF",
-                border: "1px solid #BFDBFE",
-                borderRadius: "8px",
-                padding: "14px 18px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                flexWrap: "wrap",
-                gap: "12px",
-              }}
-            >
-              <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", fontSize: "12.5px", fontWeight: 600, color: "#1E3A8A" }}>
-                <span>Contract Value: {fmtINR(getContractValue(activeContractId))}</span>
-                <span>Line Items: {activeContract.itemIds.length}</span>
-                <span>Supplier: {getSupplierName(activeContract.supplierId)}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => sendContractToSupplier(activeContractId)}
-                disabled={activeContract.dateError}
-                style={{
-                  padding: "9px 18px",
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  border: "none",
-                  cursor: activeContract.dateError ? "not-allowed" : "pointer",
-                  background: activeContract.dateError ? "#CBD5E1" : "#2563EB",
-                  color: "#FFFFFF",
-                }}
-              >
-                Send to Supplier
-              </button>
-            </div>
-          )}
-
           {/* Action Step: Terms Negotiation & Acceptance */}
-          {activeTcEntry?.termsAndCondition !== false &&
+          {!tcDeclined &&
             (activeContract.step === "terms" ||
             activeContract.step === "completed" ||
             (activeContract.step === "sign" && !(activeContract.buyerSigned && activeContract.supplierSigned))) && (
-            <div style={{ border: "1px solid #E2E8F0", borderRadius: "8px", padding: "16px 18px", marginBottom: "14px" }}>
-              <div style={{ fontSize: "13px", fontWeight: 700, marginBottom: "4px" }}>
+            <div className="contract-step-card">
+              <div className="contract-subsection-title contract-subsection-title--tight">
                 Contract Terms Review &amp; Acceptance
               </div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "end", gap: "12px", marginBottom: "10px", flexWrap: "wrap" }}>
-                <div style={{ display: "flex", gap: "8px" }}>
+              <div className="contract-step-card-toolbar">
+                <div className="contract-btn-group">
                   <button
                     type="button"
                     onClick={() => alert("Previewing Contract Terms...")}
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      border: "1px solid #E2E8F0",
-                      background: "#FFFFFF",
-                      cursor: "pointer",
-                    }}
+                    className="contract-btn contract-btn--outline contract-btn--sm"
                   >
                     Preview
                   </button>
@@ -1792,7 +1500,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
               {/* Real Terms & Conditions status/attachments for this supplier, from the RFQ e-sign API */}
               {activeTcEntry?.termsAndCondition === true && (
-                <div style={{ marginBottom: "14px", padding: "10px 14px", background: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: "8px", fontSize: "12px", fontWeight: 600, color: "#059669" }}>
+                <div className="contract-notice--success">
                   ✓ Terms &amp; Conditions accepted by {activeTcEntry.supplierName || getSupplierName(activeContract.supplierId)}.
                 </div>
               )}
@@ -1800,25 +1508,24 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               {/* Render Uploaded Terms & Conditions Documents */}
               {(() => {
                 const apiAttachments = activeTcEntry?.attachments || [];
-                const legacyDocs = (rfq as any)?.termsConditionDocuments || (rfq as any)?.termsConditionDocument || [];
-                const docs = apiAttachments.length > 0 ? apiAttachments : legacyDocs;
+                const docs = apiAttachments.length > 0 ? apiAttachments : buyerTermsDocs;
                 if (!docs || docs.length === 0) return null;
                 return (
-                  <div style={{ marginBottom: "14px", padding: "12px 14px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "8px" }}>
-                    <div style={{ fontSize: "12.5px", fontWeight: 700, color: "#1E293B", marginBottom: "8px" }}>
+                  <div className="contract-docs-panel">
+                    <div className="contract-panel-heading">
                       📄 Terms &amp; Conditions Documents:
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div className="contract-doc-list">
                       {docs.map((doc: any, idx: number) => (
-                        <div key={doc.id || idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "#FFFFFF", border: "1px solid #CBD5E1", borderRadius: "6px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span style={{ fontSize: "16px" }}>📎</span>
+                        <div key={doc.id || idx} className="contract-doc-item">
+                          <div className="contract-actions">
+                            <span className="contract-doc-icon">📎</span>
                             <div>
-                              <div style={{ fontSize: "12.5px", fontWeight: 600, color: "#0F172A" }}>
+                              <div className="contract-doc-name">
                                 {doc.fileName || doc.assetName || `Terms_Document_${idx + 1}.pdf`}
                               </div>
                               {(doc.assetType || doc.fileType) && (
-                                <div style={{ fontSize: "10.5px", color: "#64748B", marginTop: "1px" }}>
+                                <div className="contract-doc-type">
                                   {doc.assetType || doc.fileType}
                                 </div>
                               )}
@@ -1828,7 +1535,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                             <button
                               type="button"
                               onClick={() => handleDownloadAsset(doc.id, doc.fileName || doc.assetName || "Terms_Document.pdf")}
-                              style={{ background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE", borderRadius: "6px", padding: "5px 12px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+                              className="contract-btn contract-btn--soft contract-btn--xs"
                             >
                               Download
                             </button>
@@ -1841,22 +1548,22 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               })()}
 
               {activeTcEntry?.termsAndCondition !== true && (
-              <div style={{ fontSize: "11.5px", color: "#475569", marginBottom: "12px" }}>
+              <div className="contract-chat-hint">
                 Use the chat button at bottom right to discuss terms with {isSupplier ? "the buyer" : "the supplier"}.
               </div>
               )}
 
               {activeTcEntry?.termsAndCondition !== true && (
-              <div style={{ marginBottom: "14px" }}>
+              <div className="contract-terms-actions">
                 {isSupplier ? (
                   <div>
                     {/* Radio Question Prompt */}
-                    <div style={{ fontSize: "12.5px", fontWeight: 700, color: "#1E293B", marginBottom: "8px" }}>
+                    <div className="contract-panel-heading">
                       Can we proceed with the Buyer's Terms &amp; Conditions?
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: "24px", marginBottom: "14px" }}>
-                      <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 600, color: "#1E293B", cursor: "pointer" }}>
+                    <div className="contract-radio-group">
+                      <label className="contract-radio-label">
                         <input
                           type="radio"
                           name={`acceptBuyerTcRadio_${activeContractId}`}
@@ -1869,7 +1576,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                         />
                         Yes (Proceed with Buyer Terms &amp; Conditions)
                       </label>
-                      <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 600, color: "#1E293B", cursor: "pointer" }}>
+                      <label className="contract-radio-label">
                         <input
                           type="radio"
                           name={`acceptBuyerTcRadio_${activeContractId}`}
@@ -1887,21 +1594,12 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                     {/* IF YES: Show Accept Terms button */}
                     {supplierTcRadioChoice === "yes" && (
                       <div>
-                        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                        <div className="contract-inline-actions">
                           <button
                             type="button"
                             onClick={() => handleSupplierAcceptFinal(activeContractId)}
                             disabled={uploadingSupplierTc}
-                            style={{
-                              padding: "8px 18px",
-                              borderRadius: "6px",
-                              fontSize: "12.5px",
-                              fontWeight: 600,
-                              border: "none",
-                              cursor: uploadingSupplierTc ? "not-allowed" : "pointer",
-                              background: activeContract.supplierFinalAccepted ? "#ECFDF5" : "#2563EB",
-                              color: activeContract.supplierFinalAccepted ? "#059669" : "#FFFFFF",
-                            }}
+                            className={`contract-btn contract-btn--lg ${activeContract.supplierFinalAccepted ? "contract-btn--accepted" : "contract-btn--accept"}`}
                           >
                             {uploadingSupplierTc
                               ? "Submitting..."
@@ -1909,28 +1607,9 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                                 ? "✓ Supplier Accepted"
                                 : "Accept Terms"}
                           </button>
-
-                          {!activeContract.buyerFinalAccepted && (
-                            <button
-                              type="button"
-                              onClick={() => handleBuyerAcceptFinal(activeContractId)}
-                              style={{
-                                padding: "8px 16px",
-                                borderRadius: "6px",
-                                fontSize: "12.5px",
-                                fontWeight: 600,
-                                border: "1px solid #E2E8F0",
-                                background: "#F1F5F9",
-                                color: "#0F172A",
-                                cursor: "pointer",
-                              }}
-                            >
-                              Simulate: Buyer Accepts
-                            </button>
-                          )}
                         </div>
                         {supplierTcStatusMsg && (
-                          <div style={{ marginTop: "6px", fontSize: "11.5px", color: supplierTcStatusMsg.includes("Success") ? "#16A34A" : "#EF4444", fontWeight: 600 }}>
+                          <div className={supplierTcStatusMsgClass}>
                             {supplierTcStatusMsg}
                           </div>
                         )}
@@ -1939,14 +1618,14 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
                     {/* IF NO: Show File Upload Card */}
                     {supplierTcRadioChoice === "no" && (
-                      <div style={{ padding: "14px 16px", background: "#F8FAFC", border: "1px dashed #CBD5E1", borderRadius: "8px" }}>
-                        <div style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A", marginBottom: "4px" }}>
+                      <div className="contract-dashed-box contract-dashed-box--inline">
+                        <div className="contract-upload-title">
                           Upload Supplier Terms &amp; Conditions Document
                         </div>
-                        <div style={{ fontSize: "11.5px", color: "#64748B", marginBottom: "10px" }}>
+                        <div className="contract-upload-help">
                           Attach your company's custom terms and conditions document (.pdf, .doc, .docx) to submit to the buyer.
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                        <div className="contract-upload-row">
                           <input
                             type="file"
                             accept=".pdf,.doc,.docx"
@@ -1956,33 +1635,24 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                                 setSupplierTcStatusMsg(null);
                               }
                             }}
-                            style={{ fontSize: "12px", color: "#334155" }}
+                            className="contract-file-input"
                           />
                           <button
                             type="button"
                             onClick={() => handleUploadSupplierTcFileDirect(activeContractId)}
                             disabled={!supplierTcFile || uploadingSupplierTc}
-                            style={{
-                              padding: "8px 18px",
-                              borderRadius: "6px",
-                              fontSize: "12.5px",
-                              fontWeight: 600,
-                              border: "none",
-                              background: !supplierTcFile || uploadingSupplierTc ? "#CBD5E1" : "#2563EB",
-                              color: "#FFFFFF",
-                              cursor: !supplierTcFile || uploadingSupplierTc ? "not-allowed" : "pointer",
-                            }}
+                            className="contract-btn contract-btn--primary contract-btn--lg"
                           >
                             {uploadingSupplierTc ? "Uploading..." : "Upload & Submit Terms"}
                           </button>
                         </div>
                         {supplierTcFile && (
-                          <div style={{ marginTop: "6px", fontSize: "11.5px", color: "#2563EB", fontWeight: 600 }}>
+                          <div className="contract-selected-file">
                             📄 Selected file: {supplierTcFile.name} ({(supplierTcFile.size / 1024).toFixed(1)} KB)
                           </div>
                         )}
                         {supplierTcStatusMsg && (
-                          <div style={{ marginTop: "6px", fontSize: "11.5px", color: supplierTcStatusMsg.includes("Success") ? "#16A34A" : "#EF4444", fontWeight: 600 }}>
+                          <div className={supplierTcStatusMsgClass}>
                             {supplierTcStatusMsg}
                           </div>
                         )}
@@ -1994,60 +1664,24 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                     <button
                       type="button"
                       onClick={() => handleBuyerAcceptFinal(activeContractId)}
-                      style={{
-                        padding: "7px 14px",
-                        borderRadius: "6px",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        border: "none",
-                        cursor: "pointer",
-                        background: activeContract.buyerFinalAccepted ? "#ECFDF5" : "#2563EB",
-                        color: activeContract.buyerFinalAccepted ? "#059669" : "#FFFFFF",
-                      }}
+                      className={`contract-btn contract-btn--md ${activeContract.buyerFinalAccepted ? "contract-btn--accepted" : "contract-btn--accept"}`}
                     >
                       {activeContract.buyerFinalAccepted ? "✓ Buyer Accepted" : "Accept Terms"}
                     </button>
-
-                    {!activeContract.supplierFinalAccepted && (
-                      <button
-                        type="button"
-                        onClick={() => handleSupplierAcceptFinal(activeContractId)}
-                        style={{
-                          padding: "7px 14px",
-                          borderRadius: "6px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          border: "1px solid #E2E8F0",
-                          background: "#F1F5F9",
-                          color: "#0F172A",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Simulate: Supplier Accepts
-                      </button>
-                    )}
                   </>
                 )}
               </div>
               )}
 
               {/* Final Terms Acceptance Gate */}
-              <div style={{ display: "flex", gap: "16px", marginBottom: "12px", flexWrap: "wrap" }}>
+              <div className="contract-accept-summary">
                 <span
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: activeContract.buyerFinalAccepted ? "#059669" : "#64748B",
-                  }}
+                  className={`contract-accept-status${activeContract.buyerFinalAccepted ? " contract-accept-status--done" : ""}`}
                 >
                   Buyer — {activeContract.buyerFinalAccepted ? "Accepted ✓" : "Awaiting Acceptance"}
                 </span>
                 <span
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: activeContract.supplierFinalAccepted ? "#059669" : "#64748B",
-                  }}
+                  className={`contract-accept-status${activeContract.supplierFinalAccepted ? " contract-accept-status--done" : ""}`}
                 >
                   Supplier — {activeContract.supplierFinalAccepted ? "Accepted ✓" : "Awaiting Acceptance"}
                 </span>
@@ -2058,22 +1692,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   type="button"
                   onClick={() => handleProceedToSigning(activeContractId)}
                   disabled={!(activeContract.buyerFinalAccepted && activeContract.supplierFinalAccepted)}
-                  style={{
-                    padding: "9px 18px",
-                    borderRadius: "8px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    border: "none",
-                    cursor:
-                      activeContract.buyerFinalAccepted && activeContract.supplierFinalAccepted
-                        ? "pointer"
-                        : "not-allowed",
-                    background:
-                      activeContract.buyerFinalAccepted && activeContract.supplierFinalAccepted
-                        ? "#2563EB"
-                        : "#CBD5E1",
-                    color: "#FFFFFF",
-                  }}
+                  className="contract-btn contract-btn--primary contract-btn--cta"
                 >
                   Proceed to Signing
                 </button>
@@ -2083,15 +1702,15 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
           {/* Action Step: Signing */}
           {activeContract.step === "sign" && (
-            <div style={{ border: "1px solid #E2E8F0", borderRadius: "8px", padding: "16px 18px", marginBottom: "14px" }}>
-              <div style={{ fontSize: "13px", fontWeight: 700, marginBottom: "10px" }}>
+            <div className="contract-step-card">
+              <div className="contract-subsection-title">
                 Contract Signing
               </div>
 
               {/* Terms & conditions didn't require negotiation for this supplier, so surface the
                   implicit acceptance here since the "Contract Terms Review & Acceptance" card was skipped. */}
-              {activeTcEntry?.termsAndCondition === false && (
-                <div style={{ marginBottom: "14px", fontSize: "12px", fontWeight: 600, color: "#059669" }}>
+              {tcDeclined && (
+                <div className="contract-implicit-accept">
                   Supplier — Accepted ✓
                 </div>
               )}
@@ -2103,21 +1722,21 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 const docs = apiAttachments.length > 0 ? apiAttachments : legacyDocs;
                 if (!docs || docs.length === 0) return null;
                 return (
-                  <div style={{ marginBottom: "14px", padding: "12px 14px", background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: "8px" }}>
-                    <div style={{ fontSize: "12.5px", fontWeight: 700, color: "#166534", marginBottom: "8px" }}>
+                  <div className="contract-docs-panel contract-docs-panel--esign">
+                    <div className="contract-panel-heading contract-panel-heading--esign">
                       ✍️ Uploaded E-Signature Documents:
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div className="contract-doc-list">
                       {docs.map((doc: any, idx: number) => (
-                        <div key={doc.id || idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "#FFFFFF", border: "1px solid #86EFAC", borderRadius: "6px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span style={{ fontSize: "16px" }}>🖋️</span>
+                        <div key={doc.id || idx} className="contract-doc-item contract-doc-item--esign">
+                          <div className="contract-actions">
+                            <span className="contract-doc-icon">🖋️</span>
                             <div>
-                              <div style={{ fontSize: "12.5px", fontWeight: 600, color: "#0F172A" }}>
+                              <div className="contract-doc-name">
                                 {doc.fileName || doc.assetName || `E_Sign_Document_${idx + 1}.png`}
                               </div>
                               {(doc.assetType || doc.fileType) && (
-                                <div style={{ fontSize: "10.5px", color: "#166534", marginTop: "1px" }}>
+                                <div className="contract-doc-type contract-doc-type--esign">
                                   {doc.assetType || doc.fileType}
                                 </div>
                               )}
@@ -2127,7 +1746,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                             <button
                               type="button"
                               onClick={() => handleDownloadAsset(doc.id, doc.fileName || doc.assetName || "E_Sign_Document.png")}
-                              style={{ background: "#2563EB", color: "#FFFFFF", border: "none", borderRadius: "6px", padding: "5px 12px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+                              className="contract-btn contract-btn--primary contract-btn--xs"
                             >
                               View / Download
                             </button>
@@ -2143,7 +1762,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               <input
                 type="file"
                 id="signed-contract-upload-input"
-                style={{ display: "none" }}
+                className="contract-hidden-input"
                 accept=".pdf,.png,.jpg,.doc,.docx"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -2153,30 +1772,30 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 }}
               />
 
-              <div style={{ display: "flex", gap: "24px", marginBottom: "14px", flexWrap: "wrap" }}>
+              <div className="contract-sign-status-row">
                 <div>
-                  <div style={{ fontSize: "10px", fontWeight: 700, color: "#64748B", textTransform: 'uppercase', letterSpacing: "0.04em", marginBottom: "4px" }}>
+                  <div className="contract-sign-label">
                     Buyer Signature
                   </div>
-                  <div style={{ fontSize: "12.5px", fontWeight: 600, color: activeContract.buyerSigned ? "#059669" : "#64748B" }}>
+                  <div className={`contract-sign-status${activeContract.buyerSigned ? " contract-sign-status--done" : ""}`}>
                     {activeContract.buyerSigned ? "Signed ✓" : "Awaiting Signature"}
                   </div>
                   {activeContract.buyerSigned && activeContract.buyerSignDetails && (
-                    <div style={{ fontSize: "11px", color: "#475569", marginTop: "2px" }}>
+                    <div className="contract-sign-by">
                       By {activeContract.buyerSignDetails.signerName} ({activeContract.buyerSignDetails.signerDesignation})
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <div style={{ fontSize: "10px", fontWeight: 700, color: "#64748B", textTransform: 'uppercase', letterSpacing: "0.04em", marginBottom: "4px" }}>
+                  <div className="contract-sign-label">
                     Supplier Signature
                   </div>
-                  <div style={{ fontSize: "12.5px", fontWeight: 600, color: activeContract.supplierSigned ? "#059669" : "#64748B" }}>
+                  <div className={`contract-sign-status${activeContract.supplierSigned ? " contract-sign-status--done" : ""}`}>
                     {activeContract.supplierSigned ? "Signed ✓" : "Awaiting Signature"}
                   </div>
                   {activeContract.supplierSigned && activeContract.supplierSignDetails && (
-                    <div style={{ fontSize: "11px", color: "#475569", marginTop: "2px" }}>
+                    <div className="contract-sign-by">
                       By {activeContract.supplierSignDetails.signerName} ({activeContract.supplierSignDetails.signerDesignation})
                     </div>
                   )}
@@ -2185,29 +1804,29 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
               {/* Buyer Signed Badge & Signature Box */}
               {activeContract.buyerSigned && activeContract.buyerSignDetails && (
-                <div style={{ background: "#EFF6FF", border: "1px dashed #60A5FA", borderRadius: "8px", padding: "12px 16px", marginBottom: "14px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#1E40AF", textTransform: "uppercase" }}>
+                <div className="contract-signature-box contract-signature-box--buyer">
+                  <div className="contract-signature-header">
+                    <span className="contract-signature-title contract-signature-title--buyer">
                       Buyer E-Signature Verified ✓
                     </span>
-                    <span style={{ fontSize: "10px", color: "#64748B" }}>
+                    <span className="contract-signature-time">
                       {activeContract.buyerSignDetails.signedAt}
                     </span>
                   </div>
                   {activeContract.buyerSignDetails.drawnSignatureUrl ? (
-                    <div style={{ margin: "6px 0" }}>
+                    <div className="contract-signature-image-wrap">
                       <img
                         src={activeContract.buyerSignDetails.drawnSignatureUrl}
                         alt="Handwritten Signature"
-                        style={{ maxHeight: "55px", objectFit: "contain" }}
+                        className="contract-signature-image"
                       />
                     </div>
                   ) : (
-                    <div style={{ fontFamily: "cursive, 'Dancing Script', 'Brush Script MT', sans-serif", fontSize: "22px", fontWeight: 700, color: "#1D4ED8" }}>
+                    <div className="contract-signature-text contract-signature-text--buyer">
                       /s/ {activeContract.buyerSignDetails.signerName}
                     </div>
                   )}
-                  <div style={{ fontSize: "11px", color: "#334155", fontWeight: 500, marginTop: "2px" }}>
+                  <div className="contract-signature-caption">
                     {activeContract.buyerSignDetails.signerName} ({activeContract.buyerSignDetails.signerDesignation}) • SILA Procurement
                   </div>
                 </div>
@@ -2215,36 +1834,36 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
               {/* Supplier Signed Badge & Signature Box */}
               {activeContract.supplierSigned && activeContract.supplierSignDetails && (
-                <div style={{ background: "#F0FDF4", border: "1px dashed #4ADE80", borderRadius: "8px", padding: "12px 16px", marginBottom: "14px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#166534", textTransform: "uppercase" }}>
+                <div className="contract-signature-box contract-signature-box--supplier">
+                  <div className="contract-signature-header">
+                    <span className="contract-signature-title contract-signature-title--supplier">
                       Supplier E-Signature Verified ✓
                     </span>
-                    <span style={{ fontSize: "10px", color: "#64748B" }}>
+                    <span className="contract-signature-time">
                       {activeContract.supplierSignDetails.signedAt}
                     </span>
                   </div>
                   {activeContract.supplierSignDetails.drawnSignatureUrl ? (
-                    <div style={{ margin: "6px 0" }}>
+                    <div className="contract-signature-image-wrap">
                       <img
                         src={activeContract.supplierSignDetails.drawnSignatureUrl}
                         alt="Handwritten Signature"
-                        style={{ maxHeight: "55px", objectFit: "contain" }}
+                        className="contract-signature-image"
                       />
                     </div>
                   ) : (
-                    <div style={{ fontFamily: "cursive, 'Dancing Script', 'Brush Script MT', sans-serif", fontSize: "22px", fontWeight: 700, color: "#15803D" }}>
+                    <div className="contract-signature-text contract-signature-text--supplier">
                       /s/ {activeContract.supplierSignDetails.signerName}
                     </div>
                   )}
-                  <div style={{ fontSize: "11px", color: "#334155", fontWeight: 500, marginTop: "2px" }}>
+                  <div className="contract-signature-caption">
                     {activeContract.supplierSignDetails.signerName} ({activeContract.supplierSignDetails.signerDesignation}) • {getSupplierName(activeContract.supplierId)}
                   </div>
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <div className="contract-btn-group contract-btn-group--wrap">
                 {isSupplier ? (
                   <>
                     <Button
@@ -2266,16 +1885,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                     >
                       Upload Signed Contract
                     </Button>
-
-                    {!activeContract.buyerSigned && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleBuyerSign(activeContractId)}
-                      >
-                        Simulate: Buyer Signs
-                      </Button>
-                    )}
                   </>
                 ) : (
                   <>
@@ -2298,25 +1907,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                     >
                       Upload Signed Contract
                     </Button>
-
-                    {!activeContract.supplierSigned && (
-                      <button
-                        type="button"
-                        onClick={() => handleSupplierSign(activeContractId)}
-                        style={{
-                          padding: "8px 16px",
-                          borderRadius: "6px",
-                          fontSize: "12.5px",
-                          fontWeight: 600,
-                          border: "1px solid #CBD5E1",
-                          background: "#F8FAFC",
-                          color: "#334155",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Simulate: Supplier Signs
-                      </button>
-                    )}
                   </>
                 )}
               </div>
@@ -2325,62 +1915,44 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
           {/* Action Step: Completed */}
           {activeContract.step === "completed" && (
-            <div style={{ background: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: "10px", padding: "20px 24px", textAlign: "center", marginBottom: "14px" }}>
-              <div style={{ fontSize: "16px", fontWeight: 700, color: "#059669", marginBottom: "16px" }}>
+            <div className="contract-completed-card">
+              <div className="contract-completed-title">
                 Contract Executed Successfully
               </div>
-              <div style={{ display: "flex", justifyContent: "center", gap: "32px", flexWrap: "wrap", marginBottom: "18px", fontSize: "12.5px", fontWeight: 600, textAlign: "left" }}>
+              <div className="contract-completed-summary">
                 <div>
-                  <div style={{ color: "#475569", fontWeight: 500, fontSize: "11px", marginBottom: "2px" }}>Contract Number</div>
-                  <div style={{ color: "#0F172A", fontWeight: 700 }}>{activeContract.contractNumber}</div>
+                  <div className="contract-completed-label">Contract Number</div>
+                  <div className="contract-completed-value">{activeContract.contractNumber}</div>
                 </div>
                 <div>
-                  <div style={{ color: "#475569", fontWeight: 500, fontSize: "11px", marginBottom: "2px" }}>Supplier</div>
-                  <div style={{ color: "#0F172A", fontWeight: 700 }}>{getSupplierName(activeContract.supplierId)}</div>
+                  <div className="contract-completed-label">Supplier</div>
+                  <div className="contract-completed-value">{getSupplierName(activeContract.supplierId)}</div>
                 </div>
                 <div>
-                  <div style={{ color: "#475569", fontWeight: 500, fontSize: "11px", marginBottom: "2px" }}>Contract Value</div>
-                  <div style={{ color: "#0F172A", fontWeight: 700 }}>{fmtINR(getContractValue(activeContractId))}</div>
+                  <div className="contract-completed-label">Contract Value</div>
+                  <div className="contract-completed-value">{fmtINR(getContractValue(activeContractId))}</div>
                 </div>
                 <div>
-                  <div style={{ color: "#475569", fontWeight: 500, fontSize: "11px", marginBottom: "2px" }}>Start Date</div>
-                  <div style={{ color: "#0F172A", fontWeight: 700 }}>{activeContract.startDate}</div>
+                  <div className="contract-completed-label">Start Date</div>
+                  <div className="contract-completed-value">{activeContract.startDate}</div>
                 </div>
                 <div>
-                  <div style={{ color: "#475569", fontWeight: 500, fontSize: "11px", marginBottom: "2px" }}>End Date</div>
-                  <div style={{ color: "#0F172A", fontWeight: 700 }}>{activeContract.endDate}</div>
+                  <div className="contract-completed-label">End Date</div>
+                  <div className="contract-completed-value">{activeContract.endDate}</div>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+              <div className="contract-completed-actions">
                 <button
                   type="button"
                   onClick={() => alert(`Contract ${activeContract.contractNumber} Details:\nSupplier: ${getSupplierName(activeContract.supplierId)}\nValue: ${fmtINR(getContractValue(activeContractId))}`)}
-                  style={{
-                    padding: "8px 18px",
-                    borderRadius: "6px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    border: "1px solid #10B981",
-                    background: "#FFFFFF",
-                    color: "#059669",
-                    cursor: "pointer",
-                  }}
+                  className="contract-btn contract-btn--success-outline contract-btn--xl"
                 >
                   View Contract
                 </button>
                 <button
                   type="button"
                   onClick={() => alert(`Downloading final executed contract ${activeContract.contractNumber}.pdf...`)}
-                  style={{
-                    padding: "8px 18px",
-                    borderRadius: "6px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    border: "none",
-                    background: "#059669",
-                    color: "#FFFFFF",
-                    cursor: "pointer",
-                  }}
+                  className="contract-btn contract-btn--success contract-btn--xl"
                 >
                   Download Contract
                 </button>
@@ -2395,28 +1967,11 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         <button
           type="button"
           onClick={() => setChatOpen(true)}
-          style={{
-            position: "fixed",
-            bottom: "24px",
-            right: "24px",
-            background: "#2563EB",
-            color: "#FFFFFF",
-            borderRadius: "9999px",
-            padding: "12px 18px",
-            fontSize: "13px",
-            fontWeight: 700,
-            border: "none",
-            boxShadow: "0 10px 25px -5px rgba(37, 99, 235, 0.4)",
-            cursor: "pointer",
-            zIndex: 50,
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
+          className="contract-chat-fab"
         >
           <span>💬 {isSupplier ? "Buyer Chat" : "Supplier Chats"}</span>
           {activeChatContract?.messages.length ? (
-            <span style={{ background: "#EF4444", color: "#FFFFFF", borderRadius: "9999px", width: "18px", height: "18px", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span className="contract-chat-badge">
               {activeChatContract.messages.length}
             </span>
           ) : null}
@@ -2428,45 +1983,25 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         <>
           <div
             onClick={() => setChatOpen(false)}
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(15, 23, 42, 0.25)",
-              zIndex: 55,
-            }}
+            className="contract-chat-backdrop"
           />
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: "640px",
-              maxWidth: "92vw",
-              background: "#FFFFFF",
-              borderLeft: "1px solid #E2E8F0",
-              boxShadow: "-8px 0 24px 0 rgba(0,0,0,0.12)",
-              zIndex: 56,
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px", borderBottom: "1px solid #E2E8F0", flexShrink: 0 }}>
-              <div style={{ fontSize: "14px", fontWeight: 700 }}>
+          <div className="contract-chat-drawer">
+            <div className="contract-chat-header">
+              <div className="contract-chat-title">
                 {isSupplier ? "Buyer Chat" : "Supplier Chats"}
               </div>
               <button
                 type="button"
                 onClick={() => setChatOpen(false)}
-                style={{ background: "none", border: "none", fontSize: "18px", cursor: "pointer", color: "#475569", lineHeight: 1 }}
+                className="contract-chat-close"
               >
                 ×
               </button>
             </div>
-            <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+            <div className="contract-chat-body">
               {/* Supplier Thread List (Buyer View) */}
               {!isSupplier && (
-                <div style={{ width: "220px", flexShrink: 0, borderRight: "1px solid #E2E8F0", overflowY: "auto" }}>
+                <div className="contract-chat-threads">
                   {sentContractIds.map((sid) => {
                     const c = contracts[sid];
                     const suppName = getSupplierName(sid);
@@ -2475,18 +2010,12 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                       <div
                         key={sid}
                         onClick={() => setChatViewSupplierId(sid)}
-                        style={{
-                          padding: "12px 14px",
-                          borderBottom: "1px solid #F1F5F9",
-                          cursor: "pointer",
-                          background: isSel ? "#EFF6FF" : "#FFFFFF",
-                          borderLeft: isSel ? "3px solid #2563EB" : "3px solid transparent",
-                        }}
+                        className={`contract-chat-thread${isSel ? " contract-chat-thread--selected" : ""}`}
                       >
-                        <div style={{ fontSize: "12.5px", fontWeight: 700, color: "#0F172A", marginBottom: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <div className="contract-chat-thread-name">
                           {suppName}
                         </div>
-                        <div style={{ fontSize: "10.5px", color: "#64748B" }}>
+                        <div className="contract-caption">
                           {c?.contractNumber || sid}
                         </div>
                       </div>
@@ -2496,41 +2025,35 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               )}
 
               {/* Chat Conversation Pane */}
-              <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                <div style={{ padding: "10px 14px", background: "#F8FAFC", borderBottom: "1px solid #E2E8F0", fontSize: "12px", fontWeight: 700, color: "#334155" }}>
+              <div className="contract-chat-pane">
+                <div className="contract-chat-pane-header">
                   Chatting with {isSupplier ? "Buyer (Procurement Team)" : getSupplierName(activeChatSupplierId)}
                 </div>
-                <div style={{ flex: 1, padding: "14px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div className="contract-chat-messages">
                   {activeChatContract?.messages.map((m: any, idx: number) => {
                     const isSelf = m.sender === (isSupplier ? "Supplier" : "Buyer");
                     return (
                       <div
                         key={idx}
-                        style={{
-                          alignSelf: isSelf ? "flex-end" : "flex-start",
-                          maxWidth: "75%",
-                          background: isSelf ? "#EFF6FF" : "#F1F5F9",
-                          borderRadius: "8px",
-                          padding: "8px 12px",
-                        }}
+                        className={`contract-chat-bubble${isSelf ? " contract-chat-bubble--self" : ""}`}
                       >
-                        <div style={{ fontSize: "9.5px", fontWeight: 700, color: "#94A3B8", textTransform: 'uppercase', marginBottom: "2px" }}>
+                        <div className="contract-chat-sender">
                           {m.sender}
                         </div>
-                        <div style={{ fontSize: "12.5px" }}>{m.text}</div>
-                        <div style={{ fontSize: "10px", color: "#94A3B8", marginTop: "4px", textAlign: "right" }}>
+                        <div className="contract-chat-text">{m.text}</div>
+                        <div className="contract-chat-time">
                           {m.time}
                         </div>
                       </div>
                     );
                   })}
                   {(!activeChatContract || activeChatContract.messages.length === 0) && (
-                    <div style={{ fontSize: "12px", color: "#94A3B8", textAlign: "center", marginTop: "20px" }}>
+                    <div className="contract-chat-empty">
                       No messages yet. Start the conversation.
                     </div>
                   )}
                 </div>
-                <div style={{ display: "flex", gap: "8px", padding: "14px 18px", borderTop: "1px solid #E2E8F0", flexShrink: 0 }}>
+                <div className="contract-chat-composer">
                   <input
                     type="text"
                     placeholder="Type a message..."
@@ -2539,12 +2062,12 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleSendChatMessage(activeChatSupplierId);
                     }}
-                    style={{ flex: 1, padding: "9px 10px", border: "1px solid #E2E8F0", borderRadius: "6px", fontSize: "12.5px", fontFamily: "inherit" }}
+                    className="contract-chat-input"
                   />
                   <button
                     type="button"
                     onClick={() => handleSendChatMessage(activeChatSupplierId)}
-                    style={{ padding: "9px 16px", borderRadius: "6px", fontSize: "12.5px", fontWeight: 600, border: "none", cursor: "pointer", background: "#2563EB", color: "#ffffff" }}
+                    className="contract-btn contract-btn--primary contract-btn--chat-send"
                   >
                     Send
                   </button>
@@ -2556,57 +2079,37 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       )}
       {/* E-Sign Modal Overlay */}
       {eSignModalContractId && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15, 23, 42, 0.5)",
-            backdropFilter: "blur(2px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 65,
-          }}
-        >
-          <div
-            style={{
-              background: "#FFFFFF",
-              borderRadius: "12px",
-              boxShadow: "0 20px 40px -8px rgba(0,0,0,0.25)",
-              width: "680px",
-              maxWidth: "94vw",
-              padding: "24px 26px",
-            }}
-          >
-            <div style={{ fontSize: "16px", fontWeight: 700, color: "#0F172A", marginBottom: "4px" }}>
+        <div className="contract-modal-overlay contract-modal-overlay--esign">
+          <div className="contract-modal contract-modal--esign">
+            <div className="contract-modal-title contract-modal-title--dark">
               E-Sign Contract ({isSupplier ? "Supplier" : "Buyer"})
             </div>
-            <div style={{ fontSize: "12.5px", color: "#64748B", marginBottom: "16px" }}>
+            <div className="contract-esign-subtitle">
               Draw your signature in the box below to sign this contract.
             </div>
 
             {/* Signature Drawing Pad Canvas */}
-            <div style={{ marginBottom: "16px" }}>
+            <div className="contract-esign-pad">
               <SignaturePad onDraw={setDrawnSignatureData} />
             </div>
 
             {/* Declaration Checkbox */}
-            <label style={{ display: "flex", alignItems: "flex-start", gap: "8px", fontSize: "12px", color: "#334155", cursor: "pointer", marginBottom: "20px" }}>
+            <label className="contract-declaration">
               <input
                 type="checkbox"
                 checked={declarationChecked}
                 onChange={(e) => setDeclarationChecked(e.target.checked)}
-                style={{ marginTop: "2px", width: "15px", height: "15px", accentColor: "#2563EB" }}
+                className="contract-declaration-checkbox"
               />
               <span>I declare that I am authorized to sign this contract on behalf of {isSupplier ? (supplierName || getSupplierName(eSignModalContractId)) : "Buyer"} and agree to all terms and conditions specified herein.</span>
             </label>
 
             {/* Actions */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+            <div className="contract-modal-actions contract-modal-actions--flush">
               <button
                 type="button"
                 onClick={() => setESignModalContractId(null)}
-                style={{ padding: "9px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, border: "1px solid #E2E8F0", background: "#FFFFFF", cursor: "pointer" }}
+                className="contract-btn contract-btn--outline contract-btn--modal"
               >
                 Cancel
               </button>
@@ -2614,16 +2117,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 type="button"
                 onClick={() => confirmApplyESign(eSignModalContractId)}
                 disabled={!declarationChecked || !drawnSignatureData}
-                style={{
-                  padding: "9px 18px",
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  border: "none",
-                  cursor: (!declarationChecked || !drawnSignatureData) ? "not-allowed" : "pointer",
-                  background: (!declarationChecked || !drawnSignatureData) ? "#CBD5E1" : "#2563EB",
-                  color: "#FFFFFF",
-                }}
+                className="contract-btn contract-btn--primary contract-btn--cta"
               >
                 Confirm &amp; Apply E-Signature
               </button>
