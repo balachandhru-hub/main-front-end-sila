@@ -275,16 +275,10 @@ export const createPerson = async (data: CreatePersonRequestDto): Promise<string
       (typeof responseData === 'string' && responseData.trim() ? responseData : null) ||
       responseData?.message ||
       responseData?.description ||
-      responseData?.error ||
-      responseData?.detail ||
-      responseData?.details ||
-      error.message ||
       'Failed to create person';
     throw new Error(errorMsg);
   }
 };
-
-
 export const deleteUser = async (personId: string): Promise<void> => {
   try {
     await platformInstance.delete('/api/v1/identity/delete-person', {
