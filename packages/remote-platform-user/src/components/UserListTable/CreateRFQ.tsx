@@ -727,7 +727,7 @@ if (Array.isArray(data)) {
     };
 
     const selectedSuppliers = suppliers.filter((s) => selectedSupplierIds.includes(s.supplierId));
-    console.log(suppliers);
+
     const verifiedSelectedCount = selectedSuppliers.filter((s) => s.isVerified).length;
     const unverifiedSelectedCount = selectedSuppliers.length - verifiedSelectedCount;
     const hasUnverifiedSelected = unverifiedSelectedCount > 0;
