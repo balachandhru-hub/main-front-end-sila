@@ -349,6 +349,13 @@ export interface RFQDetailResponse {
   items: RFQDetailItem[];
   supplierQuotation: RFQSupplierQuotation[];
   supplierQuotationItems: RFQSupplierQuotationItem[];
+  /** The supplier's own e-signature documents for this RFQ. */
+  eSignDocuments?: RFQDetailDocument[];
+  /** true when the supplier submitted their own Terms & Conditions. */
+  supplierTermsAndCondition?: boolean;
+  supplierTermsConditionDocuments?: RFQDetailDocument[];
+  /** true once the supplier accepted the buyer's Terms & Conditions. */
+  buyerTermsAndConditionAccepted?: boolean;
   status?: string;
   buyerId?: string;
   buyerName?: string;
