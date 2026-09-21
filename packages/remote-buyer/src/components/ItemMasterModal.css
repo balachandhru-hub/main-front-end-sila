@@ -115,9 +115,9 @@
   color: var(--sila-danger);
 }
 
-.item-master-field input,
-.item-master-field select,
-.item-master-field textarea {
+.item-master-field > input,
+.item-master-field > select,
+.item-master-field > textarea {
   width: 100%;
   box-sizing: border-box;
   padding: 0 var(--sila-space-3);
@@ -131,51 +131,51 @@
   transition: var(--sila-transition);
 }
 
-.item-master-field input,
-.item-master-field select {
+.item-master-field > input,
+.item-master-field > select {
   height: var(--sila-control-height);
 }
 
-.item-master-field textarea {
+.item-master-field > textarea {
   min-height: 5.25rem;
   padding: var(--sila-space-2) var(--sila-space-3);
   line-height: var(--sila-leading);
   resize: vertical;
 }
 
-.item-master-field input::placeholder,
-.item-master-field textarea::placeholder {
+.item-master-field > input::placeholder,
+.item-master-field > textarea::placeholder {
   color: var(--sila-text-subtle);
 }
 
-.item-master-field input:hover:not(:disabled),
-.item-master-field select:hover:not(:disabled),
-.item-master-field textarea:hover:not(:disabled) {
+.item-master-field > input:hover:not(:disabled),
+.item-master-field > select:hover:not(:disabled),
+.item-master-field > textarea:hover:not(:disabled) {
   border-color: var(--sila-text-subtle);
 }
 
-.item-master-field input:focus,
-.item-master-field select:focus,
-.item-master-field textarea:focus {
+.item-master-field > input:focus,
+.item-master-field > select:focus,
+.item-master-field > textarea:focus {
   border-color: var(--sila-primary);
   box-shadow: var(--sila-focus-ring);
 }
 
-.item-master-field select:disabled {
+.item-master-field > select:disabled {
   color: var(--sila-text-muted);
   background: var(--sila-surface-subtle);
   cursor: not-allowed;
 }
 
-.item-master-field input.item-master-input-error,
-.item-master-field select.item-master-input-error,
-.item-master-field textarea.item-master-input-error {
+.item-master-field > input.item-master-input-error,
+.item-master-field > select.item-master-input-error,
+.item-master-field > textarea.item-master-input-error {
   border-color: var(--sila-danger);
 }
 
-.item-master-field input.item-master-input-error:focus,
-.item-master-field select.item-master-input-error:focus,
-.item-master-field textarea.item-master-input-error:focus {
+.item-master-field > input.item-master-input-error:focus,
+.item-master-field > select.item-master-input-error:focus,
+.item-master-field > textarea.item-master-input-error:focus {
   box-shadow: 0 0 0 0.1875rem var(--sila-danger-ring);
 }
 
