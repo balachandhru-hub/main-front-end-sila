@@ -1,8 +1,22 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { fetchBuyerAsset } from "../api/platformApi";
+import {
+  fetchBuyerAsset,
+  fetchBuyerRfqContractStatus,
+  fetchBuyerContractById,
+  createBuyerContract,
+  type BuyerRfqContractRefDto,
+} from "../api/platformApi";
 import { fetchReferenceList } from "../api/masterdataApi";
 import { Button } from "@vosox/shared-ui";
 import "./ContractCreationView.css";
+
+/** The parts of a created contract this screen shows, as returned by the buyer and supplier contract APIs. */
+export interface ContractDetails {
+  contractName: string;
+  contractNumber: string;
+  startDate: string;
+  endDate: string;
+}
 
 export interface RfqAssetAttachment {
   id: string;
@@ -64,6 +78,18 @@ function resolveMimeType(contentType: string | undefined, fileName: string): str
   return MIME_BY_EXTENSION[extension] || MIME_BY_EXTENSION[fileName.split(".").pop()?.toLowerCase() || ""] || "application/octet-stream";
 }
 
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.includes(",") ? result.split(",")[1] : result);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export interface ContractCreationViewProps {
   rfq: any;
   lineItems: any[];
@@ -105,6 +131,8 @@ export interface ContractCreationViewProps {
   fetchTermsConditions?: (rfqId: string) => Promise<TermsConditionStatusEntry[] | { statusCode: number }>;
   /** Fetches the latest per-supplier e-signature status/attachments for this RFQ. */
   fetchESigns?: (rfqId: string) => Promise<EsignStatusEntry[] | { statusCode: number }>;
+  /** Supplier: loads the contract the buyer created (its id is the RFQ's contractId). */
+  fetchContract?: (contractId: string) => Promise<ContractDetails | { statusCode: number; message?: string }>;
 }
 
 export interface SignDetails {
@@ -133,6 +161,8 @@ interface ContractState {
   buyerFinalAccepted: boolean;
   supplierFinalAccepted: boolean;
   supplierFinalRejected?: boolean;
+  /** Buyer: a Terms & Conditions document added through "Proposed Edits", sent with the contract. */
+  buyerTcFile?: File | null;
   buyerSigned: boolean;
   supplierSigned: boolean;
   buyerSignDetails?: SignDetails | null;
@@ -140,6 +170,14 @@ interface ContractState {
   messages: Array<{ sender: string; text: string; time: string }>;
   draftMessage: string;
 }
+
+/** A label with its value (or input) in the contract details grid. `wide` makes it span the full row. */
+const DetailField: React.FC<{ label: string; wide?: boolean; children: React.ReactNode }> = ({ label, wide, children }) => (
+  <div className={wide ? "contract-field contract-field--wide" : "contract-field"}>
+    <div className="contract-field-label">{label}</div>
+    {children}
+  </div>
+);
 
 const SignaturePad: React.FC<{ onDraw: (dataUrl: string | null) => void }> = ({ onDraw }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -265,6 +303,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   onAcceptBuyerTerms,
   fetchTermsConditions,
   fetchESigns,
+  fetchContract,
 }) => {
   const isSupplier = role === "supplier";
   const rfqId: string | undefined = rfq?.rfqId || rfq?.id || (rfq as any)?._id;
@@ -274,7 +313,8 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const supplierHasOwnTc = isSupplier && (rfq as any)?.supplierTermsAndCondition === true;
   const supplierOwnTcDocs: RfqAssetAttachment[] = isSupplier ? (rfq as any)?.supplierTermsConditionDocuments || [] : [];
   const supplierHasSigned = isSupplier && ((rfq as any)?.eSignDocuments?.length ?? 0) > 0;
-  const supplierAcceptedBuyerTc = isSupplier && (rfq as any)?.buyerTermsAndConditionAccepted === true;
+  // The "Buyer — Accepted" status shown to the supplier.
+  const buyerTermsAccepted = isSupplier && (rfq as any)?.buyerTermsAndConditionAccepted === true;
 
   // Real terms-condition / e-sign status per supplier, sourced from the RFQ payload
   // (buyer's rfq-by-id already includes it) and refreshed via the dedicated status endpoints.
@@ -433,6 +473,13 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     );
   };
 
+  // The awarded ids on this screen can be quotation ids. The terms & conditions, e-signature, buyer-acceptance and
+  // contract data from the API are keyed by the supplier's own id, so match them through this.
+  const resolveSupplierId = (id: string): string => {
+    const quotation = effectiveQuotations.find((q: any) => q.quotationId === id || q.supplierId === id || q._id === id);
+    return String(quotation?.supplierId || id);
+  };
+
   // Map of line items for each awarded supplier
   const supplierItemsMap = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -496,8 +543,13 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         tcLastUpdatedAt: null,
         tcEditorOpen: false,
         tcDraft: "",
-        buyerFinalAccepted: isSupplier ? true : false,
-        supplierFinalAccepted: supplierHasOwnTc || supplierAcceptedBuyerTc,
+        // Buyer: whether this buyer has already approved this supplier's terms, from the RFQ's per-supplier statuses.
+        buyerFinalAccepted: isSupplier
+          ? true
+          : ((rfq as any)?.buyerTermsAndConditionStatuses || []).some(
+              (s: any) => String(s.supplierId) === resolveSupplierId(sid) && s.buyerTermsAndConditionAccepted === true
+            ),
+        supplierFinalAccepted: supplierHasOwnTc,
         buyerSigned: false,
         supplierSigned: supplierHasSigned,
         messages: isSupplier
@@ -523,10 +575,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
 
 
-  // Chat Drawer State
-  const [chatOpen, setChatOpen] = useState(false);
-  const [chatViewSupplierId, setChatViewSupplierId] = useState<string | null>(null);
-
   // E-Sign Modal State
   const [eSignModalContractId, setESignModalContractId] = useState<string | null>(null);
   const [signerNameInput, setSignerNameInput] = useState("");
@@ -543,18 +591,18 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const [supplierTcStatusMsg, setSupplierTcStatusMsg] = useState<string | null>(null);
   const supplierTcStatusMsgClass = `contract-status-msg${supplierTcStatusMsg?.includes("Success") ? " contract-status-msg--success" : ""}`;
 
-  // The SUPPLIER row of the ENTITY_TYPE reference list: its id is the entityId of the supplier's uploaded assets
-  // (terms & conditions, e-signature).
-  const getSupplierEntityType = async () => {
+  // A row of the ENTITY_TYPE reference list: its id is the entityId of that party's uploaded assets.
+  const getEntityTypeByKey = async (key: "SUPPLIER" | "BUYER") => {
     const entityTypes = await fetchReferenceList(["ENTITY_TYPE"]);
-    const supplierEntity = Array.isArray(entityTypes)
-      ? entityTypes.find((e) => e.key === "SUPPLIER")
-      : undefined;
-    if (!supplierEntity) {
-      throw new Error("SUPPLIER entity type not found.");
+    const entity = Array.isArray(entityTypes) ? entityTypes.find((e) => e.key === key) : undefined;
+    if (!entity) {
+      throw new Error(`${key} entity type not found.`);
     }
-    return { entityId: supplierEntity.id as string, entityType: supplierEntity.key as string };
+    return { entityId: entity.id as string, entityType: entity.key as string };
   };
+
+  // The supplier's uploaded assets (terms & conditions, e-signature).
+  const getSupplierEntityType = () => getEntityTypeByKey("SUPPLIER");
 
   const handleUploadSupplierTcFileDirect = async (id: string) => {
     if (!supplierTcFile || !onUploadSupplierTerms) return;
@@ -595,14 +643,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         return;
       }
 
-      if (onAcceptBuyerTerms && rfqId) {
-        try {
-          await onAcceptBuyerTerms(rfqId, "REJECT");
-        } catch (err) {
-          console.error("Failed to update buyer terms status to REJECT:", err);
-        }
-      }
-
       setSupplierTcStatusMsg("Success! Supplier terms uploaded & submitted.");
       const c = contracts[id];
       if (c) {
@@ -640,10 +680,10 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
   // Real terms-condition / e-sign status for the currently active supplier, when the API has data for it.
   const activeTcEntry = activeContract
-    ? termsConditions.find((e) => String(e.supplierId) === String(activeContract.supplierId))
+    ? termsConditions.find((e) => String(e.supplierId) === resolveSupplierId(activeContract.supplierId))
     : undefined;
   const activeEsignEntry = activeContract
-    ? eSigns.find((e) => String(e.supplierId) === String(activeContract.supplierId))
+    ? eSigns.find((e) => String(e.supplierId) === resolveSupplierId(activeContract.supplierId))
     : undefined;
 
   // The buyer's own Terms & Conditions documents attached to the RFQ.
@@ -652,23 +692,232 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
   // termsAndCondition means "the supplier has their own Terms & Conditions".
   // Buyer: once the supplier's entry is known (true or false) there is no terms review card, the contract goes straight to signing.
-  // Supplier: only when they have submitted their own documents.
-  const tcDeclined =
-    (!isSupplier && activeTcEntry !== undefined) ||
-    (supplierHasOwnTc && supplierOwnTcDocs.length > 0);
+  // Buyer: the contract name is asked for when the contract screen opens, and sent with "Send to Supplier".
+  const [contractName, setContractName] = useState("");
+  const [contractNameDraft, setContractNameDraft] = useState("");
+  // Contracts already created for this RFQ (one per supplier), from the buyer's rfq-by-id, and their details from the contract API.
+  const [contractRefs, setContractRefs] = useState<BuyerRfqContractRefDto[]>((rfq as any)?.contracts || []);
+  const [createdContracts, setCreatedContracts] = useState<Record<string, ContractDetails>>({});
+  const [contractLoadError, setContractLoadError] = useState<string | null>(null);
+  // Supplier: the contract the buyer created, loaded with the RFQ's contractId.
+  const [supplierContract, setSupplierContract] = useState<ContractDetails | null>(null);
+  const openedContractSupplierRef = useRef(false);
+  const [buyerTermsError, setBuyerTermsError] = useState<string | null>(null);
+  // Whether the buyer has already accepted the supplier's terms & conditions, from the buyer's rfq-by-id.
+  const [supplierTermsAccepted, setSupplierTermsAccepted] = useState(
+    (rfq as any)?.supplierTermsAndConditionAccepted === true
+  );
+  const [showContractNameModal, setShowContractNameModal] = useState(!isSupplier && contractRefs.length === 0);
+  const [contractNameError, setContractNameError] = useState<string | null>(null);
+  const [sendingContract, setSendingContract] = useState(false);
+  const [sendContractError, setSendContractError] = useState<string | null>(null);
+  // Buyer: the file picked in the "Proposed Edits" dialog, kept per contract only once saved.
+  const [pendingBuyerTcFile, setPendingBuyerTcFile] = useState<File | null>(null);
+  // Buyer: which suppliers' contracts "Send" applies to when several suppliers were awarded.
+  const [selectAllSuppliers, setSelectAllSuppliers] = useState(true);
+  const [sendSelection, setSendSelection] = useState<Record<string, boolean>>({});
 
-  // Skip the terms negotiation card & jump straight to signing.
+  // Buyer: reload the RFQ when the contract screen opens so each supplier's latest terms & conditions,
+  // e-signature and buyer-acceptance status are shown, not the data loaded earlier on the award screen.
+  const [latestLoading, setLatestLoading] = useState(false);
+  const [latestError, setLatestError] = useState<string | null>(null);
   useEffect(() => {
-    if (!activeContract || !tcDeclined) return;
-    if (activeContract.step === "terms" || activeContract.step === "details") {
+    if (isSupplier || !rfqId) return;
+    let cancelled = false;
+    setLatestLoading(true);
+    setLatestError(null);
+    fetchBuyerRfqContractStatus(rfqId)
+      .then((latest) => {
+        if (cancelled) return;
+        if ("statusCode" in latest) {
+          setLatestError(latest.message || "Failed to load the latest contract details.");
+          return;
+        }
+        setTermsConditions(latest.supplierTermsConditions || []);
+        setESigns(latest.supplierESigns || []);
+        setContractRefs(latest.contracts || []);
+        setSupplierTermsAccepted(latest.supplierTermsAndConditionAccepted === true);
+        const acceptedSupplierIds = (latest.buyerTermsAndConditionStatuses || [])
+          .filter((s) => s.buyerTermsAndConditionAccepted)
+          .map((s) => String(s.supplierId));
+        setContracts((prev) => {
+          const next = { ...prev };
+          Object.keys(next).forEach((sid) => {
+            if (acceptedSupplierIds.includes(resolveSupplierId(sid))) {
+              next[sid] = { ...next[sid], buyerFinalAccepted: true };
+            }
+          });
+          return next;
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setLatestLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rfqId]);
+
+  // Buyer: a supplier whose contract already exists is not sent one again. Load its name, dates and attachments
+  // from the contract API and show them instead of the editable defaults.
+  useEffect(() => {
+    if (isSupplier || contractRefs.length === 0) return;
+    let cancelled = false;
+    const contractSupplierIds = contractRefs.map((ref) => String(ref.supplierId));
+    setContracts((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((sid) => {
+        if (contractSupplierIds.includes(resolveSupplierId(sid))) {
+          next[sid] = { ...next[sid], sent: true, step: next[sid].step === "details" ? "terms" : next[sid].step };
+        }
+      });
+      return next;
+    });
+    // Open on the supplier that has a contract, once, so its details are what the buyer sees first.
+    if (!openedContractSupplierRef.current) {
+      const withContract = awardedSupplierIds.find((id) => contractSupplierIds.includes(resolveSupplierId(id)));
+      if (withContract) {
+        openedContractSupplierRef.current = true;
+        setActiveContractId(withContract);
+      }
+    }
+    setContractLoadError(null);
+    Promise.all(contractRefs.map((ref) => fetchBuyerContractById(ref.contractId))).then((results) => {
+      if (cancelled) return;
+      const loaded: Record<string, ContractDetails> = {};
+      results.forEach((res, i) => {
+        if ("statusCode" in res) {
+          setContractLoadError(res.message || "Failed to load the contract.");
+        } else {
+          loaded[String(contractRefs[i].supplierId)] = res;
+        }
+      });
+      setCreatedContracts(loaded);
+      setContracts((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((sid) => {
+          const created = loaded[resolveSupplierId(sid)];
+          if (created) {
+            next[sid] = { ...next[sid], startDate: created.startDate.slice(0, 10), endDate: created.endDate.slice(0, 10), dateError: false };
+          }
+        });
+        return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contractRefs]);
+
+  const activeSupplierId = activeContract ? resolveSupplierId(activeContract.supplierId) : "";
+  const activeContractRef = contractRefs.find((ref) => String(ref.supplierId) === activeSupplierId);
+  const activeCreated: ContractDetails | undefined = isSupplier
+    ? supplierContract ?? undefined
+    : createdContracts[activeSupplierId];
+
+  // Supplier: load the created contract (name, number, dates) and show its dates instead of the editable defaults.
+  const supplierContractId: string | undefined = isSupplier ? (rfq as any)?.contractId || undefined : undefined;
+  useEffect(() => {
+    if (!supplierContractId || !fetchContract) return;
+    let cancelled = false;
+    setContractLoadError(null);
+    fetchContract(supplierContractId).then((res) => {
+      if (cancelled) return;
+      if ("statusCode" in res) {
+        setContractLoadError(res.message || "Failed to load the contract.");
+        return;
+      }
+      setSupplierContract(res);
+      setContracts((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((sid) => {
+          next[sid] = { ...next[sid], startDate: res.startDate.slice(0, 10), endDate: res.endDate.slice(0, 10), dateError: false };
+        });
+        return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supplierContractId]);
+
+  // Buyer: no contract name is asked for once the RFQ has a contract. For a supplier that has none, while other
+  // suppliers do, the name is asked for when "Send" is clicked.
+  useEffect(() => {
+    if (isSupplier) return;
+    if (activeContractRef || (contractRefs.length > 0 && !contractName)) {
+      setShowContractNameModal(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeContractRef?.contractId, activeContract?.supplierId, contractRefs]);
+
+  // Supplier: no terms review once they have submitted their own documents.
+  const tcDeclined = supplierHasOwnTc && supplierOwnTcDocs.length > 0;
+
+  useEffect(() => {
+    if (!activeContract) return;
+    if (tcDeclined) {
+      if (activeContract.step === "terms" || activeContract.step === "details") {
+        updateContract(activeContract.supplierId, {
+          buyerFinalAccepted: true,
+          supplierFinalAccepted: true,
+          step: activeContract.buyerSigned && activeContract.supplierSigned ? "completed" : "sign",
+        });
+      }
+    } else if (
+      !isSupplier &&
+      activeContract.step === "details" &&
+      (activeTcEntry?.termsAndCondition === true || (activeEsignEntry?.attachments?.length ?? 0) > 0)
+    ) {
+      // Buyer: the supplier has already responded, so the contract was sent earlier - go to the terms step.
+      updateContract(activeContract.supplierId, { sent: true, step: "terms" });
+      setShowContractNameModal(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    activeContract?.step,
+    activeContract?.supplierId,
+    tcDeclined,
+    activeTcEntry?.termsAndCondition,
+    activeEsignEntry?.attachments?.length,
+  ]);
+
+  // Buyer: keep the acceptance flags in line with the supplier's termsAndCondition.
+  // false = the supplier answered without terms of their own, so there is nothing to approve: both sides are
+  // accepted and Proceed to Signing is available. This applies once the contract exists in the API; right after
+  // "Send to Supplier" in this session the supplier cannot have answered yet, so both sides stay awaiting.
+  // true = the supplier's own T&C is submitted, so the supplier side is accepted. If the buyer has already accepted
+  // them (supplierTermsAndConditionAccepted) there is nothing left to approve; otherwise the buyer still has to Accept.
+  // That flag is one value for the whole RFQ, so it is only trusted when one supplier has own terms.
+  const ownTermsSupplierCount = termsConditions.filter((e) => e.termsAndCondition === true).length;
+  useEffect(() => {
+    if (isSupplier || !activeContract || activeContract.step !== "terms") return;
+    if (activeTcEntry?.termsAndCondition === false) {
+      if (activeContractRef && !(activeContract.buyerFinalAccepted && activeContract.supplierFinalAccepted)) {
+        updateContract(activeContract.supplierId, { buyerFinalAccepted: true, supplierFinalAccepted: true });
+      }
+      return;
+    }
+    if (activeTcEntry?.termsAndCondition !== true) return;
+    const buyerAlreadyAccepted = supplierTermsAccepted && ownTermsSupplierCount === 1;
+    if (!activeContract.supplierFinalAccepted || (buyerAlreadyAccepted && !activeContract.buyerFinalAccepted)) {
       updateContract(activeContract.supplierId, {
-        buyerFinalAccepted: true,
         supplierFinalAccepted: true,
-        step: activeContract.buyerSigned && activeContract.supplierSigned ? "completed" : "sign",
+        ...(buyerAlreadyAccepted ? { buyerFinalAccepted: true } : {}),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeContract?.step, activeContract?.supplierId, tcDeclined]);
+  }, [
+    activeTcEntry?.termsAndCondition,
+    activeContractRef?.contractId,
+    supplierTermsAccepted,
+    ownTermsSupplierCount,
+    activeContract?.step,
+    activeContract?.supplierId,
+  ]);
 
   // Buyer: a supplier whose e-signature has been uploaded has signed, so show them as signed / accepted.
   const supplierEsignUploaded = !isSupplier && (activeEsignEntry?.attachments?.length ?? 0) > 0;
@@ -676,18 +925,10 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     if (!activeContract || !supplierEsignUploaded || activeContract.supplierSigned) return;
     updateContract(activeContract.supplierId, {
       supplierSigned: true,
-      step: activeContract.buyerSigned ? "completed" : "sign",
+      ...(activeContract.step === "sign" && activeContract.buyerSigned ? { step: "completed" as const } : {}),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supplierEsignUploaded, activeContract?.supplierId, activeContract?.supplierSigned]);
-
-  // Supplier T&C documents to list: the supplier's own (supplier role), or those of a supplier who has
-  // their own T&C (buyer role). A supplier without their own T&C has nothing to show.
-  const supplierTcDocsToShow: RfqAssetAttachment[] = isSupplier
-    ? supplierOwnTcDocs
-    : activeTcEntry?.termsAndCondition === true
-      ? activeTcEntry.attachments || []
-      : [];
 
   const showTermsAcceptanceCard =
     !tcDeclined &&
@@ -798,6 +1039,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
   // T&C Editor Modal handlers
   const openTcEditor = (id: string) => {
+    if (!isSupplier) setPendingBuyerTcFile(contracts[id]?.buyerTcFile ?? null);
     updateContract(id, {
       tcEditorOpen: true,
       tcDraft: contracts[id].tcContent,
@@ -866,6 +1108,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       tcLastUpdatedAt: timeStr,
       tcEditorOpen: false,
     };
+    if (!isSupplier) patch.buyerTcFile = pendingBuyerTcFile;
     if (c.sent) {
       const sender = isSupplier ? "Supplier" : "Buyer";
       patch.messages = [
@@ -887,12 +1130,19 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   // Negotiation Actions
   const handleBuyerAcceptFinal = async (id: string) => {
     const targetRfqId = rfq?.rfqId || rfq?.id || (rfq as any)?._id || id;
+    setBuyerTermsError(null);
     if (onAcceptSupplierTerms && targetRfqId) {
       try {
-        await onAcceptSupplierTerms(targetRfqId, "ACCEPTED");
+        const res = await onAcceptSupplierTerms(targetRfqId, "APPROVE");
+        if (res && "statusCode" in res && res.statusCode >= 400) {
+          setBuyerTermsError(res.message || "Failed to accept the supplier's terms & conditions.");
+          return;
+        }
         await refreshTermsConditions();
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to update supplier terms & conditions status:", err);
+        setBuyerTermsError(err?.message || "Failed to accept the supplier's terms & conditions.");
+        return;
       }
     }
     updateContract(id, { buyerFinalAccepted: true });
@@ -945,6 +1195,132 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     } finally {
       setUploadingSupplierTc(false);
     }
+  };
+
+  const handleConfirmContractName = () => {
+    const name = contractNameDraft.trim();
+    if (!name) {
+      setContractNameError("Please enter a contract name.");
+      return;
+    }
+    setContractName(name);
+    setContractNameError(null);
+    setShowContractNameModal(false);
+  };
+
+  const openContractNameEditor = () => {
+    setContractNameDraft(contractName);
+    setContractNameError(null);
+    setShowContractNameModal(true);
+  };
+
+  // Buyer: the Terms & Conditions sent with the contract. The document added through "Proposed Edits" if there
+  // is one, otherwise the buyer's own Terms & Conditions attached to the RFQ.
+  const buildContractAttachments = async (ids: string[]) => {
+    const { entityId, entityType } = await getEntityTypeByKey("BUYER");
+    const uploaded = ids.map((id) => contracts[id]?.buyerTcFile).find((file) => file);
+    if (uploaded) {
+      return [
+        {
+          entityId,
+          entityType,
+          assetType: "TERMS_CONDITION",
+          fileName: uploaded.name,
+          contentType: uploaded.type || resolveMimeType(undefined, uploaded.name),
+          isSingletonAsset: false,
+          fileBytes: await readFileAsBase64(uploaded),
+        },
+      ];
+    }
+    const attachments = [];
+    for (const doc of buyerTermsDocs) {
+      if (!doc.id) continue;
+      const asset = await fetchBuyerAsset(doc.id);
+      if (!("fileBytes" in asset) || !asset.fileBytes) {
+        throw new Error(`Could not load ${doc.fileName || doc.assetName || "the Terms & Conditions document"}.`);
+      }
+      const fileName = asset.fileName || doc.fileName || doc.assetName || "Terms_and_Conditions";
+      attachments.push({
+        entityId,
+        entityType,
+        assetType: "TERMS_CONDITION",
+        fileName,
+        contentType: resolveMimeType(asset.contentType || asset.fileType, fileName),
+        isSingletonAsset: false,
+        fileBytes: asset.fileBytes.replace(/^data:.*?;base64,/, ""),
+      });
+    }
+    return attachments;
+  };
+
+  // Buyer: create and send one contract per supplier, each with that supplier's id, dates and value.
+  // Stops at the first failure; contracts already sent stay sent. Returns an error message, or null on success.
+  const sendContract = async (ids: string[]): Promise<string | null> => {
+    if (ids.length === 0 || !rfqId) return "Contract not found.";
+    for (const id of ids) {
+      const c = contracts[id];
+      if (!c) return "Contract not found.";
+      try {
+        const res = await createBuyerContract({
+          contractName: contractName.trim(),
+          rfqId,
+          supplierId: resolveSupplierId(c.supplierId),
+          startDate: `${c.startDate}T00:00:00.000Z`,
+          endDate: `${c.endDate}T00:00:00.000Z`,
+          amount: getContractValue(id),
+          attachments: await buildContractAttachments([id]),
+        });
+        if ("statusCode" in res && res.statusCode >= 400) {
+          return [res.message || "Failed to send the contract.", res.description].filter(Boolean).join(" - ");
+        }
+        updateContract(id, { sent: true, step: "terms" });
+      } catch (err: any) {
+        return err?.message || "Failed to send the contract.";
+      }
+    }
+    return null;
+  };
+
+  // The contract name is normally asked for when the screen opens; ask for it here if it is still missing.
+  const hasContractName = (): boolean => {
+    if (contractName.trim()) return true;
+    setContractNameDraft("");
+    setContractNameError(null);
+    setShowContractNameModal(true);
+    return false;
+  };
+
+  const handleSendToSupplier = async (id: string) => {
+    if (!hasContractName()) return;
+    setSendingContract(true);
+    setSendContractError(null);
+    const error = await sendContract([id]);
+    if (error) setSendContractError(error);
+    setSendingContract(false);
+  };
+
+  // Buyer, several awarded suppliers: the contracts still on the Details step that "Send" applies to.
+  const pendingContractIds = awardedSupplierIds.filter(
+    (id) => contracts[id]?.step === "details" && !contracts[id].dateError
+  );
+  const selectedPendingIds = selectAllSuppliers
+    ? pendingContractIds
+    : pendingContractIds.filter((id) => sendSelection[id]);
+  const showBulkSendBar = !isSupplier && awardedSupplierIds.length > 1 && pendingContractIds.length > 0;
+
+  // The bar at the bottom: with several suppliers selected it shows their combined value and all their names,
+  // and its button sends to those suppliers. Otherwise it is for the supplier on screen.
+  const sendBarIds = showBulkSendBar && selectedPendingIds.length > 1 ? selectedPendingIds : [activeContractId];
+  const sendBarIsBulk = sendBarIds.length > 1;
+
+  const handleBulkSend = async () => {
+    if (!hasContractName()) return;
+    setSendingContract(true);
+    setSendContractError(null);
+    const error = await sendContract(selectedPendingIds);
+    if (error) setSendContractError(error);
+    else setSendSelection({});
+    setSendingContract(false);
   };
 
   const handleProceedToSigning = (id: string) => {
@@ -1161,22 +1537,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   };
 
 
-  // Chat messaging
-  const handleSendChatMessage = (id: string) => {
-    const c = contracts[id];
-    if (!c || !c.draftMessage.trim()) return;
-    const currentSender = isSupplier ? "Supplier" : "Buyer";
-    const msg = { sender: currentSender, text: c.draftMessage.trim(), time: nowLabel() };
-    updateContract(id, {
-      messages: [...c.messages, msg],
-      draftMessage: "",
-    });
-  };
-
-  const sentContractIds = awardedSupplierIds.filter((id) => contracts[id]?.sent);
-  const activeChatSupplierId = chatViewSupplierId || sentContractIds[0] || activeContractId;
-  const activeChatContract = contracts[activeChatSupplierId];
-
   const stepOrderLabels = ["Details", "Terms", "Sign", "Completed"];
   const activeStepIdx = activeContract
     ? ["details", "terms", "sign", "completed"].indexOf(activeContract.step)
@@ -1285,7 +1645,26 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       <div className="contract-header">
         <div>
           <h1 className="contract-title">
-            {isSupplier ? "Contract Review & Execution" : "Contract Creation"}
+            {isSupplier ? (activeCreated?.contractName || "Contract Review & Execution") : activeCreated?.contractName ? (
+              activeCreated.contractName
+            ) : contractName ? (
+              <>
+                {contractName}
+                <button
+                  type="button"
+                  onClick={openContractNameEditor}
+                  className="contract-btn contract-btn--soft contract-btn--xs"
+                  style={{ marginLeft: "10px", verticalAlign: "middle" }}
+                  aria-label="Edit contract name"
+                  title="Edit contract name"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
+                </button>
+              </>
+            ) : "Contract Creation"}
           </h1>
           <div className="contract-inline-group">
             {stepOrderLabels.map((label, i) => {
@@ -1306,6 +1685,54 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
 
 
+      {!isSupplier && latestLoading && (
+        <div className="contract-chat-hint">Loading the latest terms &amp; conditions and e-sign status...</div>
+      )}
+      {!isSupplier && latestError && (
+        <div className="contract-status-msg">{latestError}</div>
+      )}
+      {contractLoadError && (
+        <div className="contract-status-msg">{contractLoadError}</div>
+      )}
+
+      {/* Bulk send bar for several awarded suppliers (buyer) */}
+      {showBulkSendBar && (
+        <>
+          <div className="contract-info-bar contract-info-bar--bulk">
+            <label className="contract-bulk-label">
+              <input
+                type="checkbox"
+                className="contract-checkbox"
+                checked={selectAllSuppliers}
+                onChange={() => {
+                  setSelectAllSuppliers(!selectAllSuppliers);
+                  setSendSelection({});
+                }}
+              />
+              Select All Suppliers
+            </label>
+            <button
+              type="button"
+              onClick={handleBulkSend}
+              disabled={selectedPendingIds.length === 0 || sendingContract}
+              className="contract-btn contract-btn--primary contract-btn--md"
+            >
+              {sendingContract
+                ? "Sending..."
+                : selectAllSuppliers
+                  ? `Send to All Suppliers (${pendingContractIds.length})`
+                  : `Send Selected Suppliers (${selectedPendingIds.length})`}
+            </button>
+          </div>
+          <div className="contract-chat-hint">
+            {selectAllSuppliers
+              ? "Uncheck to pick individual suppliers to send to below."
+              : "Tick the suppliers to send to below."}
+          </div>
+          {sendContractError && <div className="contract-status-msg">{sendContractError}</div>}
+        </>
+      )}
+
       {/* Supplier Tabs */}
       {!isSupplier && awardedSupplierIds.length > 1 && (
         <div className="contract-supplier-tabs">
@@ -1318,9 +1745,19 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
             if (c?.step === "completed") statusText = "Completed ✓";
             else if (c?.step === "sign") statusText = "Awaiting Signature";
             else if (c?.step === "terms" && c.sent) statusText = "Awaiting Supplier Review";
+            const showCheck = !selectAllSuppliers && c?.step === "details" && !c?.dateError;
 
             return (
               <div key={sid} className="contract-inline-group">
+                {showCheck && (
+                  <input
+                    type="checkbox"
+                    className="contract-checkbox contract-checkbox--sm"
+                    checked={!!sendSelection[sid]}
+                    onChange={() => setSendSelection((prev) => ({ ...prev, [sid]: !prev[sid] }))}
+                    aria-label={`Send to ${name}`}
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => setActiveContractId(sid)}
@@ -1347,55 +1784,44 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
           {/* Details Row Grid */}
           <div className="contract-details-grid">
-            <div>
-              <div className="contract-field-label">
-                RFQ TITLE
-              </div>
+            <DetailField label="RFQ TITLE">
               <div className="contract-field-value">
                 {rfq?.title || rfq?.rfqNo || rfq?.name || "Office IT Equipment Procurement"}
               </div>
-            </div>
+            </DetailField>
 
-            <div>
-              <div className="contract-field-label">
-                RFQ DESCRIPTION
-              </div>
-              <div className="contract-field-text">
-                {rfq?.description || "Procurement of laptops and accessories for the new office."}
-              </div>
-            </div>
+            <DetailField label="SUPPLIER">
+              <div className="contract-field-value">{getSupplierName(activeContract.supplierId)}</div>
+            </DetailField>
 
-            <div>
-              <div className="contract-field-label">
-                SUPPLIER
-              </div>
-              <div className="contract-field-value">
-                {getSupplierName(activeContract.supplierId)}
-              </div>
-            </div>
+            {activeCreated && (
+              <>
+                <DetailField label="CONTRACT NAME">
+                  <div className="contract-field-value">{activeCreated.contractName}</div>
+                </DetailField>
 
-            <div>
-              <div className="contract-field-label">
-                CONTRACT START DATE
-              </div>
+                <DetailField label="CONTRACT NUMBER">
+                  <div className="contract-field-value">{activeCreated.contractNumber}</div>
+                </DetailField>
+              </>
+            )}
+
+            <DetailField label="CONTRACT START DATE">
               <input
                 type="date"
                 value={activeContract.startDate}
                 onChange={(e) => handleStartDateChange(activeContract.supplierId, e.target.value)}
-                disabled={activeContract.buyerSigned && activeContract.supplierSigned}
+                disabled={Boolean(activeCreated) || (activeContract.buyerSigned && activeContract.supplierSigned)}
                 className="contract-date-input"
               />
-            </div>
+            </DetailField>
 
-            <div>
-              <div className="contract-field-label">
-                CONTRACT END DATE
-              </div>
+            <DetailField label="CONTRACT END DATE">
               <input
                 type="date"
                 value={activeContract.endDate}
                 onChange={(e) => handleEndDateChange(activeContract.supplierId, e.target.value)}
-                disabled={activeContract.buyerSigned && activeContract.supplierSigned}
+                disabled={Boolean(activeCreated) || (activeContract.buyerSigned && activeContract.supplierSigned)}
                 className="contract-date-input"
               />
               {activeContract.dateError && (
@@ -1403,7 +1829,13 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   End date cannot be earlier than start date.
                 </div>
               )}
-            </div>
+            </DetailField>
+
+            <DetailField label="RFQ DESCRIPTION" wide>
+              <div className="contract-field-text">
+                {rfq?.description || "Procurement of laptops and accessories for the new office."}
+              </div>
+            </DetailField>
           </div>
 
           {/* Selected Line Items Section */}
@@ -1479,6 +1911,11 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                     ? `Last Updated: ${activeContract.tcLastUpdatedAt}`
                     : "Fetched from RFQ"}
                 </span>
+                {!isSupplier && activeContract.buyerTcFile && (
+                  <span className="contract-tc-updated contract-tc-updated--edited">
+                    {" "}· Attached: {activeContract.buyerTcFile.name}
+                  </span>
+                )}
               </div>
               {showBuyerTermsDecision && supplierTcStatusMsg && (
                 <div className={supplierTcStatusMsgClass}>
@@ -1497,17 +1934,16 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   Preview
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => openTcEditor(activeContractId)}
-                disabled={
-                  (isSupplier ? activeContract.supplierFinalAccepted : activeContract.buyerFinalAccepted) ||
-                  (activeContract.buyerSigned && activeContract.supplierSigned)
-                }
-                className="contract-btn contract-btn--outline contract-btn--md"
-              >
-                Proposed Edits
-              </button>
+              {!isSupplier && (
+                <button
+                  type="button"
+                  onClick={() => openTcEditor(activeContractId)}
+                  disabled={activeContract.buyerFinalAccepted || (activeContract.buyerSigned && activeContract.supplierSigned)}
+                  className="contract-btn contract-btn--outline contract-btn--md"
+                >
+                  Proposed Edits
+                </button>
+              )}
               {showBuyerTermsDecision && (
                 <>
                   {!activeContract.supplierFinalRejected && (
@@ -1544,14 +1980,39 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
           </div>
 
           {/* Supplier's own Terms & Conditions documents, from the supplier's rfq-by-id */}
-          {supplierTcDocsToShow.length > 0 && (
+          {supplierOwnTcDocs.length > 0 && (
             <div className="contract-tc-card">
               <div>
                 <div className="contract-tc-name">
                   Supplier Terms &amp; Conditions
                 </div>
-                {renderTermsDocs(supplierTcDocsToShow)}
+                {renderTermsDocs(supplierOwnTcDocs)}
               </div>
+            </div>
+          )}
+
+          {/* Buyer: send the contract to the supplier (POST /api/v1/buyer/contract) */}
+          {!isSupplier && activeContract.step === "details" && (
+            <div>
+              <div className="contract-info-bar contract-info-bar--send">
+                <div className="contract-send-summary">
+                  {contractName.trim() && <span>Contract: {contractName.trim()}</span>}
+                  <span>Contract Value: {fmtINR(sendBarIds.reduce((sum, id) => sum + getContractValue(id), 0))}</span>
+                  <span>Line Items: {sendBarIds.reduce((sum, id) => sum + (contracts[id]?.itemIds.length ?? 0), 0)}</span>
+                  <span>
+                    Supplier{sendBarIsBulk ? "s" : ""}: {sendBarIds.map((id) => getSupplierName(id)).join(", ")}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={sendBarIsBulk ? handleBulkSend : () => handleSendToSupplier(activeContractId)}
+                  disabled={(!sendBarIsBulk && activeContract.dateError) || sendingContract}
+                  className="contract-btn contract-btn--primary contract-btn--md"
+                >
+                  {sendingContract ? "Sending..." : sendBarIsBulk ? "Send to Suppliers" : "Send to Supplier"}
+                </button>
+              </div>
+              {sendContractError && !showBulkSendBar && <div className="contract-status-msg">{sendContractError}</div>}
             </div>
           )}
 
@@ -1571,6 +2032,36 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   onChange={(e) => updateContract(activeContractId, { tcDraft: e.target.value })}
                   className="contract-tc-textarea"
                 />
+                {!isSupplier && (
+                  <div className="contract-dashed-box contract-dashed-box--modal">
+                    <div className="contract-upload-title">Upload Terms &amp; Conditions Document (optional)</div>
+                    <div className="contract-help-text">
+                      Attach a Terms &amp; Conditions document (PDF/DOCX) to send with the contract. If you don't add one,
+                      the RFQ's Terms &amp; Conditions are sent.
+                    </div>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) setPendingBuyerTcFile(e.target.files[0]);
+                      }}
+                      className="contract-file-input"
+                    />
+                    {pendingBuyerTcFile && (
+                      <div className="contract-selected-file">
+                        📄 Selected file: {pendingBuyerTcFile.name} ({(pendingBuyerTcFile.size / 1024).toFixed(1)} KB)
+                        {" "}
+                        <button
+                          type="button"
+                          onClick={() => setPendingBuyerTcFile(null)}
+                          className="contract-btn contract-btn--outline contract-btn--xs"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {isSupplier && (
                   <div className="contract-dashed-box contract-dashed-box--modal">
                     <label className="contract-check-label">
@@ -1630,77 +2121,10 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
           {/* Action Step: Terms Negotiation & Acceptance */}
           {showTermsAcceptanceCard && (
             <div className="contract-step-card">
+              {isSupplier && (<>
               <div className="contract-subsection-title contract-subsection-title--tight">
                 Contract Terms Review &amp; Acceptance
               </div>
-              <div className="contract-step-card-toolbar">
-                <div className="contract-btn-group">
-                  <button
-                    type="button"
-                    onClick={() => alert("Previewing Contract Terms...")}
-                    className="contract-btn contract-btn--outline contract-btn--sm"
-                  >
-                    Preview
-                  </button>
-                </div>
-              </div>
-
-              {/* Real Terms & Conditions status/attachments for this supplier, from the RFQ e-sign API */}
-              {activeTcEntry?.termsAndCondition === true && (
-                <div className="contract-notice--success">
-                  ✓ Terms &amp; Conditions accepted by {activeTcEntry.supplierName || getSupplierName(activeContract.supplierId)}.
-                </div>
-              )}
-
-              {/* Render Uploaded Terms & Conditions Documents */}
-              {(() => {
-                const apiAttachments = activeTcEntry?.attachments || [];
-                const docs = apiAttachments.length > 0 ? apiAttachments : buyerTermsDocs;
-                if (!docs || docs.length === 0) return null;
-                return (
-                  <div className="contract-docs-panel">
-                    <div className="contract-panel-heading">
-                      📄 Terms &amp; Conditions Documents:
-                    </div>
-                    <div className="contract-doc-list">
-                      {docs.map((doc: any, idx: number) => (
-                        <div key={doc.id || idx} className="contract-doc-item">
-                          <div className="contract-actions">
-                            <span className="contract-doc-icon">📎</span>
-                            <div>
-                              <div className="contract-doc-name">
-                                {doc.fileName || doc.assetName || `Terms_Document_${idx + 1}.pdf`}
-                              </div>
-                              {(doc.assetType || doc.fileType) && (
-                                <div className="contract-doc-type">
-                                  {doc.assetType || doc.fileType}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          {doc.id && (
-                            <button
-                              type="button"
-                              onClick={() => handleDownloadAsset(doc.id, doc.fileName || doc.assetName || "Terms_Document.pdf")}
-                              className="contract-btn contract-btn--soft contract-btn--xs"
-                            >
-                              Download
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {activeTcEntry?.termsAndCondition !== true && (
-              <div className="contract-chat-hint">
-                Use the chat button at bottom right to discuss terms with {isSupplier ? "the buyer" : "the supplier"}.
-              </div>
-              )}
-
-              {activeTcEntry?.termsAndCondition !== true && (
               <div className="contract-terms-actions">
                 {isSupplier ? (
                   <div>
@@ -1800,19 +2224,59 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   </>
                 )}
               </div>
-              )}
+              </>)}
+
+              {/* Buyer: the supplier's own Terms & Conditions. Hidden when the supplier has none (termsAndCondition false);
+                  shown disabled until the supplier's terms have been received (termsAndCondition true). */}
+              {!isSupplier && activeTcEntry?.termsAndCondition !== false && (() => {
+                const termsReceived = activeTcEntry?.termsAndCondition === true;
+                const receivedDocs = termsReceived ? activeTcEntry?.attachments || [] : [];
+                return (
+                  <div className="contract-tc-card">
+                    <div>
+                      <div className="contract-tc-name">Supplier Terms Received</div>
+                      {receivedDocs.length > 0 ? (
+                        renderTermsDocs(receivedDocs)
+                      ) : (
+                        <div className="contract-tc-doc">
+                          <span className="contract-doc-name">No supplier terms received yet</span>
+                          <button type="button" disabled className="contract-btn contract-btn--outline contract-btn--xs">
+                            Preview
+                          </button>
+                          <button type="button" disabled className="contract-btn contract-btn--soft contract-btn--xs">
+                            Download
+                          </button>
+                        </div>
+                      )}
+                      {buyerTermsError && <div className="contract-status-msg">{buyerTermsError}</div>}
+                    </div>
+                    {!activeContract.buyerFinalAccepted && (
+                      <div className="contract-actions">
+                        <button
+                          type="button"
+                          onClick={() => handleBuyerAcceptFinal(activeContractId)}
+                          disabled={!termsReceived}
+                          className="contract-btn contract-btn--md contract-btn--accept"
+                        >
+                          Accept
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Final Terms Acceptance Gate */}
               <div className="contract-accept-summary">
                 <span
-                  className={`contract-accept-status${activeContract.buyerFinalAccepted ? " contract-accept-status--done" : ""}`}
+                  className={`contract-accept-status${(isSupplier ? buyerTermsAccepted : activeContract.buyerFinalAccepted) ? " contract-accept-status--done" : ""}`}
                 >
-                  Buyer — {activeContract.buyerFinalAccepted ? "Accepted ✓" : "Awaiting Acceptance"}
+                  Buyer — {(isSupplier ? buyerTermsAccepted : activeContract.buyerFinalAccepted) ? "Accepted ✓" : isSupplier ? "Awaiting Acceptance" : "Awaiting Buyer"}
                 </span>
                 <span
                   className={`contract-accept-status${activeContract.supplierFinalAccepted ? " contract-accept-status--done" : activeContract.supplierFinalRejected ? " contract-accept-status--rejected" : ""}`}
                 >
-                  Supplier — {activeContract.supplierFinalAccepted ? "Accepted ✓" : activeContract.supplierFinalRejected ? "Rejected ✕" : "Awaiting Acceptance"}
+                  Supplier — {activeContract.supplierFinalAccepted ? "Accepted ✓" : activeContract.supplierFinalRejected ? "Rejected ✕" : isSupplier ? "Awaiting Acceptance" : "Awaiting Supplier"}
                 </span>
               </div>
 
@@ -1843,49 +2307,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   Supplier — Accepted ✓
                 </div>
               )}
-
-              {/* Render Uploaded E-Signature Documents */}
-              {(() => {
-                const apiAttachments = activeEsignEntry?.attachments || [];
-                const legacyDocs = (rfq as any)?.eSignDocuments || (rfq as any)?.eSignDocument || [];
-                const docs = apiAttachments.length > 0 ? apiAttachments : legacyDocs;
-                if (!docs || docs.length === 0) return null;
-                return (
-                  <div className="contract-docs-panel contract-docs-panel--esign">
-                    <div className="contract-panel-heading contract-panel-heading--esign">
-                      ✍️ Uploaded E-Signature Documents:
-                    </div>
-                    <div className="contract-doc-list">
-                      {docs.map((doc: any, idx: number) => (
-                        <div key={doc.id || idx} className="contract-doc-item contract-doc-item--esign">
-                          <div className="contract-actions">
-                            <span className="contract-doc-icon">🖋️</span>
-                            <div>
-                              <div className="contract-doc-name">
-                                {doc.fileName || doc.assetName || `E_Sign_Document_${idx + 1}.png`}
-                              </div>
-                              {(doc.assetType || doc.fileType) && (
-                                <div className="contract-doc-type contract-doc-type--esign">
-                                  {doc.assetType || doc.fileType}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          {doc.id && (
-                            <button
-                              type="button"
-                              onClick={() => handleDownloadAsset(doc.id, doc.fileName || doc.assetName || "E_Sign_Document.png")}
-                              className="contract-btn contract-btn--primary contract-btn--xs"
-                            >
-                              View / Download
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
 
               {/* Hidden File Input for Upload Signed Contract */}
               <input
@@ -2091,121 +2512,52 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         </div>
       )}
 
-      {/* Floating Chat Drawer Trigger Button */}
-      {sentContractIds.length > 0 && !chatOpen && (
-        <button
-          type="button"
-          onClick={() => setChatOpen(true)}
-          className="contract-chat-fab"
-        >
-          <span>💬 {isSupplier ? "Buyer Chat" : "Supplier Chats"}</span>
-          {activeChatContract?.messages.length ? (
-            <span className="contract-chat-badge">
-              {activeChatContract.messages.length}
-            </span>
-          ) : null}
-        </button>
-      )}
-
-      {/* Supplier / Buyer Chat Sidebar Drawer */}
-      {chatOpen && (
-        <>
-          <div
-            onClick={() => setChatOpen(false)}
-            className="contract-chat-backdrop"
-          />
-          <div className="contract-chat-drawer">
-            <div className="contract-chat-header">
-              <div className="contract-chat-title">
-                {isSupplier ? "Buyer Chat" : "Supplier Chats"}
-              </div>
+      {/* Buyer: contract name, asked for when the contract screen opens */}
+      {!isSupplier && showContractNameModal && !activeContractRef && (
+        <div className="contract-modal-overlay">
+          <div className="contract-modal contract-modal--terms" role="dialog" aria-modal="true" aria-labelledby="contract-name-title">
+            <div className="contract-modal-title contract-modal-title--dark" id="contract-name-title">
+              {contractName ? "Edit Contract Name" : "Create Contract"}
+            </div>
+            <div className="contract-modal-subtitle">
+              {contractName ? "Change the name of this contract." : "Add a name for this contract."}
+            </div>
+            <label className="contract-field-label" htmlFor="contract-name-input">
+              CONTRACT NAME
+            </label>
+            <input
+              id="contract-name-input"
+              type="text"
+              autoFocus
+              value={contractNameDraft}
+              onChange={(e) => {
+                setContractNameDraft(e.target.value);
+                setContractNameError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleConfirmContractName();
+              }}
+              placeholder="e.g. Supply Agreement 2026"
+              className="contract-date-input"
+              aria-invalid={contractNameError ? true : undefined}
+            />
+            {contractNameError && <div className="contract-field-error">{contractNameError}</div>}
+            <div className="contract-modal-actions">
               <button
                 type="button"
-                onClick={() => setChatOpen(false)}
-                className="contract-chat-close"
+                onClick={contractName || contractRefs.length > 0 ? () => setShowContractNameModal(false) : onBack}
+                className="contract-btn contract-btn--outline contract-btn--modal"
               >
-                ×
+                Cancel
+              </button>
+              <button type="button" onClick={handleConfirmContractName} className="contract-btn contract-btn--primary contract-btn--cta">
+                {contractName ? "Save" : "Continue"}
               </button>
             </div>
-            <div className="contract-chat-body">
-              {/* Supplier Thread List (Buyer View) */}
-              {!isSupplier && (
-                <div className="contract-chat-threads">
-                  {sentContractIds.map((sid) => {
-                    const c = contracts[sid];
-                    const suppName = getSupplierName(sid);
-                    const isSel = sid === activeChatSupplierId;
-                    return (
-                      <div
-                        key={sid}
-                        onClick={() => setChatViewSupplierId(sid)}
-                        className={`contract-chat-thread${isSel ? " contract-chat-thread--selected" : ""}`}
-                      >
-                        <div className="contract-chat-thread-name">
-                          {suppName}
-                        </div>
-                        <div className="contract-caption">
-                          {c?.contractNumber || sid}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Chat Conversation Pane */}
-              <div className="contract-chat-pane">
-                <div className="contract-chat-pane-header">
-                  Chatting with {isSupplier ? "Buyer (Procurement Team)" : getSupplierName(activeChatSupplierId)}
-                </div>
-                <div className="contract-chat-messages">
-                  {activeChatContract?.messages.map((m: any, idx: number) => {
-                    const isSelf = m.sender === (isSupplier ? "Supplier" : "Buyer");
-                    return (
-                      <div
-                        key={idx}
-                        className={`contract-chat-bubble${isSelf ? " contract-chat-bubble--self" : ""}`}
-                      >
-                        <div className="contract-chat-sender">
-                          {m.sender}
-                        </div>
-                        <div className="contract-chat-text">{m.text}</div>
-                        <div className="contract-chat-time">
-                          {m.time}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {(!activeChatContract || activeChatContract.messages.length === 0) && (
-                    <div className="contract-chat-empty">
-                      No messages yet. Start the conversation.
-                    </div>
-                  )}
-                </div>
-                <div className="contract-chat-composer">
-                  <input
-                    type="text"
-                    placeholder="Type a message..."
-                    value={activeChatContract?.draftMessage || ""}
-                    onChange={(e) => updateContract(activeChatSupplierId, { draftMessage: e.target.value })}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleSendChatMessage(activeChatSupplierId);
-                    }}
-                    className="contract-chat-input"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleSendChatMessage(activeChatSupplierId)}
-                    className="contract-btn contract-btn--primary contract-btn--chat-send"
-                  >
-                    Send
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
-        </>
+        </div>
       )}
+
       {/* E-Sign Modal Overlay */}
       {eSignModalContractId && (
         <div className="contract-modal-overlay contract-modal-overlay--esign">

@@ -354,11 +354,42 @@ export interface RFQDetailResponse {
   /** true when the supplier submitted their own Terms & Conditions. */
   supplierTermsAndCondition?: boolean;
   supplierTermsConditionDocuments?: RFQDetailDocument[];
-  /** true once the supplier accepted the buyer's Terms & Conditions. */
+  /** true once the buyer has accepted - drives the "Buyer — Accepted" status. */
   buyerTermsAndConditionAccepted?: boolean;
   status?: string;
+  /** "CONTRACT_CREATED" once the buyer has created the contract for an awarded RFQ; null before that. */
+  contractStatus?: string | null;
+  contractId?: string | null;
   buyerId?: string;
   buyerName?: string;
+}
+
+export interface SupplierContractDto {
+  id: string;
+  contractNumber: string;
+  contractName: string;
+  rfqId: string;
+  rfqNumber: string;
+  rfqTitle: string;
+  startDate: string;
+  endDate: string;
+  amount: number;
+  dateCreated: string;
+  attachments: {
+    id: string;
+    assetId: string;
+    type: string;
+    fileName: string;
+  }[];
+  approvalFlows: {
+    id: string;
+    approvalCode: string;
+    approvalName: string;
+    contractId: string;
+    type: string;
+    totalAmount: number;
+    currency: string;
+  }[];
 }
 
 export interface SubmitQuotationPayload {

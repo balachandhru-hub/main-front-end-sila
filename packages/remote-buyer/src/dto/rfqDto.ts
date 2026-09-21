@@ -211,4 +211,18 @@ export interface BuyerRFQDetailResponse {
   status?: string;
   supplierESigns?: SupplierEsignStatusDto[];
   supplierTermsConditions?: SupplierTermsConditionStatusDto[];
+  /** Per supplier: whether the buyer has accepted that supplier's terms & conditions. */
+  buyerTermsAndConditionStatuses?: {
+    supplierId: string;
+    supplierName: string;
+    buyerTermsAndConditionAccepted: boolean;
+  }[];
+  /** Whether the buyer has already accepted the supplier's terms & conditions. */
+  supplierTermsAndConditionAccepted?: boolean;
+  /** Contracts already created for this RFQ, one per supplier. */
+  contracts?: {
+    contractId: string;
+    contractNumber: string;
+    supplierId: string;
+  }[];
 }

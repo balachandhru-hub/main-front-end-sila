@@ -608,6 +608,173 @@ export const updateSupplierTermsConditionStatus = async (
   }
 };
 
+/**
+ * The parts of the buyer's rfq-by-id that the contract screen needs: each supplier's terms & conditions and
+ * e-signature status, and whether the buyer has accepted each supplier's terms.
+ */
+export interface BuyerRfqContractStatusDto {
+  supplierTermsConditions?: {
+    termsAndCondition: boolean;
+    supplierId: string;
+    supplierName: string;
+    attachments: RfqAssetAttachmentDto[];
+  }[];
+  supplierESigns?: SupplierEsignStatusDto[];
+  buyerTermsAndConditionStatuses?: {
+    supplierId: string;
+    supplierName: string;
+    buyerTermsAndConditionAccepted: boolean;
+  }[];
+  /** Whether the buyer has already accepted the supplier's terms & conditions. */
+  supplierTermsAndConditionAccepted?: boolean;
+  /** Contracts already created for this RFQ, one per supplier. Only present once a contract has been created. */
+  contracts?: BuyerRfqContractRefDto[];
+}
+
+export interface BuyerRfqContractRefDto {
+  contractId: string;
+  contractNumber: string;
+  supplierId: string;
+}
+
+export interface BuyerContractDto {
+  id: string;
+  contractNumber: string;
+  contractName: string;
+  rfqId: string;
+  rfqNumber: string;
+  rfqTitle: string;
+  startDate: string;
+  endDate: string;
+  amount: number;
+  dateCreated: string;
+  attachments: RfqAssetAttachmentDto[];
+  approvalFlows: {
+    id: string;
+    approvalCode: string;
+    approvalName: string;
+    contractId: string;
+    type: string;
+    totalAmount: number;
+    currency: string;
+  }[];
+}
+
+export interface CreateBuyerContractPayload {
+  contractName: string;
+  rfqId: string;
+  supplierId: string;
+  startDate: string;
+  endDate: string;
+  amount: number;
+  attachments: {
+    entityType: string;
+    entityId: string;
+    assetType: string;
+    fileBytes: string;
+    fileName: string;
+    contentType: string;
+    isSingletonAsset: boolean;
+    id?: string;
+  }[];
+}
+
+/**
+ * Creates the contract for an awarded RFQ and sends it to the supplier.
+ */
+export const createBuyerContract = async (
+  payload: CreateBuyerContractPayload
+): Promise<StatusUpdateResponseDto | AssetErrorDto> => {
+  try {
+    const response = await platformInstance.post('/api/v1/buyer/contract', payload);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to send the contract.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Failed to send the contract.',
+      description: '',
+    };
+  }
+};
+
+export const fetchBuyerRfqContractStatus = async (
+  rfqId: string
+): Promise<BuyerRfqContractStatusDto | AssetErrorDto> => {
+  try {
+    const response = await platformInstance.get('/api/v1/buyer/rfq-by-id', { params: { rfqId } });
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to load the RFQ contract details.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Failed to load the RFQ contract details.',
+      description: '',
+    };
+  }
+};
+
+export const fetchBuyerContractById = async (
+  contractId: string
+): Promise<BuyerContractDto | AssetErrorDto> => {
+  try {
+    const response = await platformInstance.get(`/api/v1/buyer/contract/${contractId}`);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to load the contract.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Failed to load the contract.',
+      description: '',
+    };
+  }
+};
+
 export const fetchBuyerRfqEsign = async (
   rfqId: string
 ): Promise<SupplierEsignStatusDto[] | AssetErrorDto> => {

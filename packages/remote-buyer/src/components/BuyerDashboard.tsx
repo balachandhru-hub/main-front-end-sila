@@ -521,6 +521,8 @@ const BuyersDashboard: React.FC = () => {
   };
 
   const loadAllRfqsPage = async (page: number) => {
+    // The buyer id may not be known yet (e.g. on a reload of /rfqs); the effect below loads the list once it is.
+    if (!buyerId) return;
     if (!buyerId) {
       setAllRfqsList(rfqs.length > 0 ? rfqs : []);
       setAllRfqsHasMore(false);
@@ -535,6 +537,12 @@ const BuyersDashboard: React.FC = () => {
       const { index, limit } = getRfqPageRange(page);
       const data = await fetchBuyerRFQs({ buyerId, index, limit });
 
+      if (data.length === 0 && page > 1) {
+        // Nothing on the next page: stay on the current page.
+        setAllRfqsHasMore(false);
+        return;
+      }
+      setAllRfqsList(data);
       setAllRfqsList(data.length > 0 ? data : []);
       setAllRfqsPage(page);
       setAllRfqsHasMore(data.length === RFQ_PAGE_SIZE);
@@ -547,6 +555,17 @@ const BuyersDashboard: React.FC = () => {
       setAllRfqsLoaded(true);
     }
   };
+
+  // Load the RFQ list as soon as the buyer id is available, or show why it can't be loaded.
+  useEffect(() => {
+    if (rfqPageView !== "allRfqs" || allRfqsLoaded || loadingAllRfqs) return;
+    if (buyerId) {
+      loadAllRfqsPage(1);
+    } else if (rfqsError) {
+      setAllRfqsError(rfqsError);
+      setAllRfqsLoaded(true);
+    }
+  }, [buyerId, rfqPageView, rfqsError]);
 
   const handleAllRfqsNextPage = () => {
     if (loadingAllRfqs || !allRfqsHasMore) return;
@@ -927,7 +946,7 @@ const BuyersDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                {loadingAllRfqs ? (
+                {loadingAllRfqs || !allRfqsLoaded ? (
                   <div className="pud-allrfqs-state">
                     <Loader size={24} message="Loading all sourcing opportunities..." />
                   </div>

@@ -14,6 +14,7 @@ import {
   uploadSupplierTermsAndCondition,
   uploadSupplierEsign,
   updateBuyerTermsConditionStatus,
+  fetchSupplierContractById,
   type RFQDetailResponse,
   type SubmitQuotationPayload,
   type RfqDocumentAssetDto,
@@ -248,6 +249,28 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
   const [submitQuoteSuccess, setSubmitQuoteSuccess] = useState(false);
 
   const [showContractView, setShowContractView] = useState(false);
+  const [openingContract, setOpeningContract] = useState(false);
+  const [contractLoadError, setContractLoadError] = useState<string | null>(null);
+
+  // Reload the RFQ first so the contract screen shows the latest terms & conditions, buyer acceptance and e-signature.
+  const handleReviewContract = async () => {
+    if (!selectedRfqId) return;
+    setOpeningContract(true);
+    setContractLoadError(null);
+    try {
+      const latest = await fetchRFQById(selectedRfqId);
+      if (isErrorResponse(latest)) {
+        setContractLoadError(latest.description || latest.message || "Failed to load the contract details.");
+        return;
+      }
+      setSelectedRfq(latest);
+      setShowContractView(true);
+    } catch (err: any) {
+      setContractLoadError(err?.message || "Failed to load the contract details.");
+    } finally {
+      setOpeningContract(false);
+    }
+  };
 
   useEffect(() => {
     if (selectedRfq) {
@@ -859,6 +882,9 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
     selectedRfq?.items?.some((it: any) => it.isAwarded === true && (it.awardedSupplierId === supplierId || !it.awardedSupplierId))
   );
 
+  // The supplier can review the contract only once the buyer has created it.
+  const isContractCreated = selectedRfq?.status === "AWARDED" && selectedRfq?.contractStatus === "CONTRACT_CREATED";
+
   if (showContractView && selectedRfq) {
     return (
       <ContractCreationView
@@ -871,6 +897,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
         onUploadSupplierTerms={uploadSupplierTermsAndCondition}
         onUploadSupplierEsign={uploadSupplierEsign}
         onAcceptBuyerTerms={updateBuyerTermsConditionStatus}
+        fetchContract={fetchSupplierContractById}
         onBack={() => setShowContractView(false)}
       />
     );
@@ -972,10 +999,11 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                   variant="primary"
                   type="button"
                   className="pud-btn sqs-btn-review-contract"
-                  onClick={() => setShowContractView(true)}
-                  title="Review Contract & Terms"
+                  onClick={handleReviewContract}
+                  disabled={openingContract || !isContractCreated}
+                  title={isContractCreated ? "Review Contract & Terms" : "The buyer has not created the contract yet."}
                 >
-                  <IconContract /> Review Contract
+                  <IconContract /> {openingContract ? "Loading..." : "Review Contract"}
                 </Button>
               )}
               {selectedRfq && supplierId && (
@@ -992,6 +1020,13 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
             </div>
           }
         />
+
+        {contractLoadError && (
+          <div className="sila-alert sila-alert--danger sqs-alert" role="alert">
+            <span className="sqs-alert-icon sqs-alert-icon--danger" aria-hidden="true"><IconAlertCircle /></span>
+            <span>{contractLoadError}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmitQuotationClick} className="sqs-form">
           <div className="sqs-body">
@@ -1627,54 +1662,56 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
           </div>
 
           {/* Sticky action bar */}
-          <div className="sqs-footer pud-rfq-page-footer">
-            <div className="sqs-footer-status">
-              {selectedRfq && !canSubmit && (
-                <StatusBadge
-                  status={frozen ? "Frozen" : notYetOpen ? "Pending" : "Closed"}
-                  label={notYetOpen ? "Not yet open" : frozen ? "Bid frozen" : "Submission closed"}
-                  dot
-                />
-              )}
-            </div>
-            <div className="sqs-footer-actions">
-              <button
-                type="button"
-                className="sila-btn sila-btn--secondary"
-                onClick={onClose}
-              >
-                Close
-              </button>
-              {selectedRfq && (
+          {selectedRfq?.status !== "AWARDED" && (
+            <div className="sqs-footer pud-rfq-page-footer">
+              <div className="sqs-footer-status">
+                {selectedRfq && !canSubmit && (
+                  <StatusBadge
+                    status={frozen ? "Frozen" : notYetOpen ? "Pending" : "Closed"}
+                    label={notYetOpen ? "Not yet open" : frozen ? "Bid frozen" : "Submission closed"}
+                    dot
+                  />
+                )}
+              </div>
+              <div className="sqs-footer-actions">
                 <button
-                  type="submit"
-                  className="sila-btn sila-btn--primary"
-                  disabled={submittingQuote || !canSubmit}
-                  aria-busy={submittingQuote || undefined}
-                  title={
-                    notYetOpen
-                      ? "This RFQ hasn't opened for bidding yet."
-                      : frozen
-                        ? "The buyer has frozen this RFQ's bid."
-                        : closed
-                          ? "This RFQ's submission window has closed."
-                          : undefined
-                  }
+                  type="button"
+                  className="sila-btn sila-btn--secondary"
+                  onClick={onClose}
                 >
-                  {submittingQuote && <span className="sila-spinner" aria-hidden="true" />}
-                  {submittingQuote
-                    ? "Submitting..."
-                    : notYetOpen
-                      ? "Not Yet Open"
-                      : frozen
-                        ? "Bid Frozen"
-                        : closed
-                          ? "Submission Closed"
-                          : "Submit Quotation"}
+                  Close
                 </button>
-              )}
+                {selectedRfq && (
+                  <button
+                    type="submit"
+                    className="sila-btn sila-btn--primary"
+                    disabled={submittingQuote || !canSubmit}
+                    aria-busy={submittingQuote || undefined}
+                    title={
+                      notYetOpen
+                        ? "This RFQ hasn't opened for bidding yet."
+                        : frozen
+                          ? "The buyer has frozen this RFQ's bid."
+                          : closed
+                            ? "This RFQ's submission window has closed."
+                            : undefined
+                    }
+                  >
+                    {submittingQuote && <span className="sila-spinner" aria-hidden="true" />}
+                    {submittingQuote
+                      ? "Submitting..."
+                      : notYetOpen
+                        ? "Not Yet Open"
+                        : frozen
+                          ? "Bid Frozen"
+                          : closed
+                            ? "Submission Closed"
+                            : "Submit Quotation"}
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </form>
       </div>
 

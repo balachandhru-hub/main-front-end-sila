@@ -227,6 +227,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   };
   const isBidFrozen = rfq?.status === "Freezing" || rfq?.status === "Frozen";
   const isRfqAwarded = rfq?.status === "AWARDED";
+  // A contract has already been created for this RFQ (listed in the buyer's rfq-by-id).
+  const hasContract = (rfq?.contracts?.length ?? 0) > 0;
   const isLotOption = !!rfq?.addLotOption;
   const quotations: any[] = useMemo(() => {
     if (!rfq?.supplierQuotation) return [];
@@ -1728,7 +1730,9 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           Award Completed
         </h2>
         <p style={{ fontSize: '14px', color: '#475569', margin: '0 0 24px 0', maxWidth: '540px', lineHeight: '1.5' }}>
-          The RFQ has been awarded. Continue to create the supplier contract.
+          {hasContract
+            ? "The RFQ has been awarded and a contract has been created. View the contract details."
+            : "The RFQ has been awarded. Continue to create the supplier contract."}
         </p>
         <button
           type="button"
@@ -1742,14 +1746,14 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
             fontSize: '14px',
             fontWeight: 600,
             borderRadius: '8px',
-            background: contractCreated ? '#059669' : '#2563eb',
+            background: hasContract || contractCreated ? '#059669' : '#2563eb',
             color: '#ffffff',
             border: 'none',
             cursor: 'pointer',
             boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)',
           }}
         >
-          {contractCreated ? '✓ Contract Workspace' : 'Create Contract'}
+          {hasContract ? 'View Contract' : contractCreated ? '✓ Contract Workspace' : 'Create Contract'}
         </button>
       </div>}
 
