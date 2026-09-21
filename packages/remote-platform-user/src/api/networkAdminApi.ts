@@ -239,7 +239,7 @@ export const getOrganizationUsersForRfq = async (organizationId: string): Promis
 export const getCountries = async (
   index: number = 0,
   limit: number = 50,
-  searchTerm: string = ''
+  searchTerm?: string
 ): Promise<CountriesResponseDto> => {
   try {
     const response = await platformInstance.get<CountriesResponseDto>(
@@ -248,7 +248,7 @@ export const getCountries = async (
         params: {
           index,
           limit,
-          searchTerm,
+          searchTerm: searchTerm || undefined,
         },
       }
     );

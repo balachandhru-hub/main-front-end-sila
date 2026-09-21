@@ -52,7 +52,7 @@
   max-width: 26rem;
 }
 
-.ctr-status-select {
+.ctr-toolbar .ctr-status-select {
   width: auto;
   min-width: 10rem;
 }

@@ -1,12 +1,12 @@
 import React, { useRef, useState, useEffect } from "react";
 import "./Create.RFQ.css";
-import { Button, toastService, DateTimePicker, Loader, StatusBadge } from "@vosox/shared-ui";
+import { Button, toastService, DateTimePicker, Loader, StatusBadge, Dropdown } from "@vosox/shared-ui";
+import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from "@vosox/shared-ui";
 import { FaCloudUploadAlt, FaFileAlt, FaShieldAlt, FaTimes } from "react-icons/fa";
 import { getBuyerProfile, getAllDepartments, getAllCostCenters, getAllItemMasters, createRFQ, getVerifiedSuppliers, getUnspscSegments, getUnspscFamilies, fetchBuyerVerificationTemplates, fetchBuyerVerificationTemplateById } from "../api/Buyerapi";
 import type { VerificationTemplate } from "../api/Buyerapi";
 import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../api/masterdataApi";
 import type { CreateRFQPayload, ExternalSupplierDto, RfqDocumentAssetDto, RfqItemDto, RfqQuestionDto, SupplierInviteDto, VerifiedSupplierDto, SupplierVerificationType } from "../dto/rfqDto";
-import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
 import type { CountryDto, UnitDto, CurrencyDto } from "../api/masterdataApi";
 import ItemMasterModal from "./ItemMasterModal";
 import SupplierUsersModal from "../../../remote-platform-user/src/components/UserListTable/SupplierUsersModal";
@@ -125,13 +125,6 @@ const IconCheckBig = () => (
     </svg>
 );
 
-const IconChevronDown = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <polyline points="6 9 12 15 18 9" />
-    </svg>
-);
-
-
 const steps: { key: StepKey; label: string }[] = [
     { key: "details", label: "RFQ Details" },
     { key: "suppliers", label: "Select Suppliers" },
@@ -143,7 +136,8 @@ const initialLineItems: LineItem[] = [];
 const initialCustomFields: CustomField[] = [];
 
 
-const PAGE_LIMIT = 10;
+// Page size used by every async (paginated) Dropdown
+const DROPDOWN_PAGE_SIZE = 40;
 
 /* ---------------------------------- Helpers ---------------------------------- */
 
@@ -209,219 +203,11 @@ const getMaterialCodeDescription = (m: any): string => {
     return m.description || m.Description || m.itemDescription || m.materialDescription || m.itemMasterDescription || "";
 };
 
-
-function usePaginatedSearchSelect<T>(
-    fetcher: (index: number, limit: number, searchTerm?: string) => Promise<{ items: T[]; totalCount: number }>,
-    isOpen: boolean,
-    searchTerm: string,
-    getKey: (item: T) => string,
-    limit: number = PAGE_LIMIT
-) {
-    const [options, setOptions] = useState<T[]>([]);
-    const [pageIndex, setPageIndex] = useState(0);
-    const [loading, setLoading] = useState(false);
-    const [hasMore, setHasMore] = useState(true);
-    const inFlightRef = useRef(false);
-
-    const dedupe = (items: T[]) =>
-        Array.from(new Map(items.map((i) => [getKey(i), i])).values());
-
-    useEffect(() => {
-        if (!isOpen) return;
-        const timer = setTimeout(() => {
-            const run = async () => {
-                if (inFlightRef.current) return;
-                inFlightRef.current = true;
-                setLoading(true);
-                try {
-                    const res = await fetcher(0, limit, searchTerm.trim() || undefined);
-                    const items = res?.items || [];
-                    setOptions(dedupe(items));
-                    setPageIndex(0);
-                    setHasMore(items.length === limit);
-                } catch (err) {
-                    setOptions([]);
-                    setHasMore(false);
-                } finally {
-                    setLoading(false);
-                    inFlightRef.current = false;
-                }
-            };
-            run();
-        }, 350);
-        return () => clearTimeout(timer);
-    }, [isOpen, searchTerm]);
-
-    const loadMore = async () => {
-        if (inFlightRef.current || loading || !hasMore) return;
-        inFlightRef.current = true;
-        const nextIndex = pageIndex + 1;
-        setLoading(true);
-        try {
-            const res = await fetcher(nextIndex, limit, searchTerm.trim() || undefined);
-            const items = res?.items || [];
-            setOptions((prev) => dedupe([...prev, ...items]));
-            setPageIndex(nextIndex);
-            setHasMore(items.length === limit);
-        } catch (err) {
-        } finally {
-            setLoading(false);
-            inFlightRef.current = false;
-        }
-    };
-
-    return { options, loading, hasMore, loadMore };
-}
-
-
-interface SearchableSelectProps<T> {
-    value: string;
-    placeholder: string;
-    isOpen: boolean;
-    onToggle: () => void;
-    onClose: () => void;
-    searchTerm: string;
-    onSearchChange: (v: string) => void;
-    options: T[];
-    getOptionLabel: (opt: T) => string;
-    getOptionKey: (opt: T) => string;
-    onSelect: (opt: T) => void;
-    loading: boolean;
-    onScrollBottom: () => void;
-    searchPlaceholder?: string;
-    small?: boolean;
-    hideSearch?: boolean;
-    disabled?: boolean;
-    error?: boolean;
-    /** id for the trigger so a <label htmlFor> can point at it */
-    id?: string;
-    /** id of the error message rendered next to the control */
-    describedBy?: string;
-}
-
-function SearchableSelect<T,>({
-    value,
-    placeholder,
-    isOpen,
-    onToggle,
-    onClose,
-    searchTerm,
-    onSearchChange,
-    options,
-    getOptionLabel,
-    getOptionKey,
-    onSelect,
-    loading,
-    onScrollBottom,
-    searchPlaceholder,
-    small,
-    hideSearch,
-    disabled,
-    error,
-    id,
-    describedBy,
-}: SearchableSelectProps<T>) {
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-                onClose();
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [onClose]);
-
-    const handleScroll = (e: React.UIEvent<HTMLUListElement>) => {
-        const el = e.currentTarget;
-        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
-            onScrollBottom();
-        }
-    };
-
-    return (
-        <div className="bd-custom-select-container" ref={containerRef}>
-            <button
-                type="button"
-                id={id}
-                className={`${small ? "bd-input-sm" : "bd-input"} bd-custom-select-trigger${disabled ? " disabled" : ""}${error ? " bd-input-error" : ""}${value ? "" : " bd-custom-select-trigger--placeholder"}`}
-                onClick={() => !disabled && onToggle()}
-                onKeyDown={(e) => {
-                    if (e.key === "Escape" && isOpen) {
-                        e.preventDefault();
-                        onClose();
-                    }
-                }}
-                disabled={disabled}
-                aria-haspopup="listbox"
-                aria-expanded={isOpen && !disabled}
-                aria-invalid={error || undefined}
-                aria-describedby={describedBy}
-            >
-                <span className="bd-custom-select-value">{value || placeholder}</span>
-                <IconChevronDown />
-            </button>
-            {isOpen && !disabled && (
-                <div className="bd-custom-select-panel">
-                    {!hideSearch && (
-                        <div className="bd-custom-select-search">
-                            <div className="bd-search-wrap">
-                                <span className="bd-search-icon">
-                                    <IconSearch />
-                                </span>
-                                <input
-                                    className="bd-input bd-search-input"
-                                    type="text"
-                                    placeholder={searchPlaceholder || "Search..."}
-                                    aria-label={searchPlaceholder || "Search"}
-                                    value={searchTerm}
-                                    onChange={(e) => onSearchChange(e.target.value)}
-                                    onClick={(e) => e.stopPropagation()}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Escape") onClose();
-                                    }}
-                                    autoFocus
-                                />
-                            </div>
-                        </div>
-                    )}
-                    <ul className="bd-custom-select-menu" role="listbox" onScroll={handleScroll}>
-                        {options.map((opt) => {
-                            const label = getOptionLabel(opt);
-                            const isSelected = label === value;
-                            return (
-                                <li
-                                    key={getOptionKey(opt)}
-                                    className={`bd-custom-select-option${isSelected ? " selected" : ""}`}
-                                    role="option"
-                                    aria-selected={isSelected}
-                                    tabIndex={0}
-                                    onClick={() => onSelect(opt)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter" || e.key === " ") {
-                                            e.preventDefault();
-                                            onSelect(opt);
-                                        } else if (e.key === "Escape") {
-                                            onClose();
-                                        }
-                                    }}
-                                    title={label}
-                                >
-                                    {label}
-                                </li>
-                            );
-                        })}
-                        {loading && <li className="bd-custom-select-loading" role="status">Loading...</li>}
-                        {!loading && options.length === 0 && (
-                            <li className="bd-custom-select-empty">No results found</li>
-                        )}
-                    </ul>
-                </div>
-            )}
-        </div>
-    );
-}
+const SUPPLIER_FILTER_OPTIONS: { name: string; value: "ALL" | SupplierVerificationType }[] = [
+    { name: "All Suppliers", value: "ALL" },
+    { name: "Verified", value: "VERIFIED" },
+    { name: "Unverified", value: "UNVERIFIED" },
+];
 
 /* ---------------------------------- Component ---------------------------------- */
 
@@ -432,8 +218,6 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
 
     const [rfqTitle, setRfqTitle] = useState("");
     const [department, setDepartment] = useState("");
-    const [departmentOptions, setDepartmentOptions] = useState<any[]>([]);
-    const [materialCodeOptions, setMaterialCodeOptions] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -441,43 +225,15 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
                 const profile = await getBuyerProfile();
                 if (profile?.id) {
                     setBuyerProfileId(profile.id);
-
-                    const res = await getAllDepartments(profile.id, 0, 10000);
-                    const data = res?.data?.data || res?.data || res || [];
-                    setDepartmentOptions(Array.isArray(data) ? data : []);
-
-                    const itemRes = await getAllItemMasters(profile.id, 0, 10000);
-                    const itemData = itemRes?.data?.data || itemRes?.data || itemRes || [];
-                    setMaterialCodeOptions(Array.isArray(itemData) ? itemData : []);
                 }
             } catch (err) {
-            
+
             }
         };
         fetchInitialData();
     }, []);
     const [costCenter, setCostCenter] = useState("");
-    const [costCenterOptions, setCostCenterOptions] = useState<any[]>([]);
 
-    useEffect(() => {
-        const fetchCostCenters = async () => {
-            if (!department) {
-                setCostCenterOptions([]);
-                return;
-            }
-            try {
-                const res = await getAllCostCenters(department, 0, 10000);
-                const data = res?.data?.data || res?.data || res || [];
-                setCostCenterOptions(Array.isArray(data) ? data : []);
-            } catch (err) {
-            
-            }
-        };
-        fetchCostCenters();
-    }, [department]);
-
-    const [isDepartmentDropdownOpen, setIsDepartmentDropdownOpen] = useState(false);
-    const [departmentSearchTerm, setDepartmentSearchTerm] = useState("");
     const [departmentLabel, setDepartmentLabel] = useState("");
 
     const getDeptName = (d: any, idx: number) =>
@@ -485,12 +241,20 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
     const getDeptId = (d: any, idx: number) =>
         typeof d === "string" ? d : (d.id || getDeptName(d, idx));
 
-    const filteredDepartmentOptions = departmentOptions.filter((d, idx) =>
-        formatLabel(getDeptName(d, idx)).toLowerCase().includes(departmentSearchTerm.trim().toLowerCase())
-    );
+    // ---- Async paginated loader for the Department Dropdown (`index` is an offset: 0, 40, 80, ...) ----
+    const loadDepartmentOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!buyerProfileId) {
+            return { options: [], hasMore: false };
+        }
+        const res = await getAllDepartments(buyerProfileId, page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+        const data = res?.data?.data || res?.data || res || [];
+        const departments: any[] = Array.isArray(data) ? data : [];
+        return {
+            options: departments.map((d, idx) => ({ name: formatLabel(getDeptName(d, idx)), value: String(getDeptId(d, idx)) })),
+            hasMore: departments.length === DROPDOWN_PAGE_SIZE,
+        };
+    };
 
-    const [isCostCenterDropdownOpen, setIsCostCenterDropdownOpen] = useState(false);
-    const [costCenterSearchTerm, setCostCenterSearchTerm] = useState("");
     const [costCenterLabel, setCostCenterLabel] = useState("");
 
     const getCcName = (c: any, idx: number) =>
@@ -498,126 +262,168 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
     const getCcId = (c: any, idx: number) =>
         typeof c === "string" ? c : (c.id || getCcName(c, idx));
 
-    const filteredCostCenterOptions = costCenterOptions.filter((c, idx) =>
-        formatLabel(getCcName(c, idx)).toLowerCase().includes(costCenterSearchTerm.trim().toLowerCase())
-    );
+    // ---- Async paginated loader for the Cost Center Dropdown (`index` is an offset: 0, 40, 80, ...) ----
+    const loadCostCenterOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!department) {
+            return { options: [], hasMore: false };
+        }
+        const res = await getAllCostCenters(department, page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+        const data = res?.data?.data || res?.data || res || [];
+        const costCenters: any[] = Array.isArray(data) ? data : [];
+        return {
+            options: costCenters.map((c, idx) => ({ name: formatLabel(getCcName(c, idx)), value: String(getCcId(c, idx)) })),
+            hasMore: costCenters.length === DROPDOWN_PAGE_SIZE,
+        };
+    };
+
+    const handleDepartmentChange = (val: DropdownValue | null) => {
+        setDepartment(val?.value || "");
+        setDepartmentLabel(val?.name || "");
+        setCostCenter("");
+        setCostCenterLabel("");
+        setErrors((p) => { const np = { ...p }; delete np.department; return np; });
+    };
+
+    const handleCostCenterChange = (val: DropdownValue | null) => {
+        setCostCenter(val?.value || "");
+        setCostCenterLabel(val?.name || "");
+    };
 
     const [segmentCode, setSegmentCode] = useState("");
     const [segmentTitle, setSegmentTitle] = useState("");
-    const [segmentOptions, setSegmentOptions] = useState<UnspscSegmentDto[]>([]);
-
     const [familyCode, setFamilyCode] = useState("");
     const [familyTitle, setFamilyTitle] = useState("");
-    const [familyOptions, setFamilyOptions] = useState<UnspscFamilyDto[]>([]);
 
-    useEffect(() => {
-        const fetchSegments = async () => {
-            try {
-                const data = await getUnspscSegments(1, 200);
-                setSegmentOptions(data);
-            } catch (err) {
-              
-            }
+    // ---- Async paginated loader for the Segment Dropdown ----
+    const loadSegmentOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        const pageIndex = page * DROPDOWN_PAGE_SIZE; // index of the first item on the page: 0, 40, 80, ...
+        const segments =await getUnspscSegments(pageIndex, DROPDOWN_PAGE_SIZE, search || undefined);
+        return {
+            options: segments.map((seg) => ({ name: seg.title, value: String(seg.segment) })),
+            hasMore: segments.length === DROPDOWN_PAGE_SIZE,
         };
-        fetchSegments();
-    }, []);
+    };
 
-    useEffect(() => {
-        const fetchFamilies = async () => {
-            if (!segmentCode) {
-                setFamilyOptions([]);
-                return;
-            }
-            try {
-                const data = await getUnspscFamilies(Number(segmentCode), 1, 200);
-                setFamilyOptions(data);
-            } catch (err) {
-            }
-        };
-        fetchFamilies();
-    }, [segmentCode]);
+    // ---- Async paginated loader for the Family Dropdown (server has no search param, so filter client-side) ----
+    const loadFamilyOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!segmentCode) {
+            return { options: [], hasMore: false };
+        }
+        const pageIndex = page * DROPDOWN_PAGE_SIZE; // index of the first item on the page: 0, 40, 80, ...
+        const families =await getUnspscFamilies(Number(segmentCode), pageIndex, DROPDOWN_PAGE_SIZE);
+        const searchTerm = search.trim().toLowerCase();
+        const options = families
+            .filter((fam) => !searchTerm || fam.title.toLowerCase().includes(searchTerm))
+            .map((fam) => ({ name: fam.title, value: String(fam.family) }));
+        return { options, hasMore: families.length === DROPDOWN_PAGE_SIZE };
+    };
 
-    const handleSegmentChange = (value: string) => {
-        setSegmentCode(value);
+    const handleSegmentChange = (val: DropdownValue | null) => {
+        setSegmentCode(val?.value || "");
+        setSegmentTitle(val?.name || "");
         setFamilyCode("");
         setFamilyTitle("");
-        const selected = segmentOptions.find((s) => String(s.segment) === value);
-        setSegmentTitle(selected?.title || "");
     };
 
-    const handleFamilyChange = (value: string) => {
-        setFamilyCode(value);
-        const selected = familyOptions.find((f) => String(f.family) === value);
-        setFamilyTitle(selected?.title || "");
+    const handleFamilyChange = (val: DropdownValue | null) => {
+        setFamilyCode(val?.value || "");
+        setFamilyTitle(val?.name || "");
     };
 
-    const [isSegmentDropdownOpen, setIsSegmentDropdownOpen] = useState(false);
-    const [segmentSearchTerm, setSegmentSearchTerm] = useState("");
-    const filteredSegmentOptions = segmentOptions.filter((s) =>
-        s.title.toLowerCase().includes(segmentSearchTerm.trim().toLowerCase())
-    );
-
-    const [isFamilyDropdownOpen, setIsFamilyDropdownOpen] = useState(false);
-    const [familySearchTerm, setFamilySearchTerm] = useState("");
-    const filteredFamilyOptions = familyOptions.filter((f) =>
-        f.title.toLowerCase().includes(familySearchTerm.trim().toLowerCase())
-    );
-const getCurrenciesSafe = async (
-    index: number,
-    limit: number
-): Promise<{ items: CurrencyDto[]; totalCount: number }> => {
-    try {
-        const res = await getCurrencies(index, limit);
-        if (res && Array.isArray((res as any).items)) {
-            return res as { items: CurrencyDto[]; totalCount: number };
+    const getCurrenciesSafe = async (
+        index: number,
+        limit: number
+    ): Promise<{ items: CurrencyDto[]; totalCount: number }> => {
+        try {
+            const res = await getCurrencies(index, limit);
+            if (res && Array.isArray((res as any).items)) {
+                return res as { items: CurrencyDto[]; totalCount: number };
+            }
+        } catch (err) {
         }
-    } catch (err) {
-       
-    }
-    return { items: [], totalCount: 0 };
-};
+        return { items: [], totalCount: 0 };
+    };
 
-const getCountriesSafe = async (
-    index: number,
-    limit: number,
-    searchTerm?: string
-): Promise<{ items: CountryDto[]; totalCount: number }> => {
-    try {
-        const res = await getCountries(index, limit, searchTerm);
-        if (res && Array.isArray((res as any).items)) {
-            return res as { items: CountryDto[]; totalCount: number };
+    const getCountriesSafe = async (
+        index: number,
+        limit: number,
+        searchTerm?: string
+    ): Promise<{ items: CountryDto[]; totalCount: number }> => {
+        try {
+            const res = await getCountries(index, limit, searchTerm);
+            if (res && Array.isArray((res as any).items)) {
+                return res as { items: CountryDto[]; totalCount: number };
+            }
+        } catch (err) {
         }
-    } catch (err) {
-    }
-    return { items: [], totalCount: 0 };
-};
+        return { items: [], totalCount: 0 };
+    };
 
-const getUnitsSafe = async (
-    index: number,
-    limit: number,
-    searchTerm?: string
-): Promise<{ items: UnitDto[]; totalCount: number }> => {
-    try {
-        const res = await getUnits(index, limit, searchTerm);
-        if (res && Array.isArray((res as any).items)) {
-            return res as { items: UnitDto[]; totalCount: number };
+    const getUnitsSafe = async (
+        index: number,
+        limit: number,
+        searchTerm?: string
+    ): Promise<{ items: UnitDto[]; totalCount: number }> => {
+        try {
+            const res = await getUnits(index, limit, searchTerm);
+            if (res && Array.isArray((res as any).items)) {
+                return res as { items: UnitDto[]; totalCount: number };
+            }
+        } catch (err) {
         }
-    } catch (err) {
-    }
-    return { items: [], totalCount: 0 };
-};
+        return { items: [], totalCount: 0 };
+    };
+
     const [currency, setCurrency] = useState("");
-    const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
-    const [currencySearchTerm, setCurrencySearchTerm] = useState("");
     const [region, setRegion] = useState("");
-    const [isRegionDropdownOpen, setIsRegionDropdownOpen] = useState(false);
-    const [regionSearchTerm, setRegionSearchTerm] = useState("");
 
-    const [isUomDropdownOpen, setIsUomDropdownOpen] = useState(false);
-    const [uomSearchTerm, setUomSearchTerm] = useState("");
-    const currencySelect = usePaginatedSearchSelect<CurrencyDto>(getCurrenciesSafe, isCurrencyDropdownOpen, currencySearchTerm, (o) => o.id);
-    const regionSelect = usePaginatedSearchSelect<CountryDto>(getCountriesSafe, isRegionDropdownOpen, regionSearchTerm, (o) => o.id);
-    const uomSelect = usePaginatedSearchSelect<UnitDto>(getUnitsSafe, isUomDropdownOpen, uomSearchTerm, (o) => o.id);
+    // ---- Async paginated loader for the Currency Dropdown (server has no search param, so search client-side) ----
+    // For the masterdata APIs `index` is an offset: 0, then 0 + 40, then 0 + 40 + 40, ...
+    const loadCurrencyOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        const toOption = (c: CurrencyDto) => ({ name: c.currencyName, value: c.currencyName });
+        const searchTerm = search.trim().toLowerCase();
+
+        if (searchTerm) {
+            // Page through every currency so a match on a later page isn't missed, then filter here
+            const matches: CurrencyDto[] = [];
+            let index = 0;
+            let totalCount = 0;
+            do {
+                const res = await getCurrenciesSafe(index, DROPDOWN_PAGE_SIZE);
+                matches.push(...res.items.filter((c) => c.currencyName.toLowerCase().includes(searchTerm)));
+                totalCount = res.totalCount;
+                if (res.items.length === 0) break;
+                index += res.items.length;
+            } while (index < totalCount);
+            return { options: matches.map(toOption), hasMore: false, total: matches.length };
+        }
+
+        const index = page * DROPDOWN_PAGE_SIZE;
+        const res = await getCurrenciesSafe(index, DROPDOWN_PAGE_SIZE);
+        return {
+            options: res.items.map(toOption),
+            hasMore: index + res.items.length < res.totalCount,
+            total: res.totalCount,
+        };
+    };
+
+    // ---- Async paginated loader for the Region (Country) Dropdown ----
+    const loadRegionOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        const res = await getCountriesSafe(page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+        return {
+            options: res.items.map((c) => ({ name: c.countryName, value: c.countryName })),
+            hasMore: res.items.length === DROPDOWN_PAGE_SIZE,
+        };
+    };
+
+    // ---- Async paginated loader for the Unit of Measure Dropdown ----
+    const loadUomOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        const res = await getUnitsSafe(page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+        return {
+            options: res.items.map((u) => ({ name: u.key, value: u.key })),
+            hasMore: res.items.length === DROPDOWN_PAGE_SIZE,
+        };
+    };
     const [description, setDescription] = useState("");
     const [deliveryLocation, setDeliveryLocation] = useState("");
     const [startDateTime, setStartDateTime] = useState("");
@@ -667,18 +473,31 @@ if (Array.isArray(data)) {
     const [newItemPrice, setNewItemPrice] = useState("");
     const [newItemMaterialCode, setNewItemMaterialCode] = useState("");
 
+    // Descriptions of the material codes loaded so far, used to prefill the item description on select
+    const materialCodeDescriptions = useRef<Record<string, string>>({});
+
+    // ---- Async paginated loader for the Material Code Dropdown (`index` is an offset: 0, 40, 80, ...) ----
+    const loadMaterialCodeOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!buyerProfileId) {
+            return { options: [], hasMore: false };
+        }
+        const res = await getAllItemMasters(buyerProfileId, page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+        const data = res?.data?.data || res?.data || res || [];
+        const items: any[] = Array.isArray(data) ? data : [];
+        const options = items.map((m, idx) => {
+            const code: string = typeof m === "string" ? m : (m.materialCode || m.id || `Code ${idx}`);
+            materialCodeDescriptions.current[code] = getMaterialCodeDescription(m);
+            return { name: code, value: code };
+        });
+        return { options, hasMore: items.length === DROPDOWN_PAGE_SIZE };
+    };
+
     const handleMaterialCodeChange = (code: string) => {
         setNewItemMaterialCode(code);
         if (!code) return;
-        const selected = materialCodeOptions.find((m: any) => {
-            const mCode = typeof m === 'string' ? m : (m.materialCode || m.id);
-            return mCode === code;
-        });
-        if (selected) {
-            const desc = getMaterialCodeDescription(selected);
-            if (desc && !newItemDesc) {
-                setNewItemDesc(desc);
-            }
+        const desc = materialCodeDescriptions.current[code];
+        if (desc && !newItemDesc) {
+            setNewItemDesc(desc);
         }
     };
 
@@ -689,63 +508,32 @@ if (Array.isArray(data)) {
     const [externalSuppliers, setExternalSuppliers] = useState<ExternalSupplierDto[]>([]);
     const [supplierSelectedUserIds, setSupplierSelectedUserIds] = useState<Record<string, string[]>>({});
     const [activeSupplierForUsers, setActiveSupplierForUsers] = useState<VerifiedSupplierDto | null>(null);
-    const [supplierTypeFilter, setSupplierTypeFilter] = useState<"ALL" | SupplierVerificationType>("ALL");
+    const [selectedSupplierFilter, setSelectedSupplierFilter] = useState<DropdownValue | null>(SUPPLIER_FILTER_OPTIONS[0]);
+    const supplierTypeFilter = (selectedSupplierFilter?.value || "ALL") as "ALL" | SupplierVerificationType;
     const [supplierSearchQuery, setSupplierSearchQuery] = useState("");
     const [registrationTemplate, setRegistrationTemplate] = useState("");
     const [registrationTemplateId, setRegistrationTemplateId] = useState("");
     // const supplierRegistrationLink = "https://supplier.company.com/register";
 
-    const [templateOptions, setTemplateOptions] = useState<VerificationTemplate[]>([]);
-    const [templatePageIndex, setTemplatePageIndex] = useState(0);
-    const [templateLoading, setTemplateLoading] = useState(false);
-    const [templateHasMore, setTemplateHasMore] = useState(true);
-    const [templateSearchTerm, setTemplateSearchTerm] = useState("");
-    const [isTemplateDropdownOpen, setIsTemplateDropdownOpen] = useState(false);
-
-    const templateLoadingRef = useRef(false);
-
-    const loadRegistrationTemplates = async (index: number, append: boolean) => {
-        if (templateLoadingRef.current) return;
-        templateLoadingRef.current = true;
-        setTemplateLoading(true);
-        try {
-            const data = await fetchBuyerVerificationTemplates(index, PAGE_LIMIT);
-            if (Array.isArray(data)) {
-                setTemplateOptions((prev) => {
-                    const base = append ? prev : [];
-                    const merged = new Map(base.map((t) => [t.templateId, t]));
-                    data.forEach((t) => merged.set(t.templateId, t));
-                    return Array.from(merged.values());
-                });
-                setTemplateHasMore(data.length === PAGE_LIMIT);
-                setTemplatePageIndex(index);
-            } else {
-                if (!append) setTemplateOptions([]);
-                setTemplateHasMore(false);
-            }
-        } catch (err) {
-            if (!append) setTemplateOptions([]);
-            setTemplateHasMore(false);
-        } finally {
-            setTemplateLoading(false);
-            templateLoadingRef.current = false;
+    // ---- Async paginated loader for the Registration Template Dropdown (server has no search param, so filter client-side) ----
+    const loadTemplateOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        const data = await fetchBuyerVerificationTemplates(page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE);
+        if (!Array.isArray(data)) {
+            return { options: [], hasMore: false };
         }
+        const searchTerm = search.trim().toLowerCase();
+        return {
+            options: data
+                .filter((t) => !searchTerm || t.templateName.toLowerCase().includes(searchTerm))
+                .map((t) => ({ name: t.templateName, value: t.templateId })),
+            hasMore: data.length === DROPDOWN_PAGE_SIZE,
+        };
     };
 
-    useEffect(() => {
-        if (isTemplateDropdownOpen && templateOptions.length === 0) {
-            loadRegistrationTemplates(0, false);
-        }
-    }, [isTemplateDropdownOpen]);
-
-    const handleTemplateScrollBottom = () => {
-        if (templateLoading || !templateHasMore) return;
-        loadRegistrationTemplates(templatePageIndex + 1, true);
+    const handleTemplateChange = (val: DropdownValue | null) => {
+        setRegistrationTemplateId(val?.value || "");
+        setRegistrationTemplate(val?.name || "");
     };
-
-    const filteredTemplateOptions = templateOptions.filter((t) =>
-        t.templateName.toLowerCase().includes(templateSearchTerm.trim().toLowerCase())
-    );
 
     const [isViewTemplateOpen, setIsViewTemplateOpen] = useState(false);
     const [viewTemplateLoading, setViewTemplateLoading] = useState(false);
@@ -1164,116 +952,55 @@ if (Array.isArray(data)) {
                                 {errors.rfqTitle && <div className="bd-error-text sila-error-text" id="bd-rfq-title-error">{errors.rfqTitle}</div>}
                             </div>
 
-                            <div className={`bd-field sila-field${errors.department ? " sila-field--error" : ""}`}>
-                                <label className="bd-label sila-label" htmlFor="bd-rfq-department">
-                                    Department<span className="sila-required" aria-hidden="true">*</span>
-                                </label>
-                                <SearchableSelect<any>
-                                    id="bd-rfq-department"
-                                    describedBy={errors.department ? "bd-rfq-department-error" : undefined}
-                                    value={departmentLabel}
-                                    placeholder="Select Department"
-                                    isOpen={isDepartmentDropdownOpen}
-                                    onToggle={() => setIsDepartmentDropdownOpen((prev) => !prev)}
-                                    onClose={() => setIsDepartmentDropdownOpen(false)}
-                                    searchTerm={departmentSearchTerm}
-                                    onSearchChange={setDepartmentSearchTerm}
-                                    options={filteredDepartmentOptions}
-                                    getOptionLabel={(d) => formatLabel(getDeptName(d, departmentOptions.indexOf(d)))}
-                                    getOptionKey={(d) => getDeptId(d, departmentOptions.indexOf(d))}
-                                    onSelect={(d) => {
-                                        const idx = departmentOptions.indexOf(d);
-                                        setDepartment(getDeptId(d, idx));
-                                        setDepartmentLabel(formatLabel(getDeptName(d, idx)));
-                                        setCostCenter("");
-                                        setCostCenterLabel("");
-                                        setIsDepartmentDropdownOpen(false);
-                                        setDepartmentSearchTerm("");
-                                        setErrors((p) => { const np = { ...p }; delete np.department; return np; });
-                                    }}
-                                    loading={false}
-                                    onScrollBottom={() => { }}
-                                    searchPlaceholder="Search department..."
-                                    error={!!errors.department}
-                                />
-                                {errors.department && <div className="bd-error-text sila-error-text" id="bd-rfq-department-error">{errors.department}</div>}
-                            </div>
-                            <div className="bd-field sila-field">
-                                <label className="bd-label sila-label" htmlFor="bd-rfq-cost-center">Cost Center</label>
-                                <SearchableSelect<any>
-                                    id="bd-rfq-cost-center"
-                                    value={costCenterLabel}
-                                    placeholder={department ? "Select Cost Center" : "Select Department First"}
-                                    isOpen={isCostCenterDropdownOpen}
-                                    onToggle={() => setIsCostCenterDropdownOpen((prev) => !prev)}
-                                    onClose={() => setIsCostCenterDropdownOpen(false)}
-                                    searchTerm={costCenterSearchTerm}
-                                    onSearchChange={setCostCenterSearchTerm}
-                                    options={filteredCostCenterOptions}
-                                    getOptionLabel={(c) => formatLabel(getCcName(c, costCenterOptions.indexOf(c)))}
-                                    getOptionKey={(c) => getCcId(c, costCenterOptions.indexOf(c))}
-                                    onSelect={(c) => {
-                                        const idx = costCenterOptions.indexOf(c);
-                                        setCostCenter(getCcId(c, idx));
-                                        setCostCenterLabel(formatLabel(getCcName(c, idx)));
-                                        setIsCostCenterDropdownOpen(false);
-                                        setCostCenterSearchTerm("");
-                                    }}
-                                    loading={false}
-                                    onScrollBottom={() => { }}
-                                    searchPlaceholder="Search cost center..."
-                                    disabled={!department}
-                                />
-                            </div>
+                            <div className="bd-row-2 sila-field--full">
+                                <div className={`bd-field sila-field${errors.department ? " sila-field--error" : ""}`}>
+                                    <Dropdown
+                                        label="Department"
+                                        isRequired
+                                        placeholder="Select Department"
+                                        isAsync
+                                        loadOptions={loadDepartmentOptions}
+                                        cacheUniques={[buyerProfileId]}
+                                        value={department ? { name: departmentLabel, value: department } : null}
+                                        onChange={handleDepartmentChange}
+                                        error={errors.department}
+                                    />
+                                </div>
+                                <div className="bd-field sila-field">
+                                    <Dropdown
+                                        label="Cost Center"
+                                        placeholder={department ? "Select Cost Center" : "Select Department First"}
+                                        isAsync
+                                        loadOptions={loadCostCenterOptions}
+                                        value={costCenter ? { name: costCenterLabel, value: costCenter } : null}
+                                        onChange={handleCostCenterChange}
+                                        cacheUniques={[department]}
+                                        isDisable={!department}
+                                    />
+                                </div>
 
-                            <div className="bd-field sila-field">
-                                <label className="bd-label sila-label" htmlFor="bd-rfq-segment">Segment</label>
-                                <SearchableSelect<UnspscSegmentDto>
-                                    id="bd-rfq-segment"
-                                    value={segmentTitle}
-                                    placeholder="Select Segment"
-                                    isOpen={isSegmentDropdownOpen}
-                                    onToggle={() => setIsSegmentDropdownOpen((prev) => !prev)}
-                                    onClose={() => setIsSegmentDropdownOpen(false)}
-                                    searchTerm={segmentSearchTerm}
-                                    onSearchChange={setSegmentSearchTerm}
-                                    options={filteredSegmentOptions}
-                                    getOptionLabel={(o) => o.title}
-                                    getOptionKey={(o) => String(o.segment)}
-                                    onSelect={(o) => {
-                                        handleSegmentChange(String(o.segment));
-                                        setIsSegmentDropdownOpen(false);
-                                        setSegmentSearchTerm("");
-                                    }}
-                                    loading={false}
-                                    onScrollBottom={() => { }}
-                                    searchPlaceholder="Search segment..."
-                                />
-                            </div>
-                            <div className="bd-field sila-field">
-                                <label className="bd-label sila-label" htmlFor="bd-rfq-family">Family</label>
-                                <SearchableSelect<UnspscFamilyDto>
-                                    id="bd-rfq-family"
-                                    value={familyTitle}
-                                    placeholder={segmentCode ? "Select Family" : "Select Segment First"}
-                                    isOpen={isFamilyDropdownOpen}
-                                    onToggle={() => setIsFamilyDropdownOpen((prev) => !prev)}
-                                    onClose={() => setIsFamilyDropdownOpen(false)}
-                                    searchTerm={familySearchTerm}
-                                    onSearchChange={setFamilySearchTerm}
-                                    options={filteredFamilyOptions}
-                                    getOptionLabel={(o) => o.title}
-                                    getOptionKey={(o) => String(o.family)}
-                                    onSelect={(o) => {
-                                        handleFamilyChange(String(o.family));
-                                        setIsFamilyDropdownOpen(false);
-                                        setFamilySearchTerm("");
-                                    }}
-                                    loading={false}
-                                    onScrollBottom={() => { }}
-                                    searchPlaceholder="Search family..."
-                                    disabled={!segmentCode}
-                                />
+                                <div className="bd-field sila-field">
+                                    <Dropdown
+                                        label="Segment"
+                                        placeholder="Select Segment"
+                                        isAsync
+                                        loadOptions={loadSegmentOptions}
+                                        value={segmentCode ? { name: segmentTitle, value: segmentCode } : null}
+                                        onChange={handleSegmentChange}
+                                    />
+                                </div>
+                                <div className="bd-field sila-field">
+                                    <Dropdown
+                                        label="Family"
+                                        placeholder={segmentCode ? "Select Family" : "Select Segment First"}
+                                        isAsync
+                                        loadOptions={loadFamilyOptions}
+                                        cacheUniques={[segmentCode]}
+                                        value={familyCode ? { name: familyTitle, value: familyCode } : null}
+                                        onChange={handleFamilyChange}
+                                        isDisable={!segmentCode}
+                                    />
+                                </div>
                             </div>
 
                             <div className={`bd-field sila-field sila-field--full${errors.description ? " sila-field--error" : ""}`}>
@@ -1299,67 +1026,39 @@ if (Array.isArray(data)) {
                     <section className="bd-form-section sila-form-section" aria-labelledby="bd-sec-commercial">
                         <h2 className="sila-form-section-title" id="bd-sec-commercial">Commercial &amp; delivery</h2>
                         <p className="sila-form-section-description">Currency, sourcing region, delivery point and budget.</p>
-                        <div className="sila-form-grid bd-form-grid">
+                        <div className="bd-row-2">
                             <div className={`bd-field sila-field${errors.currency ? " sila-field--error" : ""}`}>
-                                <label className="bd-label sila-label" htmlFor="bd-rfq-currency">
-                                    Currency<span className="sila-required" aria-hidden="true">*</span>
-                                </label>
-                                <SearchableSelect<CurrencyDto>
-                                    id="bd-rfq-currency"
-                                    describedBy={errors.currency ? "bd-rfq-currency-error" : undefined}
-                                    value={currency}
+                                <Dropdown
+                                    label="Currency"
+                                    isRequired
                                     placeholder="Select Currency"
-                                    isOpen={isCurrencyDropdownOpen}
-                                    onToggle={() => setIsCurrencyDropdownOpen((prev) => !prev)}
-                                    onClose={() => setIsCurrencyDropdownOpen(false)}
-                                    searchTerm={currencySearchTerm}
-                                    onSearchChange={setCurrencySearchTerm}
-                                    options={currencySelect.options}
-                                    getOptionLabel={(o) => o.currencyName}
-                                    getOptionKey={(o) => o.id}
-                                    onSelect={(o) => {
-                                        setCurrency(o.currencyName);
-                                        setIsCurrencyDropdownOpen(false);
-                                        setCurrencySearchTerm("");
+                                    isAsync
+                                    loadOptions={loadCurrencyOptions}
+                                    value={currency ? { name: currency, value: currency } : null}
+                                    onChange={(val) => {
+                                        setCurrency(val?.name || "");
                                         setErrors((p) => { const np = { ...p }; delete np.currency; return np; });
                                     }}
-                                    loading={currencySelect.loading}
-                                    onScrollBottom={currencySelect.loadMore}
-                                    hideSearch
-                                    error={!!errors.currency}
+                                    error={errors.currency}
                                 />
-                                {errors.currency && <div className="bd-error-text sila-error-text" id="bd-rfq-currency-error">{errors.currency}</div>}
                             </div>
+                        </div>
 
+                        <div className="bd-row-2">
                             <div className={`bd-field sila-field${errors.region ? " sila-field--error" : ""}`}>
-                                <label className="bd-label sila-label" htmlFor="bd-rfq-region">
-                                    Region<span className="sila-required" aria-hidden="true">*</span>
-                                </label>
-                                <SearchableSelect<CountryDto>
-                                    id="bd-rfq-region"
-                                    describedBy={errors.region ? "bd-rfq-region-error" : undefined}
-                                    value={region}
+                                <Dropdown
+                                    label="Region"
+                                    isRequired
                                     placeholder="Select Region"
-                                    isOpen={isRegionDropdownOpen}
-                                    onToggle={() => setIsRegionDropdownOpen((prev) => !prev)}
-                                    onClose={() => setIsRegionDropdownOpen(false)}
-                                    searchTerm={regionSearchTerm}
-                                    onSearchChange={setRegionSearchTerm}
-                                    options={regionSelect.options}
-                                    getOptionLabel={(o) => o.countryName}
-                                    getOptionKey={(o) => o.id}
-                                    onSelect={(o) => {
-                                        setRegion(o.countryName);
-                                        setIsRegionDropdownOpen(false);
-                                        setRegionSearchTerm("");
+                                    isAsync
+                                    loadOptions={loadRegionOptions}
+                                    value={region ? { name: region, value: region } : null}
+                                    onChange={(val) => {
+                                        setRegion(val?.name || "");
                                         setErrors((p) => { const np = { ...p }; delete np.region; return np; });
                                     }}
-                                    loading={regionSelect.loading}
-                                    onScrollBottom={regionSelect.loadMore}
-                                    searchPlaceholder="Search country..."
-                                    error={!!errors.region}
+                                    error={errors.region}
                                 />
-                                {errors.region && <div className="bd-error-text sila-error-text" id="bd-rfq-region-error">{errors.region}</div>}
                             </div>
                             <div className="bd-field sila-field">
                                 <label className="bd-label sila-label" htmlFor="bd-rfq-delivery-location">Delivery Location</label>
@@ -1373,17 +1072,6 @@ if (Array.isArray(data)) {
                                         setDeliveryLocation(e.target.value);
                                         setErrors((p) => { const np = { ...p }; delete np.deliveryLocation; return np; });
                                     }}
-                                />
-                            </div>
-
-                            <div className="bd-field sila-field">
-                                <label className="bd-label sila-label" htmlFor="bd-rfq-budget">Total Budget</label>
-                                <input
-                                    id="bd-rfq-budget"
-                                    className="bd-input bd-input-num"
-                                    type="text"
-                                    value={totalBudget}
-                                    onChange={(e) => setTotalBudget(e.target.value)}
                                 />
                             </div>
                         </div>
@@ -1406,6 +1094,17 @@ if (Array.isArray(data)) {
                                 />
                                 <span className="bd-switch-slider" aria-hidden="true" />
                             </label>
+                        </div>
+
+                        <div className="bd-field sila-field">
+                            <label className="bd-label sila-label" htmlFor="bd-rfq-budget">Total Budget</label>
+                            <input
+                                id="bd-rfq-budget"
+                                className="bd-input bd-input-num"
+                                type="text"
+                                value={totalBudget}
+                                onChange={(e) => setTotalBudget(e.target.value)}
+                            />
                         </div>
                     </section>
 
@@ -1577,23 +1276,18 @@ if (Array.isArray(data)) {
                                     />
                                 </div>
                                 <div className="bd-item-add-field">
-                                    <label className="bd-label-sm" htmlFor="bd-dsr-type">Input field type</label>
-                                    <select
-                                        id="bd-dsr-type"
-                                        className="bd-select-sm"
-                                        value={newFieldType}
-                                        onChange={(e) => {
-                                            setNewFieldType(e.target.value as FieldType);
+                                    <span className="bd-label-sm">Input field type</span>
+                                    <Dropdown
+                                        placeholder="Select field type"
+                                        options={fieldTypeOptions.map((t) => ({ name: t.description, value: t.key }))}
+                                        value={fieldTypeOptions.length > 0 ? { name: getFieldTypeLabel(newFieldType), value: newFieldType } : null}
+                                        onChange={(val) => {
+                                            if (!val) return;
+                                            setNewFieldType(val.value as FieldType);
                                             setCheckboxOptions([]);
                                             setCheckboxOptionInput("");
                                         }}
-                                    >
-                                        {fieldTypeOptions.map((t) => (
-                                            <option key={t.id} value={t.key}>
-                                                {t.description}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    />
                                 </div>
                                 <div className="bd-item-add-field">
                                     <label className="bd-label-sm" htmlFor="bd-dsr-options">Options</label>
@@ -1756,50 +1450,28 @@ if (Array.isArray(data)) {
                                 />
                             </div>
                             <div className="bd-item-add-field">
-                                <label className="bd-label-sm" htmlFor="bd-item-uom">UOM</label>
-                                <SearchableSelect<UnitDto>
-                                    id="bd-item-uom"
-                                    value={newItemUom}
+                                <span className="bd-label-sm">UOM</span>
+                                <Dropdown
                                     placeholder="Select UOM"
-                                    isOpen={isUomDropdownOpen}
-                                    onToggle={() => setIsUomDropdownOpen((prev) => !prev)}
-                                    onClose={() => setIsUomDropdownOpen(false)}
-                                    searchTerm={uomSearchTerm}
-                                    onSearchChange={setUomSearchTerm}
-                                    options={uomSelect.options}
-                                    getOptionLabel={(o) => o.key}
-                                    getOptionKey={(o) => o.id}
-                                    onSelect={(o) => {
-                                        setNewItemUom(o.key);
-                                        setIsUomDropdownOpen(false);
-                                        setUomSearchTerm("");
-                                    }}
-                                    loading={uomSelect.loading}
-                                    onScrollBottom={uomSelect.loadMore}
-                                    searchPlaceholder="Search unit..."
-                                    small
+                                    isAsync
+                                    loadOptions={loadUomOptions}
+                                    value={newItemUom ? { name: newItemUom, value: newItemUom } : null}
+                                    onChange={(val) => setNewItemUom(val?.value || "")}
                                 />
                             </div>
                         </div>
                         <div className="bd-item-add-grid-bottom">
                             <div className="bd-item-add-field">
-                                <label className="bd-label-sm" htmlFor="bd-item-material">Material code</label>
-                                <select
-                                    id="bd-item-material"
-                                    className="bd-select-sm"
-                                    value={newItemMaterialCode}
-                                    onChange={(e) => handleMaterialCodeChange(e.target.value)}
-                                >
-                                    <option value="">Select Material Code</option>
-                                    {materialCodeOptions.map((m: any, idx) => {
-                                        const code = typeof m === 'string' ? m : (m.materialCode || m.id || `Code ${idx}`);
-                                        return (
-                                            <option key={code} value={code}>
-                                                {code}
-                                            </option>
-                                        );
-                                    })}
-                                </select>
+                                <span className="bd-label-sm">Material code</span>
+                                <Dropdown
+                                    placeholder="Select Material Code"
+                                    isAsync
+                                    loadOptions={loadMaterialCodeOptions}
+                                    cacheUniques={[buyerProfileId]}
+                                    value={newItemMaterialCode ? { name: newItemMaterialCode, value: newItemMaterialCode } : null}
+                                    onChange={(val) => handleMaterialCodeChange(val?.value || "")}
+                                    isClearable
+                                />
                             </div>
                             <div className="bd-item-button-section">
                                 <button className="bd-btn-add" onClick={handleAddLineItem} type="button">
@@ -1882,16 +1554,13 @@ if (Array.isArray(data)) {
                             </p>
                         </div>
                         <div className="bd-suppliers-filters">
-                            <select
-                                className="bd-select bd-category-filter"
-                                aria-label="Filter suppliers by verification"
-                                value={supplierTypeFilter}
-                                onChange={(e) => setSupplierTypeFilter(e.target.value as "ALL" | SupplierVerificationType)}
-                            >
-                                <option value="ALL">All Suppliers</option>
-                                <option value="VERIFIED">Verified</option>
-                                <option value="UNVERIFIED">Unverified</option>
-                            </select>
+                            <Dropdown
+                                placeholder="All Suppliers"
+                                options={SUPPLIER_FILTER_OPTIONS}
+                                value={selectedSupplierFilter}
+                                onChange={setSelectedSupplierFilter}
+                                className="bd-category-filter"
+                            />
                             <div className="bd-search-wrap">
                                 <span className="bd-search-icon">
                                     <IconSearch />
@@ -2064,31 +1733,16 @@ if (Array.isArray(data)) {
                             </p>
                             <div className="bd-onboarding-grid">
                                 <div className="bd-onboarding-left">
-                                    <label className="bd-label sila-label" htmlFor="bd-rfq-reg-template">
+                                    <span className="bd-label sila-label">
                                         Registration Template<span className="sila-required" aria-hidden="true">*</span>
-                                    </label>
+                                    </span>
                                     <div className="bd-template-row">
-                                        <SearchableSelect<VerificationTemplate>
-                                            id="bd-rfq-reg-template"
-                                            value={registrationTemplate}
+                                        <Dropdown
                                             placeholder="Select Template"
-                                            isOpen={isTemplateDropdownOpen}
-                                            onToggle={() => setIsTemplateDropdownOpen((prev) => !prev)}
-                                            onClose={() => setIsTemplateDropdownOpen(false)}
-                                            searchTerm={templateSearchTerm}
-                                            onSearchChange={setTemplateSearchTerm}
-                                            options={filteredTemplateOptions}
-                                            getOptionLabel={(t) => t.templateName}
-                                            getOptionKey={(t) => t.templateId}
-                                            onSelect={(t) => {
-                                                setRegistrationTemplateId(t.templateId);
-                                                setRegistrationTemplate(t.templateName);
-                                                setIsTemplateDropdownOpen(false);
-                                                setTemplateSearchTerm("");
-                                            }}
-                                            loading={templateLoading}
-                                            onScrollBottom={handleTemplateScrollBottom}
-                                            searchPlaceholder="Search template..."
+                                            isAsync
+                                            loadOptions={loadTemplateOptions}
+                                            value={registrationTemplateId ? { name: registrationTemplate, value: registrationTemplateId } : null}
+                                            onChange={handleTemplateChange}
                                         />
                                         <button
                                             type="button"
