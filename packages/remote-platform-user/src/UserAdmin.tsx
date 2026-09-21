@@ -490,7 +490,13 @@ const UserAdmin: React.FC = () => {
                   />
                 </div>
 
-                <div className="user-admin-form-group">
+                <div
+                  className="user-admin-form-group"
+                  onKeyDown={(e) => {
+                    // Enter inside the dropdown's search box would otherwise submit the surrounding form.
+                    if (e.key === 'Enter') e.preventDefault();
+                  }}
+                >
                   <Dropdown
                     label="Country"
                     isRequired
