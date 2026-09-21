@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useMemo } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import "./Create.RFQ.css";
 import { Button, toastService, DateTimePicker, Loader, StatusBadge, Dropdown } from "@vosox/shared-ui";
 import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from "@vosox/shared-ui";
@@ -136,7 +136,8 @@ const initialLineItems: LineItem[] = [];
 const initialCustomFields: CustomField[] = [];
 
 
-const PAGE_LIMIT = 10;
+// Page size used by every async (paginated) Dropdown
+const DROPDOWN_PAGE_SIZE = 40;
 
 /* ---------------------------------- Helpers ---------------------------------- */
 
@@ -217,8 +218,6 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
 
     const [rfqTitle, setRfqTitle] = useState("");
     const [department, setDepartment] = useState("");
-    const [departmentOptions, setDepartmentOptions] = useState<any[]>([]);
-    const [materialCodeOptions, setMaterialCodeOptions] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -226,40 +225,14 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
                 const profile = await getBuyerProfile();
                 if (profile?.id) {
                     setBuyerProfileId(profile.id);
-
-                    const res = await getAllDepartments(profile.id, 0, 10000);
-                    const data = res?.data?.data || res?.data || res || [];
-                    setDepartmentOptions(Array.isArray(data) ? data : []);
-
-                    const itemRes = await getAllItemMasters(profile.id, 0, 10000);
-                    const itemData = itemRes?.data?.data || itemRes?.data || itemRes || [];
-                    setMaterialCodeOptions(Array.isArray(itemData) ? itemData : []);
                 }
             } catch (err) {
-            
+
             }
         };
         fetchInitialData();
     }, []);
     const [costCenter, setCostCenter] = useState("");
-    const [costCenterOptions, setCostCenterOptions] = useState<any[]>([]);
-
-    useEffect(() => {
-        const fetchCostCenters = async () => {
-            if (!department) {
-                setCostCenterOptions([]);
-                return;
-            }
-            try {
-                const res = await getAllCostCenters(department, 0, 10000);
-                const data = res?.data?.data || res?.data || res || [];
-                setCostCenterOptions(Array.isArray(data) ? data : []);
-            } catch (err) {
-            
-            }
-        };
-        fetchCostCenters();
-    }, [department]);
 
     const [departmentLabel, setDepartmentLabel] = useState("");
 
@@ -268,10 +241,19 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
     const getDeptId = (d: any, idx: number) =>
         typeof d === "string" ? d : (d.id || getDeptName(d, idx));
 
-    const departmentDropdownOptions = useMemo(
-        () => departmentOptions.map((d, idx) => ({ name: formatLabel(getDeptName(d, idx)), value: String(getDeptId(d, idx)) })),
-        [departmentOptions]
-    );
+    // ---- Async paginated loader for the Department Dropdown (`index` is an offset: 0, 40, 80, ...) ----
+    const loadDepartmentOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!buyerProfileId) {
+            return { options: [], hasMore: false };
+        }
+        const res = await getAllDepartments(buyerProfileId, page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+        const data = res?.data?.data || res?.data || res || [];
+        const departments: any[] = Array.isArray(data) ? data : [];
+        return {
+            options: departments.map((d, idx) => ({ name: formatLabel(getDeptName(d, idx)), value: String(getDeptId(d, idx)) })),
+            hasMore: departments.length === DROPDOWN_PAGE_SIZE,
+        };
+    };
 
     const [costCenterLabel, setCostCenterLabel] = useState("");
 
@@ -280,10 +262,19 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
     const getCcId = (c: any, idx: number) =>
         typeof c === "string" ? c : (c.id || getCcName(c, idx));
 
-    const costCenterDropdownOptions = useMemo(
-        () => costCenterOptions.map((c, idx) => ({ name: formatLabel(getCcName(c, idx)), value: String(getCcId(c, idx)) })),
-        [costCenterOptions]
-    );
+    // ---- Async paginated loader for the Cost Center Dropdown (`index` is an offset: 0, 40, 80, ...) ----
+    const loadCostCenterOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!department) {
+            return { options: [], hasMore: false };
+        }
+        const res = await getAllCostCenters(department, page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+        const data = res?.data?.data || res?.data || res || [];
+        const costCenters: any[] = Array.isArray(data) ? data : [];
+        return {
+            options: costCenters.map((c, idx) => ({ name: formatLabel(getCcName(c, idx)), value: String(getCcId(c, idx)) })),
+            hasMore: costCenters.length === DROPDOWN_PAGE_SIZE,
+        };
+    };
 
     const handleDepartmentChange = (val: DropdownValue | null) => {
         setDepartment(val?.value || "");
@@ -303,32 +294,28 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
     const [familyCode, setFamilyCode] = useState("");
     const [familyTitle, setFamilyTitle] = useState("");
 
-    const SEGMENT_PAGE_SIZE = 50;
-
     // ---- Async paginated loader for the Segment Dropdown ----
     const loadSegmentOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
-        const pageIndex = page + 1; // Dropdown pages are 0-based; the API is 1-based
-        const segments = await getUnspscSegments(pageIndex, SEGMENT_PAGE_SIZE, search || undefined);
+        const pageIndex = page * DROPDOWN_PAGE_SIZE; // index of the first item on the page: 0, 40, 80, ...
+        const segments =await getUnspscSegments(pageIndex, DROPDOWN_PAGE_SIZE, search || undefined);
         return {
             options: segments.map((seg) => ({ name: seg.title, value: String(seg.segment) })),
-            hasMore: segments.length === SEGMENT_PAGE_SIZE,
+            hasMore: segments.length === DROPDOWN_PAGE_SIZE,
         };
     };
-
-    const FAMILY_PAGE_SIZE = 50;
 
     // ---- Async paginated loader for the Family Dropdown (server has no search param, so filter client-side) ----
     const loadFamilyOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
         if (!segmentCode) {
             return { options: [], hasMore: false };
         }
-        const pageIndex = page + 1; // Dropdown pages are 0-based; the API is 1-based
-        const families = await getUnspscFamilies(Number(segmentCode), pageIndex, FAMILY_PAGE_SIZE);
+        const pageIndex = page * DROPDOWN_PAGE_SIZE; // index of the first item on the page: 0, 40, 80, ...
+        const families =await getUnspscFamilies(Number(segmentCode), pageIndex, DROPDOWN_PAGE_SIZE);
         const searchTerm = search.trim().toLowerCase();
         const options = families
             .filter((fam) => !searchTerm || fam.title.toLowerCase().includes(searchTerm))
             .map((fam) => ({ name: fam.title, value: String(fam.family) }));
-        return { options, hasMore: families.length === FAMILY_PAGE_SIZE };
+        return { options, hasMore: families.length === DROPDOWN_PAGE_SIZE };
     };
 
     const handleSegmentChange = (val: DropdownValue | null) => {
@@ -390,30 +377,51 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
     const [currency, setCurrency] = useState("");
     const [region, setRegion] = useState("");
 
-    // ---- Async paginated loader for the Currency Dropdown (server has no search param) ----
-    const loadCurrencyOptions = async ({ page }: DropdownLoadParams): Promise<DropdownLoadResult> => {
-        const res = await getCurrenciesSafe(page, PAGE_LIMIT);
+    // ---- Async paginated loader for the Currency Dropdown (server has no search param, so search client-side) ----
+    // For the masterdata APIs `index` is an offset: 0, then 0 + 40, then 0 + 40 + 40, ...
+    const loadCurrencyOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        const toOption = (c: CurrencyDto) => ({ name: c.currencyName, value: c.currencyName });
+        const searchTerm = search.trim().toLowerCase();
+
+        if (searchTerm) {
+            // Page through every currency so a match on a later page isn't missed, then filter here
+            const matches: CurrencyDto[] = [];
+            let index = 0;
+            let totalCount = 0;
+            do {
+                const res = await getCurrenciesSafe(index, DROPDOWN_PAGE_SIZE);
+                matches.push(...res.items.filter((c) => c.currencyName.toLowerCase().includes(searchTerm)));
+                totalCount = res.totalCount;
+                if (res.items.length === 0) break;
+                index += res.items.length;
+            } while (index < totalCount);
+            return { options: matches.map(toOption), hasMore: false, total: matches.length };
+        }
+
+        const index = page * DROPDOWN_PAGE_SIZE;
+        const res = await getCurrenciesSafe(index, DROPDOWN_PAGE_SIZE);
         return {
-            options: res.items.map((c) => ({ name: c.currencyName, value: c.currencyName })),
-            hasMore: res.items.length === PAGE_LIMIT,
+            options: res.items.map(toOption),
+            hasMore: index + res.items.length < res.totalCount,
+            total: res.totalCount,
         };
     };
 
     // ---- Async paginated loader for the Region (Country) Dropdown ----
     const loadRegionOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
-        const res = await getCountriesSafe(page, PAGE_LIMIT, search || undefined);
+        const res = await getCountriesSafe(page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
         return {
             options: res.items.map((c) => ({ name: c.countryName, value: c.countryName })),
-            hasMore: res.items.length === PAGE_LIMIT,
+            hasMore: res.items.length === DROPDOWN_PAGE_SIZE,
         };
     };
 
     // ---- Async paginated loader for the Unit of Measure Dropdown ----
     const loadUomOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
-        const res = await getUnitsSafe(page, PAGE_LIMIT, search || undefined);
+        const res = await getUnitsSafe(page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
         return {
             options: res.items.map((u) => ({ name: u.key, value: u.key })),
-            hasMore: res.items.length === PAGE_LIMIT,
+            hasMore: res.items.length === DROPDOWN_PAGE_SIZE,
         };
     };
     const [description, setDescription] = useState("");
@@ -465,25 +473,31 @@ if (Array.isArray(data)) {
     const [newItemPrice, setNewItemPrice] = useState("");
     const [newItemMaterialCode, setNewItemMaterialCode] = useState("");
 
-    const materialCodeDropdownOptions = useMemo(() => {
-        const codes = materialCodeOptions.map((m: any, idx) =>
-            typeof m === "string" ? m : (m.materialCode || m.id || `Code ${idx}`)
-        );
-        return Array.from(new Set<string>(codes)).map((code) => ({ name: code, value: code }));
-    }, [materialCodeOptions]);
+    // Descriptions of the material codes loaded so far, used to prefill the item description on select
+    const materialCodeDescriptions = useRef<Record<string, string>>({});
+
+    // ---- Async paginated loader for the Material Code Dropdown (`index` is an offset: 0, 40, 80, ...) ----
+    const loadMaterialCodeOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!buyerProfileId) {
+            return { options: [], hasMore: false };
+        }
+        const res = await getAllItemMasters(buyerProfileId, page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+        const data = res?.data?.data || res?.data || res || [];
+        const items: any[] = Array.isArray(data) ? data : [];
+        const options = items.map((m, idx) => {
+            const code: string = typeof m === "string" ? m : (m.materialCode || m.id || `Code ${idx}`);
+            materialCodeDescriptions.current[code] = getMaterialCodeDescription(m);
+            return { name: code, value: code };
+        });
+        return { options, hasMore: items.length === DROPDOWN_PAGE_SIZE };
+    };
 
     const handleMaterialCodeChange = (code: string) => {
         setNewItemMaterialCode(code);
         if (!code) return;
-        const selected = materialCodeOptions.find((m: any) => {
-            const mCode = typeof m === 'string' ? m : (m.materialCode || m.id);
-            return mCode === code;
-        });
-        if (selected) {
-            const desc = getMaterialCodeDescription(selected);
-            if (desc && !newItemDesc) {
-                setNewItemDesc(desc);
-            }
+        const desc = materialCodeDescriptions.current[code];
+        if (desc && !newItemDesc) {
+            setNewItemDesc(desc);
         }
     };
 
@@ -503,7 +517,7 @@ if (Array.isArray(data)) {
 
     // ---- Async paginated loader for the Registration Template Dropdown (server has no search param, so filter client-side) ----
     const loadTemplateOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
-        const data = await fetchBuyerVerificationTemplates(page, PAGE_LIMIT);
+        const data = await fetchBuyerVerificationTemplates(page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE);
         if (!Array.isArray(data)) {
             return { options: [], hasMore: false };
         }
@@ -512,7 +526,7 @@ if (Array.isArray(data)) {
             options: data
                 .filter((t) => !searchTerm || t.templateName.toLowerCase().includes(searchTerm))
                 .map((t) => ({ name: t.templateName, value: t.templateId })),
-            hasMore: data.length === PAGE_LIMIT,
+            hasMore: data.length === DROPDOWN_PAGE_SIZE,
         };
     };
 
@@ -938,50 +952,55 @@ if (Array.isArray(data)) {
                                 {errors.rfqTitle && <div className="bd-error-text sila-error-text" id="bd-rfq-title-error">{errors.rfqTitle}</div>}
                             </div>
 
-                            <div className={`bd-field sila-field${errors.department ? " sila-field--error" : ""}`}>
-                                <Dropdown
-                                    label="Department"
-                                    isRequired
-                                    placeholder="Select Department"
-                                    options={departmentDropdownOptions}
-                                    value={department ? { name: departmentLabel, value: department } : null}
-                                    onChange={handleDepartmentChange}
-                                    error={errors.department}
-                                />
-                            </div>
-                            <div className="bd-field sila-field">
-                                <Dropdown
-                                    label="Cost Center"
-                                    placeholder={department ? "Select Cost Center" : "Select Department First"}
-                                    options={costCenterDropdownOptions}
-                                    value={costCenter ? { name: costCenterLabel, value: costCenter } : null}
-                                    onChange={handleCostCenterChange}
-                                    cacheUniques={[department]}
-                                    isDisable={!department}
-                                />
-                            </div>
+                            <div className="bd-row-2 sila-field--full">
+                                <div className={`bd-field sila-field${errors.department ? " sila-field--error" : ""}`}>
+                                    <Dropdown
+                                        label="Department"
+                                        isRequired
+                                        placeholder="Select Department"
+                                        isAsync
+                                        loadOptions={loadDepartmentOptions}
+                                        cacheUniques={[buyerProfileId]}
+                                        value={department ? { name: departmentLabel, value: department } : null}
+                                        onChange={handleDepartmentChange}
+                                        error={errors.department}
+                                    />
+                                </div>
+                                <div className="bd-field sila-field">
+                                    <Dropdown
+                                        label="Cost Center"
+                                        placeholder={department ? "Select Cost Center" : "Select Department First"}
+                                        isAsync
+                                        loadOptions={loadCostCenterOptions}
+                                        value={costCenter ? { name: costCenterLabel, value: costCenter } : null}
+                                        onChange={handleCostCenterChange}
+                                        cacheUniques={[department]}
+                                        isDisable={!department}
+                                    />
+                                </div>
 
-                            <div className="bd-field sila-field">
-                                <Dropdown
-                                    label="Segment"
-                                    placeholder="Select Segment"
-                                    isAsync
-                                    loadOptions={loadSegmentOptions}
-                                    value={segmentCode ? { name: segmentTitle, value: segmentCode } : null}
-                                    onChange={handleSegmentChange}
-                                />
-                            </div>
-                            <div className="bd-field sila-field">
-                                <Dropdown
-                                    label="Family"
-                                    placeholder={segmentCode ? "Select Family" : "Select Segment First"}
-                                    isAsync
-                                    loadOptions={loadFamilyOptions}
-                                    cacheUniques={[segmentCode]}
-                                    value={familyCode ? { name: familyTitle, value: familyCode } : null}
-                                    onChange={handleFamilyChange}
-                                    isDisable={!segmentCode}
-                                />
+                                <div className="bd-field sila-field">
+                                    <Dropdown
+                                        label="Segment"
+                                        placeholder="Select Segment"
+                                        isAsync
+                                        loadOptions={loadSegmentOptions}
+                                        value={segmentCode ? { name: segmentTitle, value: segmentCode } : null}
+                                        onChange={handleSegmentChange}
+                                    />
+                                </div>
+                                <div className="bd-field sila-field">
+                                    <Dropdown
+                                        label="Family"
+                                        placeholder={segmentCode ? "Select Family" : "Select Segment First"}
+                                        isAsync
+                                        loadOptions={loadFamilyOptions}
+                                        cacheUniques={[segmentCode]}
+                                        value={familyCode ? { name: familyTitle, value: familyCode } : null}
+                                        onChange={handleFamilyChange}
+                                        isDisable={!segmentCode}
+                                    />
+                                </div>
                             </div>
 
                             <div className={`bd-field sila-field sila-field--full${errors.description ? " sila-field--error" : ""}`}>
@@ -1007,7 +1026,7 @@ if (Array.isArray(data)) {
                     <section className="bd-form-section sila-form-section" aria-labelledby="bd-sec-commercial">
                         <h2 className="sila-form-section-title" id="bd-sec-commercial">Commercial &amp; delivery</h2>
                         <p className="sila-form-section-description">Currency, sourcing region, delivery point and budget.</p>
-                        <div className="sila-form-grid bd-form-grid">
+                        <div className="bd-row-2">
                             <div className={`bd-field sila-field${errors.currency ? " sila-field--error" : ""}`}>
                                 <Dropdown
                                     label="Currency"
@@ -1023,7 +1042,9 @@ if (Array.isArray(data)) {
                                     error={errors.currency}
                                 />
                             </div>
+                        </div>
 
+                        <div className="bd-row-2">
                             <div className={`bd-field sila-field${errors.region ? " sila-field--error" : ""}`}>
                                 <Dropdown
                                     label="Region"
@@ -1053,17 +1074,6 @@ if (Array.isArray(data)) {
                                     }}
                                 />
                             </div>
-
-                            <div className="bd-field sila-field">
-                                <label className="bd-label sila-label" htmlFor="bd-rfq-budget">Total Budget</label>
-                                <input
-                                    id="bd-rfq-budget"
-                                    className="bd-input bd-input-num"
-                                    type="text"
-                                    value={totalBudget}
-                                    onChange={(e) => setTotalBudget(e.target.value)}
-                                />
-                            </div>
                         </div>
 
                         <div className="bd-toggle-row">
@@ -1084,6 +1094,17 @@ if (Array.isArray(data)) {
                                 />
                                 <span className="bd-switch-slider" aria-hidden="true" />
                             </label>
+                        </div>
+
+                        <div className="bd-field sila-field">
+                            <label className="bd-label sila-label" htmlFor="bd-rfq-budget">Total Budget</label>
+                            <input
+                                id="bd-rfq-budget"
+                                className="bd-input bd-input-num"
+                                type="text"
+                                value={totalBudget}
+                                onChange={(e) => setTotalBudget(e.target.value)}
+                            />
                         </div>
                     </section>
 
@@ -1444,7 +1465,9 @@ if (Array.isArray(data)) {
                                 <span className="bd-label-sm">Material code</span>
                                 <Dropdown
                                     placeholder="Select Material Code"
-                                    options={materialCodeDropdownOptions}
+                                    isAsync
+                                    loadOptions={loadMaterialCodeOptions}
+                                    cacheUniques={[buyerProfileId]}
                                     value={newItemMaterialCode ? { name: newItemMaterialCode, value: newItemMaterialCode } : null}
                                     onChange={(val) => handleMaterialCodeChange(val?.value || "")}
                                     isClearable

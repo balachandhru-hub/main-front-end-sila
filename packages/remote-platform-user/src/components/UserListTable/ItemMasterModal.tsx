@@ -1,13 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
     createItemMaster,
     getMasterApprovalFlows,
     type MasterApprovalFlowDto,
 } from "../../api/itemmasterapi";
 import { toastService, Dropdown } from "@vosox/shared-ui";
-import type { DropdownValue } from "@vosox/shared-ui";
+import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from "@vosox/shared-ui";
 import { FaTimes } from "react-icons/fa";
 import "./ItemMasterModal.css";
+
+// Page size used by the async (paginated) Approval Flow Dropdown
+const APPROVAL_FLOW_PAGE_SIZE = 40;
 
 interface ItemMasterModalProps {
     isOpen: boolean;
@@ -49,51 +52,57 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
     const approvalFlowId = selectedApprovalFlow?.value || "";
     const [comment, setComment] = useState("");
 
-    const [approvalFlows, setApprovalFlows] = useState<MasterApprovalFlowDto[]>([]);
-    const [approvalFlowLoading, setApprovalFlowLoading] = useState(false);
     const [approvalFlowError, setApprovalFlowError] = useState("");
 
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    useEffect(() => {
-        if (!isOpen || !buyerId) return;
-
-        let cancelled = false;
-
-        const loadApprovalFlows = async () => {
-            setApprovalFlowLoading(true);
-            setApprovalFlowError("");
-
-            try {
-                const flows = await getMasterApprovalFlows(buyerId, 0, 100);
-                if (!cancelled) {
-                    setApprovalFlows(flows);
-                }
-            } catch (error: any) {
-                if (!cancelled) {
-                    setApprovalFlows([]);
-                    setApprovalFlowError(
-                        error?.message || "Failed to load approval flows."
-                    );
-                }
-            } finally {
-                if (!cancelled) {
-                    setApprovalFlowLoading(false);
-                }
-            }
-        };
-
-        loadApprovalFlows();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [isOpen, buyerId]);
-
     if (!isOpen) {
         return null;
     }
+
+    // ---- Async paginated loader for the Approval Flow Dropdown (server has no search param, so search client-side) ----
+    // `index` is an offset: 0, then 0 + 40, then 0 + 40 + 40, ...
+    const loadApprovalFlowOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!buyerId) {
+            return { options: [], hasMore: false };
+        }
+        const toOption = (flow: MasterApprovalFlowDto) => ({
+            name: `${flow.approvalCode} - ${flow.approvalName}`,
+            value: flow.id,
+        });
+        const searchTerm = search.trim().toLowerCase();
+
+        try {
+            if (searchTerm) {
+                // Page through every approval flow so a match on a later page isn't missed, then filter here
+                const matches: MasterApprovalFlowDto[] = [];
+                let index = 0;
+                let flows: MasterApprovalFlowDto[];
+                do {
+                    flows = await getMasterApprovalFlows(buyerId, index, APPROVAL_FLOW_PAGE_SIZE);
+                    matches.push(...flows.filter((flow) => toOption(flow).name.toLowerCase().includes(searchTerm)));
+                    index += flows.length;
+                } while (flows.length === APPROVAL_FLOW_PAGE_SIZE);
+                setApprovalFlowError("");
+                return { options: matches.map(toOption), hasMore: false };
+            }
+
+            const flows = await getMasterApprovalFlows(
+                buyerId,
+                page * APPROVAL_FLOW_PAGE_SIZE,
+                APPROVAL_FLOW_PAGE_SIZE
+            );
+            setApprovalFlowError("");
+            return {
+                options: flows.map(toOption),
+                hasMore: flows.length === APPROVAL_FLOW_PAGE_SIZE,
+            };
+        } catch (error: any) {
+            setApprovalFlowError(error?.message || "Failed to load approval flows.");
+            return { options: [], hasMore: false };
+        }
+    };
 
     const resetForm = () => {
         setDescription("");
@@ -561,17 +570,15 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                         <Dropdown
                             label="Approval Flow"
                             isRequired
-                            placeholder={approvalFlowLoading ? "Loading approval flows..." : "Select an approval flow"}
-                            options={approvalFlows.map((flow) => ({
-                                name: `${flow.approvalCode} - ${flow.approvalName}`,
-                                value: flow.id,
-                            }))}
+                            placeholder="Select an approval flow"
+                            isAsync
+                            loadOptions={loadApprovalFlowOptions}
+                            cacheUniques={[buyerId]}
                             value={selectedApprovalFlow}
                             onChange={(val) => {
                                 setSelectedApprovalFlow(val);
                                 clearFieldError(setErrors, "approvalFlowId");
                             }}
-                            isDisable={approvalFlowLoading}
                             error={errors.approvalFlowId}
                         />
 
