@@ -169,6 +169,27 @@
   cursor: not-allowed;
 }
 
+.contract-btn--danger {
+  border: 1px solid #ef4444;
+  background: #ffffff;
+  color: #dc2626;
+}
+
+.contract-btn--danger:hover {
+  background: #fef2f2;
+}
+
+.contract-btn--danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.contract-btn--rejected {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+}
+
 .contract-btn--xs {
   padding: 5px 12px;
   border-radius: 6px;
@@ -864,6 +885,10 @@
 
 .contract-accept-status--done {
   color: #059669;
+}
+
+.contract-accept-status--rejected {
+  color: #dc2626;
 }
 
 /* ---------- Signing ---------- */

@@ -31,27 +31,6 @@
   display: block;
 }
 
-.ebid-hero-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  flex-shrink: 0;
-}
-
-.ebid-chat-btn {
-  gap: 0.4375rem;
-  flex-shrink: 0;
-}
-
-.ebid-chat-btn:hover {
-  background: #eff6ff !important;
-}
-
-.ebid-chat-btn svg {
-  width: 0.9rem;
-  height: 0.9rem;
-}
-
 .ebid-main {
   flex: 1;
   width: 100%;
@@ -64,19 +43,6 @@
 .ebid-main-centered {
   align-items: center;
   justify-content: center;
-}
-
-/* --- RFQ detail (reuses the supplier dashboard's pud-* RFQ detail styles) --- */
-
-/* The shared .pud-modal-footer padding declaration is invalid (5 values) and gets dropped,
-   so give the footer its spacing here. */
-.ebid-main .pud-modal-footer {
-  padding: 1rem 1.75rem 1.5rem;
-}
-
-.ebid-main .pud-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 
 .ebid-submit-btn {
@@ -104,17 +70,6 @@
 .ebid-submit-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-}
-
-.ebid-btn-outline {
-  background: transparent;
-  color: #475569;
-  border: 0.0625rem solid #cbd5e1;
-  border-radius: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 /* --- Status / success screens --- */
@@ -168,65 +123,7 @@
   padding-top: 1.25rem;
 }
 
-/* --- Confirm modal --- */
-
-.ebid-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  z-index: 1000;
-}
-
-.ebid-modal {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-  background: #ffffff;
-  border-radius: 0.75rem;
-  padding: 1.75rem;
-  max-width: 24rem;
-  width: 100%;
-  box-shadow: 0 0.625rem 1.875rem rgba(15, 23, 42, 0.2);
-}
-
-.ebid-modal h2 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.ebid-modal p {
-  font-size: 0.875rem;
-  color: #64748b;
-  line-height: 1.6;
-}
-
-.ebid-modal-actions {
-  display: flex;
-  gap: 0.75rem;
-  justify-content: flex-end;
-  padding-top: 0.5rem;
-}
-
 /* --- Responsive --- */
-
-@media (max-width: 48rem) {
-  .ebid-modal-actions {
-    flex-direction: column-reverse;
-  }
-
-  .ebid-modal-actions button {
-    width: 100%;
-  }
-
-  .ebid-main .pud-modal-meta {
-    flex-wrap: wrap;
-  }
-}
 
 @media (max-width: 29.25rem) {
   .ebid-page {
@@ -241,272 +138,39 @@
     height: 2.5rem;
   }
 
-  .ebid-main .pud-modal-footer .pud-btn,
-  .ebid-btn-outline {
-    width: 100%;
-  }
-
   .ebid-status-icon {
     font-size: 2rem;
   }
 }
 
-/* --- Evaluation questions & answers (mirrors the buyer's bid comparison Q&A panel) --- */
+/* --- Type dropdowns (Delivery / Discount / Tax type) --- */
 
-.ebid-qa-section {
-  background: #ffffff;
-  border: 0.0625rem solid #e2e8f0;
-  border-radius: 0.75rem;
-  padding: 1.25rem 1.5rem;
-  box-shadow: 0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.03);
+.ebid-field-dropdown .sila-dropdown__field,
+.ebid-cell-dropdown .sila-dropdown__field {
+  border-color: var(--sila-border-strong);
+  border-radius: var(--sila-radius);
 }
 
-.ebid-qa-section-header {
-  padding-bottom: 1.25rem;
+.ebid-field-dropdown .sila-dropdown__field {
+  min-height: var(--sila-control-height);
+  padding: 0 var(--sila-space-3);
 }
 
-.ebid-qa-section-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #0f172a;
-  line-height: 1.5rem;
-  padding: 0 0 0.25rem 0;
+.ebid-field-dropdown .sila-dropdown__input {
+  height: calc(var(--sila-control-height) - 0.125rem);
+  font-size: var(--sila-text-md);
 }
 
-.ebid-qa-section-sub {
-  font-size: 0.84375rem;
-  color: #64748b;
-  margin: 0;
+.ebid-cell-dropdown {
+  width: 7.75rem;
 }
 
-.ebid-qa-supplier-card {
-  background: #ffffff;
-  border: 0.0625rem solid #e2e8f0;
-  border-radius: 0.75rem;
-  padding: 1.25rem;
-  box-shadow: 0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.02);
+.ebid-cell-dropdown .sila-dropdown__field {
+  min-height: var(--sila-control-height-sm);
+  padding: 0 var(--sila-space-2);
 }
 
-.ebid-qa-supplier-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding-bottom: 1rem;
-}
-
-.ebid-qa-supplier-left {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-.ebid-qa-supplier-avatar {
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 50%;
-  background: #2563eb;
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.875rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.ebid-qa-supplier-name {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #1e293b;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ebid-qa-supplier-badge {
-  flex-shrink: 0;
-  background: #f1f5f9;
-  color: #475569;
-  border: 0.0625rem solid #e2e8f0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.75rem;
-  border-radius: var(--sila-radius-full);
-  white-space: nowrap;
-}
-
-.ebid-qa-supplier-badge.is-complete {
-  background: #ecfdf5;
-  color: #059669;
-  border-color: #a7f3d0;
-}
-
-.ebid-qa-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-}
-
-.ebid-qa-item {
-  background: #ffffff;
-  border: 0.0625rem solid #f1f5f9;
-  border-radius: 0.5rem;
-  padding: 0.875rem 1rem;
-}
-
-.ebid-qa-question-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.625rem;
-  padding-bottom: 0.5rem;
-}
-
-.ebid-qa-question-left {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  min-width: 0;
-}
-
-.ebid-qa-index {
-  font-weight: 700;
-  color: #2563eb;
-  font-size: 0.84375rem;
-  flex-shrink: 0;
-}
-
-.ebid-qa-question-text {
-  font-weight: 600;
-  color: #1e293b;
-  font-size: 0.875rem;
-  word-break: break-word;
-}
-
-.ebid-qa-tags {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  flex-shrink: 0;
-}
-
-.ebid-qa-type-badge,
-.ebid-qa-req-badge {
-  font-size: 0.71875rem;
-  font-weight: 600;
-  padding: 0.125rem 0.625rem;
-  border-radius: 0.375rem;
-  white-space: nowrap;
-}
-
-.ebid-qa-type-badge {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.ebid-qa-req-badge {
-  background: #fef2f2;
-  color: #ef4444;
-}
-
-.ebid-qa-answer-box {
-  background: #f8fafc;
-  border-left: 0.1875rem solid #2563eb;
-  border-radius: 0 0.5rem 0.5rem 0;
-  padding: 0.75rem 1rem;
-  color: #334155;
-  font-size: 0.84375rem;
-  line-height: 1.5;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.ebid-qa-input {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 0.0625rem solid #cbd5e1;
-  border-radius: 0.375rem;
-  font-size: 0.8125rem;
-  color: #0f172a;
-  background: #ffffff;
-  box-sizing: border-box;
-}
-
-.ebid-qa-input:focus {
-  outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 0.1875rem rgba(37, 99, 235, 0.15);
-}
-
-.ebid-qa-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.25rem;
-}
-
-.ebid-qa-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8125rem;
-  color: #334155;
-  cursor: pointer;
-}
-
-.ebid-qa-file-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4375rem;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ebid-qa-file-name svg {
-  width: 0.9375rem;
-  height: 0.9375rem;
-  flex-shrink: 0;
-  color: #2563eb;
-}
-
-.ebid-qa-file-btn {
-  flex-shrink: 0;
-  background: #ffffff;
-  border: 0.0625rem solid #2563eb;
-  color: #2563eb;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.3125rem 0.75rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-}
-
-.ebid-qa-file-btn:hover {
-  background: #eff6ff;
-}
-
-@media (max-width: 48rem) {
-  .ebid-qa-section {
-    padding: 1rem;
-  }
-
-  .ebid-qa-supplier-card {
-    padding: 1rem;
-  }
-
-  .ebid-qa-question-row {
-    flex-wrap: wrap;
-  }
-}
-
-/* The Chat button sits on the header's blue gradient, so keep it solid white. */
-.ebid-main .pud-modal-meta .ebid-chat-btn {
-  background: #ffffff;
-  border-color: #ffffff;
-  color: #2f6feb;
+.ebid-cell-dropdown .sila-dropdown__input {
+  height: calc(var(--sila-control-height-sm) - 0.125rem);
+  font-size: var(--sila-text-sm);
 }

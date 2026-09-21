@@ -1718,42 +1718,6 @@ export interface RfqTermsConditionStatusDto {
   attachments: RfqAssetAttachmentDto[];
 }
 
-export interface RfqEsignStatusDto {
-  supplierId: string;
-  supplierName: string;
-  attachments: RfqAssetAttachmentDto[];
-}
-
-/**
- * The buyer's terms & conditions status, as seen internally by the supplier.
- */
-export const fetchInternalRfqTermsCondition = async (
-  rfqId: string
-): Promise<RfqTermsConditionStatusDto[] | ErrorResponseDto> => {
-  try {
-    const response = await supplierInstance.get('/api/v1/supplier/internal/rfq-terms-condition', {
-      params: { rfqId },
-    });
-    return response.data;
-  } catch (error: any) {
-    if (error.response?.status === 401) {
-      (window as any).handleUnauthorized?.();
-      return {
-        statusCode: 401,
-        message: 'Unauthorized',
-        description: 'You are not authorized to access this resource. Please login again.',
-      };
-    }
-    if (error.response && error.response.data) {
-      return error.response.data;
-    }
-    return {
-      statusCode: 500,
-      message: error.message || 'Failed to fetch terms & conditions status.',
-      description: '',
-    };
-  }
-};
 
 /**
  * Supplier's acceptance/rejection status of the buyer's terms & conditions.
@@ -1778,34 +1742,6 @@ export const updateBuyerTermsConditionStatus = async (rfqId: string, status: str
     return {
       statusCode: 500,
       message: error.message || 'Failed to update buyer terms & conditions status.',
-    };
-  }
-};
-
-export const fetchInternalRfqEsign = async (
-  rfqId: string
-): Promise<RfqEsignStatusDto[] | ErrorResponseDto> => {
-  try {
-    const response = await supplierInstance.get('/api/v1/supplier/internal/rfq-esign', {
-      params: { rfqId },
-    });
-    return response.data;
-  } catch (error: any) {
-    if (error.response?.status === 401) {
-      (window as any).handleUnauthorized?.();
-      return {
-        statusCode: 401,
-        message: 'Unauthorized',
-        description: 'You are not authorized to access this resource. Please login again.',
-      };
-    }
-    if (error.response && error.response.data) {
-      return error.response.data;
-    }
-    return {
-      statusCode: 500,
-      message: error.message || 'Failed to fetch e-signature status.',
-      description: '',
     };
   }
 };

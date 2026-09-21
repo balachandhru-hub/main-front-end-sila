@@ -291,7 +291,7 @@
 .vx-row-between {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: var(--sila-space-3);
     padding: var(--sila-space-1) 0 var(--sila-space-5);
 }
