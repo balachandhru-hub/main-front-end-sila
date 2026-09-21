@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Button,
+  Dropdown,
   EmptyState,
   Loader,
   PageHeader,
@@ -8,6 +9,7 @@ import {
   ToastContainer,
   toastService as toast,
 } from '@vosox/shared-ui';
+import type { DropdownValue } from '@vosox/shared-ui';
 import { createBusinessUser, getOrganizationUsers } from './api/departmentcostapi';
 import { Country } from 'country-state-city';
 import { FaEye, FaEyeSlash, FaPlus, FaTimes, FaUsers, FaExclamationCircle } from 'react-icons/fa';
@@ -49,6 +51,12 @@ const UserAdmin: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [users, setUsers] = useState<BusinessUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState<DropdownValue | null>(null);
+
+  const countryOptions = useMemo(
+    () => Country.getAllCountries().map((c) => ({ name: c.name, value: c.isoCode })),
+    []
+  );
 
   // Fetch real users on mount
   useEffect(() => {
@@ -120,6 +128,7 @@ const UserAdmin: React.FC = () => {
     setError(null);
     setShowPassword(false);
     setShowConfirmPassword(false);
+    setSelectedCountry(null);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -473,24 +482,17 @@ const UserAdmin: React.FC = () => {
                 </div>
 
                 <div className="user-admin-form-group">
-                  <label htmlFor="ua-country" className="user-admin-label">
-                    Country <span className="sila-required" aria-hidden="true">*</span>
-                  </label>
-                  <select
-                    id="ua-country"
-                    name="country"
-                    value={formData.country}
-                    onChange={handleInputChange}
-                    className="user-admin-input user-admin-select"
-                    aria-required="true"
-                  >
-                    <option value="">Select Country</option>
-                    {Country.getAllCountries().map((c) => (
-                      <option key={c.isoCode} value={c.isoCode}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Dropdown
+                    label="Country"
+                    isRequired
+                    placeholder="Select Country"
+                    options={countryOptions}
+                    value={selectedCountry}
+                    onChange={(val) => {
+                      setSelectedCountry(val);
+                      setFormData((prev) => ({ ...prev, country: val?.value || '' }));
+                    }}
+                  />
                 </div>
 
                 <div className="user-admin-form-group">

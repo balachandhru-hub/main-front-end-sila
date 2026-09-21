@@ -30,11 +30,11 @@ const ROLE_IDS = {
   BUYER_ADMIN: 'c95f5a1b-4aec-4647-9328-895a58193ec4',
 } as const;
 
-const CheckIcon = () => (
-  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M4 12.5l5 5L20 6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
+// const CheckIcon = () => (
+//   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+//     <path d="M4 12.5l5 5L20 6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+//   </svg>
+// );
 
 interface LoginProps {
   onLoginSuccess?: (
@@ -59,7 +59,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
   const [role, setRole] = useState<Role>('supplier');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  // const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -254,7 +254,7 @@ if (claims && claims.roleId) {
                   </div>
 
                   <div className="vx-row-between">
-                    <label className="vx-checkbox">
+                    {/* <label className="vx-checkbox">
                       <input
                         type="checkbox"
                         className="vx-checkbox-input"
@@ -268,7 +268,7 @@ if (claims && claims.roleId) {
                         {rememberMe && <CheckIcon />}
                       </span>
                       Remember me
-                    </label>
+                    </label> */}
                     <a href="#" className="vx-link" onClick={(e) => e.preventDefault()}>
                       Forgot Password?
                     </a>

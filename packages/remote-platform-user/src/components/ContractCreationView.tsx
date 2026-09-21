@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { fetchBuyerAsset } from "../api/platformApi";
+import { fetchReferenceList } from "../api/masterdataApi";
 import { Button } from "@vosox/shared-ui";
 import "./ContractCreationView.css";
 
@@ -36,6 +37,31 @@ function nowLabel() {
     ", " +
     now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
   );
+}
+
+const MIME_BY_EXTENSION: Record<string, string> = {
+  pdf: "application/pdf",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  txt: "text/plain",
+  csv: "text/csv",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+};
+
+// The asset API's contentType can be missing, generic (octet-stream) or a bare type like "pdf",
+// so fall back to the file type / file extension.
+function resolveMimeType(contentType: string | undefined, fileName: string): string {
+  if (contentType && contentType.includes("/") && contentType !== "application/octet-stream") {
+    return contentType;
+  }
+  const extension = (contentType || fileName.split(".").pop() || "").toLowerCase();
+  return MIME_BY_EXTENSION[extension] || MIME_BY_EXTENSION[fileName.split(".").pop()?.toLowerCase() || ""] || "application/octet-stream";
 }
 
 export interface ContractCreationViewProps {
@@ -106,6 +132,7 @@ interface ContractState {
   tcDraft: string;
   buyerFinalAccepted: boolean;
   supplierFinalAccepted: boolean;
+  supplierFinalRejected?: boolean;
   buyerSigned: boolean;
   supplierSigned: boolean;
   buyerSignDetails?: SignDetails | null;
@@ -242,6 +269,13 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const isSupplier = role === "supplier";
   const rfqId: string | undefined = rfq?.rfqId || rfq?.id || (rfq as any)?._id;
 
+  // Supplier role: the supplier's own Terms & Conditions and e-signature state, as returned by the supplier's rfq-by-id.
+  // Read once so the accepted status, T&C documents and e-signature survive leaving and reopening the contract.
+  const supplierHasOwnTc = isSupplier && (rfq as any)?.supplierTermsAndCondition === true;
+  const supplierOwnTcDocs: RfqAssetAttachment[] = isSupplier ? (rfq as any)?.supplierTermsConditionDocuments || [] : [];
+  const supplierHasSigned = isSupplier && ((rfq as any)?.eSignDocuments?.length ?? 0) > 0;
+  const supplierAcceptedBuyerTc = isSupplier && (rfq as any)?.buyerTermsAndConditionAccepted === true;
+
   // Real terms-condition / e-sign status per supplier, sourced from the RFQ payload
   // (buyer's rfq-by-id already includes it) and refreshed via the dedicated status endpoints.
   const [termsConditions, setTermsConditions] = useState<TermsConditionStatusEntry[]>(
@@ -285,13 +319,17 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
   const [busyAssetId, setBusyAssetId] = useState<string | null>(null);
 
-  // Downloads the asset, or with `preview` opens it in a new tab (types the browser can't render download instead).
+  // Downloads the asset, or with `preview` opens it in a new tab (the browser itself downloads types it can't display, e.g. Excel).
   const handleDownloadAsset = async (assetId: string, defaultName: string = "Document", preview: boolean = false) => {
     setBusyAssetId(assetId);
+    // Open the tab right away, while still inside the click, so the browser doesn't block it after the fetch below.
+    const previewTab = preview ? window.open("", "_blank") : null;
+    if (previewTab) previewTab.opener = null;
     try {
       const res = await fetchBuyerAsset(assetId);
       if (res && "fileBytes" in res && res.fileBytes) {
-        const mime = (res as any).contentType || "application/pdf";
+        const fileName = (res as any).fileName || defaultName;
+        const mime = resolveMimeType((res as any).contentType || (res as any).fileType, fileName);
         const base64Str = (res as any).fileBytes.includes(",") ? (res as any).fileBytes.split(",")[1] : (res as any).fileBytes;
         const byteCharacters = atob(base64Str);
         const byteNumbers = new Array(byteCharacters.length);
@@ -302,27 +340,67 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         const blob = new Blob([byteArray], { type: mime });
         const url = URL.createObjectURL(blob);
         if (preview) {
-          window.open(url, "_blank", "noopener,noreferrer");
+          if (previewTab) {
+            previewTab.location.href = url;
+          } else {
+            window.open(url, "_blank", "noopener,noreferrer");
+          }
           setTimeout(() => URL.revokeObjectURL(url), 60000);
         } else {
           const a = document.createElement("a");
           a.href = url;
-          a.download = (res as any).fileName || defaultName;
+          a.download = fileName;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
         }
       } else {
+        previewTab?.close();
         alert("Document file content not available for download.");
       }
     } catch (err) {
+      previewTab?.close();
       console.error("Failed to download document:", err);
       alert(preview ? "Unable to preview document." : "Unable to download document.");
     } finally {
       setBusyAssetId(null);
     }
   };
+
+  const renderTermsDocs = (docs: RfqAssetAttachment[]) => (
+    <div className="contract-tc-docs">
+      {docs.map((doc, idx) => {
+        const docName = doc.fileName || doc.assetName || `Terms_Document_${idx + 1}`;
+        return (
+          <div key={doc.id || idx} className="contract-tc-doc">
+            <span className="contract-doc-icon">📎</span>
+            <span className="contract-doc-name">{docName}</span>
+            {doc.id && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadAsset(doc.id, docName, true)}
+                  disabled={busyAssetId === doc.id}
+                  className="contract-btn contract-btn--outline contract-btn--xs"
+                >
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadAsset(doc.id, docName)}
+                  disabled={busyAssetId === doc.id}
+                  className="contract-btn contract-btn--soft contract-btn--xs"
+                >
+                  Download
+                </button>
+              </>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 
   // Determine awarded suppliers
   const awardedSupplierIds = useMemo(() => {
@@ -410,7 +488,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         startDate: "2026-09-15",
         endDate: "2027-09-14",
         dateError: false,
-        step: isSupplier ? "terms" : "details",
+        step: isSupplier ? (supplierHasSigned || (supplierHasOwnTc && supplierOwnTcDocs.length > 0) ? "sign" : "terms") : "details",
         sent: isSupplier ? true : false,
         tcContent:
           "1. Payment Terms: 45 days from invoice date.\n2. Delivery: Within 30 days of purchase order issuance.\n3. Warranty: 12 months standard warranty on all items from date of delivery.\n4. Penalty: 1% of order value per week of delay, capped at maximum 10%.",
@@ -419,9 +497,9 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         tcEditorOpen: false,
         tcDraft: "",
         buyerFinalAccepted: isSupplier ? true : false,
-        supplierFinalAccepted: false,
+        supplierFinalAccepted: supplierHasOwnTc || supplierAcceptedBuyerTc,
         buyerSigned: false,
-        supplierSigned: false,
+        supplierSigned: supplierHasSigned,
         messages: isSupplier
           ? [
               {
@@ -458,11 +536,25 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
   // Supplier Terms & Conditions Document Upload State
   const [supplierTcFile, setSupplierTcFile] = useState<File | null>(null);
-  const [supplierTcRadioChoice, setSupplierTcRadioChoice] = useState<"yes" | "no">("yes");
+  // "Is there any Supplier Terms & Conditions?" yes = supplier uploads their own (sent as true), no = proceed with the buyer's (sent as false).
+  const [hasSupplierTcChoice, setHasSupplierTcChoice] = useState<"yes" | "no">("no");
   const [includeSupplierTc, setIncludeSupplierTc] = useState(true);
   const [uploadingSupplierTc, setUploadingSupplierTc] = useState(false);
   const [supplierTcStatusMsg, setSupplierTcStatusMsg] = useState<string | null>(null);
   const supplierTcStatusMsgClass = `contract-status-msg${supplierTcStatusMsg?.includes("Success") ? " contract-status-msg--success" : ""}`;
+
+  // The SUPPLIER row of the ENTITY_TYPE reference list: its id is the entityId of the supplier's uploaded assets
+  // (terms & conditions, e-signature).
+  const getSupplierEntityType = async () => {
+    const entityTypes = await fetchReferenceList(["ENTITY_TYPE"]);
+    const supplierEntity = Array.isArray(entityTypes)
+      ? entityTypes.find((e) => e.key === "SUPPLIER")
+      : undefined;
+    if (!supplierEntity) {
+      throw new Error("SUPPLIER entity type not found.");
+    }
+    return { entityId: supplierEntity.id as string, entityType: supplierEntity.key as string };
+  };
 
   const handleUploadSupplierTcFileDirect = async (id: string) => {
     if (!supplierTcFile || !onUploadSupplierTerms) return;
@@ -481,20 +573,19 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       });
 
       const rfqId = rfq?.rfqId || rfq?.id || (rfq as any)?._id || id;
+      const { entityId, entityType } = await getSupplierEntityType();
       const docAsset = {
-        entityType: "SUPPLIER_TERMS_CONDITION",
-        entityId: rfqId,
+        entityId,
+        entityType,
         assetType: "SUPPLIER_TERMS_CONDITION",
-        fileBytes: fileBytes,
         fileName: supplierTcFile.name,
-        contentType: supplierTcFile.type || "application/pdf",
-        isSingletonAsset: true,
-        id: rfqId,
+        isSingletonAsset: false,
+        fileBytes: fileBytes,
       };
 
       const res = await onUploadSupplierTerms({
         rfqId: rfqId,
-        termsAndCondition: false,
+        termsAndCondition: true,
         documents: [docAsset],
       });
 
@@ -504,12 +595,21 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         return;
       }
 
+      if (onAcceptBuyerTerms && rfqId) {
+        try {
+          await onAcceptBuyerTerms(rfqId, "REJECT");
+        } catch (err) {
+          console.error("Failed to update buyer terms status to REJECT:", err);
+        }
+      }
+
       setSupplierTcStatusMsg("Success! Supplier terms uploaded & submitted.");
       const c = contracts[id];
       if (c) {
         const timeStr = nowLabel();
         updateContract(id, {
           supplierFinalAccepted: true,
+          supplierFinalRejected: false,
           tcEdited: true,
           tcLastUpdatedAt: timeStr,
           messages: [
@@ -550,35 +650,57 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const buyerTermsDocs: RfqAssetAttachment[] =
     (rfq as any)?.termsConditionDocuments || (rfq as any)?.termsConditionDocument || [];
 
-  // termsAndCondition:false is also what the API returns before the supplier has answered, so only
-  // treat it as "No" (supplier uploaded their own terms) once the entry has attachments.
+  // termsAndCondition means "the supplier has their own Terms & Conditions".
+  // Buyer: once the supplier's entry is known (true or false) there is no terms review card, the contract goes straight to signing.
+  // Supplier: only when they have submitted their own documents.
   const tcDeclined =
-    activeTcEntry?.termsAndCondition === false && (activeTcEntry.attachments?.length ?? 0) > 0;
+    (!isSupplier && activeTcEntry !== undefined) ||
+    (supplierHasOwnTc && supplierOwnTcDocs.length > 0);
 
-  // When the supplier declined the buyer's terms, skip the terms negotiation card & jump straight to signing.
-  // When they accepted, mark both parties accepted since the Accept buttons are hidden for that state.
+  // Skip the terms negotiation card & jump straight to signing.
   useEffect(() => {
-    if (!activeContract) return;
-    if (tcDeclined) {
-      if (activeContract.step === "terms" || activeContract.step === "details") {
-        updateContract(activeContract.supplierId, {
-          buyerFinalAccepted: true,
-          supplierFinalAccepted: true,
-          step: activeContract.buyerSigned && activeContract.supplierSigned ? "completed" : "sign",
-        });
-      }
-    } else if (
-      activeTcEntry?.termsAndCondition === true &&
-      activeContract.step === "terms" &&
-      !(activeContract.buyerFinalAccepted && activeContract.supplierFinalAccepted)
-    ) {
+    if (!activeContract || !tcDeclined) return;
+    if (activeContract.step === "terms" || activeContract.step === "details") {
       updateContract(activeContract.supplierId, {
         buyerFinalAccepted: true,
         supplierFinalAccepted: true,
+        step: activeContract.buyerSigned && activeContract.supplierSigned ? "completed" : "sign",
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeContract?.step, activeContract?.supplierId, tcDeclined, activeTcEntry?.termsAndCondition]);
+  }, [activeContract?.step, activeContract?.supplierId, tcDeclined]);
+
+  // Buyer: a supplier whose e-signature has been uploaded has signed, so show them as signed / accepted.
+  const supplierEsignUploaded = !isSupplier && (activeEsignEntry?.attachments?.length ?? 0) > 0;
+  useEffect(() => {
+    if (!activeContract || !supplierEsignUploaded || activeContract.supplierSigned) return;
+    updateContract(activeContract.supplierId, {
+      supplierSigned: true,
+      step: activeContract.buyerSigned ? "completed" : "sign",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supplierEsignUploaded, activeContract?.supplierId, activeContract?.supplierSigned]);
+
+  // Supplier T&C documents to list: the supplier's own (supplier role), or those of a supplier who has
+  // their own T&C (buyer role). A supplier without their own T&C has nothing to show.
+  const supplierTcDocsToShow: RfqAssetAttachment[] = isSupplier
+    ? supplierOwnTcDocs
+    : activeTcEntry?.termsAndCondition === true
+      ? activeTcEntry.attachments || []
+      : [];
+
+  const showTermsAcceptanceCard =
+    !tcDeclined &&
+    (activeContract?.step === "terms" ||
+      activeContract?.step === "completed" ||
+      (activeContract?.step === "sign" && !(activeContract.buyerSigned && activeContract.supplierSigned)));
+
+  // Supplier Accept / Reject of the buyer's Terms & Conditions, shown in the "Contract Terms & Conditions" card.
+  const showBuyerTermsDecision =
+    isSupplier &&
+    showTermsAcceptanceCard &&
+    activeTcEntry?.termsAndCondition !== true &&
+    hasSupplierTcChoice === "no";
 
   // Helper calculation for contract value per supplier
   const getContractValue = (id: string) => {
@@ -706,15 +828,14 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         });
 
         const rfqId = rfq?.rfqId || rfq?.id || (rfq as any)?._id || id;
+        const { entityId, entityType } = await getSupplierEntityType();
         const docAsset = {
-          entityType: "SUPPLIER_TERMS_CONDITION",
-          entityId: rfqId,
+          entityId,
+          entityType,
           assetType: "SUPPLIER_TERMS_CONDITION",
-          fileBytes: fileBytes,
           fileName: supplierTcFile.name,
-          contentType: supplierTcFile.type || "application/pdf",
-          isSingletonAsset: true,
-          id: rfqId,
+          isSingletonAsset: false,
+          fileBytes: fileBytes,
         };
 
         const res = await onUploadSupplierTerms({
@@ -779,37 +900,51 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
   const handleSupplierAcceptFinal = async (id: string) => {
     const rfqId = rfq?.rfqId || rfq?.id || (rfq as any)?._id || id;
-    if (onUploadSupplierTerms && rfqId) {
-      setUploadingSupplierTc(true);
-      setSupplierTcStatusMsg(null);
-      try {
-        const res = await onUploadSupplierTerms({
-          rfqId: rfqId,
-          termsAndCondition: true,
-        });
+    setUploadingSupplierTc(true);
+    setSupplierTcStatusMsg(null);
+    try {
+      if (onAcceptBuyerTerms && rfqId) {
+        const res = await onAcceptBuyerTerms(rfqId, "APPROVE");
         if (res && "statusCode" in res && res.statusCode >= 400) {
           setSupplierTcStatusMsg(res.message || "Failed to accept buyer terms & conditions.");
           setUploadingSupplierTc(false);
           return;
         }
-        setSupplierTcStatusMsg("Success! Buyer terms & conditions accepted.");
-      } catch (err: any) {
-        setSupplierTcStatusMsg(err?.message || "Failed to accept terms.");
-        setUploadingSupplierTc(false);
-        return;
-      } finally {
-        setUploadingSupplierTc(false);
       }
+      setSupplierTcStatusMsg("Success! Buyer terms & conditions accepted.");
+      await refreshTermsConditions();
+      updateContract(id, { supplierFinalAccepted: true, supplierFinalRejected: false });
+    } catch (err: any) {
+      console.error("Failed to accept buyer terms & conditions:", err);
+      setSupplierTcStatusMsg(err?.message || "Failed to accept terms.");
+    } finally {
+      setUploadingSupplierTc(false);
     }
-    if (onAcceptBuyerTerms && rfqId) {
-      try {
-        await onAcceptBuyerTerms(rfqId, "ACCEPTED");
-      } catch (err) {
-        console.error("Failed to update buyer terms & conditions status:", err);
+  };
+
+  const handleSupplierRejectFinal = async (id: string) => {
+    const rfqId = rfq?.rfqId || rfq?.id || (rfq as any)?._id || id;
+    setUploadingSupplierTc(true);
+    setSupplierTcStatusMsg(null);
+    try {
+      if (onAcceptBuyerTerms && rfqId) {
+        const res = await onAcceptBuyerTerms(rfqId, "REJECT");
+        if (res && "statusCode" in res && res.statusCode >= 400) {
+          setSupplierTcStatusMsg(res.message || "Failed to reject buyer terms & conditions.");
+          setUploadingSupplierTc(false);
+          return;
+        }
       }
+      setSupplierTcStatusMsg("Buyer terms & conditions rejected. You can upload custom terms & conditions below.");
+      setHasSupplierTcChoice("yes");
+      await refreshTermsConditions();
+      updateContract(id, { supplierFinalAccepted: false, supplierFinalRejected: true });
+    } catch (err: any) {
+      console.error("Failed to reject buyer terms & conditions:", err);
+      setSupplierTcStatusMsg(err?.message || "Failed to reject terms.");
+    } finally {
+      setUploadingSupplierTc(false);
     }
-    await refreshTermsConditions();
-    updateContract(id, { supplierFinalAccepted: true });
   };
 
   const handleProceedToSigning = (id: string) => {
@@ -862,17 +997,16 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
           ? (drawnSignatureData.includes(",") ? drawnSignatureData.split(",")[1] : drawnSignatureData)
           : "";
         const nameSlug = (signerNameInput.trim() || supplierName || "supplier").toLowerCase().replace(/\s+/g, "_");
-        const payload = {
-          entityType: "SupplierEsign",
-          entityId: targetRfqId,
-          assetType: "SupplierEsign",
-          fileBytes: rawBytes,
-          fileName: `${nameSlug}_signature.png`,
-          contentType: "image/png",
-          isSingletonAsset: true,
-          id: targetRfqId,
-        };
         try {
+          const { entityId, entityType } = await getSupplierEntityType();
+          const payload = {
+            entityId,
+            entityType,
+            assetType: "ESIGN",
+            fileName: `${nameSlug}_signature.png`,
+            isSingletonAsset: false,
+            fileBytes: rawBytes,
+          };
           await onUploadSupplierEsign(targetRfqId, payload);
           await refreshESigns();
         } catch (err) {
@@ -959,17 +1093,16 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         reader.onload = async () => {
           const result = reader.result as string;
           const fileBytes = result.includes(",") ? result.split(",")[1] : result;
-          const payload = {
-            entityType: "SupplierEsign",
-            entityId: targetRfqId,
-            assetType: "SupplierEsign",
-            fileBytes: fileBytes,
-            fileName: fileObj.name || "Signed_Contract_Supplier.pdf",
-            contentType: fileObj.type || "application/pdf",
-            isSingletonAsset: true,
-            id: targetRfqId,
-          };
           try {
+            const { entityId, entityType } = await getSupplierEntityType();
+            const payload = {
+              entityId,
+              entityType,
+              assetType: "ESIGN",
+              fileName: fileObj.name || "Signed_Contract_Supplier.pdf",
+              isSingletonAsset: false,
+              fileBytes: fileBytes,
+            };
             await onUploadSupplierEsign(targetRfqId, payload);
             await refreshESigns();
           } catch (err) {
@@ -1333,39 +1466,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               <div className="contract-tc-name">
                 Contract Terms &amp; Conditions
               </div>
-              {buyerTermsDocs.length > 0 ? (
-                <div className="contract-tc-docs">
-                  {buyerTermsDocs.map((doc, idx) => {
-                    const docName = doc.fileName || doc.assetName || `Terms_Document_${idx + 1}`;
-                    return (
-                      <div key={doc.id || idx} className="contract-tc-doc">
-                        <span className="contract-doc-icon">📎</span>
-                        <span className="contract-doc-name">{docName}</span>
-                        {doc.id && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => handleDownloadAsset(doc.id, docName, true)}
-                              disabled={busyAssetId === doc.id}
-                              className="contract-btn contract-btn--outline contract-btn--xs"
-                            >
-                              Preview
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDownloadAsset(doc.id, docName)}
-                              disabled={busyAssetId === doc.id}
-                              className="contract-btn contract-btn--soft contract-btn--xs"
-                            >
-                              Download
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
+              {buyerTermsDocs.length > 0 ? renderTermsDocs(buyerTermsDocs) : (
                 <div className="contract-tc-file">
                   Terms_and_Conditions.pdf
                 </div>
@@ -1379,6 +1480,11 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                     : "Fetched from RFQ"}
                 </span>
               </div>
+              {showBuyerTermsDecision && supplierTcStatusMsg && (
+                <div className={supplierTcStatusMsgClass}>
+                  {supplierTcStatusMsg}
+                </div>
+              )}
             </div>
 
             <div className="contract-actions">
@@ -1402,8 +1508,52 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               >
                 Proposed Edits
               </button>
+              {showBuyerTermsDecision && (
+                <>
+                  {!activeContract.supplierFinalRejected && (
+                    <button
+                      type="button"
+                      onClick={() => handleSupplierAcceptFinal(activeContractId)}
+                      disabled={uploadingSupplierTc || activeContract.supplierFinalAccepted}
+                      className={`contract-btn contract-btn--md ${activeContract.supplierFinalAccepted ? "contract-btn--accepted" : "contract-btn--accept"}`}
+                    >
+                      {uploadingSupplierTc && !activeContract.supplierFinalAccepted
+                        ? "Submitting..."
+                        : activeContract.supplierFinalAccepted
+                          ? "✓ Supplier Accepted"
+                          : "Accept"}
+                    </button>
+                  )}
+                  {!activeContract.supplierFinalAccepted && (
+                    <button
+                      type="button"
+                      onClick={() => handleSupplierRejectFinal(activeContractId)}
+                      disabled={uploadingSupplierTc || activeContract.supplierFinalRejected}
+                      className={`contract-btn contract-btn--md ${activeContract.supplierFinalRejected ? "contract-btn--rejected" : "contract-btn--danger"}`}
+                    >
+                      {uploadingSupplierTc && !activeContract.supplierFinalRejected
+                        ? "Submitting..."
+                        : activeContract.supplierFinalRejected
+                          ? "✕ Supplier Rejected"
+                          : "Reject"}
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
+
+          {/* Supplier's own Terms & Conditions documents, from the supplier's rfq-by-id */}
+          {supplierTcDocsToShow.length > 0 && (
+            <div className="contract-tc-card">
+              <div>
+                <div className="contract-tc-name">
+                  Supplier Terms &amp; Conditions
+                </div>
+                {renderTermsDocs(supplierTcDocsToShow)}
+              </div>
+            </div>
+          )}
 
           {/* Edit Terms Modal Overlay */}
           {activeContract.tcEditorOpen && (
@@ -1478,10 +1628,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
           )}
 
           {/* Action Step: Terms Negotiation & Acceptance */}
-          {!tcDeclined &&
-            (activeContract.step === "terms" ||
-            activeContract.step === "completed" ||
-            (activeContract.step === "sign" && !(activeContract.buyerSigned && activeContract.supplierSigned))) && (
+          {showTermsAcceptanceCard && (
             <div className="contract-step-card">
               <div className="contract-subsection-title contract-subsection-title--tight">
                 Contract Terms Review &amp; Acceptance
@@ -1559,65 +1706,47 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   <div>
                     {/* Radio Question Prompt */}
                     <div className="contract-panel-heading">
-                      Can we proceed with the Buyer's Terms &amp; Conditions?
+                      Is there any Supplier Terms &amp; Conditions?
                     </div>
 
                     <div className="contract-radio-group">
                       <label className="contract-radio-label">
                         <input
                           type="radio"
-                          name={`acceptBuyerTcRadio_${activeContractId}`}
+                          name={`hasSupplierTcRadio_${activeContractId}`}
                           value="yes"
-                          checked={supplierTcRadioChoice === "yes"}
+                          checked={hasSupplierTcChoice === "yes"}
                           onChange={() => {
-                            setSupplierTcRadioChoice("yes");
+                            setHasSupplierTcChoice("yes");
                             setSupplierTcStatusMsg(null);
                           }}
                         />
-                        Yes (Proceed with Buyer Terms &amp; Conditions)
+                        Yes (Upload Supplier Terms &amp; Conditions)
                       </label>
                       <label className="contract-radio-label">
                         <input
                           type="radio"
-                          name={`acceptBuyerTcRadio_${activeContractId}`}
+                          name={`hasSupplierTcRadio_${activeContractId}`}
                           value="no"
-                          checked={supplierTcRadioChoice === "no"}
+                          checked={hasSupplierTcChoice === "no"}
                           onChange={() => {
-                            setSupplierTcRadioChoice("no");
+                            setHasSupplierTcChoice("no");
                             setSupplierTcStatusMsg(null);
                           }}
                         />
-                        No (Upload Supplier Terms &amp; Conditions)
+                        No (Proceed with Buyer Terms &amp; Conditions)
                       </label>
                     </div>
 
-                    {/* IF YES: Show Accept Terms button */}
-                    {supplierTcRadioChoice === "yes" && (
-                      <div>
-                        <div className="contract-inline-actions">
-                          <button
-                            type="button"
-                            onClick={() => handleSupplierAcceptFinal(activeContractId)}
-                            disabled={uploadingSupplierTc}
-                            className={`contract-btn contract-btn--lg ${activeContract.supplierFinalAccepted ? "contract-btn--accepted" : "contract-btn--accept"}`}
-                          >
-                            {uploadingSupplierTc
-                              ? "Submitting..."
-                              : activeContract.supplierFinalAccepted
-                                ? "✓ Supplier Accepted"
-                                : "Accept Terms"}
-                          </button>
-                        </div>
-                        {supplierTcStatusMsg && (
-                          <div className={supplierTcStatusMsgClass}>
-                            {supplierTcStatusMsg}
-                          </div>
-                        )}
+                    {/* IF NO: No supplier terms - Accept / Reject of the buyer's terms is in the "Contract Terms & Conditions" card above */}
+                    {hasSupplierTcChoice === "no" && (
+                      <div className="contract-upload-help">
+                        Use Accept or Reject in the Contract Terms &amp; Conditions section above to respond to the buyer's terms.
                       </div>
                     )}
 
-                    {/* IF NO: Show File Upload Card */}
-                    {supplierTcRadioChoice === "no" && (
+                    {/* IF YES: Show File Upload Card - upload sends termsAndCondition=true with the document */}
+                    {hasSupplierTcChoice === "yes" && (
                       <div className="contract-dashed-box contract-dashed-box--inline">
                         <div className="contract-upload-title">
                           Upload Supplier Terms &amp; Conditions Document
@@ -1681,9 +1810,9 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   Buyer — {activeContract.buyerFinalAccepted ? "Accepted ✓" : "Awaiting Acceptance"}
                 </span>
                 <span
-                  className={`contract-accept-status${activeContract.supplierFinalAccepted ? " contract-accept-status--done" : ""}`}
+                  className={`contract-accept-status${activeContract.supplierFinalAccepted ? " contract-accept-status--done" : activeContract.supplierFinalRejected ? " contract-accept-status--rejected" : ""}`}
                 >
-                  Supplier — {activeContract.supplierFinalAccepted ? "Accepted ✓" : "Awaiting Acceptance"}
+                  Supplier — {activeContract.supplierFinalAccepted ? "Accepted ✓" : activeContract.supplierFinalRejected ? "Rejected ✕" : "Awaiting Acceptance"}
                 </span>
               </div>
 
@@ -1709,7 +1838,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
               {/* Terms & conditions didn't require negotiation for this supplier, so surface the
                   implicit acceptance here since the "Contract Terms Review & Acceptance" card was skipped. */}
-              {tcDeclined && (
+              {(isSupplier ? tcDeclined : supplierEsignUploaded) && (
                 <div className="contract-implicit-accept">
                   Supplier — Accepted ✓
                 </div>

@@ -4,7 +4,8 @@ import {
     getMasterApprovalFlows,
     type MasterApprovalFlowDto,
 } from "../api/Buyerapi";
-import { toastService } from "@vosox/shared-ui";
+import { toastService, Dropdown } from "@vosox/shared-ui";
+import type { DropdownValue } from "@vosox/shared-ui";
 import { FaTimes } from "react-icons/fa";
 import "./ItemMasterModal.css";
 
@@ -44,7 +45,8 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
     const [unitOfMeasureMapping, setUnitOfMeasureMapping] = useState("");
     const [subUnit, setSubUnit] = useState("");
     const [microUnit, setMicroUnit] = useState("");
-    const [approvalFlowId, setApprovalFlowId] = useState("");
+    const [selectedApprovalFlow, setSelectedApprovalFlow] = useState<DropdownValue | null>(null);
+    const approvalFlowId = selectedApprovalFlow?.value || "";
     const [comment, setComment] = useState("");
 
     const [approvalFlows, setApprovalFlows] = useState<MasterApprovalFlowDto[]>([]);
@@ -105,7 +107,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
         setUnitOfMeasureMapping("");
         setSubUnit("");
         setMicroUnit("");
-        setApprovalFlowId("");
+        setSelectedApprovalFlow(null);
         setComment("");
         setErrors({});
     };
@@ -508,40 +510,22 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
 
                     {/* Approval Flow */}
                     <div className="item-master-field">
-                        <label htmlFor="item-master-approval-flow">
-                            Approval flow <span className="sila-required" aria-hidden="true">*</span>
-                        </label>
-
-                        <select
-                            id="item-master-approval-flow"
-                            value={approvalFlowId}
-                            disabled={approvalFlowLoading}
-                            aria-invalid={errors.approvalFlowId ? true : undefined}
-                            aria-describedby={errors.approvalFlowId ? "item-master-error-approvalFlowId" : undefined}
-                            className={errors.approvalFlowId ? "item-master-input-error" : ""}
-                            onChange={(e) => {
-                                setApprovalFlowId(e.target.value);
+                        <Dropdown
+                            label="Approval flow"
+                            isRequired
+                            placeholder={approvalFlowLoading ? "Loading approval flows..." : "Select an approval flow"}
+                            options={approvalFlows.map((flow) => ({
+                                name: `${flow.approvalCode} - ${flow.approvalName}`,
+                                value: flow.id,
+                            }))}
+                            value={selectedApprovalFlow}
+                            onChange={(val) => {
+                                setSelectedApprovalFlow(val);
                                 clearFieldError(setErrors, "approvalFlowId");
                             }}
-                        >
-                            <option value="">
-                                {approvalFlowLoading
-                                    ? "Loading approval flows..."
-                                    : "Select an approval flow"}
-                            </option>
-
-                            {approvalFlows.map((flow) => (
-                                <option key={flow.id} value={flow.id}>
-                                    {`${flow.approvalCode} - ${flow.approvalName}`}
-                                </option>
-                            ))}
-                        </select>
-
-                        {errors.approvalFlowId && (
-                            <div className="item-master-error" id="item-master-error-approvalFlowId">
-                                {errors.approvalFlowId}
-                            </div>
-                        )}
+                            isDisable={approvalFlowLoading}
+                            error={errors.approvalFlowId}
+                        />
 
                         {approvalFlowError && (
                             <div className="item-master-field-hint item-master-field-hint-error">
