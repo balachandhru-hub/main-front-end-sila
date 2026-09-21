@@ -506,9 +506,19 @@ export const submitSupplierQuotation = async (
   }
 };
 
-export const fetchSegments = async (): Promise<any[] | ErrorResponseDto> => {
+export const fetchSegments = async (payload?: {
+  pageIndex?: number;
+  pageSize?: number;
+  searchTerm?: string;
+}): Promise<any[] | ErrorResponseDto> => {
   try {
-    const res = await supplierInstance.get(`/api/v1/masterdata/unspsc/segment?pageIndex=1&pageSize=10`);
+    const res = await supplierInstance.get(`/api/v1/masterdata/unspsc/segment`, {
+      params: {
+        pageIndex: payload?.pageIndex ?? 1,
+        pageSize: payload?.pageSize ?? 10,
+        searchTerm: payload?.searchTerm || undefined,
+      },
+    });
     return Array.isArray(res.data) ? res.data : [];
   } catch (error: any) {
     if (error.response?.status === 401) {
@@ -995,7 +1005,7 @@ export const fetchUnits = async (payload?: {
         params: {
           index: payload?.index ?? 0,
           limit: payload?.limit ?? 100,
-          searchTerm: payload?.searchTerm ?? '',
+          searchTerm: payload?.searchTerm || undefined,
         },
       }
     );

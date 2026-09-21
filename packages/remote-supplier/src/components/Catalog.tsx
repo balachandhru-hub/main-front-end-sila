@@ -14,12 +14,14 @@ import {
     fetchSupplierCatalogDetail,
     fetchSupplierAsset,
     fetchUnits,
-    type UnitItem,
     type CatalogDetailResponseItem,
 } from "../api/supplierApi";
 import { isErrorResponse, Button, EmptyState, Loader, Pagination, Dropdown } from '@vosox/shared-ui';
 import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from '@vosox/shared-ui';
-import type { CatalogAssetDto, CatalogDetailDto, SupplierCatalogListItem } from "../dto/supplierDto";
+import type { CatalogAssetDto, CatalogDetailDto, CurrencyItem, SupplierCatalogListItem } from "../dto/supplierDto";
+
+// Page size used by every async (paginated) Dropdown
+const DROPDOWN_PAGE_SIZE = 40;
 
 const toDropdownValue = (value: string): DropdownValue | null =>
     value ? { name: value, value } : null;
@@ -377,47 +379,78 @@ const Catalog: React.FC<CatalogProps> = ({
     const [createCatalogSuccess, setCreateCatalogSuccess] = useState(false);
     const catalogFileInputRef = useRef<HTMLInputElement>(null);
 
-    const [catalogTypeOptions, setCatalogTypeOptions] = useState<Array<{ id: string; key: string }>>([]);
-    const [currencyOptions, setCurrencyOptions] = useState<Array<{ id: string; currencyName: string; sortNumber: number }>>([]);
-    const [loadingCurrencies, setLoadingCurrencies] = useState(false);
-
-    const loadCatalogTypes = async () => {
+    // ---- Async loader for the Catalog Type Dropdown (reference-list API has no paging or search, so search client-side) ----
+    const loadCatalogTypeOptions = async ({ search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
         const types = await fetchMetadataReferenceList(['CATALOG_TYPE']);
-        if (Array.isArray(types)) {
-            setCatalogTypeOptions(types);
-        }
-    };
-
-    const loadCurrencies = async () => {
-        if (currencyOptions.length > 0 || loadingCurrencies) return;
-        setLoadingCurrencies(true);
-        try {
-            const result = await fetchCurrencies({ index: 0, limit: 100 });
-            if (result && 'items' in result && Array.isArray(result.items)) {
-                setCurrencyOptions(result.items);
-            }
-        } catch (error) {
-        } finally {
-            setLoadingCurrencies(false);
-        }
-    };
-
-    // fetchSegments() takes no pagination/search params — the backend always returns
-    // a fixed page (pageIndex=1, pageSize=10), so this loader can only filter that
-    // fixed page client-side; there's no way to page further or search server-side.
-    const loadSegmentOptions = async ({ search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
-        const segments = await fetchSegments();
-        if (!Array.isArray(segments)) {
+        if (!Array.isArray(types)) {
             return { options: [], hasMore: false };
         }
         const searchTerm = search.trim().toLowerCase();
-        const options = segments
-            .filter((seg) => !searchTerm || seg.title.toLowerCase().includes(searchTerm))
-            .map((seg) => ({ name: seg.title, value: String(seg.segment) }));
-        return { options, hasMore: false };
+        return {
+            options: types
+                .filter((opt) => !searchTerm || opt.key.toLowerCase().includes(searchTerm))
+                .map((opt) => ({ name: opt.key, value: opt.key })),
+            hasMore: false,
+        };
     };
 
-    const FAMILY_PAGE_SIZE = 100;
+    // ---- Async paginated loader for the Currency Dropdown (server has no search param, so search client-side) ----
+    // `index` is an offset: 0, then 0 + 40, then 0 + 40 + 40, ...
+    const fetchCurrencyPage = async (index: number): Promise<CurrencyItem[]> => {
+        const result = await fetchCurrencies({ index, limit: DROPDOWN_PAGE_SIZE });
+        return result && 'items' in result && Array.isArray(result.items) ? result.items : [];
+    };
+
+    const loadCurrencyOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        const toOption = (c: CurrencyItem) => ({ name: c.currencyName, value: c.currencyName });
+        const searchTerm = search.trim().toLowerCase();
+
+        if (searchTerm) {
+            // Page through every currency so a match on a later page isn't missed, then filter here
+            const matches: CurrencyItem[] = [];
+            let index = 0;
+            let items: CurrencyItem[];
+            do {
+                items = await fetchCurrencyPage(index);
+                matches.push(...items.filter((c) => c.currencyName.toLowerCase().includes(searchTerm)));
+                index += items.length;
+            } while (items.length === DROPDOWN_PAGE_SIZE);
+            return { options: matches.map(toOption), hasMore: false };
+        }
+
+        const items = await fetchCurrencyPage(page * DROPDOWN_PAGE_SIZE);
+        return { options: items.map(toOption), hasMore: items.length === DROPDOWN_PAGE_SIZE };
+    };
+
+    // ---- Async paginated loader for the Unit of Measure Dropdown (`index` is an offset: 0, 40, 80, ...) ----
+    const loadUnitOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        const result = await fetchUnits({
+            index: page * DROPDOWN_PAGE_SIZE,
+            limit: DROPDOWN_PAGE_SIZE,
+            searchTerm: search.trim() || undefined,
+        });
+        const items = result && 'items' in result && Array.isArray(result.items) ? result.items : [];
+        return {
+            options: items.map((unit) => ({ name: unit.key, value: unit.key })),
+            hasMore: items.length === DROPDOWN_PAGE_SIZE,
+        };
+    };
+
+    // ---- Async paginated loader for the Segment Dropdown (`pageIndex` is an offset: 0, 40, 80, ...) ----
+    const loadSegmentOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        const segments = await fetchSegments({
+            pageIndex: page * DROPDOWN_PAGE_SIZE,
+            pageSize: DROPDOWN_PAGE_SIZE,
+            searchTerm: search.trim() || undefined,
+        });
+        if (!Array.isArray(segments)) {
+            return { options: [], hasMore: false };
+        }
+        return {
+            options: segments.map((seg) => ({ name: seg.title, value: String(seg.segment) })),
+            hasMore: segments.length === DROPDOWN_PAGE_SIZE,
+        };
+    };
 
     // fetchFamilies supports pagination but not a search param, so each page is
     // fetched as-is and filtered client-side before being handed to the Dropdown.
@@ -425,8 +458,8 @@ const Catalog: React.FC<CatalogProps> = ({
         if (!catalogForm.segment) {
             return { options: [], hasMore: false };
         }
-        const pageIndex = page + 1; // Dropdown pages are 0-based; the API is 1-based
-        const families = await fetchFamilies(Number(catalogForm.segment), { pageIndex, pageSize: FAMILY_PAGE_SIZE });
+        const pageIndex = page * DROPDOWN_PAGE_SIZE; // index of the first item on the page: 0, 40, 80, ...
+        const families = await fetchFamilies(Number(catalogForm.segment), { pageIndex, pageSize: DROPDOWN_PAGE_SIZE });
         if (!Array.isArray(families)) {
             return { options: [], hasMore: false };
         }
@@ -434,17 +467,15 @@ const Catalog: React.FC<CatalogProps> = ({
         const options = families
             .filter((fam) => !searchTerm || fam.title.toLowerCase().includes(searchTerm))
             .map((fam) => ({ name: fam.title, value: String(fam.family) }));
-        return { options, hasMore: families.length === FAMILY_PAGE_SIZE };
+        return { options, hasMore: families.length === DROPDOWN_PAGE_SIZE };
     };
-
-    const CLASS_PAGE_SIZE = 100;
 
     const loadClassOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
         if (!catalogForm.family) {
             return { options: [], hasMore: false };
         }
-        const pageIndex = page + 1;
-        const classes = await fetchClassifications(Number(catalogForm.family), { pageIndex, pageSize: CLASS_PAGE_SIZE });
+        const pageIndex = page * DROPDOWN_PAGE_SIZE;
+        const classes = await fetchClassifications(Number(catalogForm.family), { pageIndex, pageSize: DROPDOWN_PAGE_SIZE });
         if (!Array.isArray(classes)) {
             return { options: [], hasMore: false };
         }
@@ -452,17 +483,15 @@ const Catalog: React.FC<CatalogProps> = ({
         const options = classes
             .filter((cls) => !searchTerm || cls.classTitle.toLowerCase().includes(searchTerm))
             .map((cls) => ({ name: cls.classTitle, value: String(cls.class) }));
-        return { options, hasMore: classes.length === CLASS_PAGE_SIZE };
+        return { options, hasMore: classes.length === DROPDOWN_PAGE_SIZE };
     };
-
-    const COMMODITY_PAGE_SIZE = 100;
 
     const loadCommodityOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
         if (!catalogForm.class) {
             return { options: [], hasMore: false };
         }
-        const pageIndex = page + 1;
-        const commodities = await fetchCommodities(Number(catalogForm.class), { pageIndex, pageSize: COMMODITY_PAGE_SIZE });
+        const pageIndex = page * DROPDOWN_PAGE_SIZE;
+        const commodities = await fetchCommodities(Number(catalogForm.class), { pageIndex, pageSize: DROPDOWN_PAGE_SIZE });
         if (!Array.isArray(commodities)) {
             return { options: [], hasMore: false };
         }
@@ -470,7 +499,7 @@ const Catalog: React.FC<CatalogProps> = ({
         const options = commodities
             .filter((com) => !searchTerm || com.commodityTitle.toLowerCase().includes(searchTerm))
             .map((com) => ({ name: com.commodityTitle, value: String(com.commodity) }));
-        return { options, hasMore: commodities.length === COMMODITY_PAGE_SIZE };
+        return { options, hasMore: commodities.length === DROPDOWN_PAGE_SIZE };
     };
 
     const handleSegmentChange = (val: DropdownValue | null) => {
@@ -734,34 +763,6 @@ const Catalog: React.FC<CatalogProps> = ({
         setPunchOutIframeBlocked(false);
     };
 
-    const [unitOptions, setUnitOptions] = useState<UnitItem[]>([]);
-    const [loadingUnits, setLoadingUnits] = useState(false);
-
-    const loadUnits = async () => {
-        if (unitOptions.length > 0 || loadingUnits) return;
-        setLoadingUnits(true);
-        try {
-            const result = await fetchUnits({ index: 0, limit: 100 });
-            if (result && 'items' in result && Array.isArray(result.items)) {
-                setUnitOptions(result.items);
-            }
-        } catch (error) {
-        } finally {
-            setLoadingUnits(false);
-        }
-    };
-
-    // Reference-data dropdowns (Currency/UOM/Catalog Type) no longer lazy-load on
-    // click (the Dropdown component has no click-to-open hook), so load them once
-    // up front when the create-catalog form opens. Each loader already guards
-    // against duplicate fetches.
-    useEffect(() => {
-        if (!showCreateCatalogModal) return;
-        loadCatalogTypes();
-        loadCurrencies();
-        loadUnits();
-    }, [showCreateCatalogModal]);
-
     return (
         <>
             <div
@@ -885,10 +886,10 @@ const Catalog: React.FC<CatalogProps> = ({
                                     <div className="pud-catalog-form-field" onKeyDown={preventEnterSubmit}>
                                         <Dropdown
                                             label="Currency"
-                                            placeholder={loadingCurrencies ? "Loading..." : "Select currency"}
-                                            isDisable={loadingCurrencies}
+                                            placeholder="Select currency"
                                             isClearable
-                                            options={currencyOptions.map((c) => ({ name: c.currencyName, value: c.currencyName }))}
+                                            isAsync
+                                            loadOptions={loadCurrencyOptions}
                                             value={toDropdownValue(catalogForm.currency)}
                                             onChange={(val) => updateCatalogField("currency", val?.value ?? "")}
                                         />
@@ -897,10 +898,10 @@ const Catalog: React.FC<CatalogProps> = ({
                                     <div className="pud-catalog-form-field" onKeyDown={preventEnterSubmit}>
                                         <Dropdown
                                             label="Unit of Measure"
-                                            placeholder={loadingUnits ? "Loading units..." : "Select unit of measure"}
-                                            isDisable={loadingUnits}
+                                            placeholder="Select unit of measure"
                                             isClearable
-                                            options={unitOptions.map((unit) => ({ name: unit.key, value: unit.key }))}
+                                            isAsync
+                                            loadOptions={loadUnitOptions}
                                             value={toDropdownValue(catalogForm.unitOfMeasure)}
                                             onChange={(val) => updateCatalogField("unitOfMeasure", val?.value ?? "")}
                                         />
@@ -911,7 +912,8 @@ const Catalog: React.FC<CatalogProps> = ({
                                             label="Catalog Type"
                                             placeholder="Select catalog type"
                                             isClearable
-                                            options={catalogTypeOptions.map((opt) => ({ name: opt.key, value: opt.key }))}
+                                            isAsync
+                                            loadOptions={loadCatalogTypeOptions}
                                             value={toDropdownValue(catalogForm.catalogType)}
                                             onChange={(val) => updateCatalogField("catalogType", val?.value ?? "")}
                                         />
