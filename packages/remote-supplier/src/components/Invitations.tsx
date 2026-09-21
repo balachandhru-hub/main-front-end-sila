@@ -1394,7 +1394,14 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
                             placeholder="Search buyer, ID or category..."
                             aria-label="Search invitations"
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setSearchQuery(value);
+
+                              if (value.trim() === "") {
+                                handleClearSearch();
+                              }
+                            }}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter") {
                                     handleSearch();

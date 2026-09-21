@@ -283,6 +283,7 @@ const SupplierAdminDash: React.FC = () => {
   /* ---------------------------------- RFQ management (ported from SupplierDashboard) ---------------------------------- */
 
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
+  const personDetail = useNetworkAdminAuthStore((state) => state.personDetail);
   const [supplierId, setSupplierId] = useState<string | null>(currentUser?.supplierId || null);
 
   useEffect(() => {
@@ -742,6 +743,7 @@ const SupplierAdminDash: React.FC = () => {
                     setSelectedRfq={setSelectedRfq}
                     setOwnQuotation={setOwnQuotation}
                     onRfqsRefresh={refreshRfqsList}
+                    personDetail={personDetail}
                   />
                 </div>
               ) : (
