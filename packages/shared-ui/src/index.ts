@@ -1,6 +1,8 @@
 import './styles/index.css';
 
 export * from './components/Button';
+export { default as Dropdown } from './components/DropDown/DropDown';
+export * from './components/DropDown/DropDown.types';
 export * from './components/Loader';
 export * from './components/AppShell/AppShell';
 export * from './components/AppShell/accountIcons';
