@@ -1036,7 +1036,7 @@
     gap: var(--sila-space-2);
 }
 
-.bd-category-filter {
+.bd-suppliers-filters .bd-category-filter {
     width: auto;
     min-width: 9.375rem;
 }
@@ -1209,8 +1209,7 @@
     gap: var(--sila-space-2);
 }
 
-.bd-template-row .bd-select,
-.bd-template-row .bd-custom-select-container {
+.bd-template-row .sila-dropdown {
     flex: 1;
     min-width: 0;
 }

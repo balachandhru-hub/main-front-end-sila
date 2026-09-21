@@ -1384,8 +1384,8 @@ if (Array.isArray(data)) {
                                 />
                             </div>
                             <div className="bd-item-add-field">
+                                <span className="bd-label-sm">UoM</span>
                                 <Dropdown
-                                    label="UoM"
                                     placeholder="Select UOM"
                                     isAsync
                                     loadOptions={loadUomOptions}
