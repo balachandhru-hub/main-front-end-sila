@@ -126,10 +126,10 @@ export const fetchApprovalTypes = async (): Promise<ApprovalTypeOption[]> => {
   }
 };
 
-export const fetchCurrencies = async (): Promise<CurrencyOption[]> => {
+export const fetchCurrencies = async (index: number = 0, limit: number = 100): Promise<CurrencyOption[]> => {
   try {
     const response = await platformInstance.get('/api/v1/masterdata/currencies', {
-      params: { index: 0, limit: 100 },
+      params: { index, limit },
     });
     const items: CurrencyOption[] = Array.isArray(response.data?.items) ? response.data.items : [];
     return [...items].sort((a, b) => a.sortNumber - b.sortNumber);

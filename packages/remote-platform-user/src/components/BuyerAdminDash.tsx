@@ -18,7 +18,7 @@ import {
 import CreateRFQ from "./UserListTable/CreateRFQ";
 import { logoutPlatformUser } from "../api/platformApi";
 import { BuyerAnalytics, StatusBadge, toastService, useAsyncData, useRouteNav, type RouteNavPaths } from "@vosox/shared-ui";
-import UserTemplate from "./usertemplate"
+import UserTemplate from "./UserTemplate";
 import ApprovalManagement from "./ApprovalManagement/ApprovalManagement";
 import { ToastContainer } from "@vosox/shared-ui";
 import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
@@ -385,19 +385,6 @@ const matchCards: MatchCard[] = [
   },
 ];
 
-const mockRfqs = [
-  {
-    rfqId: "rfq-1001",
-    rfqNumber: "RFQ-2026-1104",
-    organizationName: "Your Organization",
-    title: "Supply of Laptops & Docking Stations",
-    endDate: "2026-08-12",
-    deliveryLocation: "Indore, India",
-    description: "Sourcing 120 business laptops with docking stations and monitor arms for the new engineering wing.",
-    startDate: "2026-07-10",
-    addLotOption: true,
-  }
-];
 
 const BuyerAdminDash: React.FC = () => {
   const [activeNav, setActiveNav] = useRouteNav(BUYER_ADMIN_NAV_PATHS, "dashboard");
@@ -406,7 +393,7 @@ const BuyerAdminDash: React.FC = () => {
 
   const [loadingRfqs, setLoadingRfqs] = useState(false);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
-  const [rfqs, setRfqs] = useState<any[]>(mockRfqs);
+  const [rfqs, setRfqs] = useState<any[]>([]);
   const analytics = useAsyncData(fetchBuyerDashboardAnalytics);
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
   const RFQ_INITIAL_VISIBLE = 3;
@@ -450,8 +437,8 @@ const BuyerAdminDash: React.FC = () => {
 
   const loadRfqs = async () => {
     if (!buyerId) {
-      setRfqs(mockRfqs);
-      setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, mockRfqs.length));
+      setRfqs([]);
+      setVisibleRfqCount(0);
       return;
     }
 
@@ -465,7 +452,7 @@ const BuyerAdminDash: React.FC = () => {
         limit: RFQ_INITIAL_VISIBLE,
       });
 
-      const finalData = data.length > 0 ? data : mockRfqs;
+      const finalData = data.length > 0 ? data : [];
 
       setRfqs(finalData);
       setVisibleRfqCount(
@@ -477,10 +464,8 @@ const BuyerAdminDash: React.FC = () => {
         err?.message || "Failed to load sourcing opportunities."
       );
 
-      setRfqs(mockRfqs);
-      setVisibleRfqCount(
-        Math.min(RFQ_INITIAL_VISIBLE, mockRfqs.length)
-      );
+      setRfqs([]);
+      setVisibleRfqCount(0);
     } finally {
       setLoadingRfqs(false);
     }
@@ -659,7 +644,7 @@ const BuyerAdminDash: React.FC = () => {
 
   const loadAllRfqsPage = async (page: number) => {
     if (!buyerId) {
-      setAllRfqsList(rfqs.length > 0 ? rfqs : mockRfqs);
+      setAllRfqsList(rfqs.length > 0 ? rfqs : []);
       setAllRfqsHasMore(false);
       setAllRfqsLoaded(true);
       return;
@@ -673,12 +658,12 @@ const BuyerAdminDash: React.FC = () => {
 
       const data = await fetchBuyerRFQs({ buyerId, index, limit });
 
-      setAllRfqsList(data.length > 0 ? data : mockRfqs);
+      setAllRfqsList(data.length > 0 ? data : []);
       setAllRfqsPage(page);
       setAllRfqsHasMore(data.length === RFQ_PAGE_SIZE);
     } catch (err: any) {
       setAllRfqsError(err.message || "Failed to load the full RFQ list.");
-      setAllRfqsList(rfqs.length > 0 ? rfqs : mockRfqs);
+      setAllRfqsList(rfqs.length > 0 ? rfqs : []);
       setAllRfqsHasMore(false);
     } finally {
       setLoadingAllRfqs(false);
@@ -1417,7 +1402,7 @@ const BuyerAdminDash: React.FC = () => {
                     ) : rfqs.length === 0 ? (
                       <div className="bad-panel-list bad-panel-state">
                         <div className="bad-state-inner">
-                          No recent sourcing opportunities found.
+                          No RFQs found.
                         </div>
                       </div>
                     ) : (

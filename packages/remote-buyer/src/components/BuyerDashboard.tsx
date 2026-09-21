@@ -10,7 +10,7 @@ import QsAns from "./Qsans.tsx";
 import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, updateRfqStatus, fetchBuyerDashboardAnalytics } from "../api/Buyerapi";
 import { useBuyerAuthStore } from "../store/useBuyerAuthStore";
 import BuyerRFQChat from "./BuyerRFQChat/BuyerRFQChat";
-import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
+import UserTemplate from "../../../remote-platform-user/src/components/UserTemplate.tsx";
 import QuotationComparisonCard from "../../../remote-platform-user/src/components/QuotationComparisonCard.tsx";
 import BidComparisonAwardView from "../../../remote-platform-user/src/components/BidComparisonAwardView.tsx";
 import type { PendingMaterialApproval, MaterialApprovalKpi } from "../../../remote-platform-user/src/components/Material/materialApi";
@@ -380,19 +380,6 @@ const matchCards: MatchCard[] = [
   },
 ];
 
-const mockRfqs = [
-  {
-    rfqId: "rfq-1001",
-    rfqNumber: "RFQ-2026-1104",
-    organizationName: "Your Organization",
-    title: "Supply of Laptops & Docking Stations",
-    endDate: "2026-08-12",
-    deliveryLocation: "Indore, India",
-    description: "Sourcing 120 business laptops with docking stations and monitor arms for the new engineering wing.",
-    startDate: "2026-07-10",
-    addLotOption: true,
-  }
-];
 
 /* ---------------------------------- Component ---------------------------------- */
 
@@ -405,7 +392,7 @@ const BuyersDashboard: React.FC = () => {
   const [loadingRfqs, setLoadingRfqs] = useState(false);
   const [rfqsError, setRfqsError] = useState<string | null>(null);
 
-  const [rfqs, setRfqs] = useState<any[]>(mockRfqs);
+  const [rfqs, setRfqs] = useState<any[]>([]);
   const analytics = useAsyncData(fetchBuyerDashboardAnalytics);
   const [visibleRfqCount, setVisibleRfqCount] = useState(3);
   const RFQ_INITIAL_VISIBLE = 3;
@@ -455,8 +442,8 @@ const BuyersDashboard: React.FC = () => {
         setRfqs(data);
         setVisibleRfqCount(Math.min(RFQ_INITIAL_VISIBLE, data.length));
       } else {
-        setRfqs(mockRfqs);
-        setVisibleRfqCount(mockRfqs.length);
+        setRfqs([]);
+        setVisibleRfqCount(0);
       }
     } catch (err: any) {
       setRfqsError(err.message || "Failed to load sourcing opportunities.");
@@ -535,7 +522,7 @@ const BuyersDashboard: React.FC = () => {
 
   const loadAllRfqsPage = async (page: number) => {
     if (!buyerId) {
-      setAllRfqsList(rfqs.length > 0 ? rfqs : mockRfqs);
+      setAllRfqsList(rfqs.length > 0 ? rfqs : []);
       setAllRfqsHasMore(false);
       setAllRfqsLoaded(true);
       return;
@@ -548,12 +535,12 @@ const BuyersDashboard: React.FC = () => {
       const { index, limit } = getRfqPageRange(page);
       const data = await fetchBuyerRFQs({ buyerId, index, limit });
 
-      setAllRfqsList(data.length > 0 ? data : mockRfqs);
+      setAllRfqsList(data.length > 0 ? data : []);
       setAllRfqsPage(page);
       setAllRfqsHasMore(data.length === RFQ_PAGE_SIZE);
     } catch (err: any) {
       setAllRfqsError(err.message || "Failed to load the full RFQ list.");
-      setAllRfqsList(rfqs.length > 0 ? rfqs : mockRfqs);
+      setAllRfqsList(rfqs.length > 0 ? rfqs : []);
       setAllRfqsHasMore(false);
     } finally {
       setLoadingAllRfqs(false);
@@ -1399,7 +1386,7 @@ const BuyersDashboard: React.FC = () => {
                       </div>
                     ) : rfqs.length === 0 ? (
                       <div className="pud-panel-list pud-panel-state">
-                        <EmptyState title="No recent sourcing opportunities found." icon={<IconFile />} />
+                        <EmptyState title="No RFQs found." icon={<IconFile />} />
                       </div>
                     ) : (
                       <div className="pud-panel-list">

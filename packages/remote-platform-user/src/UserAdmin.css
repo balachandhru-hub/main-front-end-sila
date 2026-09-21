@@ -267,6 +267,17 @@
   align-items: center;
 }
 
+.user-admin-password-wrapper input::-ms-reveal,
+.user-admin-password-wrapper input::-ms-clear {
+  display: none;
+}
+
+.user-admin-password-wrapper input::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+}
+
 .user-admin-input--with-toggle {
   padding-right: 2.5rem;
 }
