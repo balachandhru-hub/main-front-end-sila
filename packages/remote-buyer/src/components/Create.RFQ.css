@@ -339,6 +339,10 @@
     border-radius: var(--sila-radius);
 }
 
+.bd-toggle-row + .bd-field {
+    margin-top: var(--sila-space-4);
+}
+
 .bd-toggle-row-title {
     padding-bottom: 0.125rem;
     font-size: var(--sila-text-sm);

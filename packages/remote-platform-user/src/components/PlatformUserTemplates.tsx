@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaTimes } from 'react-icons/fa';
 import { getAllBuyers } from '../api/platformApi';
 import { EmptyState } from '@vosox/shared-ui';
-import UserTemplate from './usertemplate';
+import UserTemplate from './UserTemplate';
 import './PlatformUserTemplates.css';
 
 const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;

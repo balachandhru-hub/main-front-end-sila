@@ -10,7 +10,7 @@ import QsAns from "./Qsans.tsx";
 import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, updateRfqStatus, fetchBuyerDashboardAnalytics } from "../api/Buyerapi";
 import { useBuyerAuthStore } from "../store/useBuyerAuthStore";
 import BuyerRFQChat from "./BuyerRFQChat/BuyerRFQChat";
-import UserTemplate from "../../../remote-platform-user/src/components/usertemplate.tsx";
+import UserTemplate from "../../../remote-platform-user/src/components/UserTemplate.tsx";
 import QuotationComparisonCard from "../../../remote-platform-user/src/components/QuotationComparisonCard.tsx";
 import BidComparisonAwardView from "../../../remote-platform-user/src/components/BidComparisonAwardView.tsx";
 import type { PendingMaterialApproval, MaterialApprovalKpi } from "../../../remote-platform-user/src/components/Material/materialApi";
