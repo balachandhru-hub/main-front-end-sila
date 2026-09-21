@@ -291,10 +291,6 @@ const Catalog: React.FC<CatalogProps> = ({
     };
 
     useEffect(() => {
-        loadCatalogList();
-    }, []);
-
-    useEffect(() => {
         if (fullViewContainer) {
             loadCatalogList();
         }
