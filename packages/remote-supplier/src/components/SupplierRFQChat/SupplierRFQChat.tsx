@@ -65,7 +65,7 @@ const SupplierRFQChat: React.FC<SupplierRFQChatProps> = ({
   // SupplierApp's mount effect - no per-component fetch, no local cache.
   const storePersonDetail = useSupplierAuthStore((state) => state.personDetail);
   const myProfile = personDetail ?? storePersonDetail;
-  console.log(myProfile);
+
   const isLoadingMyProfile = useSupplierAuthStore((state) => state.personDetailLoading);
 
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
