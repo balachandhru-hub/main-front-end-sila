@@ -26,11 +26,15 @@ export interface ReferenceListItemDto {
 
 export async function fetchSegments(
     pageIndex: number = 1,
-    pageSize: number = 40
+    pageSize: number = 40,
+    searchTerm?: string
 ): Promise<any[] | ErrorResponseDto> {
     try {
+        const params: Record<string, any> = { pageIndex, pageSize };
+        if (searchTerm) params.searchTerm = searchTerm;
         const res = await axiosInstance.get(
-            `/api/v1/masterdata/unspsc/segment?pageIndex=${pageIndex}&pageSize=${pageSize}`
+            `/api/v1/masterdata/unspsc/segment`,
+            { params }
         );
         return Array.isArray(res.data) ? res.data : [];
     } catch (error: any) {

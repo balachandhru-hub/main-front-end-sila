@@ -142,9 +142,10 @@ const Product: React.FC = () => {
   // ---- Async paginated loader for the Segment Dropdown ----
   const loadSegmentOptions = async ({
     page,
+    search,
   }: DropdownLoadParams): Promise<DropdownLoadResult> => {
     const pageIndex = page + SEGMENT_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
-    const segments = await fetchSegments(pageIndex, SEGMENT_PAGE_SIZE);
+    const segments = await fetchSegments(pageIndex, SEGMENT_PAGE_SIZE, search || undefined);
 
     if (!Array.isArray(segments)) {
       return { options: [], hasMore: false };
