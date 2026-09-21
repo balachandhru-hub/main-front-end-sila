@@ -167,6 +167,7 @@ const Product: React.FC = () => {
   // ---- Async paginated loader for the Family Dropdown ----
   const loadFamilyOptions = async ({
     page,
+    search,
   }: DropdownLoadParams): Promise<DropdownLoadResult> => {
     if (!filters.segment) {
       return { options: [], hasMore: false };
@@ -181,11 +182,16 @@ const Product: React.FC = () => {
 
     setFamilyOptions((prev) => (page === 0 ? families : [...prev, ...families]));
 
-    return {
-      options: families.map((fam) => ({
+    const searchTerm = search.trim().toLowerCase();
+    const options = families
+      .filter((fam) => !searchTerm || `${fam.family} - ${fam.title}`.toLowerCase().includes(searchTerm))
+      .map((fam) => ({
         name: `${fam.family} - ${fam.title}`,
         value: String(fam.family),
-      })),
+      }));
+
+    return {
+      options,
       hasMore: families.length === FAMILY_PAGE_SIZE,
     };
   };
@@ -195,6 +201,7 @@ const Product: React.FC = () => {
   // ---- Async paginated loader for the Class Dropdown ----
   const loadClassOptions = async ({
     page,
+    search,
   }: DropdownLoadParams): Promise<DropdownLoadResult> => {
     if (!filters.family) {
       return { options: [], hasMore: false };
@@ -209,11 +216,16 @@ const Product: React.FC = () => {
 
     setClassOptions((prev) => (page === 0 ? classes : [...prev, ...classes]));
 
-    return {
-      options: classes.map((cls) => ({
+    const searchTerm = search.trim().toLowerCase();
+    const options = classes
+      .filter((cls) => !searchTerm || `${cls.class} - ${cls.classTitle}`.toLowerCase().includes(searchTerm))
+      .map((cls) => ({
         name: `${cls.class} - ${cls.classTitle}`,
         value: String(cls.class),
-      })),
+      }));
+
+    return {
+      options,
       hasMore: classes.length === CLASS_PAGE_SIZE,
     };
   };
@@ -223,6 +235,7 @@ const Product: React.FC = () => {
   // ---- Async paginated loader for the Commodity Dropdown ----
   const loadCommodityOptions = async ({
     page,
+    search,
   }: DropdownLoadParams): Promise<DropdownLoadResult> => {
     if (!filters.class) {
       return { options: [], hasMore: false };
@@ -237,11 +250,16 @@ const Product: React.FC = () => {
 
     setCommodityOptions((prev) => (page === 0 ? commodities : [...prev, ...commodities]));
 
-    return {
-      options: commodities.map((com) => ({
+    const searchTerm = search.trim().toLowerCase();
+    const options = commodities
+      .filter((com) => !searchTerm || `${com.commodity} - ${com.commodityTitle}`.toLowerCase().includes(searchTerm))
+      .map((com) => ({
         name: `${com.commodity} - ${com.commodityTitle}`,
         value: String(com.commodity),
-      })),
+      }));
+
+    return {
+      options,
       hasMore: commodities.length === COMMODITY_PAGE_SIZE,
     };
   };
