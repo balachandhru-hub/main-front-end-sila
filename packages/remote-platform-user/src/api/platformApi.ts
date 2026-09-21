@@ -558,13 +558,6 @@ export interface RfqAssetAttachmentDto {
   fileName?: string;
 }
 
-export interface SupplierTermsConditionStatusDto {
-  termsAndCondition: boolean;
-  supplierId: string;
-  supplierName: string;
-  attachments: RfqAssetAttachmentDto[];
-}
-
 export interface SupplierEsignStatusDto {
   supplierId: string;
   supplierName: string;
@@ -577,42 +570,6 @@ export interface StatusUpdateResponseDto {
   description?: string;
   id?: string;
 }
-
-/**
- * The supplier's terms & conditions status, as seen internally by the buyer.
- */
-export const fetchSupplierTermsConditionStatus = async (
-  rfqId: string
-): Promise<SupplierTermsConditionStatusDto[] | AssetErrorDto> => {
-  try {
-    const response = await platformInstance.get('/api/v1/buyer/interal/supplier-terms-condition-status', {
-      params: { rfqId },
-    });
-    return response.data;
-  } catch (error: any) {
-    if (error.response?.status === 401) {
-      (window as any).handleUnauthorized?.();
-      return {
-        statusCode: 401,
-        message: 'Unauthorized',
-        description: 'You are not authorized to access this resource. Please login again.',
-      };
-    }
-    if (error.response?.data) {
-      const errData = error.response.data;
-      return {
-        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
-        message: errData.message || 'Failed to fetch supplier terms & conditions status.',
-        description: errData.description || '',
-      };
-    }
-    return {
-      statusCode: 500,
-      message: error?.message || 'Failed to fetch supplier terms & conditions status.',
-      description: '',
-    };
-  }
-};
 
 /**
  * Buyer's acceptance/rejection status of the supplier's terms & conditions.
@@ -715,6 +672,43 @@ export const uploadBuyerRfqEsign = async (
     return {
       statusCode: 500,
       message: error?.message || 'Failed to upload buyer e-signature.',
+    };
+  }
+};
+
+/**
+ * Supplier's acceptance/rejection status of the buyer's terms & conditions.
+ */
+export const updateBuyerTermsConditionStatus = async (
+  rfqId: string,
+  status: string
+): Promise<StatusUpdateResponseDto | AssetErrorDto> => {
+  try {
+    const response = await platformInstance.put('/api/v1/supplier/buyer-terms-condition-status', null, {
+      params: { rfqId, status },
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to update buyer terms & conditions status.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Failed to update buyer terms & conditions status.',
+      description: '',
     };
   }
 };

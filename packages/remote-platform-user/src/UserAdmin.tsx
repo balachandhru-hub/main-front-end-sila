@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Button,
+  Dropdown,
   EmptyState,
   Loader,
   PageHeader,
@@ -8,11 +9,15 @@ import {
   ToastContainer,
   toastService as toast,
 } from '@vosox/shared-ui';
+import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from '@vosox/shared-ui';
 import { createBusinessUser, getOrganizationUsers } from './api/departmentcostapi';
-import { Country } from 'country-state-city';
+import { getCountries } from './api/networkAdminApi';
 import { FaEye, FaEyeSlash, FaPlus, FaTimes, FaUsers, FaExclamationCircle } from 'react-icons/fa';
 import './UserAdmin.css';
 import { useNetworkAdminAuthStore } from './store/useAuthStore';
+
+// Page size used by the async (paginated) Country Dropdown
+const COUNTRY_PAGE_SIZE = 40;
 
 interface BusinessUser {
   personId: string;
@@ -49,6 +54,20 @@ const UserAdmin: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [users, setUsers] = useState<BusinessUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState<DropdownValue | null>(null);
+
+  // ---- Async paginated loader for the Country Dropdown (`index` is an offset: 0, 40, 80, ...) ----
+  const loadCountryOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+    const index = page * COUNTRY_PAGE_SIZE;
+    const res = await getCountries(index, COUNTRY_PAGE_SIZE, search || undefined);
+    const countries = res.items || [];
+    const reportedTotal = res.totalCount ?? 0;
+    return {
+      options: countries.map((c) => ({ name: c.countryName, value: c.countryName })),
+      // totalCount alone isn't reliable for this API, so a full page also means there may be more
+      hasMore: countries.length === COUNTRY_PAGE_SIZE || reportedTotal > index + COUNTRY_PAGE_SIZE,
+    };
+  };
 
   // Fetch real users on mount
   useEffect(() => {
@@ -120,6 +139,7 @@ const UserAdmin: React.FC = () => {
     setError(null);
     setShowPassword(false);
     setShowConfirmPassword(false);
+    setSelectedCountry(null);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -201,8 +221,6 @@ const UserAdmin: React.FC = () => {
           draggable: true,
         });
 
-        const countryFullName = Country.getAllCountries().find(c => c.isoCode === formData.country)?.name || formData.country;
-
         const newUser: BusinessUser = {
           personId: userId,
           userId: userId,
@@ -212,7 +230,7 @@ const UserAdmin: React.FC = () => {
           roleId: roleId,
           roleName: userTypeDisplay,
           phone: formData.phone,
-          country: countryFullName,
+          country: formData.country,
           addressLine: formData.addressLine,
           createdDate: new Date().toISOString().split('T')[0],
         };
@@ -472,25 +490,25 @@ const UserAdmin: React.FC = () => {
                   />
                 </div>
 
-                <div className="user-admin-form-group">
-                  <label htmlFor="ua-country" className="user-admin-label">
-                    Country <span className="sila-required" aria-hidden="true">*</span>
-                  </label>
-                  <select
-                    id="ua-country"
-                    name="country"
-                    value={formData.country}
-                    onChange={handleInputChange}
-                    className="user-admin-input user-admin-select"
-                    aria-required="true"
-                  >
-                    <option value="">Select Country</option>
-                    {Country.getAllCountries().map((c) => (
-                      <option key={c.isoCode} value={c.isoCode}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                <div
+                  className="user-admin-form-group"
+                  onKeyDown={(e) => {
+                    // Enter inside the dropdown's search box would otherwise submit the surrounding form.
+                    if (e.key === 'Enter') e.preventDefault();
+                  }}
+                >
+                  <Dropdown
+                    label="Country"
+                    isRequired
+                    placeholder="Select Country"
+                    isAsync
+                    loadOptions={loadCountryOptions}
+                    value={selectedCountry}
+                    onChange={(val) => {
+                      setSelectedCountry(val);
+                      setFormData((prev) => ({ ...prev, country: val?.value || '' }));
+                    }}
+                  />
                 </div>
 
                 <div className="user-admin-form-group">

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { FaSearch } from 'react-icons/fa';
-import { EmptyState, KpiCard, StatusBadge } from '@vosox/shared-ui';
+import { EmptyState, KpiCard, StatusBadge, Dropdown } from '@vosox/shared-ui';
+import type { DropdownValue } from '@vosox/shared-ui';
 import type { ContractRecord } from './contractApi';
 import './ContractTable.css';
 
@@ -23,9 +24,12 @@ const STATUS_FILTERS: { label: string; value: '' | ContractRecord['status'] }[] 
   { label: statusLabel.REJECTED, value: 'REJECTED' },
 ];
 
+const STATUS_FILTER_OPTIONS = STATUS_FILTERS.map((opt) => ({ name: opt.label, value: opt.value }));
+
 const ContractTable: React.FC<ContractTableProps> = ({ records, loading, error }) => {
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'' | ContractRecord['status']>('');
+  const [selectedStatus, setSelectedStatus] = useState<DropdownValue | null>(STATUS_FILTER_OPTIONS[0]);
+  const statusFilter = (selectedStatus?.value || '') as '' | ContractRecord['status'];
 
   const counts = useMemo(
     () => ({
@@ -80,16 +84,13 @@ const ContractTable: React.FC<ContractTableProps> = ({ records, loading, error }
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <select
-                className="ctr-status-select sila-select"
-                aria-label="Filter by status"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as '' | ContractRecord['status'])}
-              >
-                {STATUS_FILTERS.map((opt) => (
-                  <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+              <Dropdown
+                placeholder="All Status"
+                options={STATUS_FILTER_OPTIONS}
+                value={selectedStatus}
+                onChange={setSelectedStatus}
+                className="ctr-status-select"
+              />
             </div>
           </>
         )}

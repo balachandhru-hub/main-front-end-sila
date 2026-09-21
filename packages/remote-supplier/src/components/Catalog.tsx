@@ -17,8 +17,21 @@ import {
     type UnitItem,
     type CatalogDetailResponseItem,
 } from "../api/supplierApi";
-import { isErrorResponse, Button, EmptyState, Loader, Pagination } from '@vosox/shared-ui';
+import { isErrorResponse, Button, EmptyState, Loader, Pagination, Dropdown } from '@vosox/shared-ui';
+import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from '@vosox/shared-ui';
 import type { CatalogAssetDto, CatalogDetailDto, SupplierCatalogListItem } from "../dto/supplierDto";
+
+const toDropdownValue = (value: string): DropdownValue | null =>
+    value ? { name: value, value } : null;
+
+const toIdTitleDropdownValue = (id: string, title: string): DropdownValue | null =>
+    id ? { name: title || id, value: id } : null;
+
+// The Dropdown's search box is a plain text input; inside a <form>, Enter on it
+// would otherwise submit the form instead of just filtering the option list.
+const preventEnterSubmit = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') e.preventDefault();
+};
 
 /* ============================== Types ============================== */
 
@@ -228,41 +241,32 @@ const Catalog: React.FC<CatalogProps> = ({
         try {
             const asset: any = await fetchSupplierAsset(assetId);
             if (!asset) {
-                console.warn(`No asset data returned for assetId: ${assetId}`);
                 return;
             }
 
             // ✅ Check for error response
             if (asset.statusCode && asset.statusCode >= 400) {
-                console.warn(`Error loading asset ${assetId}:`, asset);
                 return;
             }
 
             let src: string | null = null;
-            
+
             // ✅ Try multiple approaches to get image source
             if (asset.fileBytes) {
                 const mime = asset.contentType || asset.mimeType || "image/jpeg";
                 src = `data:${mime};base64,${asset.fileBytes}`;
-                console.log(`Loaded asset ${assetId} from fileBytes`);
             } else if (asset.url) {
                 src = asset.url;
-                console.log(`Loaded asset ${assetId} from url:`, src);
             } else if (asset.fileUrl) {
                 src = asset.fileUrl;
-                console.log(`Loaded asset ${assetId} from fileUrl:`, src);
             } else if (asset.downloadUrl) {
                 src = asset.downloadUrl;
-                console.log(`Loaded asset ${assetId} from downloadUrl:`, src);
-            } else {
-                console.warn(`No image source found for asset ${assetId}. Asset data:`, asset);
             }
 
             if (src) {
                 setCatalogAssetImages((prev) => ({ ...prev, [assetId]: src as string }));
             }
         } catch (error) {
-            console.error(`Failed to load asset ${assetId}:`, error);
         }
     };
 
@@ -377,16 +381,6 @@ const Catalog: React.FC<CatalogProps> = ({
     const [currencyOptions, setCurrencyOptions] = useState<Array<{ id: string; currencyName: string; sortNumber: number }>>([]);
     const [loadingCurrencies, setLoadingCurrencies] = useState(false);
 
-    const [segmentOptions, setSegmentOptions] = useState<Array<{ segment: number; title: string }>>([]);
-    const [familyOptions, setFamilyOptions] = useState<Array<{ family: number; title: string }>>([]);
-    const [classOptions, setClassOptions] = useState<Array<{ class: number; classTitle: string }>>([]);
-    const [commodityOptions, setCommodityOptions] = useState<Array<{ commodity: number; commodityTitle: string }>>([]);
-
-    const [loadingSegments, setLoadingSegments] = useState(false);
-    const [loadingFamilies, setLoadingFamilies] = useState(false);
-    const [loadingClasses, setLoadingClasses] = useState(false);
-    const [loadingCommodities, setLoadingCommodities] = useState(false);
-
     const loadCatalogTypes = async () => {
         const types = await fetchMetadataReferenceList(['CATALOG_TYPE']);
         if (Array.isArray(types)) {
@@ -408,116 +402,107 @@ const Catalog: React.FC<CatalogProps> = ({
         }
     };
 
-    const loadSegments = async () => {
-        if (segmentOptions.length > 0) return;
-        setLoadingSegments(true);
-        try {
-            const segments = await fetchSegments();
-            if (Array.isArray(segments)) {
-                setSegmentOptions(segments);
-            }
-        } catch (error) {
-        } finally {
-            setLoadingSegments(false);
+    // fetchSegments() takes no pagination/search params — the backend always returns
+    // a fixed page (pageIndex=1, pageSize=10), so this loader can only filter that
+    // fixed page client-side; there's no way to page further or search server-side.
+    const loadSegmentOptions = async ({ search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        const segments = await fetchSegments();
+        if (!Array.isArray(segments)) {
+            return { options: [], hasMore: false };
         }
+        const searchTerm = search.trim().toLowerCase();
+        const options = segments
+            .filter((seg) => !searchTerm || seg.title.toLowerCase().includes(searchTerm))
+            .map((seg) => ({ name: seg.title, value: String(seg.segment) }));
+        return { options, hasMore: false };
     };
 
-    const handleSegmentChange = async (segmentValue: string) => {
-        const segmentNum = Number(segmentValue);
+    const FAMILY_PAGE_SIZE = 100;
 
-        updateCatalogField("segment", segmentValue);
+    // fetchFamilies supports pagination but not a search param, so each page is
+    // fetched as-is and filtered client-side before being handed to the Dropdown.
+    const loadFamilyOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!catalogForm.segment) {
+            return { options: [], hasMore: false };
+        }
+        const pageIndex = page + 1; // Dropdown pages are 0-based; the API is 1-based
+        const families = await fetchFamilies(Number(catalogForm.segment), { pageIndex, pageSize: FAMILY_PAGE_SIZE });
+        if (!Array.isArray(families)) {
+            return { options: [], hasMore: false };
+        }
+        const searchTerm = search.trim().toLowerCase();
+        const options = families
+            .filter((fam) => !searchTerm || fam.title.toLowerCase().includes(searchTerm))
+            .map((fam) => ({ name: fam.title, value: String(fam.family) }));
+        return { options, hasMore: families.length === FAMILY_PAGE_SIZE };
+    };
 
-        const selectedSegment = segmentOptions.find(s => s.segment === segmentNum);
-        updateCatalogField("segmentTitle", selectedSegment?.title || "");
+    const CLASS_PAGE_SIZE = 100;
 
+    const loadClassOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!catalogForm.family) {
+            return { options: [], hasMore: false };
+        }
+        const pageIndex = page + 1;
+        const classes = await fetchClassifications(Number(catalogForm.family), { pageIndex, pageSize: CLASS_PAGE_SIZE });
+        if (!Array.isArray(classes)) {
+            return { options: [], hasMore: false };
+        }
+        const searchTerm = search.trim().toLowerCase();
+        const options = classes
+            .filter((cls) => !searchTerm || cls.classTitle.toLowerCase().includes(searchTerm))
+            .map((cls) => ({ name: cls.classTitle, value: String(cls.class) }));
+        return { options, hasMore: classes.length === CLASS_PAGE_SIZE };
+    };
+
+    const COMMODITY_PAGE_SIZE = 100;
+
+    const loadCommodityOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!catalogForm.class) {
+            return { options: [], hasMore: false };
+        }
+        const pageIndex = page + 1;
+        const commodities = await fetchCommodities(Number(catalogForm.class), { pageIndex, pageSize: COMMODITY_PAGE_SIZE });
+        if (!Array.isArray(commodities)) {
+            return { options: [], hasMore: false };
+        }
+        const searchTerm = search.trim().toLowerCase();
+        const options = commodities
+            .filter((com) => !searchTerm || com.commodityTitle.toLowerCase().includes(searchTerm))
+            .map((com) => ({ name: com.commodityTitle, value: String(com.commodity) }));
+        return { options, hasMore: commodities.length === COMMODITY_PAGE_SIZE };
+    };
+
+    const handleSegmentChange = (val: DropdownValue | null) => {
+        updateCatalogField("segment", val?.value ?? "");
+        updateCatalogField("segmentTitle", val?.name ?? "");
         updateCatalogField("family", "");
         updateCatalogField("familyTitle", "");
         updateCatalogField("class", "");
         updateCatalogField("classTitle", "");
         updateCatalogField("commodity", "");
         updateCatalogField("commodityTitle", "");
-
-        setFamilyOptions([]);
-        setClassOptions([]);
-        setCommodityOptions([]);
-
-        if (segmentNum) {
-            setLoadingFamilies(true);
-            try {
-                const families = await fetchFamilies(segmentNum);
-                if (Array.isArray(families)) {
-                    setFamilyOptions(families);
-                }
-            } catch (error) {
-            } finally {
-                setLoadingFamilies(false);
-            }
-        }
     };
 
-    const handleFamilyChange = async (familyValue: string) => {
-        const familyNum = Number(familyValue);
-
-        updateCatalogField("family", familyValue);
-
-        const selectedFamily = familyOptions.find(f => f.family === familyNum);
-        updateCatalogField("familyTitle", selectedFamily?.title || "");
-
+    const handleFamilyChange = (val: DropdownValue | null) => {
+        updateCatalogField("family", val?.value ?? "");
+        updateCatalogField("familyTitle", val?.name ?? "");
         updateCatalogField("class", "");
         updateCatalogField("classTitle", "");
         updateCatalogField("commodity", "");
         updateCatalogField("commodityTitle", "");
-
-        setClassOptions([]);
-        setCommodityOptions([]);
-
-        if (familyNum) {
-            setLoadingClasses(true);
-            try {
-                const classes = await fetchClassifications(familyNum);
-                if (Array.isArray(classes)) {
-                    setClassOptions(classes);
-                }
-            } catch (error) {
-            } finally {
-                setLoadingClasses(false);
-            }
-        }
     };
 
-    const handleClassChange = async (classValue: string) => {
-        const classNum = Number(classValue);
-
-        updateCatalogField("class", classValue);
-
-        const selectedClass = classOptions.find(c => c.class === classNum);
-        updateCatalogField("classTitle", selectedClass?.classTitle || "");
-
+    const handleClassChange = (val: DropdownValue | null) => {
+        updateCatalogField("class", val?.value ?? "");
+        updateCatalogField("classTitle", val?.name ?? "");
         updateCatalogField("commodity", "");
         updateCatalogField("commodityTitle", "");
-
-        setCommodityOptions([]);
-        if (classNum) {
-            setLoadingCommodities(true);
-            try {
-                const commodities = await fetchCommodities(classNum);
-                if (Array.isArray(commodities)) {
-                    setCommodityOptions(commodities);
-                }
-            } catch (error) {
-            } finally {
-                setLoadingCommodities(false);
-            }
-        }
     };
 
-    const handleCommodityChange = (commodityValue: string) => {
-        const commodityNum = Number(commodityValue);
-
-        updateCatalogField("commodity", commodityValue);
-
-        const selectedCommodity = commodityOptions.find(c => c.commodity === commodityNum);
-        updateCatalogField("commodityTitle", selectedCommodity?.commodityTitle || "");
+    const handleCommodityChange = (val: DropdownValue | null) => {
+        updateCatalogField("commodity", val?.value ?? "");
+        updateCatalogField("commodityTitle", val?.name ?? "");
     };
 
     const updateCatalogField = <K extends keyof CatalogFormState>(field: K, value: CatalogFormState[K]) => {
@@ -766,6 +751,17 @@ const Catalog: React.FC<CatalogProps> = ({
         }
     };
 
+    // Reference-data dropdowns (Currency/UOM/Catalog Type) no longer lazy-load on
+    // click (the Dropdown component has no click-to-open hook), so load them once
+    // up front when the create-catalog form opens. Each loader already guards
+    // against duplicate fetches.
+    useEffect(() => {
+        if (!showCreateCatalogModal) return;
+        loadCatalogTypes();
+        loadCurrencies();
+        loadUnits();
+    }, [showCreateCatalogModal]);
+
     return (
         <>
             <div
@@ -886,82 +882,56 @@ const Catalog: React.FC<CatalogProps> = ({
                                         />
                                     </div>
 
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label" htmlFor="catalog-currency">Currency</label>
-                                        <select
-                                            id="catalog-currency"
-                                            className="pud-catalog-form-select"
-                                            value={catalogForm.currency}
-                                            onChange={(e) => updateCatalogField("currency", e.target.value)}
-                                            onClick={loadCurrencies}
-                                        >
-                                            <option value="">
-                                                {loadingCurrencies ? "Loading..." : "Select currency"}
-                                            </option>
-                                            {currencyOptions.map((c) => (
-                                                <option key={c.id} value={c.currencyName}>{c.currencyName}</option>
-                                            ))}
-                                        </select>
+                                    <div className="pud-catalog-form-field" onKeyDown={preventEnterSubmit}>
+                                        <Dropdown
+                                            label="Currency"
+                                            placeholder={loadingCurrencies ? "Loading..." : "Select currency"}
+                                            isDisable={loadingCurrencies}
+                                            isClearable
+                                            options={currencyOptions.map((c) => ({ name: c.currencyName, value: c.currencyName }))}
+                                            value={toDropdownValue(catalogForm.currency)}
+                                            onChange={(val) => updateCatalogField("currency", val?.value ?? "")}
+                                        />
                                     </div>
 
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label" htmlFor="catalog-unit-of-measure">Unit of Measure</label>
-                                        <select
-                                            id="catalog-unit-of-measure"
-                                            className="pud-catalog-form-select"
-                                            value={catalogForm.unitOfMeasure}
-                                            onChange={(e) => updateCatalogField("unitOfMeasure", e.target.value)}
-                                            onClick={loadUnits}
-                                        >
-                                            <option value="">
-                                                {loadingUnits ? "Loading units..." : "Select unit of measure"}
-                                            </option>
-                                            {unitOptions.map((unit) => (
-                                                <option key={unit.id} value={unit.key}>
-                                                    {unit.key}
-                                                </option>
-                                            ))}
-                                        </select>
+                                    <div className="pud-catalog-form-field" onKeyDown={preventEnterSubmit}>
+                                        <Dropdown
+                                            label="Unit of Measure"
+                                            placeholder={loadingUnits ? "Loading units..." : "Select unit of measure"}
+                                            isDisable={loadingUnits}
+                                            isClearable
+                                            options={unitOptions.map((unit) => ({ name: unit.key, value: unit.key }))}
+                                            value={toDropdownValue(catalogForm.unitOfMeasure)}
+                                            onChange={(val) => updateCatalogField("unitOfMeasure", val?.value ?? "")}
+                                        />
                                     </div>
 
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label" htmlFor="catalog-catalog-type">Catalog Type</label>
-                                        <select
-                                            id="catalog-catalog-type"
-                                            className="pud-catalog-form-select"
-                                            value={catalogForm.catalogType}
-                                            onChange={(e) => updateCatalogField("catalogType", e.target.value)}
-                                            onClick={loadCatalogTypes}
-                                        >
-                                            <option value="">Select catalog type</option>
-                                            {catalogTypeOptions.map((opt) => (
-                                                <option key={opt.id} value={opt.key}>{opt.key}</option>
-                                            ))}
-                                        </select>
+                                    <div className="pud-catalog-form-field" onKeyDown={preventEnterSubmit}>
+                                        <Dropdown
+                                            label="Catalog Type"
+                                            placeholder="Select catalog type"
+                                            isClearable
+                                            options={catalogTypeOptions.map((opt) => ({ name: opt.key, value: opt.key }))}
+                                            value={toDropdownValue(catalogForm.catalogType)}
+                                            onChange={(val) => updateCatalogField("catalogType", val?.value ?? "")}
+                                        />
                                     </div>
 
                                     <div className="pud-catalog-form-section">
                                         <span className="pud-catalog-form-section-title">Classification</span>
                                     </div>
 
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label" htmlFor="catalog-segment">Segment<span className="sila-required" aria-hidden="true">*</span></label>
-                                        <select
-                                            id="catalog-segment"
-                                            className="pud-catalog-form-select"
-                                            value={catalogForm.segment}
-                                            onChange={(e) => handleSegmentChange(e.target.value)}
-                                            onClick={loadSegments}
-                                        >
-                                            <option value="">
-                                                {loadingSegments ? "Loading segments..." : "Select segment"}
-                                            </option>
-                                            {segmentOptions.map((seg) => (
-                                                <option key={seg.segment} value={seg.segment}>
-                                                    {seg.segment} - {seg.title}
-                                                </option>
-                                            ))}
-                                        </select>
+                                    <div className="pud-catalog-form-field" onKeyDown={preventEnterSubmit}>
+                                        <Dropdown
+                                            label="Segment"
+                                            placeholder="Select segment"
+                                            isRequired
+                                            isClearable
+                                            isAsync
+                                            loadOptions={loadSegmentOptions}
+                                            value={toIdTitleDropdownValue(catalogForm.segment, catalogForm.segmentTitle)}
+                                            onChange={handleSegmentChange}
+                                        />
                                     </div>
 
                                     <div className="pud-catalog-form-field">
@@ -976,29 +946,19 @@ const Catalog: React.FC<CatalogProps> = ({
                                         />
                                     </div>
 
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label" htmlFor="catalog-family">Family<span className="sila-required" aria-hidden="true">*</span></label>
-                                        <select
-                                            id="catalog-family"
-                                            className="pud-catalog-form-select"
-                                            value={catalogForm.family}
-                                            onChange={(e) => handleFamilyChange(e.target.value)}
-                                            disabled={!catalogForm.segment}
-                                        >
-                                            <option value="">
-                                                {!catalogForm.segment
-                                                    ? "Select a segment first"
-                                                    : loadingFamilies
-                                                        ? "Loading families..."
-                                                        : "Select family"
-                                                }
-                                            </option>
-                                            {familyOptions.map((fam) => (
-                                                <option key={fam.family} value={fam.family}>
-                                                    {fam.family} - {fam.title}
-                                                </option>
-                                            ))}
-                                        </select>
+                                    <div className="pud-catalog-form-field" onKeyDown={preventEnterSubmit}>
+                                        <Dropdown
+                                            label="Family"
+                                            placeholder={!catalogForm.segment ? "Select a segment first" : "Select family"}
+                                            isRequired
+                                            isClearable
+                                            isDisable={!catalogForm.segment}
+                                            isAsync
+                                            loadOptions={loadFamilyOptions}
+                                            cacheUniques={[catalogForm.segment]}
+                                            value={toIdTitleDropdownValue(catalogForm.family, catalogForm.familyTitle)}
+                                            onChange={handleFamilyChange}
+                                        />
                                     </div>
 
                                     <div className="pud-catalog-form-field">
@@ -1013,29 +973,19 @@ const Catalog: React.FC<CatalogProps> = ({
                                         />
                                     </div>
 
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label" htmlFor="catalog-class">Class<span className="sila-required" aria-hidden="true">*</span></label>
-                                        <select
-                                            id="catalog-class"
-                                            className="pud-catalog-form-select"
-                                            value={catalogForm.class}
-                                            onChange={(e) => handleClassChange(e.target.value)}
-                                            disabled={!catalogForm.family}
-                                        >
-                                            <option value="">
-                                                {!catalogForm.family
-                                                    ? "Select a family first"
-                                                    : loadingClasses
-                                                        ? "Loading classes..."
-                                                        : "Select class"
-                                                }
-                                            </option>
-                                            {classOptions.map((cls) => (
-                                                <option key={cls.class} value={cls.class}>
-                                                    {cls.class} - {cls.classTitle}
-                                                </option>
-                                            ))}
-                                        </select>
+                                    <div className="pud-catalog-form-field" onKeyDown={preventEnterSubmit}>
+                                        <Dropdown
+                                            label="Class"
+                                            placeholder={!catalogForm.family ? "Select a family first" : "Select class"}
+                                            isRequired
+                                            isClearable
+                                            isDisable={!catalogForm.family}
+                                            isAsync
+                                            loadOptions={loadClassOptions}
+                                            cacheUniques={[catalogForm.family]}
+                                            value={toIdTitleDropdownValue(catalogForm.class, catalogForm.classTitle)}
+                                            onChange={handleClassChange}
+                                        />
                                     </div>
 
                                     <div className="pud-catalog-form-field">
@@ -1050,29 +1000,19 @@ const Catalog: React.FC<CatalogProps> = ({
                                         />
                                     </div>
 
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label" htmlFor="catalog-commodity">Commodity<span className="sila-required" aria-hidden="true">*</span></label>
-                                        <select
-                                            id="catalog-commodity"
-                                            className="pud-catalog-form-select"
-                                            value={catalogForm.commodity}
-                                            onChange={(e) => handleCommodityChange(e.target.value)}
-                                            disabled={!catalogForm.class}
-                                        >
-                                            <option value="">
-                                                {!catalogForm.class
-                                                    ? "Select a class first"
-                                                    : loadingCommodities
-                                                        ? "Loading commodities..."
-                                                        : "Select commodity"
-                                                }
-                                            </option>
-                                            {commodityOptions.map((com) => (
-                                                <option key={com.commodity} value={com.commodity}>
-                                                    {com.commodity} - {com.commodityTitle}
-                                                </option>
-                                            ))}
-                                        </select>
+                                    <div className="pud-catalog-form-field" onKeyDown={preventEnterSubmit}>
+                                        <Dropdown
+                                            label="Commodity"
+                                            placeholder={!catalogForm.class ? "Select a class first" : "Select commodity"}
+                                            isRequired
+                                            isClearable
+                                            isDisable={!catalogForm.class}
+                                            isAsync
+                                            loadOptions={loadCommodityOptions}
+                                            cacheUniques={[catalogForm.class]}
+                                            value={toIdTitleDropdownValue(catalogForm.commodity, catalogForm.commodityTitle)}
+                                            onChange={handleCommodityChange}
+                                        />
                                     </div>
 
                                     <div className="pud-catalog-form-field">
