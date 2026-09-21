@@ -1,10 +1,10 @@
 import React, { useRef, useState, useEffect } from "react";
 import "./CreateRFQ.css";
-import { Button, toastService, DateTimePicker, StatusBadge } from "@vosox/shared-ui";
+import { Button, toastService, DateTimePicker, StatusBadge, Dropdown } from "@vosox/shared-ui";
+import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from "@vosox/shared-ui";
 import { getBuyerProfile, getAllDepartments, getAllCostCenters, getAllItemMasters, createRFQ, getVerifiedSuppliers, getUnspscSegments, getUnspscFamilies } from "../../../../remote-buyer/src/api/Buyerapi";
 import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../../../../remote-buyer/src/api/masterdataApi";
 import type { CreateRFQPayload, ExternalSupplierDto, RfqDocumentAssetDto, RfqItemDto, RfqQuestionDto, SupplierInviteDto, VerifiedSupplierDto, SupplierVerificationType } from "../../../../remote-buyer/src/dto/rfqDto";
-import type { UnspscSegmentDto, UnspscFamilyDto } from "../../../../remote-buyer/src/dto/masterDataDto";
 import type { CountryDto, UnitDto, CurrencyDto } from "../../../../remote-buyer/src/api/masterdataApi";
 import ItemMasterModal from "./ItemMasterModal";
 import ExternalSupplierModal, { type ExternalSupplierFormValues } from "./ExternalSupplierModal";
@@ -150,13 +150,6 @@ const IconCheckBig = () => (
     </svg>
 );
 
-const IconChevronDown = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <polyline points="6 9 12 15 18 9" />
-    </svg>
-);
-
-
 const steps: { key: StepKey; label: string }[] = [
     { key: "details", label: "1. RFQ Details" },
     { key: "suppliers", label: "2. Select Suppliers" },
@@ -173,7 +166,8 @@ const registrationTemplateOptions = [
     "IT Hardware Vendor Verification",
 ];
 
-const PAGE_LIMIT = 10;
+// Page size used by every async (paginated) Dropdown
+const DROPDOWN_PAGE_SIZE = 40;
 
 /* ---------------------------------- Helpers ---------------------------------- */
 
@@ -234,185 +228,6 @@ const getMaterialCodeDescription = (m: any): string => {
 };
 
 
-function usePaginatedSearchSelect<T>(
-    fetcher: (index: number, limit: number, searchTerm?: string) => Promise<{ items: T[]; totalCount: number }>,
-    isOpen: boolean,
-    searchTerm: string,
-    limit: number = PAGE_LIMIT
-) {
-    const [options, setOptions] = useState<T[]>([]);
-    const [pageIndex, setPageIndex] = useState(0);
-    const [loading, setLoading] = useState(false);
-    const [hasMore, setHasMore] = useState(true);
-
-    useEffect(() => {
-        if (!isOpen) return;
-        const timer = setTimeout(() => {
-            const run = async () => {
-                setLoading(true);
-                try {
-                    const res = await fetcher(0, limit, searchTerm.trim() || undefined);
-                    const items = res?.items || [];
-                    setOptions(items);
-                    setPageIndex(0);
-                    setHasMore(items.length === limit);
-                } catch (err) {
-                    console.error("Failed to fetch options", err);
-                    setOptions([]);
-                    setHasMore(false);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            run();
-        }, 350);
-        return () => clearTimeout(timer);
-    }, [isOpen, searchTerm]);
-
-    const loadMore = async () => {
-        if (loading || !hasMore) return;
-        const nextIndex = pageIndex + 1;
-        setLoading(true);
-        try {
-            const res = await fetcher(nextIndex, limit, searchTerm.trim() || undefined);
-            const items = res?.items || [];
-            setOptions((prev) => [...prev, ...items]);
-            setPageIndex(nextIndex);
-            setHasMore(items.length === limit);
-        } catch (err) {
-            console.error("Failed to fetch more options", err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return { options, loading, hasMore, loadMore };
-}
-
-
-interface SearchableSelectProps<T> {
-    value: string;
-    placeholder: string;
-    isOpen: boolean;
-    onToggle: () => void;
-    onClose: () => void;
-    searchTerm: string;
-    onSearchChange: (v: string) => void;
-    options: T[];
-    getOptionLabel: (opt: T) => string;
-    getOptionKey: (opt: T) => string;
-    onSelect: (opt: T) => void;
-    loading: boolean;
-    onScrollBottom: () => void;
-    searchPlaceholder?: string;
-    small?: boolean;
-    hideSearch?: boolean;
-    disabled?: boolean;
-    error?: boolean;
-}
-
-function SearchableSelect<T,>({
-    value,
-    placeholder,
-    isOpen,
-    onToggle,
-    onClose,
-    searchTerm,
-    onSearchChange,
-    options,
-    getOptionLabel,
-    getOptionKey,
-    onSelect,
-    loading,
-    onScrollBottom,
-    searchPlaceholder,
-    small,
-    hideSearch,
-    disabled,
-    error,
-}: SearchableSelectProps<T>) {
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-                onClose();
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [onClose]);
-
-    const handleScroll = (e: React.UIEvent<HTMLUListElement>) => {
-        const el = e.currentTarget;
-        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
-            onScrollBottom();
-        }
-    };
-
-    return (
-        <div className="bd-custom-select-container" ref={containerRef}>
-            <div
-                className={`${small ? "bd-input-sm" : "bd-input"} bd-custom-select-trigger${disabled ? " disabled" : ""}${error ? " bd-input-error" : ""}${value ? "" : " bd-custom-select-placeholder"}`}
-                onClick={() => !disabled && onToggle()}
-                onKeyDown={(e) => !disabled && activateOnKey(e, onToggle)}
-                role="button"
-                tabIndex={disabled ? -1 : 0}
-                aria-haspopup="listbox"
-                aria-expanded={isOpen}
-                aria-disabled={disabled || undefined}
-                aria-invalid={error || undefined}
-            >
-                <span className="bd-custom-select-value">{value || placeholder}</span>
-                <IconChevronDown />
-            </div>
-            {isOpen && !disabled && (
-                <div className="bd-custom-select-panel">
-                    {!hideSearch && (
-                        <div className="bd-custom-select-search">
-                            <div className="bd-search-wrap">
-                                <span className="bd-search-icon">
-                                    <IconSearch />
-                                </span>
-                                <input
-                                    className="bd-input bd-search-input bd-search-input-full"
-                                    type="text"
-                                    aria-label={searchPlaceholder || "Search"}
-                                    placeholder={searchPlaceholder || "Search..."}
-                                    value={searchTerm}
-                                    onChange={(e) => onSearchChange(e.target.value)}
-                                    onClick={(e) => e.stopPropagation()}
-                                    autoFocus
-                                />
-                            </div>
-                        </div>
-                    )}
-                    <ul className="bd-custom-select-menu" role="listbox" onScroll={handleScroll}>
-                        {options.map((opt) => (
-                            <li
-                                key={getOptionKey(opt)}
-                                className={`bd-custom-select-option${getOptionLabel(opt) === value ? " selected" : ""}`}
-                                role="option"
-                                aria-selected={getOptionLabel(opt) === value}
-                                tabIndex={0}
-                                onClick={() => onSelect(opt)}
-                                onKeyDown={(e) => activateOnKey(e, () => onSelect(opt))}
-                                title={getOptionLabel(opt)}
-                            >
-                                {getOptionLabel(opt)}
-                            </li>
-                        ))}
-                        {loading && <li className="bd-custom-select-loading">Loading...</li>}
-                        {!loading && options.length === 0 && (
-                            <li className="bd-custom-select-empty">No results found</li>
-                        )}
-                    </ul>
-                </div>
-            )}
-        </div>
-    );
-}
-
 /* ---------------------------------- Component ---------------------------------- */
 
 const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: () => Promise<void>;}> = ({ onNavClick,onRfqCreated })=> {
@@ -422,8 +237,6 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
 
     const [rfqTitle, setRfqTitle] = useState("");
     const [department, setDepartment] = useState("");
-    const [departmentOptions, setDepartmentOptions] = useState<any[]>([]);
-    const [materialCodeOptions, setMaterialCodeOptions] = useState<any[]>([]);
     const [isItemMasterModalOpen, setIsItemMasterModalOpen] = useState(false);
     const [isExternalSupplierModalOpen, setIsExternalSupplierModalOpen] = useState(false);
 
@@ -433,14 +246,6 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
                 const profile = await getBuyerProfile();
                 if (profile?.id) {
                     setBuyerProfileId(profile.id);
-
-                    const res = await getAllDepartments(profile.id, 0, 10000);
-                    const data = res?.data?.data || res?.data || res || [];
-                    setDepartmentOptions(Array.isArray(data) ? data : []);
-
-                    const itemRes = await getAllItemMasters(profile.id, 0, 10000);
-                    const itemData = itemRes?.data?.data || itemRes?.data || itemRes || [];
-                    setMaterialCodeOptions(Array.isArray(itemData) ? itemData : []);
                 }
             } catch (err) {
                 console.error("Failed to fetch initial data", err);
@@ -449,169 +254,221 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
         fetchInitialData();
     }, []);
     const [costCenter, setCostCenter] = useState("");
-    const [costCenterOptions, setCostCenterOptions] = useState<any[]>([]);
-
-    useEffect(() => {
-        const fetchCostCenters = async () => {
-            if (!department) {
-                setCostCenterOptions([]);
-                return;
-            }
-            try {
-                const res = await getAllCostCenters(department, 0, 10000);
-                const data = res?.data?.data || res?.data || res || [];
-                setCostCenterOptions(Array.isArray(data) ? data : []);
-            } catch (err) {
-                console.error("Failed to fetch cost centers", err);
-            }
-        };
-        fetchCostCenters();
-    }, [department]);
-
-    const [isDepartmentDropdownOpen, setIsDepartmentDropdownOpen] = useState(false);
-    const [departmentSearchTerm, setDepartmentSearchTerm] = useState("");
-    const [departmentLabel, setDepartmentLabel] = useState("");
+    const [selectedDepartment, setSelectedDepartment] = useState<DropdownValue | null>(null);
+    const [selectedCostCenter, setSelectedCostCenter] = useState<DropdownValue | null>(null);
 
     const getDeptName = (d: any, idx: number) =>
         typeof d === "string" ? d : (d.department || d.name || d.Name || `Dept ${idx}`);
     const getDeptId = (d: any, idx: number) =>
         typeof d === "string" ? d : (d.id || getDeptName(d, idx));
 
-    const filteredDepartmentOptions = departmentOptions.filter((d, idx) =>
-        formatLabel(getDeptName(d, idx)).toLowerCase().includes(departmentSearchTerm.trim().toLowerCase())
-    );
-
-    const [isCostCenterDropdownOpen, setIsCostCenterDropdownOpen] = useState(false);
-    const [costCenterSearchTerm, setCostCenterSearchTerm] = useState("");
-    const [costCenterLabel, setCostCenterLabel] = useState("");
+    // ---- Async paginated loader for the Department Dropdown (`index` is an offset: 0, 40, 80, ...) ----
+    const loadDepartmentOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!buyerProfileId) {
+            return { options: [], hasMore: false };
+        }
+        try {
+            const res = await getAllDepartments(buyerProfileId, page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+            const data = res?.data?.data || res?.data || res || [];
+            const departments: any[] = Array.isArray(data) ? data : [];
+            return {
+                options: departments.map((d, idx) => ({ name: formatLabel(getDeptName(d, idx)), value: String(getDeptId(d, idx)) })),
+                hasMore: departments.length === DROPDOWN_PAGE_SIZE,
+            };
+        } catch (err) {
+            console.error("Failed to fetch departments", err);
+            return { options: [], hasMore: false };
+        }
+    };
 
     const getCcName = (c: any, idx: number) =>
         typeof c === "string" ? c : (c.costCenter || c.name || c.Name || `CC ${idx}`);
     const getCcId = (c: any, idx: number) =>
         typeof c === "string" ? c : (c.id || getCcName(c, idx));
 
-    const filteredCostCenterOptions = costCenterOptions.filter((c, idx) =>
-        formatLabel(getCcName(c, idx)).toLowerCase().includes(costCenterSearchTerm.trim().toLowerCase())
-    );
-
-    const [segmentCode, setSegmentCode] = useState("");
-    const [segmentTitle, setSegmentTitle] = useState("");
-    const [segmentOptions, setSegmentOptions] = useState<UnspscSegmentDto[]>([]);
-
-    const [familyCode, setFamilyCode] = useState("");
-    const [familyTitle, setFamilyTitle] = useState("");
-    const [familyOptions, setFamilyOptions] = useState<UnspscFamilyDto[]>([]);
-
-    useEffect(() => {
-        const fetchSegments = async () => {
-            try {
-                const data = await getUnspscSegments(1, 200);
-                setSegmentOptions(data);
-            } catch (err) {
-                console.error("Failed to fetch UNSPSC segments", err);
-            }
-        };
-        fetchSegments();
-    }, []);
-
-    useEffect(() => {
-        const fetchFamilies = async () => {
-            if (!segmentCode) {
-                setFamilyOptions([]);
-                return;
-            }
-            try {
-                const data = await getUnspscFamilies(Number(segmentCode), 1, 200);
-                setFamilyOptions(data);
-            } catch (err) {
-                console.error("Failed to fetch UNSPSC families", err);
-            }
-        };
-        fetchFamilies();
-    }, [segmentCode]);
-
-    const handleSegmentChange = (value: string) => {
-        setSegmentCode(value);
-        setFamilyCode("");
-        setFamilyTitle("");
-        const selected = segmentOptions.find((s) => String(s.segment) === value);
-        setSegmentTitle(selected?.title || "");
+    // ---- Async paginated loader for the Cost Center Dropdown (`index` is an offset: 0, 40, 80, ...) ----
+    const loadCostCenterOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!department) {
+            return { options: [], hasMore: false };
+        }
+        try {
+            const res = await getAllCostCenters(department, page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+            const data = res?.data?.data || res?.data || res || [];
+            const costCenters: any[] = Array.isArray(data) ? data : [];
+            return {
+                options: costCenters.map((c, idx) => ({ name: formatLabel(getCcName(c, idx)), value: String(getCcId(c, idx)) })),
+                hasMore: costCenters.length === DROPDOWN_PAGE_SIZE,
+            };
+        } catch (err) {
+            console.error("Failed to fetch cost centers", err);
+            return { options: [], hasMore: false };
+        }
     };
 
-    const handleFamilyChange = (value: string) => {
-        setFamilyCode(value);
-        const selected = familyOptions.find((f) => String(f.family) === value);
-        setFamilyTitle(selected?.title || "");
+    const handleDepartmentChange = (val: DropdownValue | null) => {
+        setSelectedDepartment(val);
+        setDepartment(val?.value || "");
+        setErrors((p) => { const np = { ...p }; delete np.department; return np; });
+        setSelectedCostCenter(null);
+        setCostCenter("");
     };
 
-    const [isSegmentDropdownOpen, setIsSegmentDropdownOpen] = useState(false);
-    const [segmentSearchTerm, setSegmentSearchTerm] = useState("");
-    const filteredSegmentOptions = segmentOptions.filter((s) =>
-        s.title.toLowerCase().includes(segmentSearchTerm.trim().toLowerCase())
-    );
-const getCurrenciesSafe = async (
-    index: number,
-    limit: number
-): Promise<{ items: CurrencyDto[]; totalCount: number }> => {
-    try {
-        const res = await getCurrencies(index, limit);
-        if (res && Array.isArray((res as any).items)) {
-            return res as { items: CurrencyDto[]; totalCount: number };
-        }
-    } catch (err) {
-        console.error("Failed to fetch currencies", err);
-    }
-    return { items: [], totalCount: 0 };
-};
+    const handleCostCenterChange = (val: DropdownValue | null) => {
+        setSelectedCostCenter(val);
+        setCostCenter(val?.value || "");
+    };
 
-const getCountriesSafe = async (
-    index: number,
-    limit: number,
-    searchTerm?: string
-): Promise<{ items: CountryDto[]; totalCount: number }> => {
-    try {
-        const res = await getCountries(index, limit, searchTerm);
-        if (res && Array.isArray((res as any).items)) {
-            return res as { items: CountryDto[]; totalCount: number };
-        }
-    } catch (err) {
-        console.error("Failed to fetch countries", err);
-    }
-    return { items: [], totalCount: 0 };
-};
+    const [selectedSegment, setSelectedSegment] = useState<DropdownValue | null>(null);
+    const [selectedFamily, setSelectedFamily] = useState<DropdownValue | null>(null);
+    const segmentCode = selectedSegment?.value || "";
+    const segmentTitle = selectedSegment?.name || "";
+    const familyCode = selectedFamily?.value || "";
+    const familyTitle = selectedFamily?.name || "";
 
-const getUnitsSafe = async (
-    index: number,
-    limit: number,
-    searchTerm?: string
-): Promise<{ items: UnitDto[]; totalCount: number }> => {
-    try {
-        const res = await getUnits(index, limit, searchTerm);
-        if (res && Array.isArray((res as any).items)) {
-            return res as { items: UnitDto[]; totalCount: number };
+    // ---- Async paginated loader for the Segment Dropdown ----
+    const loadSegmentOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        try {
+            const pageIndex = page * DROPDOWN_PAGE_SIZE; // index of the first item on the page: 0, 40, 80, ...
+            const segments = await getUnspscSegments(pageIndex, DROPDOWN_PAGE_SIZE, search || undefined);
+            return {
+                options: segments.map((seg) => ({ name: seg.title, value: String(seg.segment) })),
+                hasMore: segments.length === DROPDOWN_PAGE_SIZE,
+            };
+        } catch (err) {
+            console.error("Failed to fetch UNSPSC segments", err);
+            return { options: [], hasMore: false };
         }
-    } catch (err) {
-        console.error("Failed to fetch units", err);
-    }
-    return { items: [], totalCount: 0 };
-};
-    const [isFamilyDropdownOpen, setIsFamilyDropdownOpen] = useState(false);
-    const [familySearchTerm, setFamilySearchTerm] = useState("");
-    const filteredFamilyOptions = familyOptions.filter((f) =>
-        f.title.toLowerCase().includes(familySearchTerm.trim().toLowerCase())
-    );
+    };
 
-    const [currency, setCurrency] = useState("");
-    const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
-    const [currencySearchTerm, setCurrencySearchTerm] = useState("");
-    const [region, setRegion] = useState("");
-    const [isRegionDropdownOpen, setIsRegionDropdownOpen] = useState(false);
-    const [regionSearchTerm, setRegionSearchTerm] = useState("");
-    const [isUomDropdownOpen, setIsUomDropdownOpen] = useState(false);
-    const [uomSearchTerm, setUomSearchTerm] = useState("");
-const currencySelect = usePaginatedSearchSelect<CurrencyDto>(getCurrenciesSafe, isCurrencyDropdownOpen, currencySearchTerm);
-const regionSelect = usePaginatedSearchSelect<CountryDto>(getCountriesSafe, isRegionDropdownOpen, regionSearchTerm);
-const uomSelect = usePaginatedSearchSelect<UnitDto>(getUnitsSafe, isUomDropdownOpen, uomSearchTerm);
+    // ---- Async paginated loader for the Family Dropdown (server has no search param, so filter client-side) ----
+    const loadFamilyOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!segmentCode) {
+            return { options: [], hasMore: false };
+        }
+        try {
+            const pageIndex = page * DROPDOWN_PAGE_SIZE; // index of the first item on the page: 0, 40, 80, ...
+            const families = await getUnspscFamilies(Number(segmentCode), pageIndex, DROPDOWN_PAGE_SIZE);
+            const searchTerm = search.trim().toLowerCase();
+            const options = families
+                .filter((fam) => !searchTerm || fam.title.toLowerCase().includes(searchTerm))
+                .map((fam) => ({ name: fam.title, value: String(fam.family) }));
+            return { options, hasMore: families.length === DROPDOWN_PAGE_SIZE };
+        } catch (err) {
+            console.error("Failed to fetch UNSPSC families", err);
+            return { options: [], hasMore: false };
+        }
+    };
+
+    const handleSegmentChange = (val: DropdownValue | null) => {
+        setSelectedSegment(val);
+        setSelectedFamily(null);
+    };
+
+    const handleFamilyChange = (val: DropdownValue | null) => {
+        setSelectedFamily(val);
+    };
+
+    const getCurrenciesSafe = async (
+        index: number,
+        limit: number
+    ): Promise<{ items: CurrencyDto[]; totalCount: number }> => {
+        try {
+            const res = await getCurrencies(index, limit);
+            if (res && Array.isArray((res as any).items)) {
+                return res as { items: CurrencyDto[]; totalCount: number };
+            }
+        } catch (err) {
+            console.error("Failed to fetch currencies", err);
+        }
+        return { items: [], totalCount: 0 };
+    };
+
+    const getCountriesSafe = async (
+        index: number,
+        limit: number,
+        searchTerm?: string
+    ): Promise<{ items: CountryDto[]; totalCount: number }> => {
+        try {
+            const res = await getCountries(index, limit, searchTerm);
+            if (res && Array.isArray((res as any).items)) {
+                return res as { items: CountryDto[]; totalCount: number };
+            }
+        } catch (err) {
+            console.error("Failed to fetch countries", err);
+        }
+        return { items: [], totalCount: 0 };
+    };
+
+    const getUnitsSafe = async (
+        index: number,
+        limit: number,
+        searchTerm?: string
+    ): Promise<{ items: UnitDto[]; totalCount: number }> => {
+        try {
+            const res = await getUnits(index, limit, searchTerm);
+            if (res && Array.isArray((res as any).items)) {
+                return res as { items: UnitDto[]; totalCount: number };
+            }
+        } catch (err) {
+            console.error("Failed to fetch units", err);
+        }
+        return { items: [], totalCount: 0 };
+    };
+
+    const [selectedCurrency, setSelectedCurrency] = useState<DropdownValue | null>(null);
+    const [selectedRegion, setSelectedRegion] = useState<DropdownValue | null>(null);
+    const [selectedUom, setSelectedUom] = useState<DropdownValue | null>({ name: "EA", value: "EA" });
+    const currency = selectedCurrency?.name || "";
+    const region = selectedRegion?.name || "";
+    const newItemUom = selectedUom?.value || "EA";
+
+    // ---- Async paginated loader for the Currency Dropdown (server has no search param, so search client-side) ----
+    // For the masterdata APIs `index` is an offset: 0, then 0 + 40, then 0 + 40 + 40, ...
+    const loadCurrencyOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        const toOption = (c: CurrencyDto) => ({ name: c.currencyName, value: c.id });
+        const searchTerm = search.trim().toLowerCase();
+
+        if (searchTerm) {
+            // Page through every currency so a match on a later page isn't missed, then filter here
+            const matches: CurrencyDto[] = [];
+            let index = 0;
+            let totalCount = 0;
+            do {
+                const res = await getCurrenciesSafe(index, DROPDOWN_PAGE_SIZE);
+                matches.push(...res.items.filter((c) => c.currencyName.toLowerCase().includes(searchTerm)));
+                totalCount = res.totalCount;
+                if (res.items.length === 0) break;
+                index += res.items.length;
+            } while (index < totalCount);
+            return { options: matches.map(toOption), hasMore: false, total: matches.length };
+        }
+
+        const index = page * DROPDOWN_PAGE_SIZE;
+        const res = await getCurrenciesSafe(index, DROPDOWN_PAGE_SIZE);
+        return {
+            options: res.items.map(toOption),
+            hasMore: index + res.items.length < res.totalCount,
+            total: res.totalCount,
+        };
+    };
+
+    // ---- Async paginated loader for the Region (Country) Dropdown ----
+    const loadRegionOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        const res = await getCountriesSafe(page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+        return {
+            options: res.items.map((c) => ({ name: c.countryName, value: c.id })),
+            hasMore: res.items.length === DROPDOWN_PAGE_SIZE,
+        };
+    };
+
+    // ---- Async paginated loader for the Unit of Measure Dropdown ----
+    const loadUomOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        const res = await getUnitsSafe(page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+        return {
+            options: res.items.map((u) => ({ name: u.key, value: u.key })),
+            hasMore: res.items.length === DROPDOWN_PAGE_SIZE,
+        };
+    };
     const [description, setDescription] = useState("");
     const [deliveryLocation, setDeliveryLocation] = useState("");
     const [startDateTime, setStartDateTime] = useState("");
@@ -659,22 +516,39 @@ if (Array.isArray(data)) {
     const [newItemName, setNewItemName] = useState("");
     const [newItemDesc, setNewItemDesc] = useState("");
     const [newItemQty, setNewItemQty] = useState(1);
-    const [newItemUom, setNewItemUom] = useState("EA");
     const [newItemPrice, setNewItemPrice] = useState("");
     const [newItemMaterialCode, setNewItemMaterialCode] = useState("");
+
+    // Descriptions of the material codes loaded so far, used to prefill the item description on select
+    const materialCodeDescriptions = useRef<Record<string, string>>({});
+
+    // ---- Async paginated loader for the Material Code Dropdown (`index` is an offset: 0, 40, 80, ...) ----
+    const loadMaterialCodeOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!buyerProfileId) {
+            return { options: [], hasMore: false };
+        }
+        try {
+            const res = await getAllItemMasters(buyerProfileId, page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+            const data = res?.data?.data || res?.data || res || [];
+            const items: any[] = Array.isArray(data) ? data : [];
+            const options = items.map((m, idx) => {
+                const code: string = typeof m === "string" ? m : (m.materialCode || m.id || `Code ${idx}`);
+                materialCodeDescriptions.current[code] = getMaterialCodeDescription(m);
+                return { name: code, value: code };
+            });
+            return { options, hasMore: items.length === DROPDOWN_PAGE_SIZE };
+        } catch (err) {
+            console.error("Failed to fetch material codes", err);
+            return { options: [], hasMore: false };
+        }
+    };
 
     const handleMaterialCodeChange = (code: string) => {
         setNewItemMaterialCode(code);
         if (!code) return;
-        const selected = materialCodeOptions.find((m: any) => {
-            const mCode = typeof m === 'string' ? m : (m.materialCode || m.id);
-            return mCode === code;
-        });
-        if (selected) {
-            const desc = getMaterialCodeDescription(selected);
-            if (desc && !newItemDesc) {
-                setNewItemDesc(desc);
-            }
+        const desc = materialCodeDescriptions.current[code];
+        if (desc && !newItemDesc) {
+            setNewItemDesc(desc);
         }
     };
 
@@ -769,7 +643,7 @@ if (Array.isArray(data)) {
         setNewItemName("");
         setNewItemDesc("");
         setNewItemQty(1);
-        setNewItemUom("EA");
+        setSelectedUom({ name: "EA", value: "EA" });
         setNewItemPrice("");
         setNewItemMaterialCode("");
     };
@@ -889,7 +763,7 @@ if (Array.isArray(data)) {
     };
 
     const selectedSuppliers = suppliers.filter((s) => selectedSupplierIds.includes(s.supplierId));
-    console.log(suppliers);
+
     const verifiedSelectedCount = selectedSuppliers.filter((s) => s.isVerified).length;
     const unverifiedSelectedCount = selectedSuppliers.length - verifiedSelectedCount;
     const hasUnverifiedSelected = unverifiedSelectedCount > 0;
@@ -1024,108 +898,53 @@ if (Array.isArray(data)) {
 
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Department<span className="sila-required" aria-hidden="true">*</span></label>
-                            <SearchableSelect<any>
-                                value={departmentLabel}
+                            <Dropdown
+                                label="Department"
+                                isRequired
                                 placeholder="Select Department"
-                                isOpen={isDepartmentDropdownOpen}
-                                onToggle={() => setIsDepartmentDropdownOpen((prev) => !prev)}
-                                onClose={() => setIsDepartmentDropdownOpen(false)}
-                                searchTerm={departmentSearchTerm}
-                                onSearchChange={setDepartmentSearchTerm}
-                                options={filteredDepartmentOptions}
-                                getOptionLabel={(d) => formatLabel(getDeptName(d, departmentOptions.indexOf(d)))}
-                                getOptionKey={(d) => getDeptId(d, departmentOptions.indexOf(d))}
-                                onSelect={(d) => {
-                                    const idx = departmentOptions.indexOf(d);
-                                    setDepartment(getDeptId(d, idx));
-                                    setDepartmentLabel(formatLabel(getDeptName(d, idx)));
-                                    setCostCenter("");
-                                    setCostCenterLabel("");
-                                    setIsDepartmentDropdownOpen(false);
-                                    setDepartmentSearchTerm("");
-                                }}
-                                loading={false}
-                                onScrollBottom={() => { }}
-                                searchPlaceholder="Search department..."
-                                error={!!errors.department}
+                                isAsync
+                                loadOptions={loadDepartmentOptions}
+                                cacheUniques={[buyerProfileId]}
+                                value={selectedDepartment}
+                                onChange={handleDepartmentChange}
+                                error={errors.department}
                             />
-                            {errors.department && <div className="bd-error-text">{errors.department}</div>}
                         </div>
                         <div className="bd-field">
-                            <label className="bd-label">Cost Center</label>
-                            <SearchableSelect<any>
-                                value={costCenterLabel}
+                            <Dropdown
+                                label="Cost Center"
                                 placeholder={department ? "Select Cost Center" : "Select Department First"}
-                                isOpen={isCostCenterDropdownOpen}
-                                onToggle={() => setIsCostCenterDropdownOpen((prev) => !prev)}
-                                onClose={() => setIsCostCenterDropdownOpen(false)}
-                                searchTerm={costCenterSearchTerm}
-                                onSearchChange={setCostCenterSearchTerm}
-                                options={filteredCostCenterOptions}
-                                getOptionLabel={(c) => formatLabel(getCcName(c, costCenterOptions.indexOf(c)))}
-                                getOptionKey={(c) => getCcId(c, costCenterOptions.indexOf(c))}
-                                onSelect={(c) => {
-                                    const idx = costCenterOptions.indexOf(c);
-                                    setCostCenter(getCcId(c, idx));
-                                    setCostCenterLabel(formatLabel(getCcName(c, idx)));
-                                    setIsCostCenterDropdownOpen(false);
-                                    setCostCenterSearchTerm("");
-                                }}
-                                loading={false}
-                                onScrollBottom={() => { }}
-                                searchPlaceholder="Search cost center..."
-                                disabled={!department}
+                                isAsync
+                                loadOptions={loadCostCenterOptions}
+                                value={selectedCostCenter}
+                                onChange={handleCostCenterChange}
+                                cacheUniques={[department]}
+                                isDisable={!department}
                             />
                         </div>
                     </div>
 
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Segment</label>
-                            <SearchableSelect<UnspscSegmentDto>
-                                value={segmentTitle}
+                            <Dropdown
+                                label="Segment"
                                 placeholder="Select Segment"
-                                isOpen={isSegmentDropdownOpen}
-                                onToggle={() => setIsSegmentDropdownOpen((prev) => !prev)}
-                                onClose={() => setIsSegmentDropdownOpen(false)}
-                                searchTerm={segmentSearchTerm}
-                                onSearchChange={setSegmentSearchTerm}
-                                options={filteredSegmentOptions}
-                                getOptionLabel={(o) => o.title}
-                                getOptionKey={(o) => String(o.segment)}
-                                onSelect={(o) => {
-                                    handleSegmentChange(String(o.segment));
-                                    setIsSegmentDropdownOpen(false);
-                                    setSegmentSearchTerm("");
-                                }}
-                                loading={false}
-                                onScrollBottom={() => { }}
-                                searchPlaceholder="Search segment..."
+                                isAsync
+                                loadOptions={loadSegmentOptions}
+                                value={selectedSegment}
+                                onChange={handleSegmentChange}
                             />
                         </div>
                         <div className="bd-field">
-                            <label className="bd-label">Family</label>
-                            <SearchableSelect<UnspscFamilyDto>
-                                value={familyTitle}
+                            <Dropdown
+                                label="Family"
                                 placeholder={segmentCode ? "Select Family" : "Select Segment First"}
-                                isOpen={isFamilyDropdownOpen}
-                                onToggle={() => setIsFamilyDropdownOpen((prev) => !prev)}
-                                onClose={() => setIsFamilyDropdownOpen(false)}
-                                searchTerm={familySearchTerm}
-                                onSearchChange={setFamilySearchTerm}
-                                options={filteredFamilyOptions}
-                                getOptionLabel={(o) => o.title}
-                                getOptionKey={(o) => String(o.family)}
-                                onSelect={(o) => {
-                                    handleFamilyChange(String(o.family));
-                                    setIsFamilyDropdownOpen(false);
-                                    setFamilySearchTerm("");
-                                }}
-                                loading={false}
-                                onScrollBottom={() => { }}
-                                searchPlaceholder="Search family..."
-                                disabled={!segmentCode}
+                                isAsync
+                                loadOptions={loadFamilyOptions}
+                                cacheUniques={[segmentCode]}
+                                value={selectedFamily}
+                                onChange={handleFamilyChange}
+                                isDisable={!segmentCode}
                             />
                         </div>
                     </div>
@@ -1147,57 +966,31 @@ if (Array.isArray(data)) {
                     <h3 className="bd-form-section-title">Commercial &amp; Delivery</h3>
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Currency<span className="sila-required" aria-hidden="true">*</span></label>
-                            <SearchableSelect<CurrencyDto>
-                                value={currency}
+                            <Dropdown
+                                label="Currency"
+                                isRequired
                                 placeholder="Select Currency"
-                                isOpen={isCurrencyDropdownOpen}
-                                onToggle={() => setIsCurrencyDropdownOpen((prev) => !prev)}
-                                onClose={() => setIsCurrencyDropdownOpen(false)}
-                                searchTerm={currencySearchTerm}
-                                onSearchChange={setCurrencySearchTerm}
-                                options={currencySelect.options}
-                                getOptionLabel={(o) => o.currencyName}
-                                getOptionKey={(o) => o.id}
-                                onSelect={(o) => {
-                                    setCurrency(o.currencyName);
-                                    setIsCurrencyDropdownOpen(false);
-                                    setCurrencySearchTerm("");
-                                }}
-                                loading={currencySelect.loading}
-                                onScrollBottom={currencySelect.loadMore}
-                                hideSearch
-                                error={!!errors.currency}
+                                isAsync
+                                loadOptions={loadCurrencyOptions}
+                                value={selectedCurrency}
+                                onChange={setSelectedCurrency}
+                                error={errors.currency}
                             />
-                            {errors.currency && <div className="bd-error-text">{errors.currency}</div>}
                         </div>
                     </div>
 
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Region<span className="sila-required" aria-hidden="true">*</span></label>
-                            <SearchableSelect<CountryDto>
-                                value={region}
+                            <Dropdown
+                                label="Region"
+                                isRequired
                                 placeholder="Select Region"
-                                isOpen={isRegionDropdownOpen}
-                                onToggle={() => setIsRegionDropdownOpen((prev) => !prev)}
-                                onClose={() => setIsRegionDropdownOpen(false)}
-                                searchTerm={regionSearchTerm}
-                                onSearchChange={setRegionSearchTerm}
-                                options={regionSelect.options}
-                                getOptionLabel={(o) => o.countryName}
-                                getOptionKey={(o) => o.id}
-                                onSelect={(o) => {
-                                    setRegion(o.countryName);
-                                    setIsRegionDropdownOpen(false);
-                                    setRegionSearchTerm("");
-                                }}
-                                loading={regionSelect.loading}
-                                onScrollBottom={regionSelect.loadMore}
-                                searchPlaceholder="Search country..."
-                                error={!!errors.region}
+                                isAsync
+                                loadOptions={loadRegionOptions}
+                                value={selectedRegion}
+                                onChange={setSelectedRegion}
+                                error={errors.region}
                             />
-                            {errors.region && <div className="bd-error-text">{errors.region}</div>}
                         </div>
                         <div className="bd-field">
                             <label className="bd-label" htmlFor="crfq-delivery-location">Delivery Location</label>
@@ -1630,49 +1423,28 @@ if (Array.isArray(data)) {
                                 />
                             </div>
                             <div className="bd-item-add-field">
-                                <label className="bd-label-sm">UoM</label>
-                                <SearchableSelect<UnitDto>
-                                    value={newItemUom}
+                                <span className="bd-label-sm">UoM</span>
+                                <Dropdown
                                     placeholder="Select UOM"
-                                    isOpen={isUomDropdownOpen}
-                                    onToggle={() => setIsUomDropdownOpen((prev) => !prev)}
-                                    onClose={() => setIsUomDropdownOpen(false)}
-                                    searchTerm={uomSearchTerm}
-                                    onSearchChange={setUomSearchTerm}
-                                    options={uomSelect.options}
-                                    getOptionLabel={(o) => o.key}
-                                    getOptionKey={(o) => o.id}
-                                    onSelect={(o) => {
-                                        setNewItemUom(o.key);
-                                        setIsUomDropdownOpen(false);
-                                        setUomSearchTerm("");
-                                    }}
-                                    loading={uomSelect.loading}
-                                    onScrollBottom={uomSelect.loadMore}
-                                    searchPlaceholder="Search unit..."
-                                    small
+                                    isAsync
+                                    loadOptions={loadUomOptions}
+                                    value={selectedUom}
+                                    onChange={setSelectedUom}
                                 />
                             </div>
                         </div>
                         <div className="bd-item-add-grid-bottom">
                             <div className="bd-item-add-field">
-                                <label className="bd-label-sm" htmlFor="crfq-item-material">Material Code</label>
-                                <select
-                                    id="crfq-item-material"
-                                    className="bd-select-sm"
-                                    value={newItemMaterialCode}
-                                    onChange={(e) => handleMaterialCodeChange(e.target.value)}
-                                >
-                                    <option value="">Select Material Code</option>
-                                    {materialCodeOptions.map((m: any, idx) => {
-                                        const code = typeof m === 'string' ? m : (m.materialCode || m.id || `Code ${idx}`);
-                                        return (
-                                            <option key={code} value={code}>
-                                                {code}
-                                            </option>
-                                        );
-                                    })}
-                                </select>
+                                <span className="bd-label-sm">Material Code</span>
+                                <Dropdown
+                                    placeholder="Select Material Code"
+                                    isAsync
+                                    loadOptions={loadMaterialCodeOptions}
+                                    cacheUniques={[buyerProfileId]}
+                                    value={newItemMaterialCode ? { name: newItemMaterialCode, value: newItemMaterialCode } : null}
+                                    onChange={(val) => handleMaterialCodeChange(val?.value || "")}
+                                    isClearable
+                                />
                             </div>
                             <div className="bd-item-button-section">
                                 <button className="bd-btn-add" onClick={handleAddLineItem} type="button">

@@ -20,6 +20,8 @@ import {
 
 interface ExternalChatConversationProps {
   counterpartyName: string;
+  /** The invited external contact's own name, shown on their (right-side, blue) messages instead of "You". */
+  externalSupplierName?: string;
   hasThread: boolean;
   messages: ExternalChatMessageDto[];
   isLoadingMessages: boolean;
@@ -38,6 +40,7 @@ interface ExternalChatConversationProps {
 
 const ExternalChatConversation: React.FC<ExternalChatConversationProps> = ({
   counterpartyName,
+  externalSupplierName,
   hasThread,
   messages,
   isLoadingMessages,
@@ -148,7 +151,11 @@ const ExternalChatConversation: React.FC<ExternalChatConversationProps> = ({
           )}
 
           {messages.map((message, index) => {
-            const isOwn = message.senderOrganizationType?.toLowerCase() === "supplier";
+            // The external contact has no user account, so their own messages
+            // come back with a null senderUserId (or their invited name).
+            const isOwn =
+              !message.senderUserId ||
+              (!!externalSupplierName && message.senderName === externalSupplierName);
             const previousMessage = messages[index - 1];
             const showDateSeparator =
               !previousMessage || !isSameCalendarDay(previousMessage.dateCreated, message.dateCreated);

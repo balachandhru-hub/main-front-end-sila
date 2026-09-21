@@ -32,8 +32,33 @@ export interface RfqChatHubParams {
    * client sends no such key, so it passes none here either.
    */
   headers?: Record<string, string>;
+  /**
+   * ExternalSupplier chat only. An ExternalSupplier has no JWT, so the hub
+   * (MessageHub.OnConnectedAsync) authenticates it from the `session_token`
+   * and `external_rfq_id` QUERY STRING params - it never reads the
+   * X-Session-Token header, which cannot reach the WebSocket handshake
+   * anyway. Without this the connection is rejected and the supplier never
+   * receives the buyer's messages.
+   */
+  externalSessionToken?: string;
 }
-
+ 
+// SignalR's built-in console logger reports a deliberately stopped attempt
+// ("The connection was stopped during negotiation") at Error level. That is
+// expected whenever a chat effect is cleaned up mid-connect (see the
+// AbortError handling in startRfqChatHub), so log just that one at debug and
+// leave every other message at its normal level.
+const chatHubLogger: signalR.ILogger = {
+  log(level, message) {
+    const text = `[${new Date().toISOString()}] ${signalR.LogLevel[level]}: ${message}`;
+    if (message.includes("stopped during negotiation")) console.debug(text);
+    else if (level >= signalR.LogLevel.Error) console.error(text);
+    else if (level === signalR.LogLevel.Warning) console.warn(text);
+    else if (level === signalR.LogLevel.Information) console.info(text);
+    else console.debug(text);
+  },
+};
+ 
 let connection: signalR.HubConnection | null = null;
 let currentConnectionKey: string | null = null;
 let isConnecting = false;
@@ -44,16 +69,21 @@ let connectionPromise: Promise<void> | null = null;
 // attempt's late-firing callbacks (onclose, or even a delayed success) must
 // not be allowed to touch state that a newer, still-live connection owns.
 let activeAttemptId = 0;
-
-const buildConnectionKey = ({ rfqId, supplierId }: RfqChatHubParams) => `${rfqId}::${supplierId || ""}`;
-
-const buildHubUrl = ({ rfqId, supplierId }: RfqChatHubParams) => {
+ 
+const buildConnectionKey = ({ rfqId, supplierId, externalSessionToken }: RfqChatHubParams) =>
+  `${rfqId}::${supplierId || ""}::${externalSessionToken ? "external" : ""}`;
+ 
+const buildHubUrl = ({ rfqId, supplierId, externalSessionToken }: RfqChatHubParams) => {
   const apiBaseUrl = (import.meta.env.VITE_AUTH_API_BASE as string).replace(/\/+$/, "");
   // supplierId is only ever passed by the Supplier Admin chat (SupplierRFQChat.tsx) —
   // the Buyer Admin chat (BuyerRFQChat.tsx) always connects with just rfqId.
   const hubPath = supplierId ? SUPPLIER_CHAT_HUB_PATH : BUYER_CHAT_HUB_PATH;
   const query = new URLSearchParams({ rfqId });
   if (supplierId) query.set("supplierId", supplierId);
+  if (externalSessionToken) {
+    query.set("session_token", externalSessionToken);
+    query.set("external_rfq_id", rfqId);
+  }
   return `${apiBaseUrl}${hubPath}?${query.toString()}`;
 };
 
@@ -104,7 +134,7 @@ export const startRfqChatHub = async (
     // mount/cleanup/remount in dev — can null out that module variable while
     // this specific connection's own .start() is still in flight.
     const activeConnection = new signalR.HubConnectionBuilder()
-      .configureLogging(signalR.LogLevel.Information)
+      .configureLogging(chatHubLogger)
       .withUrl(hubUrl, {
         withCredentials: true,
         headers: params.headers,
@@ -169,6 +199,23 @@ export const startRfqChatHub = async (
     console.log("[SignalR] Connected", { hubUrl, state: activeConnection.state });
     onStatusChange?.("connected");
   } catch (err) {
+    // An AbortError means this attempt was stopped on purpose while it was
+    // still negotiating - stopRfqChatHub() from an effect cleanup (React
+    // StrictMode's dev mount/cleanup/remount, or the rfqId/supplier changing
+    // or the panel closing). That is not a connection failure: don't log it
+    // as one, don't surface it to the caller, and don't report "disconnected"
+    // for a connection that was never meant to stay open.
+    if (err instanceof signalR.AbortError || (err as Error | undefined)?.name === "AbortError") {
+      console.debug("[SignalR] Connection attempt stopped during negotiation (intentional):", key);
+      if (myAttemptId === activeAttemptId) {
+        connection = null;
+        currentConnectionKey = null;
+        isConnecting = false;
+        connectionPromise = null;
+      }
+      return;
+    }
+ 
     console.error("[SignalR] Connection failed:", err, "URL:", hubUrl);
     if (myAttemptId === activeAttemptId) {
       connection = null;
@@ -182,21 +229,27 @@ export const startRfqChatHub = async (
 };
 
 export const stopRfqChatHub = async () => {
-  if (connection) {
+  const stopping = connection;
+  if (stopping) {
     try {
-      for (const eventName of RECEIVE_MESSAGE_EVENTS) connection.off(eventName);
+      for (const eventName of RECEIVE_MESSAGE_EVENTS) stopping.off(eventName);
 
-      if (connection.state !== signalR.HubConnectionState.Disconnected) {
+      if (stopping.state !== signalR.HubConnectionState.Disconnected) {
         console.log("[SignalR] Stopping connection", currentConnectionKey);
-        await connection.stop();
+        await stopping.stop();
       }
     } catch (err) {
       console.warn("[SignalR] Error while stopping connection:", err);
     } finally {
-      connection = null;
-      currentConnectionKey = null;
-      isConnecting = false;
-      connectionPromise = null;
+      // stop() is async: by the time it resolves, a newer connect attempt
+      // (e.g. StrictMode's remount) may already own the shared state. Only
+      // clear it if it is still the connection we were asked to stop.
+      if (connection === stopping) {
+        connection = null;
+        currentConnectionKey = null;
+        isConnecting = false;
+        connectionPromise = null;
+      }
     }
   }
 };

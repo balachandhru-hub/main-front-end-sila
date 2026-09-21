@@ -23,7 +23,7 @@ export interface ExternalChatMessageDto {
   rfqId: string;
   supplierId: string;
   externalSupplierId: string;
-  senderUserId: string;
+  senderUserId: string | null;
   senderName: string;
   senderOrganizationType: string;
   body: string;
