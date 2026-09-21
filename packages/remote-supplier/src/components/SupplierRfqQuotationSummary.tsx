@@ -13,9 +13,7 @@ import {
   verifyOtp,
   uploadSupplierTermsAndCondition,
   uploadSupplierEsign,
-  fetchInternalRfqTermsCondition,
   updateBuyerTermsConditionStatus,
-  fetchInternalRfqEsign,
   type RFQDetailResponse,
   type SubmitQuotationPayload,
   type RfqDocumentAssetDto,
@@ -861,8 +859,6 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
         supplierName={ownQuotation?.supplierName || undefined}
         onUploadSupplierTerms={uploadSupplierTermsAndCondition}
         onUploadSupplierEsign={uploadSupplierEsign}
-        fetchTermsConditions={fetchInternalRfqTermsCondition}
-        fetchESigns={fetchInternalRfqEsign}
         onAcceptBuyerTerms={updateBuyerTermsConditionStatus}
         onBack={() => setShowContractView(false)}
       />
