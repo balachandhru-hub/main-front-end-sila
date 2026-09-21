@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "../../../../remote-buyer/src/components/BuyerRFQChat/BuyerRFQChat.css";
 import { isErrorResponse } from "@vosox/shared-ui";
-import type { ChatMessageDto, ChatThreadDto } from "../../api/supplierApi";
+import type { ChatMessageDto, ChatThreadDto, PersonDetailDto } from "../../api/supplierApi";
 import {
   fetchSupplierMessageThreads,
   fetchSupplierMessageHistory,
@@ -35,6 +35,11 @@ interface SupplierRFQChatProps {
   /** From the RFQ-by-id response — preferred over the threads API's counterpartyName. */
   buyerId?: string;
   buyerName?: string;
+  /**
+   * Logged-in user's profile when it lives outside the supplier auth store
+   * (e.g. Supplier Admin, whose profile is in the platform-user store).
+   */
+  personDetail?: PersonDetailDto | null;
 }
 
 const SupplierRFQChat: React.FC<SupplierRFQChatProps> = ({
@@ -45,6 +50,7 @@ const SupplierRFQChat: React.FC<SupplierRFQChatProps> = ({
   supplierId,
   buyerId,
   buyerName,
+  personDetail,
 }) => {
   // The supplier side of an RFQ is always a single conversation with the
   // buyer who created it — unlike the Buyer Admin chat, there is no list of
@@ -57,7 +63,9 @@ const SupplierRFQChat: React.FC<SupplierRFQChatProps> = ({
 
   // Sourced from the store, which fetches it once (on login and on reload) via
   // SupplierApp's mount effect - no per-component fetch, no local cache.
-  const myProfile = useSupplierAuthStore((state) => state.personDetail);
+  const storePersonDetail = useSupplierAuthStore((state) => state.personDetail);
+  const myProfile = personDetail ?? storePersonDetail;
+  console.log(myProfile);
   const isLoadingMyProfile = useSupplierAuthStore((state) => state.personDetailLoading);
 
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
@@ -395,7 +403,7 @@ const SupplierRFQChat: React.FC<SupplierRFQChatProps> = ({
           ) : (
             <SupplierChatConversation
               counterpartyName={counterpartyName}
-              currentUserId={myProfile?.userId}
+              myProfile={myProfile}
               hasThread={!!thread}
               messages={messages}
               isLoadingMessages={loadingMessages}

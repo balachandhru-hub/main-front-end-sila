@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import type { ChatMessageDto } from "../../api/supplierApi";
+import type { ChatMessageDto, PersonDetailDto } from "../../api/supplierApi";
 import type { PendingAttachment } from "./types";
 import {
   formatDateSeparator,
@@ -20,7 +20,7 @@ import {
 
 interface SupplierChatConversationProps {
   counterpartyName: string;
-  currentUserId?: string;
+  myProfile: PersonDetailDto | null;
   hasThread: boolean;
   messages: ChatMessageDto[];
   isLoadingMessages: boolean;
@@ -39,7 +39,7 @@ interface SupplierChatConversationProps {
 
 const SupplierChatConversation: React.FC<SupplierChatConversationProps> = ({
   counterpartyName,
-  currentUserId,
+  myProfile,
   hasThread,
   messages,
   isLoadingMessages,
@@ -150,7 +150,12 @@ const SupplierChatConversation: React.FC<SupplierChatConversationProps> = ({
           )}
 
           {messages.map((message, index) => {
-            const isOwn = !!currentUserId && message.senderUserId === currentUserId;
+            const isOwn =
+              !!myProfile &&
+              !!message.senderUserId &&
+              message.senderUserId === myProfile.userId &&
+              message.senderName === myProfile.userName;
+            console.log(message.senderName, "senderName", myProfile?.userName, "myProfile.userName", message.senderUserId, "senderUserId", myProfile?.userId, "myProfile.userId");
             const previousMessage = messages[index - 1];
             const showDateSeparator =
               !previousMessage || !isSameCalendarDay(previousMessage.dateCreated, message.dateCreated);
