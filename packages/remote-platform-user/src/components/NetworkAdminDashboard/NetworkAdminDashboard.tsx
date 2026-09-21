@@ -101,16 +101,24 @@ const NetworkAdminDashboard: React.FC = () => {
 
       toastService.success('User created successfully!');
       setIsModalOpen(false);
-    } catch {
-      const errorMessage = 'Failed to create user';
+    } catch (err: any) {
+      const rawMessage = err?.message || 'Failed to create user';
+      const lower = rawMessage.toLowerCase();
+      let userFacingError = rawMessage;
 
-      if (errorMessage.includes('Username already exists')) {
-        toastService.error('This username is already taken. Please choose a different one.');
-      } else if (errorMessage.includes('Email already exists')) {
-        toastService.error('This email is already registered. Please use a different email.');
-      } else {
-        toastService.error(errorMessage);
+      if (
+        lower.includes('email') ||
+        lower.includes('already registered') ||
+        lower.includes('already exists') ||
+        lower.includes('duplicate')
+      ) {
+        userFacingError = 'Email address already exists. Please use a different email address.';
+      } else if (lower.includes('username')) {
+        userFacingError = 'This username is already taken. Please choose a different one.';
       }
+
+      toastService.error(userFacingError);
+      throw new Error(userFacingError);
     } finally {
       setIsCreatingUser(false);
     }

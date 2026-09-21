@@ -10,7 +10,7 @@ import './CreateUserModal.css';
 interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (user: User) => void;
+  onCreate: (user: User) => Promise<void> | void;
   createRole: UserRole;
   isLoading?: boolean;
 }
@@ -233,22 +233,27 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
       roleId: roleIdToUse,
     };
 
-    onCreate(newUser);
+    try {
+      await onCreate(newUser);
 
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      country: '',
-      addressLine: '',
-      userName: '',
-      password: '',
-      confirmPassword: '',
-    });
-    setSelectedCountryLabel('');
-    setFormErrors({});
-    setShowPassword(false);
-    setShowConfirmPassword(false);
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        country: '',
+        addressLine: '',
+        userName: '',
+        password: '',
+        confirmPassword: '',
+      });
+      setSelectedCountryLabel('');
+      setFormErrors({});
+      setShowPassword(false);
+      setShowConfirmPassword(false);
+    } catch {
+      // Backend API errors are displayed via toast notification on screen.
+      // Do not display backend errors on the inline <span> element.
+    }
   };
 
   const handleClose = () => {
