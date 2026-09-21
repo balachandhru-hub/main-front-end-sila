@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import "./ApprovalManagement.css";
+import { FaChevronRight, FaPlus, FaSearch } from "react-icons/fa";
+import { EmptyState } from "@vosox/shared-ui";
 import { useNetworkAdminAuthStore } from "../../store/useAuthStore";
 import { getTokenClaims } from "../../api/platformApi";
 import { fetchMasterApprovalFlows, type MasterApprovalFlow } from "./approvalManagementApi";
@@ -21,7 +23,11 @@ const sortByOrderNumber = (flows: MasterApprovalFlow[]) =>
     })
     .map(({ flow }) => flow);
 
-const ApprovalManagement: React.FC = () => {
+interface ApprovalManagementProps {
+  canCreate?: boolean;
+}
+
+const ApprovalManagement: React.FC<ApprovalManagementProps> = ({ canCreate = true }) => {
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const [buyerId, setBuyerId] = useState<string | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(currentUser?.organizationId || null);
@@ -32,6 +38,7 @@ const ApprovalManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [selectedFlow, setSelectedFlow] = useState<MasterApprovalFlow | null>(null);
+  const [search, setSearch] = useState("");
 
 
   useEffect(() => {
@@ -96,6 +103,19 @@ const ApprovalManagement: React.FC = () => {
     );
   }
 
+  const query = search.trim().toLowerCase();
+  const visibleFlows = query
+    ? flows.filter(
+        (flow) =>
+          (flow.approvalCode || "").toLowerCase().includes(query) ||
+          (flow.approvalName || "").toLowerCase().includes(query)
+      )
+    : flows;
+
+  const openFlow = (flow: MasterApprovalFlow) => {
+    if (flow.id) setSelectedFlow(flow);
+  };
+
   return (
     <div className="apl-card">
       <div className="apl-header">
@@ -105,41 +125,76 @@ const ApprovalManagement: React.FC = () => {
             Master approval flows configured for your organization. Click a row to view its approvers.
           </p>
         </div>
-        <button type="button" className="apl-create-btn" onClick={() => setShowCreate(true)}>
-          <span className="apl-create-plus">+</span> Create Approval
-        </button>
+        {canCreate && (
+          <button type="button" className="apl-create-btn sila-btn sila-btn--primary" onClick={() => setShowCreate(true)}>
+            <FaPlus aria-hidden="true" /> Create Approval
+          </button>
+        )}
       </div>
 
+      {!claimsError && !loading && buyerId && !error && flows.length > 0 && (
+        <div className="apl-toolbar">
+          <div className="apl-search sila-search">
+            <FaSearch className="sila-search-icon" aria-hidden="true" />
+            <input
+              type="search"
+              className="sila-input"
+              placeholder="Search by code or name"
+              aria-label="Search approval flows"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <span className="apl-count">
+            {visibleFlows.length} of {flows.length} flow{flows.length === 1 ? "" : "s"}
+          </span>
+        </div>
+      )}
+
       {claimsError ? (
-        <div className="apl-state apl-state-error">{claimsError}</div>
+        <EmptyState variant="error" className="apl-state" title={claimsError} />
       ) : loading || !buyerId ? (
         <div className="apl-state">
-          <div className="apl-spinner" />
+          <div className="apl-spinner sila-spinner sila-spinner--md" />
           <span>Loading approval flows...</span>
         </div>
       ) : error ? (
-        <div className="apl-state apl-state-error">{error}</div>
+        <EmptyState variant="error" className="apl-state" title={error} />
       ) : flows.length === 0 ? (
-        <div className="apl-state">No approval flows found.</div>
+        <EmptyState className="apl-state" title="No approval flows found." />
+      ) : visibleFlows.length === 0 ? (
+        <EmptyState className="apl-state" title="No approval flows match your search." />
       ) : (
-        <div className="apl-table-container">
-          <table className="apl-table">
+        <div className="apl-table-container sila-table-wrap">
+          <table className="apl-table sila-table">
             <thead>
               <tr>
-                <th className="apl-col-sno">S.No</th>
+                <th className="apl-col-sno sila-num">S.No</th>
                 <th>Approval Code</th>
                 <th>Approval Name</th>
+                <th className="apl-col-open" aria-label="Open" />
               </tr>
             </thead>
             <tbody>
-              {flows.map((flow, idx) => {
+              {visibleFlows.map((flow, idx) => {
                 return (
-                  <tr key={flow.id || idx} className="apl-row" onClick={() => flow.id && setSelectedFlow(flow)}>
-                    <td className="apl-sno">{idx + 1}</td>
+                  <tr
+                    key={flow.id || idx}
+                    className="apl-row sila-row-clickable"
+                    tabIndex={0}
+                    onClick={() => openFlow(flow)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") openFlow(flow);
+                    }}
+                  >
+                    <td className="apl-sno sila-num">{flows.indexOf(flow) + 1}</td>
                     <td>
-                      <span className="apl-code">{flow.approvalCode || "—"}</span>
+                      <span className="apl-code sila-ref">{flow.approvalCode || "—"}</span>
                     </td>
                     <td className="apl-name">{flow.approvalName || "—"}</td>
+                    <td className="apl-open">
+                      <FaChevronRight aria-hidden="true" />
+                    </td>
                   </tr>
                 );
               })}

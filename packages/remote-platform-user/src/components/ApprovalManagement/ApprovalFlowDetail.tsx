@@ -17,8 +17,15 @@ interface ApprovalFlowDetailProps {
 }
 
 const IconBack = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M19 12H5M12 19l-7-7 7-7" />
+  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M12 15L7 10L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const EditIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
   </svg>
 );
 
@@ -28,7 +35,7 @@ const ApprovalFlowDetail: React.FC<ApprovalFlowDetailProps> = ({ flow: initialFl
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+ const [isEditing, setIsEditing] = useState(false);
   // Prevents the request from firing twice for the same approval (e.g. React StrictMode re-running effects).
   const fetchedIdRef = useRef<string | null>(null);
 
@@ -51,10 +58,10 @@ const ApprovalFlowDetail: React.FC<ApprovalFlowDetailProps> = ({ flow: initialFl
 
   const steps: ApprovalStep[] = useMemo(
     () =>
-      approvers.map((approver, i) => ({
+      approvers.map((approver) => ({
         id: `${approver.userId}-${approver.id ?? ""}`,
-        title: `Approver ${i + 1}`,
-        description: approver.userId,
+        title: approver.name || "Unknown user",
+        description: approver.email || approver.userId,
       })),
     [approvers]
   );
@@ -95,20 +102,31 @@ const ApprovalFlowDetail: React.FC<ApprovalFlowDetailProps> = ({ flow: initialFl
     }
   };
 
-  const editingApprover = editingIndex !== null ? approvers[editingIndex] : null;
+  //const editingApprover = editingIndex !== null ? approvers[editingIndex] : null;
 
   return (
     <div className="afd-page">
       <div className="afd-header">
-        <button type="button" className="afd-back" onClick={onBack} aria-label="Back to approval list">
+        <button type="button" className="afd-back sila-btn sila-btn--secondary sila-btn--icon" onClick={onBack} aria-label="Back to approval list">
           <IconBack />
         </button>
         <div className="afd-heading">
-          <h1 className="afd-title">{flow.approvalName || "Approval Flow"}</h1>
+          <div className="afd-title-edit">
+            <h1 className="afd-title">{flow.approvalName || "Approval Flow"}</h1>
+            <button
+              type="button"
+              className="afd-edit-btn sila-btn sila-btn--ghost sila-btn--sm sila-btn--icon"
+              title="Edit Approval Flow"
+              aria-label="Edit Approval Flow"
+              onClick={() => setIsEditing(true)}
+            >
+              <EditIcon />
+            </button>
+          </div>
           <div className="afd-meta">
-            <span className="afd-code">{flow.approvalCode || "—"}</span>
+            <span className="afd-code sila-ref">{flow.approvalCode || "—"}</span>
             {!loading && !error && (
-              <span className="afd-count">
+              <span className="afd-count sila-badge sila-badge--neutral">
                 {approvers.length} approver{approvers.length === 1 ? "" : "s"}
               </span>
             )}
@@ -121,22 +139,21 @@ const ApprovalFlowDetail: React.FC<ApprovalFlowDetailProps> = ({ flow: initialFl
         loading={loading}
         error={error}
         onReorder={handleReorder}
-        onEdit={setEditingIndex}
         disabled={savingOrder}
       />
 
-      {editingApprover && (
+      {isEditing && (
         <EditApprovalModal
-          mappingId={getMappingId(editingApprover)}
+          mappingId={approvers[0]?.id || flow.id}
           approvalCode={flow.approvalCode}
           approvalName={flow.approvalName}
-          order={editingApprover.order}
-          onClose={() => setEditingIndex(null)}
+          order={approvers[0]?.order??flow.orderNumber?? flow.order?? 1}
+          onClose={() => setIsEditing(false)}
           onSaved={(values) => {
             const updated = { ...flow, ...values };
             setFlow(updated);
             onFlowUpdated(updated);
-            setEditingIndex(null);
+            setIsEditing(false);
           }}
         />
       )}

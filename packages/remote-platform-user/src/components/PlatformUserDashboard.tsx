@@ -15,14 +15,13 @@ import {
   FaThLarge,
   FaList,
   FaExternalLinkAlt,
-  FaBars,
   FaTimes,
-  FaCheckCircle,
+  FaExclamationCircle,
 } from 'react-icons/fa';
+import { AppShell, PageHeader, EmptyState, StatusBadge } from '@vosox/shared-ui';
+import type { AppNavItem, AppUserMenuItem } from '@vosox/shared-ui';
 import { PlatformUserDetailView } from './PlatformUserDetailView';
 import './PlatformUserDashboard.css';
-
-const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;
 
 const PAGE_SIZE = 8;
 
@@ -37,8 +36,6 @@ export const PlatformUserDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loggingOut, setLoggingOut] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
   const [buyerIndex, setBuyerIndex] = useState<number>(0);
   const [supplierIndex, setSupplierIndex] = useState<number>(0);
@@ -266,233 +263,180 @@ export const PlatformUserDashboard: React.FC = () => {
 
   const filteredList = activeTab === 'buyers' ? filterList(buyers) : filterList(suppliers);
 
+  const selectTab = (tab: PlatformEntityType) => {
+    setActiveTab(tab);
+    setSelectedDetail(null);
+  };
+
+  const navItems: AppNavItem[] = [
+    { key: 'buyers', label: 'Buyers', icon: <FaUser /> },
+    { key: 'suppliers', label: 'Suppliers', icon: <FaBuilding /> },
+  ];
+
+  const userMenuItems: AppUserMenuItem[] = [
+    { key: 'settings', label: 'Settings & Preferences', icon: <FaCog />, onSelect: handleSettingsClick },
+    {
+      key: 'logout',
+      label: loggingOut ? 'Logging out...' : 'Log Out',
+      icon: <FaSignOutAlt />,
+      onSelect: handleLogout,
+      tone: 'danger',
+      dividerBefore: true,
+    },
+  ];
+
   return (
-    <div className="plat-layout">
-      {/* Overlay for mobile sidebar */}
-      {sidebarOpen && <div className="plat-sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
-
-      {/* LEFT NAVIGATION SIDEBAR */}
-      <aside className={`plat-sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="plat-sidebar-brand">
-          <img src={sila_logo} alt="SILA Logo" className="plat-sidebar-logo" />
-          <button className="plat-sidebar-close-btn" onClick={() => setSidebarOpen(false)}>
-            <FaTimes />
-          </button>
-        </div>
-
-        <nav className="plat-sidebar-nav">
-          <div className="plat-nav-section-label">MANAGEMENT</div>
-          
-          <button
-            className={`plat-nav-item ${activeTab === 'buyers' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveTab('buyers');
-              setSelectedDetail(null);
-              setSidebarOpen(false);
-            }}
-          >
-            <div className="plat-nav-icon plat-icon-buyer">
-              <FaUser />
-            </div>
-            <span className="plat-nav-label">Buyers</span>
-          </button>
-
-          <button
-            className={`plat-nav-item ${activeTab === 'suppliers' ? 'active active-supplier' : ''}`}
-            onClick={() => {
-              setActiveTab('suppliers');
-              setSelectedDetail(null);
-              setSidebarOpen(false);
-            }}
-          >
-            <div className="plat-nav-icon plat-icon-supplier">
-              <FaBuilding />
-            </div>
-            <span className="plat-nav-label">Suppliers</span>
-          </button>
-            <button
-            className="plat-sidebar-logout-btn"
-            onClick={handleLogout}
-            disabled={loggingOut}
-            title="Log Out"
-          >
-            <FaSignOutAlt className="plat-logout-icon" />
-            <span>{loggingOut ? 'Logging out...' : 'Log Out'}</span>
-          </button>
-        </nav>
-
-        {/* BOTTOM LOGOUT BUTTON & USER CARD IN SIDEBAR */}
-        <div className="plat-sidebar-footer">
-        
-        </div>
-      </aside>
-
-      {/* MAIN CONTENT WRAPPER */}
+    <AppShell
+      onLogoClick={() => selectTab('buyers')}
+      navItems={navItems}
+      activeNav={activeTab}
+      onNavClick={(key) => selectTab(key as PlatformEntityType)}
+      userFallbackName="Platform Administrator"
+      userFallbackEmail="admin@sila-platform.com"
+      userMenuItems={userMenuItems}
+    >
       {!selectedDetail ? (
-        <div className="plat-main-wrapper">
-        {/* TOP HEADER BAR */}
-        <header className="plat-topbar">
-          <div className="plat-topbar-left">
-            <button className="plat-mobile-toggle" onClick={() => setSidebarOpen(true)} title="Open Menu">
-              <FaBars />
-            </button>
-            <div>
-              <h1 className="plat-topbar-title">Platform Administrator Dashboard</h1>
-              <p className="plat-topbar-subtitle">
-                Monitor & manage registered {activeTab === 'buyers' ? 'buyers' : 'suppliers'} on SILA Platform
-              </p>
-            </div>
-          </div>
-
-          {/* TOP RIGHT ACTIONS & PROFILE BUTTON */}
-          <div className="plat-topbar-actions">
-            {/* Profile Dropdown Button */}
-            <div className="plat-profile-dropdown-wrapper">
-              <button
-                className="plat-profile-btn"
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                title="Profile Menu"
-              >
-                <div className="plat-profile-avatar-circle">PA</div>
-                <div className="plat-profile-btn-info">
-                  <span className="plat-profile-name">Admin</span>
-                  <span className="plat-profile-role">Platform</span>
-                </div>
-              </button>
-
-              {showProfileMenu && (
-                <div className="plat-profile-popover">
-                  <div className="plat-popover-header">
-                    <div className="plat-popover-avatar">PA</div>
-                    <div>
-                      <div className="plat-popover-name">Platform Administrator</div>
-                      <div className="plat-popover-email">admin@sila-platform.com</div>
-                    </div>
-                  </div>
-                  <div className="plat-popover-divider" />
-                  <button
-                    className="plat-popover-item"
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      handleSettingsClick();
-                    }}
-                  >
-                    <FaCog /> Settings & Preferences
-                  </button>
-                  <button
-                    className="plat-popover-item plat-popover-logout"
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      handleLogout();
-                    }}
-                    disabled={loggingOut}
-                  >
-                    <FaSignOutAlt /> {loggingOut ? 'Logging out...' : 'Log Out'}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </header>
-
-        {/* MAIN BODY CONTENT */}
-        <main className="plat-main-content">
+        <>
+          <PageHeader
+            title="Platform Administrator Dashboard"
+            description={`Monitor & manage registered ${activeTab === 'buyers' ? 'buyers' : 'suppliers'} on SILA Platform`}
+          />
+          <div className="plat-main-content">
 
           {/* CONTROLS BAR: SEARCH, TABS & VIEW TOGGLE */}
           <div className="plat-controls-card">
             <div className="plat-search-bar">
-              <FaSearch className="plat-search-lens" />
+              <FaSearch className="plat-search-lens" aria-hidden="true" />
               <input
-                type="text"
+                type="search"
                 placeholder={`Search ${activeTab} by name, email, industry, or location...`}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="plat-search-field"
+                className="plat-search-field sila-input"
+                aria-label={`Search ${activeTab}`}
               />
               {searchQuery && (
-                <button className="plat-search-clear" onClick={() => setSearchQuery('')}>
-                  <FaTimes />
+                <button
+                  type="button"
+                  className="plat-search-clear"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search"
+                  title="Clear search"
+                >
+                  <FaTimes aria-hidden="true" />
                 </button>
               )}
             </div>
 
             <div className="plat-controls-right">
               {/* Entity Type Toggle Tabs */}
-              <div className="plat-segmented-tabs">
+              <div className="plat-segmented-tabs" role="tablist" aria-label="Organisation type">
                 <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === 'buyers'}
                   className={`plat-seg-tab ${activeTab === 'buyers' ? 'active-buyer-tab' : ''}`}
                   onClick={() => setActiveTab('buyers')}
                 >
-                  <FaUser style={{ marginRight: '6px' }} /> Buyers ({buyers.length})
+                  <FaUser className="plat-seg-icon" aria-hidden="true" /> Buyers
+                  <span className="plat-seg-count">{buyers.length}</span>
                 </button>
                 <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === 'suppliers'}
                   className={`plat-seg-tab ${activeTab === 'suppliers' ? 'active-supplier-tab' : ''}`}
                   onClick={() => setActiveTab('suppliers')}
                 >
-                  <FaBuilding style={{ marginRight: '6px' }} /> Suppliers ({suppliers.length})
+                  <FaBuilding className="plat-seg-icon" aria-hidden="true" /> Suppliers
+                  <span className="plat-seg-count">{suppliers.length}</span>
                 </button>
               </div>
 
               {/* Grid / Table View Mode Switcher */}
-              <div className="plat-view-switcher">
+              <div className="plat-view-switcher" role="group" aria-label="View mode">
                 <button
+                  type="button"
                   className={`plat-view-btn ${viewMode === 'grid' ? 'active' : ''}`}
                   onClick={() => setViewMode('grid')}
                   title="Grid Card View"
+                  aria-label="Grid Card View"
+                  aria-pressed={viewMode === 'grid'}
                 >
-                  <FaThLarge />
+                  <FaThLarge aria-hidden="true" />
                 </button>
                 <button
+                  type="button"
                   className={`plat-view-btn ${viewMode === 'table' ? 'active' : ''}`}
                   onClick={() => setViewMode('table')}
                   title="Table View"
+                  aria-label="Table View"
+                  aria-pressed={viewMode === 'table'}
                 >
-                  <FaList />
+                  <FaList aria-hidden="true" />
                 </button>
               </div>
             </div>
           </div>
 
           {/* ERROR BANNER */}
-          {error && <div className="plat-error-alert">{error}</div>}
+          {error && (
+            <div className="plat-error-alert sila-alert sila-alert--danger" role="alert">
+              <FaExclamationCircle className="plat-error-icon" aria-hidden="true" />
+              <span>{error}</span>
+            </div>
+          )}
 
           {/* CONTENT SECTION */}
           {loading ? (
-            <div className="plat-loading-wrapper">
-              <div className="plat-spinner-ring"></div>
+            <div className="plat-loading-wrapper" role="status" aria-live="polite">
+              <span className="sila-spinner sila-spinner--lg plat-spinner" aria-hidden="true"></span>
               <span className="plat-loading-text">Loading platform registry data...</span>
             </div>
           ) : filteredList.length === 0 ? (
             <div className="plat-empty-card">
-              <div className="plat-empty-avatar">{activeTab === 'buyers' ? <FaUser /> : <FaBuilding />}</div>
-              <h3 className="plat-empty-heading">No {activeTab} found</h3>
-              <p className="plat-empty-subtext">
-                {searchQuery
-                  ? `No matching ${activeTab} found for "${searchQuery}".`
-                  : `There are currently no registered ${activeTab} on this page.`}
-              </p>
+              <EmptyState
+                icon={activeTab === 'buyers' ? <FaUser aria-hidden="true" /> : <FaBuilding aria-hidden="true" />}
+                title={`No ${activeTab} found`}
+                description={
+                  searchQuery
+                    ? `No matching ${activeTab} found for "${searchQuery}".`
+                    : `There are currently no registered ${activeTab} on this page.`
+                }
+              />
             </div>
           ) : viewMode === 'grid' ? (
-            /* REDESIGNED GRID CARD VIEW */
-            <div className={`plat-grid-container ${sectionLoading ? 'plat-grid-loading' : ''}`}>
+            /* GRID CARD VIEW */
+            <div
+              className={`plat-grid-container ${sectionLoading ? 'plat-grid-loading' : ''}`}
+              aria-busy={sectionLoading}
+            >
               {filteredList.map((item) => {
                 const rec = getRecordProfile(item);
+                const openDetail = () => setSelectedDetail({ type: activeTab, record: item });
 
                 return (
                   <div
                     key={rec.orgId || Math.random()}
                     className={`plat-v2-card ${activeTab}`}
-                    onClick={() => setSelectedDetail({ type: activeTab, record: item })}
-                    style={{ cursor: 'pointer' }}
+                    onClick={openDetail}
+                    onKeyDown={(e) => {
+                      if (e.target !== e.currentTarget) return;
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openDetail();
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`View details for ${rec.organizationName}`}
                   >
                     <div className="plat-v2-card-header">
-                      <div className={`plat-v2-avatar ${activeTab}-avatar`}>{rec.initials}</div>
+                      <div className={`plat-v2-avatar ${activeTab}-avatar`} aria-hidden="true">{rec.initials}</div>
                       <div className="plat-v2-header-meta">
                         <div className="plat-v2-title-row">
-                          <h3 className="plat-v2-card-title">{rec.organizationName}</h3>
-                          <span className="plat-v2-status-chip">
-                            <FaCheckCircle style={{ marginRight: '4px', fontSize: '10px' }} /> Active
-                          </span>
+                          <h3 className="plat-v2-card-title" title={rec.organizationName}>{rec.organizationName}</h3>
+                          <StatusBadge status="Active" size="sm" className="plat-v2-status-chip" />
                         </div>
                         <div className="plat-v2-badge-group">
                           {rec.businessType && <span className="plat-v2-pill plat-v2-pill-type">{rec.businessType}</span>}
@@ -509,24 +453,24 @@ export const PlatformUserDashboard: React.FC = () => {
 
                     <div className="plat-v2-contact-grid">
                       <div className="plat-v2-contact-item">
-                        <FaEnvelope className="plat-v2-contact-icon" />
+                        <FaEnvelope className="plat-v2-contact-icon" aria-hidden="true" />
                         <span className="plat-v2-contact-val" title={rec.email}>
                           {rec.email}
                         </span>
                       </div>
                       <div className="plat-v2-contact-item">
-                        <FaPhone className="plat-v2-contact-icon" />
+                        <FaPhone className="plat-v2-contact-icon" aria-hidden="true" />
                         <span className="plat-v2-contact-val">{rec.phone}</span>
                       </div>
                       <div className="plat-v2-contact-item">
-                        <FaMapMarkerAlt className="plat-v2-contact-icon" />
+                        <FaMapMarkerAlt className="plat-v2-contact-icon" aria-hidden="true" />
                         <span className="plat-v2-contact-val" title={rec.location}>
                           {rec.location}
                         </span>
                       </div>
                       {rec.website && (
                         <div className="plat-v2-contact-item">
-                          <FaGlobe className="plat-v2-contact-icon" />
+                          <FaGlobe className="plat-v2-contact-icon" aria-hidden="true" />
                           <a
                             href={rec.website.startsWith('http') ? rec.website : `https://${rec.website}`}
                             target="_blank"
@@ -534,7 +478,8 @@ export const PlatformUserDashboard: React.FC = () => {
                             className="plat-v2-link"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            {rec.website} <FaExternalLinkAlt style={{ fontSize: '10px', marginLeft: '3px' }} />
+                            <span className="plat-v2-link-text">{rec.website}</span>
+                            <FaExternalLinkAlt className="plat-v2-link-icon" aria-hidden="true" />
                           </a>
                         </div>
                       )}
@@ -545,16 +490,19 @@ export const PlatformUserDashboard: React.FC = () => {
             </div>
           ) : (
             /* TABLE VIEW */
-            <div className={`plat-table-container ${sectionLoading ? 'plat-grid-loading' : ''}`}>
-              <table className="plat-data-table">
+            <div
+              className={`plat-table-container sila-table-wrap ${sectionLoading ? 'plat-grid-loading' : ''}`}
+              aria-busy={sectionLoading}
+            >
+              <table className="plat-data-table sila-table">
                 <thead>
                   <tr>
-                    <th>Organization</th>
-                    <th>Business Type</th>
-                    <th>Industry</th>
-                    <th>Contact Info</th>
-                    <th>Location</th>
-                    <th>Actions</th>
+                    <th scope="col">Organization</th>
+                    <th scope="col">Business Type</th>
+                    <th scope="col">Industry</th>
+                    <th scope="col">Contact Info</th>
+                    <th scope="col">Location</th>
+                    <th scope="col" className="sila-cell-actions">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -565,10 +513,12 @@ export const PlatformUserDashboard: React.FC = () => {
                       <tr key={rec.orgId || Math.random()}>
                         <td>
                           <div className="plat-tbl-org">
-                            <div className={`plat-tbl-avatar ${activeTab}-avatar`}>{rec.initials}</div>
-                            <div>
+                            <div className={`plat-tbl-avatar ${activeTab}-avatar`} aria-hidden="true">{rec.initials}</div>
+                            <div className="plat-tbl-org-text">
                               <div className="plat-tbl-org-name">{rec.organizationName}</div>
-                              <div className="plat-tbl-org-id">ID: #{rec.orgId}</div>
+                              <div className="plat-tbl-org-id">
+                                ID: <span className="sila-ref">#{rec.orgId}</span>
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -584,11 +534,13 @@ export const PlatformUserDashboard: React.FC = () => {
                             <div className="plat-tbl-phone">{rec.phone}</div>
                           </div>
                         </td>
-                        <td>{rec.location || 'N/A'}</td>
-                        <td>
+                        <td className="plat-tbl-location">{rec.location || 'N/A'}</td>
+                        <td className="sila-cell-actions">
                           <button
-                            className="plat-v2-action-btn"
+                            type="button"
+                            className="plat-v2-action-btn sila-btn sila-btn--secondary sila-btn--sm"
                             onClick={() => setSelectedDetail({ type: activeTab, record: item })}
+                            aria-label={`View details for ${rec.organizationName}`}
                           >
                             Details
                           </button>
@@ -603,29 +555,26 @@ export const PlatformUserDashboard: React.FC = () => {
 
           {/* INFINITE SCROLL LOADING INDICATOR */}
           {loadingMore && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '24px', color: '#64748b' }}>
-              <div className="plat-spinner-ring" style={{ width: '20px', height: '20px' }}></div>
-              <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>Loading more {activeTab}...</span>
+            <div className="plat-loading-more" role="status" aria-live="polite">
+              <span className="sila-spinner plat-spinner" aria-hidden="true"></span>
+              <span className="plat-loading-more-text">Loading more {activeTab}...</span>
             </div>
           )}
-        </main>
-      </div>
+          </div>
+        </>
       ) : (
-        /* RENDER FULL PAGE DETAIL VIEW WHEN CARD IS CLICKED */
-        <div style={{ flex: 1, marginLeft: 'var(--plat-sidebar-width)' }}>
-          <PlatformUserDetailView
-            type={selectedDetail.type}
-            record={selectedDetail.record}
-            onBack={() => setSelectedDetail(null)}
-            onStatusUpdated={() => {
-              if (activeTab === 'buyers') loadBuyers(buyerIndex);
-              else loadSuppliers(supplierIndex);
-            }}
-            onSettingsClick={handleSettingsClick}
-          />
-        </div>
+        <PlatformUserDetailView
+          type={selectedDetail.type}
+          record={selectedDetail.record}
+          onBack={() => setSelectedDetail(null)}
+          onStatusUpdated={() => {
+            if (activeTab === 'buyers') loadBuyers(buyerIndex);
+            else loadSuppliers(supplierIndex);
+          }}
+          onSettingsClick={handleSettingsClick}
+        />
       )}
-    </div>
+    </AppShell>
   );
 };
 

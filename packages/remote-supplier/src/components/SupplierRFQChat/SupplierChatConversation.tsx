@@ -20,6 +20,7 @@ import {
 
 interface SupplierChatConversationProps {
   counterpartyName: string;
+  currentUserId?: string;
   hasThread: boolean;
   messages: ChatMessageDto[];
   isLoadingMessages: boolean;
@@ -38,6 +39,7 @@ interface SupplierChatConversationProps {
 
 const SupplierChatConversation: React.FC<SupplierChatConversationProps> = ({
   counterpartyName,
+  currentUserId,
   hasThread,
   messages,
   isLoadingMessages,
@@ -103,7 +105,7 @@ const SupplierChatConversation: React.FC<SupplierChatConversationProps> = ({
         <button type="button" className="brc-back-to-list" onClick={onBackToList} aria-label="Back to chat list">
           <IconChevronLeft />
         </button>
-        <div className="brc-supplier-avatar" style={{ flexShrink: 0 }}>
+        <div className="brc-supplier-avatar" aria-hidden="true">
           {getInitials(counterpartyName)}
         </div>
         <div className="brc-conversation-header-text">
@@ -148,7 +150,7 @@ const SupplierChatConversation: React.FC<SupplierChatConversationProps> = ({
           )}
 
           {messages.map((message, index) => {
-            const isOwn = message.senderOrganizationType?.toLowerCase() === "supplier";
+            const isOwn = !!currentUserId && message.senderUserId === currentUserId;
             const previousMessage = messages[index - 1];
             const showDateSeparator =
               !previousMessage || !isSameCalendarDay(previousMessage.dateCreated, message.dateCreated);
@@ -225,7 +227,7 @@ const SupplierChatConversation: React.FC<SupplierChatConversationProps> = ({
           ref={fileInputRef}
           type="file"
           multiple
-          style={{ display: "none" }}
+          hidden
           onChange={handleFilesSelected}
         />
         <button
@@ -247,7 +249,7 @@ const SupplierChatConversation: React.FC<SupplierChatConversationProps> = ({
           onKeyDown={handleComposerKeyDown}
           disabled={isSendingMessage}
         />
-        <button type="button" className="brc-send-btn" onClick={handleSend} disabled={!canSend}>
+        <button type="button" className="brc-send-btn" onClick={handleSend} disabled={!canSend} aria-label="Send message">
           {isSendingMessage ? <span className="brc-spinner-sm" /> : <IconSend />}
           Send
         </button>

@@ -1,36 +1,38 @@
+/* Quotation comparison table — follows .sila-table */
+
+.qst-root {
+    min-width: 0;
+}
+
 .qst-section-title {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: #0f172a;
-    letter-spacing: -0.01em;
-    margin-bottom: 0.625rem;
+    font-size: var(--sila-text-md);
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text);
+    padding-bottom: var(--sila-space-2);
+}
+
+.qst-section-title.qst-summary-title {
+    padding-bottom: var(--sila-space-3);
 }
 
 .qst-table-container {
-    --qst-border: #e2e8f0;
-    --qst-border-strong: #cbd5e1;
-    --qst-bg-header: #f8fafc;
-    --qst-bg-subheader: #eef2fb;
-    --qst-text-primary: #0f172a;
-    --qst-text-secondary: #64748b;
-    --qst-accent: #2563eb;
-    --qst-accent-bg: #eef4ff;
-    --qst-accent-border: #bfdbfe;
-    --qst-negative: #dc2626;
-    --qst-total-bg: #ecfdf5;
-    --qst-total-border: #a7f3d0;
-    --qst-total-text: #047857;
-
     width: 100%;
     max-width: 100%;
     overflow-x: auto;
-    border: 0.0625rem solid var(--qst-border);
-    border-radius: 0.625rem;
-    background: #ffffff;
-    box-shadow: 0 0.125rem 0.375rem rgba(15, 23, 42, 0.05);
+    -webkit-overflow-scrolling: touch;
+    border: 0.0625rem solid var(--sila-border);
+    border-radius: var(--sila-radius-md);
+    background: var(--sila-surface);
+    box-shadow: var(--sila-shadow-xs);
+}
+
+.qst-table-container.qst-table-scroll {
+    max-height: 22.5rem;
+    overflow-y: auto;
 }
 
 .qst-table-container::-webkit-scrollbar {
+    width: 0.5rem;
     height: 0.5rem;
 }
 
@@ -39,49 +41,61 @@
 }
 
 .qst-table-container::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 0.5rem;
+    background: var(--sila-border-strong);
+    border-radius: var(--sila-radius-full);
 }
 
 .qst-table-container::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background: var(--sila-text-subtle);
 }
 
 .qst-items-table {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
-    font-size: 0.8125rem;
-    color: #1e293b;
+    font-size: var(--sila-text-sm);
+    color: var(--sila-text);
 }
+
+/* Supplier comparison layout: fixed columns sized in design units (1 unit = 1/16 rem).
+   The row totals 548 units plus 190 per supplier (Rate + Amount), or 260 with the LL column. */
+.qst-items-table--quoted {
+    --qst-supplier-units: 190;
+    --qst-total-units: calc(548 + var(--qst-suppliers, 1) * var(--qst-supplier-units));
+    table-layout: fixed;
+    min-width: calc(var(--qst-total-units) * 0.0625rem);
+}
+
+.qst-items-table--with-ll { --qst-supplier-units: 260; }
+
+.qst-col--expand   { width: calc(100% * 48 / var(--qst-total-units)); }
+.qst-col--material { width: calc(100% * 220 / var(--qst-total-units)); }
+.qst-col--ln       { width: calc(100% * 70 / var(--qst-total-units)); }
+.qst-col--code     { width: calc(100% * 120 / var(--qst-total-units)); }
+.qst-col--qty      { width: calc(100% * 90 / var(--qst-total-units)); }
+.qst-col--rate     { width: calc(100% * 90 / var(--qst-total-units)); }
+.qst-col--amount   { width: calc(100% * 100 / var(--qst-total-units)); }
+.qst-col--ll       { width: calc(100% * 70 / var(--qst-total-units)); }
 
 .qst-items-table th {
-    background: var(--qst-bg-header);
-    padding: 0.6875rem 0.875rem;
-    font-weight: 600;
-    color: var(--qst-text-secondary);
-    border-bottom: 0.125rem solid var(--qst-border-strong);
-    border-right: 0.0625rem solid var(--qst-border);
-    font-size: 0.71875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.045em;
-}
-
-.qst-items-table th:last-child {
-    border-right: none;
+    height: 2.375rem;
+    background: var(--sila-surface-subtle);
+    padding: var(--sila-space-2) var(--sila-space-3);
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text-muted);
+    border-bottom: 0.0625rem solid var(--sila-border);
+    font-size: var(--sila-text-xs);
+    white-space: nowrap;
+    vertical-align: middle;
 }
 
 .qst-items-table td {
-    padding: 0.75rem 0.875rem;
-    border-bottom: 0.0625rem solid var(--qst-border);
-    border-right: 0.0625rem solid var(--qst-border);
-    vertical-align: top;
+    height: 2.75rem;
+    padding: var(--sila-space-2) var(--sila-space-3);
+    border-bottom: 0.0625rem solid var(--sila-border-subtle);
+    vertical-align: middle;
     overflow-wrap: break-word;
     line-height: 1.45;
-}
-
-.qst-items-table td:last-child {
-    border-right: none;
 }
 
 .qst-items-table tbody tr:last-child td {
@@ -89,58 +103,83 @@
 }
 
 .qst-items-table tbody tr td {
-    transition: background-color 0.12s ease;
+    transition: background-color var(--sila-duration-fast) var(--sila-ease);
 }
 
 .qst-items-table tbody tr:hover td {
-    background: #f8fafc;
+    background: var(--sila-surface-subtle);
 }
 
-.qst-supplier-group-header {
+/* Item cell */
+.qst-item-desc {
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text);
+}
+
+.qst-item-meta {
+    padding-top: var(--sila-space-0-5);
+    font-size: var(--sila-text-xs);
+    color: var(--sila-text-muted);
+}
+
+.qst-item-code {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.qst-uom {
+    color: var(--sila-text-muted);
+    font-size: var(--sila-text-xs);
+}
+
+.qst-negative {
+    color: var(--sila-danger);
+}
+
+/* Supplier group headers */
+.qst-items-table th.qst-supplier-group-header {
     text-align: center;
-    vertical-align: top;
-    background: var(--qst-bg-subheader);
-    padding-top: 0.75rem;
-    padding-bottom: 0.75rem;
-    border-left: 0.0625rem solid var(--qst-border);
+    vertical-align: middle;
+    background: var(--sila-surface-hover);
+    border-left: 0.0625rem solid var(--sila-border);
+    white-space: normal;
 }
 
 .qst-supplier-group-name {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--qst-text-primary);
-    text-transform: none;
-    letter-spacing: normal;
+    font-size: var(--sila-text-sm);
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text);
     white-space: normal;
     word-break: break-word;
 }
 
-.qst-sub-header {
+.qst-items-table th.qst-sub-header {
     text-align: right;
-    background: var(--qst-bg-subheader);
-    border-left: 0.0625rem solid var(--qst-border);
-    color: var(--qst-text-secondary);
+    background: var(--sila-surface-hover);
+    border-left: 0.0625rem solid var(--sila-border-subtle);
+    color: var(--sila-text-muted);
 }
 
 .qst-items-table td.qst-rate-cell {
     text-align: right;
-    border-left: 0.0625rem solid var(--qst-border);
+    border-left: 0.0625rem solid var(--sila-border-subtle);
     font-variant-numeric: tabular-nums;
-    font-weight: 500;
-    color: var(--qst-text-primary);
+    white-space: nowrap;
+    color: var(--sila-text-secondary);
 }
 
 .qst-items-table td.qst-amount-cell {
     text-align: right;
     font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    color: var(--qst-accent);
+    white-space: nowrap;
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text);
 }
 
 .qst-items-table td.qst-ll-cell {
     text-align: right;
     font-variant-numeric: tabular-nums;
-    color: var(--qst-text-secondary);
+    color: var(--sila-text-muted);
 }
 
 .qst-items-table th.qst-align-right,
@@ -149,12 +188,12 @@
     font-variant-numeric: tabular-nums;
 }
 
-.qst-supplier-name-label {
+.qst-items-table th.qst-supplier-name-label {
     text-align: left;
-    color: var(--qst-text-secondary);
+    color: var(--sila-text-muted);
 }
 
-.qst-expand-header {
+.qst-items-table th.qst-expand-header {
     text-align: center;
 }
 
@@ -167,92 +206,90 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 1.4375rem;
-    height: 1.4375rem;
+    width: 1.5rem;
+    height: 1.5rem;
     padding: 0;
     margin: 0;
     cursor: pointer;
-    border: 0.0625rem solid var(--qst-accent-border);
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    line-height: 1;
-    color: var(--qst-accent);
-    background: var(--qst-accent-bg);
-    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    border: 0.0625rem solid var(--sila-border-strong);
+    border-radius: var(--sila-radius-sm);
+    color: var(--sila-text-secondary);
+    background: var(--sila-surface);
+    transition: var(--sila-transition);
+}
+
+.qst-expand-toggle svg {
+    width: 0.625rem;
+    height: 0.625rem;
 }
 
 .qst-expand-toggle:hover {
-    background: #dbeafe;
-    border-color: #93c5fd;
+    background: var(--sila-surface-hover);
+    color: var(--sila-text);
+}
+
+.qst-expand-toggle[aria-expanded="true"] {
+    background: var(--sila-primary-soft);
+    border-color: var(--sila-primary-border);
+    color: var(--sila-primary);
 }
 
 .qst-expand-toggle:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 0.1875rem rgba(37, 99, 235, 0.25);
+    border-color: var(--sila-primary);
+    box-shadow: var(--sila-focus-ring);
 }
 
+/* Expanded item details */
 .qst-expanded-row td {
-    background: #f9fafc;
-    border-top: none;
-    padding-top: 0.625rem;
-    padding-bottom: 0.75rem;
+    background: var(--sila-surface-subtle);
+    vertical-align: top;
 }
 
 .qst-expanded-label-cell {
-    color: var(--qst-text-secondary);
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.045em;
+    color: var(--sila-text-muted);
+    font-size: var(--sila-text-xs);
+    font-weight: var(--sila-weight-semibold);
     vertical-align: top;
 }
 
-.qst-expanded-detail-cell {
+.qst-items-table td.qst-expanded-detail-cell {
     vertical-align: top;
-    border-left: 0.0625rem solid var(--qst-border);
+    border-left: 0.0625rem solid var(--sila-border-subtle);
 }
 
-.qst-expanded-detail-grid {
+.qst-expanded-detail-grid,
+.qst-summary-grid {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 0.1875rem 0.75rem;
-    font-size: 0.75rem;
+    gap: var(--sila-space-1) var(--sila-space-3);
+    font-size: var(--sila-text-xs);
 }
 
 .qst-expanded-detail-grid span:nth-child(odd) {
-    color: var(--qst-text-secondary);
+    color: var(--sila-text-muted);
 }
 
 .qst-expanded-detail-grid span:nth-child(even) {
-    font-weight: 600;
-    color: var(--qst-text-primary);
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text);
     text-align: right;
     font-variant-numeric: tabular-nums;
 }
 
+.qst-expanded-detail-grid span.qst-negative {
+    color: var(--sila-danger);
+}
+
+/* Totals */
 .qst-total-quote-row td {
-    background: #ffffff;
-    font-weight: 600;
-    color: var(--qst-text-primary);
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    border-left: 0.0625rem solid var(--qst-border-strong);
-    border-top: 0.125rem solid var(--qst-border-strong);
-}
-
-.qst-total-quote-row td:first-child,
-.qst-total-quote-row td:nth-child(2),
-.qst-total-quote-row td:nth-child(3),
-.qst-total-quote-row td:nth-child(4),
-.qst-total-quote-row td:nth-child(5) {
-    background: #ffffff;
-    border-left: none;
+    background: var(--sila-surface);
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text);
     text-align: left;
-}
-
-.qst-total-quote-row td:last-child {
-    border-bottom-right-radius: 0.5625rem;
+    font-variant-numeric: tabular-nums;
+    border-top: 0.0625rem solid var(--sila-border-strong);
+    border-bottom: none;
 }
 
 .qst-total-quote-row td.qst-expand-cell {
@@ -261,89 +298,74 @@
 }
 
 .qst-total-quote-row td.qst-total-quote-cell {
-    background: var(--qst-total-bg);
-    border-left: 0.0625rem solid var(--qst-total-border);
-    border-top: 0.125rem solid var(--qst-total-border);
+    background: var(--sila-surface-subtle);
+    border-left: 0.0625rem solid var(--sila-border);
     text-align: right;
     white-space: nowrap;
 }
 
 .qst-total-quote-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--qst-total-text);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    margin-right: 0.375rem;
+    font-size: var(--sila-text-xs);
+    font-weight: var(--sila-weight-medium);
+    color: var(--sila-text-muted);
+    padding-right: var(--sila-space-2);
 }
 
 .qst-total-quote-amount {
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: var(--qst-total-text);
+    font-size: var(--sila-text-md);
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
 
-.qst-supplier-rank-header {
+.qst-items-table th.qst-supplier-rank-header {
     text-align: center;
-    vertical-align: top;
-    background: var(--qst-bg-subheader);
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
-    border-left: 0.0625rem solid var(--qst-border);
+    background: var(--sila-surface-hover);
+    border-left: 0.0625rem solid var(--sila-border);
 }
 
 .qst-supplier-rank-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.125rem 0.625rem;
-    border-radius: 999px;
-    background: var(--qst-accent-bg);
-    border: 0.0625rem solid var(--qst-accent-border);
-    color: var(--qst-accent);
-    font-size: 0.71875rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    padding: 0.0625rem var(--sila-space-2);
+    border-radius: var(--sila-radius-full);
+    background: var(--sila-primary-soft);
+    border: 0.0625rem solid var(--sila-primary-border);
+    color: var(--sila-primary);
+    font-size: var(--sila-text-xs);
+    font-weight: var(--sila-weight-semibold);
+    font-variant-numeric: tabular-nums;
 }
 
 .qst-summary-row td {
-    background: #f9fafc;
-    border-top: 0.0625rem solid var(--qst-border);
+    background: var(--sila-surface-subtle);
+    border-top: 0.0625rem solid var(--sila-border-subtle);
 }
 
 .qst-summary-row td:first-child {
-    background: #ffffff;
-    border-left: none;
+    background: var(--sila-surface);
 }
 
-.qst-summary-cell {
+.qst-items-table td.qst-summary-cell {
     vertical-align: top;
     text-align: left;
-    border-left: 0.0625rem solid var(--qst-border);
-}
-
-.qst-summary-grid {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 0.1875rem 0.75rem;
-    font-size: 0.75rem;
+    border-left: 0.0625rem solid var(--sila-border);
 }
 
 .qst-summary-item-label {
-    font-weight: 400;
-    color: var(--qst-text-secondary);
+    color: var(--sila-text-muted);
     white-space: nowrap;
 }
 
 .qst-summary-item-value {
-    font-weight: 600;
-    color: var(--qst-text-primary);
+    font-weight: var(--sila-weight-semibold);
+    color: var(--sila-text);
     font-variant-numeric: tabular-nums;
     text-align: right;
 }
 
-.qst-summary-item-negative {
-    color: var(--qst-negative);
+.qst-summary-item-value.qst-summary-item-negative {
+    color: var(--sila-danger);
 }

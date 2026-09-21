@@ -5,60 +5,46 @@
   min-height: 11.25rem;
 }
 
-.models-loading-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.625rem;
-  color: #64748b;
-  font-size: 0.875rem;
-}
-
+/* Empty / error states render through the shared EmptyState (.sila-empty). */
 .models-message {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 1.5rem;
+  background: var(--sila-surface);
+  border: 0.0625rem solid var(--sila-border);
+  border-radius: var(--sila-radius-md);
 }
 
 .models-message-error {
-  color: #ef4444;
-}
-
-.models-message-empty {
-  color: #64748b;
+  border-color: var(--sila-danger-border);
 }
 
 .models-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16.25rem, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--sila-space-4);
 }
 
 .models-card {
-  background: #ffffff;
-  border: 0.0625rem solid #e2e8f0;
-  border-radius: 0.875rem;
-  padding: 1.25rem;
+  background: var(--sila-surface);
+  border: 0.0625rem solid var(--sila-border);
+  border-radius: var(--sila-radius-md);
+  padding: var(--sila-space-4);
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
-  box-shadow: 0 0.0625rem 0.125rem rgba(0, 0, 0, 0.03);
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  gap: var(--sila-space-3);
+  box-shadow: var(--sila-shadow-xs);
+  transition: var(--sila-transition);
 }
 
 .models-card:hover {
-  box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.06);
-  border-color: #cbd5e1;
+  box-shadow: var(--sila-shadow-sm);
+  border-color: var(--sila-border-strong);
 }
 
 .models-card-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.625rem;
-  background: #eff6ff;
-  color: #2563eb;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--sila-radius);
+  background: var(--sila-primary-soft);
+  color: var(--sila-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -67,81 +53,73 @@
 .models-card-body {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+  gap: var(--sila-space-0-5);
+  min-width: 0;
 }
 
 .models-card-title {
-  font-size: 0.9375rem;
-  font-weight: 700;
-  color: #0f172a;
+  font-size: var(--sila-text-md);
+  font-weight: var(--sila-weight-semibold);
+  color: var(--sila-text);
+  overflow-wrap: anywhere;
 }
 
 .models-card-key {
-  font-size: 0.75rem;
-  color: #64748b;
-  font-family: monospace;
+  font-size: var(--sila-text-xs);
+  color: var(--sila-text-muted);
+  font-family: var(--sila-font-mono);
 }
 
 .models-card-footer {
   display: flex;
   justify-content: flex-end;
+  margin-top: auto;
 }
 
 .models-open-btn {
-  background: #2563eb;
-  color: #ffffff;
-  border: none;
-  border-radius: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sila-space-2);
+  height: var(--sila-control-height-sm);
+  padding: 0 var(--sila-space-3);
+  background: var(--sila-surface);
+  color: var(--sila-text-secondary);
+  border: 0.0625rem solid var(--sila-border-strong);
+  border-radius: var(--sila-radius);
+  font-family: inherit;
+  font-size: var(--sila-text-sm);
+  font-weight: var(--sila-weight-semibold);
   cursor: pointer;
+  transition: var(--sila-transition);
+}
+
+.models-open-btn svg {
+  width: 0.6875rem;
+  height: 0.6875rem;
 }
 
 .models-open-btn:hover {
-  background: #1d4ed8;
+  background: var(--sila-surface-hover);
+  color: var(--sila-text);
 }
 
-@media (max-width: 1024px) {
+.models-open-btn:focus-visible {
+  outline: none;
+  border-color: var(--sila-primary);
+  box-shadow: var(--sila-focus-ring);
+}
+
+@media (max-width: 48rem) {
   .models-grid {
-    grid-template-columns: repeat(auto-fill, minmax(13.75rem, 1fr));
-    gap: 1rem;
-  }
-
-  .models-card {
-    padding: 1rem;
+    grid-template-columns: 1fr;
+    gap: var(--sila-space-3);
   }
 }
 
-@media (max-width: 768px) {
-  .models-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
-    gap: 0.875rem;
-  }
-}
-
-@media (max-width: 480px) {
+@media (max-width: 30rem) {
   .models-loading-wrapper {
     min-height: 8.75rem;
-  }
-
-  .models-message {
-    padding: 1rem;
-    font-size: 0.875rem;
-  }
-
-  .models-card {
-    padding: 0.875rem;
-    gap: 0.625rem;
-  }
-
-  .models-card-icon {
-    width: 2.25rem;
-    height: 2.25rem;
-  }
-
-  .models-card-title {
-    font-size: 0.875rem;
   }
 
   .models-card-footer {
@@ -150,6 +128,5 @@
 
   .models-open-btn {
     flex: 1;
-    text-align: center;
   }
 }

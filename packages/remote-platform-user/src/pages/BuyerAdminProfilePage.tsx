@@ -1,47 +1,23 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProfileView } from '@vosox/shared-ui';
 import type { PersonDetail, PersonDetailUpdate } from '@vosox/shared-ui';
 import { isErrorResponse } from '@vosox/shared-ui';
-import { getPersonDetailCached, updatePersonDetail, invalidatePersonDetailCache } from '../api/networkAdminApi';
+import { updatePersonDetail } from '../api/networkAdminApi';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
 import Header from '../components/Header';
 
 const BuyerAdminProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const authLoading = useNetworkAdminAuthStore((state) => state.isLoading);
-  const initializeFromSession = useNetworkAdminAuthStore((state) => state.initializeFromSession);
+  // Sourced from the store, which fetches it once (on login and on reload) via
+  // initializeFromSession - no per-page fetch, no local cache.
+  const personDetail = useNetworkAdminAuthStore((state) => state.personDetail);
+  const personDetailLoading = useNetworkAdminAuthStore((state) => state.personDetailLoading);
+  const setPersonDetail = useNetworkAdminAuthStore((state) => state.setPersonDetail);
 
-  const [personDetail, setPersonDetail] = useState<PersonDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    initializeFromSession();
-  }, [initializeFromSession]);
-
-  const loadProfile = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    const result = await getPersonDetailCached();
-
-    if (isErrorResponse(result)) {
-      setError(result.message || 'Failed to load profile.');
-      setPersonDetail(null);
-    } else {
-      setPersonDetail(result as unknown as PersonDetail);
-    }
-
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    if (!authLoading) {
-      loadProfile();
-    }
-  }, [authLoading, loadProfile]);
 
   const handleSave = async (updates: PersonDetailUpdate) => {
     setSaving(true);
@@ -52,8 +28,7 @@ const BuyerAdminProfilePage: React.FC = () => {
     if (isErrorResponse(result)) {
       setError(result.message || 'Failed to update profile.');
     } else {
-      invalidatePersonDetailCache(result);
-      setPersonDetail(result as unknown as PersonDetail);
+      setPersonDetail(result);
     }
 
     setSaving(false);
@@ -64,17 +39,16 @@ const BuyerAdminProfilePage: React.FC = () => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#ffffff' }}>
-      <Header />
-        <ProfileView
-          personDetail={personDetail}
-          loading={loading}
-          saving={saving}
-          error={error}
-          onSave={handleSave}
-          onBack={() => navigate('/platform-user/buyer-admin')}
-        />
-    </div>
+    <Header>
+      <ProfileView
+        personDetail={personDetail as unknown as PersonDetail | null}
+        loading={personDetailLoading}
+        saving={saving}
+        error={error}
+        onSave={handleSave}
+        onBack={() => navigate('/dashboard')}
+      />
+    </Header>
   );
 };
 

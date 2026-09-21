@@ -20,6 +20,7 @@ import {
   updateCostCenter,
 } from '../api/departmentcostapi';
 import type { DepartmentListItemDto, CostCenterListItemDto } from '../api/platformApi';
+import { PageHeader, EmptyState, Loader } from '@vosox/shared-ui';
 import { useDepartmentStore } from './useDepartmentStore';
 import './DepartmentCostList.css';
 
@@ -45,20 +46,42 @@ const ConfirmPopup: React.FC<ConfirmPopupProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="dcl-popup-overlay" onClick={onCancel}>
-      <div className="dcl-popup" onClick={(e) => e.stopPropagation()}>
-        <div className="dcl-popup-header">
-          <FaExclamationTriangle className="dcl-popup-icon" />
-          <h3 className="dcl-popup-title">{title}</h3>
+    <div className="dcl-popup-overlay sila-root sila-overlay" onClick={onCancel}>
+      <div
+        className="dcl-popup sila-modal"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="dcl-popup-title"
+        aria-describedby="dcl-popup-message"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="dcl-popup-header sila-modal-header">
+          <div className="dcl-popup-heading">
+            <span className="dcl-popup-icon" aria-hidden="true">
+              <FaExclamationTriangle />
+            </span>
+            <h3 id="dcl-popup-title" className="dcl-popup-title sila-modal-title">{title}</h3>
+          </div>
         </div>
-        <div className="dcl-popup-body">
-          <p className="dcl-popup-message">{message}</p>
+        <div className="dcl-popup-body sila-modal-body">
+          <p id="dcl-popup-message" className="dcl-popup-message sila-modal-text">{message}</p>
         </div>
-        <div className="dcl-popup-footer">
-          <button className="dcl-popup-btn-cancel" onClick={onCancel} disabled={isLoading}>
+        <div className="dcl-popup-footer sila-modal-footer">
+          <button
+            type="button"
+            className="dcl-popup-btn-cancel sila-btn sila-btn--secondary"
+            onClick={onCancel}
+            disabled={isLoading}
+          >
             Cancel
           </button>
-          <button className="dcl-popup-btn-confirm" onClick={onConfirm} disabled={isLoading}>
+          <button
+            type="button"
+            className="dcl-popup-btn-confirm sila-btn sila-btn--danger"
+            onClick={onConfirm}
+            disabled={isLoading}
+          >
+            {isLoading && <span className="sila-spinner" aria-hidden="true" />}
             {isLoading ? 'Deleting...' : 'Yes, Delete'}
           </button>
         </div>
@@ -80,10 +103,14 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
   }, [onClose]);
 
   return (
-    <div className={`dcl-toast dcl-toast-${type}`}>
+    <div
+      className={`dcl-toast dcl-toast-${type} sila-root`}
+      role={type === 'error' ? 'alert' : 'status'}
+      aria-live={type === 'error' ? 'assertive' : 'polite'}
+    >
       <span>{message}</span>
-      <button className="dcl-toast-close" onClick={onClose}>
-        <FaTimes />
+      <button type="button" className="dcl-toast-close" onClick={onClose} aria-label="Dismiss notification">
+        <FaTimes aria-hidden="true" />
       </button>
     </div>
   );
@@ -352,62 +379,38 @@ export const DepartmentCostList: React.FC = () => {
     navigate('../settings');
   };
 
+  const rowSpanCount = isEditing ? editCostCenters.length : costCenters.length;
+
   return (
-    <div className="dcl-page-container">
+    <div className="dcl-page-container sila-root">
       <header className="dcl-top-header">
         <img src={sila_logo} alt="SILA" className="dcl-top-logo" />
       </header>
 
-      <div className="dcl-content-wrapper">
-        <div className="dcl-page-title-section">
-          <div className="dcl-title-left">
-            <h1 className="dcl-page-title">Department & Cost Center List</h1>
-            <p className="dcl-page-subtitle">Select a department to view and manage cost centers</p>
-          </div>
-          <button className="dcl-close-btn" onClick={handleClose} title="Close">
-            <FaTimes />
-          </button>
-        </div>
+      <main className="dcl-content-wrapper">
+        <PageHeader
+          className="dcl-page-title-section"
+          title="Department & Cost Center List"
+          description="Select a department to view and manage cost centers"
+          actions={
+            <button
+              type="button"
+              className="dcl-close-btn sila-btn sila-btn--secondary sila-btn--icon"
+              onClick={handleClose}
+              title="Close"
+              aria-label="Close department and cost center list"
+            >
+              <FaTimes aria-hidden="true" />
+            </button>
+          }
+        />
 
-        <div className="dcl-filters-bar">
-          <div className="dcl-filter-group">
-            <label className="dcl-filter-label">
-              Department <span className="dcl-required">*</span>
-            </label>
-            <div className="dcl-select-wrapper">
-              <select
-                className={`dcl-form-select ${!selectedBuyer ? 'dcl-select-disabled' : ''}`}
-                value={selectedDepartment?.id || ''}
-                onChange={(e) => handleDepartmentSelect(e.target.value)}
-                disabled={!selectedBuyer || departmentsLoading}
-              >
-                <option value="">
-                  {!selectedBuyer
-                    ? 'Select buyer first'
-                    : departmentsLoading
-                    ? 'Loading departments...'
-                    : '-- Choose a Department --'}
-                </option>
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>
-                    {dept.department}
-                  </option>
-                ))}
-              </select>
-              {selectedDepartment && (
-                <button
-                  className="dcl-clear-select-btn"
-                  onClick={() => handleDepartmentSelect('')}
-                  title="Clear department"
-                >
-                  <FaTimes />
-                </button>
-              )}
-            </div>
+        {error && (
+          <div className="dcl-error-banner sila-alert sila-alert--danger" role="alert">
+            <FaExclamationTriangle className="dcl-error-icon" aria-hidden="true" />
+            <span>{error}</span>
           </div>
-        </div>
-
-        {error && <div className="dcl-error-banner">{error}</div>}
+        )}
 
         {toast && (
           <Toast
@@ -417,59 +420,101 @@ export const DepartmentCostList: React.FC = () => {
           />
         )}
 
-        <div className="dcl-table-section">
-          {!selectedDepartment ? (
-            <div className="dcl-empty-state">
-              <FaBuilding className="dcl-empty-icon" />
-              <h3 className="dcl-empty-title">
-                {!selectedBuyer ? 'Select a Buyer' : 'Select a Department'}
-              </h3>
-              <p className="dcl-empty-desc">
-                {!selectedBuyer
-                  ? 'Choose a buyer from the dropdown above to get started.'
-                  : 'Choose a department to view its cost centers.'}
-              </p>
+        <section className="dcl-table-section" aria-label="Cost centers">
+          <div className="dcl-filters-bar sila-toolbar">
+            <div className="dcl-filter-group">
+              <label htmlFor="dcl-department-select" className="dcl-filter-label sila-label">
+                Department <span className="dcl-required sila-required" aria-hidden="true">*</span>
+              </label>
+              <div className="dcl-select-wrapper">
+                <select
+                  id="dcl-department-select"
+                  className={`dcl-form-select sila-select ${!selectedBuyer ? 'dcl-select-disabled' : ''}`}
+                  value={selectedDepartment?.id || ''}
+                  onChange={(e) => handleDepartmentSelect(e.target.value)}
+                  disabled={!selectedBuyer || departmentsLoading}
+                  aria-required="true"
+                  aria-busy={departmentsLoading || undefined}
+                >
+                  <option value="">
+                    {!selectedBuyer
+                      ? 'Select buyer first'
+                      : departmentsLoading
+                      ? 'Loading departments...'
+                      : '-- Choose a Department --'}
+                  </option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.department}
+                    </option>
+                  ))}
+                </select>
+                {selectedDepartment && (
+                  <button
+                    type="button"
+                    className="dcl-clear-select-btn"
+                    onClick={() => handleDepartmentSelect('')}
+                    title="Clear department"
+                    aria-label="Clear department"
+                  >
+                    <FaTimes aria-hidden="true" />
+                  </button>
+                )}
+              </div>
             </div>
+          </div>
+
+          {!selectedDepartment ? (
+            <EmptyState
+              className="dcl-empty-state"
+              icon={<FaBuilding aria-hidden="true" />}
+              title={!selectedBuyer ? 'Select a Buyer' : 'Select a Department'}
+              description={
+                !selectedBuyer
+                  ? 'Choose a buyer from the dropdown above to get started.'
+                  : 'Choose a department to view its cost centers.'
+              }
+            />
           ) : costCentersLoading ? (
             <div className="dcl-loading-container">
-              <div className="dcl-spinner"></div>
-              <span>Loading cost centers...</span>
+              <Loader size={24} message="Loading cost centers..." />
             </div>
           ) : (
-            <div className="dcl-table-wrapper">
-              <table className="dcl-table">
+            <div className="dcl-table-wrapper sila-table-wrap">
+              <table className="dcl-table sila-table">
                 <thead>
                   <tr>
-                    <th className="dcl-th-dept">Department</th>
-                    <th className="dcl-th-cc">Cost Center</th>
-                    <th className="dcl-th-edit">Edit</th>
-                    <th className="dcl-th-delete">Delete</th>
+                    <th scope="col" className="dcl-th-dept">Department</th>
+                    <th scope="col" className="dcl-th-cc">Cost Center</th>
+                    <th scope="col" className="dcl-th-edit">Edit</th>
+                    <th scope="col" className="dcl-th-delete">Delete</th>
                   </tr>
                 </thead>
                 <tbody>
                   {costCenters.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="dcl-no-data">
-                        No cost centers found for this department.
+                        <EmptyState
+                          icon={<FaBuilding aria-hidden="true" />}
+                          title="No cost centers found for this department."
+                        />
                       </td>
                     </tr>
                   ) : (
                     (isEditing ? editCostCenters : costCenters).map((cc, index) => (
                       <tr
                         key={isEditing ? `edit-${index}` : cc.id}
-                        className={index % 2 === 0 ? 'dcl-row-even' : 'dcl-row-odd'}
+                        className={`${index % 2 === 0 ? 'dcl-row-even' : 'dcl-row-odd'}${isEditing ? ' dcl-row-editing' : ''}`}
                       >
                         {index === 0 && (
-                          <td
-                            className="dcl-td-dept"
-                            rowSpan={isEditing ? editCostCenters.length : costCenters.length}
-                          >
+                          <td className="dcl-td-dept" rowSpan={rowSpanCount}>
                             {isEditing ? (
                               <input
                                 type="text"
-                                className="dcl-edit-input"
+                                className="dcl-edit-input sila-input"
                                 value={editDepartmentName}
                                 onChange={(e) => setEditDepartmentName(e.target.value)}
+                                aria-label="Department name"
                               />
                             ) : (
                               <span className="dcl-dept-name">{selectedDepartment.department}</span>
@@ -482,74 +527,79 @@ export const DepartmentCostList: React.FC = () => {
                             <div className="dcl-cc-edit-row">
                               <input
                                 type="text"
-                                className="dcl-edit-input"
+                                className="dcl-edit-input sila-input"
                                 value={cc.costCenter}
                                 onChange={(e) => {
                                   const updated = [...editCostCenters];
                                   updated[index] = { ...updated[index], costCenter: e.target.value };
                                   setEditCostCenters(updated);
                                 }}
+                                aria-label={`Cost center ${index + 1}`}
                               />
                               <button
-                                className="dcl-cc-delete-btn"
+                                type="button"
+                                className="dcl-cc-delete-btn sila-btn sila-btn--ghost sila-btn--sm sila-btn--icon"
                                 onClick={() => openDeleteCostCenterConfirm(cc.id, cc.costCenter, index)}
                                 title="Delete cost center"
+                                aria-label={`Delete cost center ${cc.costCenter}`}
                               >
-                                <FaTrash />
+                                <FaTrash aria-hidden="true" />
                               </button>
                             </div>
                           ) : (
-                            <span className="dcl-cc-name">{cc.costCenter}</span>
+                            <span className="dcl-cc-name sila-ref">{cc.costCenter}</span>
                           )}
                         </td>
 
                         {index === 0 && (
-                          <td
-                            className="dcl-td-edit"
-                            rowSpan={isEditing ? editCostCenters.length : costCenters.length}
-                          >
+                          <td className="dcl-td-edit" rowSpan={rowSpanCount}>
                             {isEditing ? (
                               <div className="dcl-edit-actions">
                                 <button
-                                  className="dcl-save-btn"
+                                  type="button"
+                                  className="dcl-save-btn sila-btn sila-btn--primary sila-btn--sm sila-btn--icon"
                                   onClick={handleSave}
                                   disabled={saveLoading}
                                   title="Save changes"
+                                  aria-label="Save changes"
                                 >
-                                  {saveLoading ? '...' : <FaCheck />}
+                                  {saveLoading ? <span className="sila-spinner" aria-hidden="true" /> : <FaCheck aria-hidden="true" />}
                                 </button>
                                 <button
-                                  className="dcl-cancel-btn"
+                                  type="button"
+                                  className="dcl-cancel-btn sila-btn sila-btn--secondary sila-btn--sm sila-btn--icon"
                                   onClick={handleCancelEdit}
                                   disabled={saveLoading}
                                   title="Cancel"
+                                  aria-label="Cancel editing"
                                 >
-                                  <FaTimes />
+                                  <FaTimes aria-hidden="true" />
                                 </button>
                               </div>
                             ) : (
                               <button
-                                className="dcl-edit-btn"
+                                type="button"
+                                className="dcl-edit-btn sila-btn sila-btn--ghost sila-btn--sm sila-btn--icon"
                                 onClick={handleEdit}
                                 title="Edit department"
+                                aria-label={`Edit department ${selectedDepartment.department}`}
                               >
-                                <FaPen />
+                                <FaPen aria-hidden="true" />
                               </button>
                             )}
                           </td>
                         )}
 
                         {index === 0 && (
-                          <td
-                            className="dcl-td-delete"
-                            rowSpan={isEditing ? editCostCenters.length : costCenters.length}
-                          >
+                          <td className="dcl-td-delete" rowSpan={rowSpanCount}>
                             <button
-                              className="dcl-delete-btn"
+                              type="button"
+                              className="dcl-delete-btn sila-btn sila-btn--ghost sila-btn--sm sila-btn--icon"
                               onClick={openDeleteDepartmentConfirm}
                               title="Delete department"
+                              aria-label={`Delete department ${selectedDepartment.department}`}
                             >
-                              <FaTrash />
+                              <FaTrash aria-hidden="true" />
                             </button>
                           </td>
                         )}
@@ -558,29 +608,50 @@ export const DepartmentCostList: React.FC = () => {
                   )}
 
                   {isEditing && editCostCenters.length === 0 && (
-                    <tr>
+                    <tr className="dcl-row-editing">
                       <td className="dcl-td-dept">
                         <input
                           type="text"
-                          className="dcl-edit-input"
+                          className="dcl-edit-input sila-input"
                           value={editDepartmentName}
                           onChange={(e) => setEditDepartmentName(e.target.value)}
+                          aria-label="Department name"
                         />
                       </td>
                       <td className="dcl-td-cc dcl-no-cc">No cost centers remaining</td>
                       <td className="dcl-td-edit">
                         <div className="dcl-edit-actions">
-                          <button className="dcl-save-btn" onClick={handleSave} disabled={saveLoading}>
-                            {saveLoading ? '...' : <FaCheck />}
+                          <button
+                            type="button"
+                            className="dcl-save-btn sila-btn sila-btn--primary sila-btn--sm sila-btn--icon"
+                            onClick={handleSave}
+                            disabled={saveLoading}
+                            title="Save changes"
+                            aria-label="Save changes"
+                          >
+                            {saveLoading ? <span className="sila-spinner" aria-hidden="true" /> : <FaCheck aria-hidden="true" />}
                           </button>
-                          <button className="dcl-cancel-btn" onClick={handleCancelEdit} disabled={saveLoading}>
-                            <FaTimes />
+                          <button
+                            type="button"
+                            className="dcl-cancel-btn sila-btn sila-btn--secondary sila-btn--sm sila-btn--icon"
+                            onClick={handleCancelEdit}
+                            disabled={saveLoading}
+                            title="Cancel"
+                            aria-label="Cancel editing"
+                          >
+                            <FaTimes aria-hidden="true" />
                           </button>
                         </div>
                       </td>
                       <td className="dcl-td-delete">
-                        <button className="dcl-delete-btn" onClick={openDeleteDepartmentConfirm}>
-                          <FaTrash />
+                        <button
+                          type="button"
+                          className="dcl-delete-btn sila-btn sila-btn--ghost sila-btn--sm sila-btn--icon"
+                          onClick={openDeleteDepartmentConfirm}
+                          title="Delete department"
+                          aria-label="Delete department"
+                        >
+                          <FaTrash aria-hidden="true" />
                         </button>
                       </td>
                     </tr>
@@ -589,8 +660,8 @@ export const DepartmentCostList: React.FC = () => {
               </table>
             </div>
           )}
-        </div>
-      </div>
+        </section>
+      </main>
 
       <ConfirmPopup
         isOpen={confirmPopup.isOpen}

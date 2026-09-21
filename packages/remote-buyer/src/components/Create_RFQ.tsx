@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import "./Create.RFQ.css";
-import { Button, toastService, DateTimePicker } from "@vosox/shared-ui";
+import { Button, toastService, DateTimePicker, Loader, StatusBadge } from "@vosox/shared-ui";
+import { FaCloudUploadAlt, FaFileAlt, FaShieldAlt, FaTimes } from "react-icons/fa";
 import { getBuyerProfile, getAllDepartments, getAllCostCenters, getAllItemMasters, createRFQ, getVerifiedSuppliers, getUnspscSegments, getUnspscFamilies, fetchBuyerVerificationTemplates, fetchBuyerVerificationTemplateById } from "../api/Buyerapi";
 import type { VerificationTemplate } from "../api/Buyerapi";
 import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../api/masterdataApi";
@@ -36,21 +37,21 @@ interface CustomField {
 
 
 const IconTrash = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <polyline points="3 6 5 6 21 6" />
         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
     </svg>
 );
 
 const IconPlus = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <line x1="12" y1="5" x2="12" y2="19" />
         <line x1="5" y1="12" x2="19" y2="12" />
     </svg>
 );
 
 const IconList = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <line x1="8" y1="6" x2="21" y2="6" />
         <line x1="8" y1="12" x2="21" y2="12" />
         <line x1="8" y1="18" x2="21" y2="18" />
@@ -61,7 +62,7 @@ const IconList = () => (
 );
 
 const IconSourcing = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M12 2a10 10 0 1 0 10 10" />
         <path d="M12 2v10l7 4" />
     </svg>
@@ -69,28 +70,28 @@ const IconSourcing = () => (
 
 
 const IconArrowRight = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <line x1="5" y1="12" x2="19" y2="12" />
         <polyline points="12 5 19 12 12 19" />
     </svg>
 );
 
 const IconSearch = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="8" />
         <line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>
 );
 
 const IconCheckCircle = () => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="10" />
         <polyline points="16 9 10.5 15 8 12.5" />
     </svg>
 );
 
 const IconXCircle = () => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="10" />
         <line x1="14.5" y1="9.5" x2="9.5" y2="14.5" />
         <line x1="9.5" y1="9.5" x2="14.5" y2="14.5" />
@@ -98,50 +99,43 @@ const IconXCircle = () => (
 );
 
 const IconMail = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="2" y="4" width="20" height="16" rx="2" />
         <path d="m22 6-10 7L2 6" />
     </svg>
 );
 
 const IconSend = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <line x1="22" y1="2" x2="11" y2="13" />
         <polygon points="22 2 15 22 11 13 2 9 22 2" />
     </svg>
 );
 
-const IconShieldCheck = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="#4f46e5" stroke="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21.8 12l-2.4-2.8.5-3.7-3.6-.9-1.9-3.1-3.4 1.5-3.4-1.5-1.9 3.1-3.6.9.5 3.7-2.4 2.8 2.4 2.8-.5 3.7 3.6.9 1.9 3.1 3.4-1.5 3.4 1.5 1.9-3.1 3.6-.9-.5-3.7 2.4-2.8z" />
-        <polyline points="9 12 11 14 15 10" stroke="#ffffff" fill="none" strokeWidth="3" />
-    </svg>
-);
-
 const IconEye = () => (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
         <circle cx="12" cy="12" r="3" />
     </svg>
 );
 
 const IconCheckBig = () => (
-    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <polyline points="20 6 9 17 4 12" />
     </svg>
 );
 
 const IconChevronDown = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <polyline points="6 9 12 15 18 9" />
     </svg>
 );
 
 
 const steps: { key: StepKey; label: string }[] = [
-    { key: "details", label: "1. RFQ Details" },
-    { key: "suppliers", label: "2. Select Suppliers" },
-    { key: "summary", label: "3. Summary & Dispatch" },
+    { key: "details", label: "RFQ Details" },
+    { key: "suppliers", label: "Select Suppliers" },
+    { key: "summary", label: "Summary & Dispatch" },
 ];
 
 const initialLineItems: LineItem[] = [];
@@ -178,10 +172,16 @@ const buildDocumentAsset = async (
         fileBytes,
         fileName: file.name,
         contentType: file.type || "application/octet-stream",
-        isSingletonAsset: true,
+        isSingletonAsset: false,
     };
 };
 
+
+const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const formatLabel = (value: string | undefined | null): string => {
     if (!value) return "";
@@ -293,6 +293,10 @@ interface SearchableSelectProps<T> {
     hideSearch?: boolean;
     disabled?: boolean;
     error?: boolean;
+    /** id for the trigger so a <label htmlFor> can point at it */
+    id?: string;
+    /** id of the error message rendered next to the control */
+    describedBy?: string;
 }
 
 function SearchableSelect<T,>({
@@ -314,6 +318,8 @@ function SearchableSelect<T,>({
     hideSearch,
     disabled,
     error,
+    id,
+    describedBy,
 }: SearchableSelectProps<T>) {
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -336,14 +342,26 @@ function SearchableSelect<T,>({
 
     return (
         <div className="bd-custom-select-container" ref={containerRef}>
-            <div
-                className={`${small ? "bd-input-sm" : "bd-input"} bd-custom-select-trigger${disabled ? " disabled" : ""}${error ? " bd-input-error" : ""}`}
+            <button
+                type="button"
+                id={id}
+                className={`${small ? "bd-input-sm" : "bd-input"} bd-custom-select-trigger${disabled ? " disabled" : ""}${error ? " bd-input-error" : ""}${value ? "" : " bd-custom-select-trigger--placeholder"}`}
                 onClick={() => !disabled && onToggle()}
-                style={{ cursor: disabled ? "not-allowed" : "pointer", borderColor: error ? '#ef4444' : undefined }}
+                onKeyDown={(e) => {
+                    if (e.key === "Escape" && isOpen) {
+                        e.preventDefault();
+                        onClose();
+                    }
+                }}
+                disabled={disabled}
+                aria-haspopup="listbox"
+                aria-expanded={isOpen && !disabled}
+                aria-invalid={error || undefined}
+                aria-describedby={describedBy}
             >
                 <span className="bd-custom-select-value">{value || placeholder}</span>
                 <IconChevronDown />
-            </div>
+            </button>
             {isOpen && !disabled && (
                 <div className="bd-custom-select-panel">
                     {!hideSearch && (
@@ -354,29 +372,47 @@ function SearchableSelect<T,>({
                                 </span>
                                 <input
                                     className="bd-input bd-search-input"
-                                    style={{ width: "100%" }}
                                     type="text"
                                     placeholder={searchPlaceholder || "Search..."}
+                                    aria-label={searchPlaceholder || "Search"}
                                     value={searchTerm}
                                     onChange={(e) => onSearchChange(e.target.value)}
                                     onClick={(e) => e.stopPropagation()}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Escape") onClose();
+                                    }}
                                     autoFocus
                                 />
                             </div>
                         </div>
                     )}
-                    <ul className="bd-custom-select-menu" onScroll={handleScroll}>
-                        {options.map((opt) => (
-                            <li
-                                key={getOptionKey(opt)}
-                                className={`bd-custom-select-option${getOptionLabel(opt) === value ? " selected" : ""}`}
-                                onClick={() => onSelect(opt)}
-                                title={getOptionLabel(opt)}
-                            >
-                                {getOptionLabel(opt)}
-                            </li>
-                        ))}
-                        {loading && <li className="bd-custom-select-loading">Loading...</li>}
+                    <ul className="bd-custom-select-menu" role="listbox" onScroll={handleScroll}>
+                        {options.map((opt) => {
+                            const label = getOptionLabel(opt);
+                            const isSelected = label === value;
+                            return (
+                                <li
+                                    key={getOptionKey(opt)}
+                                    className={`bd-custom-select-option${isSelected ? " selected" : ""}`}
+                                    role="option"
+                                    aria-selected={isSelected}
+                                    tabIndex={0}
+                                    onClick={() => onSelect(opt)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault();
+                                            onSelect(opt);
+                                        } else if (e.key === "Escape") {
+                                            onClose();
+                                        }
+                                    }}
+                                    title={label}
+                                >
+                                    {label}
+                                </li>
+                            );
+                        })}
+                        {loading && <li className="bd-custom-select-loading" role="status">Loading...</li>}
                         {!loading && options.length === 0 && (
                             <li className="bd-custom-select-empty">No results found</li>
                         )}
@@ -389,7 +425,7 @@ function SearchableSelect<T,>({
 
 /* ---------------------------------- Component ---------------------------------- */
 
-const CreateRFQ: React.FC = () => {
+const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: () => Promise<void>;}> = ({ onNavClick,onRfqCreated })=> {
     const [activeStep, setActiveStep] = useState<StepKey>("details");
 
     const [buyerProfileId, setBuyerProfileId] = useState<string>("");
@@ -959,11 +995,11 @@ if (Array.isArray(data)) {
 
         try {
             const technicalSpecificationDocuments: RfqDocumentAssetDto[] = await Promise.all(
-                techSpecFiles.map((file) => buildDocumentAsset(file, buyerProfileId, "TechnicalSpecification"))
+                techSpecFiles.map((file) => buildDocumentAsset(file, buyerProfileId, "TECHNICAL_SPECIFICATION"))
             );
 
             const termsConditionDocuments: RfqDocumentAssetDto[] = await Promise.all(
-                termsFiles.map((file) => buildDocumentAsset(file, buyerProfileId, "TermsAndConditions"))
+                termsFiles.map((file) => buildDocumentAsset(file, buyerProfileId, "TERMS_CONDITION"))
             );
 
             const questionTypeLegacyMap: Record<string, string> = {
@@ -1019,6 +1055,7 @@ if (Array.isArray(data)) {
 
             const response = await createRFQ(payload);
             setRfqNumber(response.id);
+            await onRfqCreated();
             setActiveStep("summary");
         } catch (err: any) {
             setSubmitError(err?.message || "Failed to submit RFQ. Please try again.");
@@ -1027,448 +1064,511 @@ if (Array.isArray(data)) {
         }
     };
 
-    const handleReset = () => {
-        setActiveStep("details");
+    // const handleReset = () => {
+    //     setActiveStep("details");
+    // };
+
+    const activeStepIndex = steps.findIndex((step) => step.key === activeStep);
+
+    const renderFileList = (
+        files: File[],
+        setFilesState: React.Dispatch<React.SetStateAction<File[]>>
+    ) =>
+        files.length > 0 && (
+            <ul className="bd-file-list sila-file-list">
+                {files.map((file, idx) => (
+                    <li key={idx} className="bd-chip sila-file">
+                        <span className="sila-file-icon" aria-hidden="true">
+                            <FaFileAlt />
+                        </span>
+                        <span className="sila-file-name" title={file.name}>{file.name}</span>
+                        <span className="sila-file-meta">{formatFileSize(file.size)}</span>
+                        <button
+                            className="bd-chip-remove sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setFilesState((prev) => prev.filter((_, i) => i !== idx));
+                            }}
+                            type="button"
+                            aria-label={`Remove ${file.name}`}
+                            title="Remove file"
+                        >
+                            <FaTimes aria-hidden="true" />
+                        </button>
+                    </li>
+                ))}
+            </ul>
+        );
+
+    const openFilePicker = (ref: React.RefObject<HTMLInputElement | null>) => (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            ref.current?.click();
+        }
     };
 
     return (
         <div className="bd-rfq-card">
             <div className="bd-rfq-header">
-                <div>
-                    <div className="bd-rfq-title">Create Request For Quotation (RFQ)</div>
-                    <div className="bd-rfq-subtitle">
+                <div className="bd-rfq-heading">
+                    <h1 className="bd-rfq-title">Create Request For Quotation (RFQ)</h1>
+                    <p className="bd-rfq-subtitle">
                         Draft your requirements, item catalogs, and dispatch directly to approved suppliers.
-                    </div>
+                    </p>
                 </div>
-                <div className="bd-stepper">
-                    {steps.map((step, idx) => (
-                        <React.Fragment key={step.key}>
-                            <span className={`bd-step${activeStep === step.key ? " bd-step-active" : ""}`}>
-                                {step.label}
-                            </span>
-                            {idx < steps.length - 1 && (
-                                <span className="bd-step-sep">
-                                    <IconArrowRight />
+                <ol className="bd-stepper sila-steps" aria-label="RFQ creation progress">
+                    {steps.map((step, idx) => {
+                        const isCurrent = activeStep === step.key;
+                        const isDone = idx < activeStepIndex;
+                        return (
+                            <li
+                                key={step.key}
+                                className={`bd-step sila-step${isCurrent ? " bd-step-active sila-step--current" : ""}${isDone ? " sila-step--done" : ""}`}
+                                aria-current={isCurrent ? "step" : undefined}
+                            >
+                                <span className="sila-step-marker" aria-hidden="true">
+                                    {isDone ? "✓" : idx + 1}
                                 </span>
-                            )}
-                        </React.Fragment>
-                    ))}
-                </div>
+                                <span>{step.label}</span>
+                            </li>
+                        );
+                    })}
+                </ol>
             </div>
 
+            <div className="bd-rfq-body">
             {activeStep === "details" && (
                 <>
-                    <div className="bd-field">
-                        <label className="bd-label">RFQ Title*</label>
-                        <input
-                            className={`bd-input ${errors.rfqTitle ? "bd-input-error" : ""}`}
-                            style={errors.rfqTitle ? { borderColor: "#ef4444" } : undefined}
-                            type="text"
-                            value={rfqTitle}
-                            onChange={(e) => {
-                                setRfqTitle(e.target.value);
-                                setErrors((p) => { const np = { ...p }; delete np.rfqTitle; return np; });
-                            }}
-                            onBlur={() => setErrors((p) => { const np = { ...p }; delete np.rfqTitle; return np; })}
-                        />
-                        {errors.rfqTitle && <div className="bd-error-text">{errors.rfqTitle}</div>}
-                    </div>
-
-                    <div className="bd-row-2">
-                        <div className="bd-field">
-                            <label className="bd-label">Department*</label>
-                            <SearchableSelect<any>
-                                value={departmentLabel}
-                                placeholder="Select Department"
-                                isOpen={isDepartmentDropdownOpen}
-                                onToggle={() => setIsDepartmentDropdownOpen((prev) => !prev)}
-                                onClose={() => setIsDepartmentDropdownOpen(false)}
-                                searchTerm={departmentSearchTerm}
-                                onSearchChange={setDepartmentSearchTerm}
-                                options={filteredDepartmentOptions}
-                                getOptionLabel={(d) => formatLabel(getDeptName(d, departmentOptions.indexOf(d)))}
-                                getOptionKey={(d) => getDeptId(d, departmentOptions.indexOf(d))}
-                                onSelect={(d) => {
-                                    const idx = departmentOptions.indexOf(d);
-                                    setDepartment(getDeptId(d, idx));
-                                    setDepartmentLabel(formatLabel(getDeptName(d, idx)));
-                                    setCostCenter("");
-                                    setCostCenterLabel("");
-                                    setIsDepartmentDropdownOpen(false);
-                                    setDepartmentSearchTerm("");
-                                    setErrors((p) => { const np = { ...p }; delete np.department; return np; });
-                                }}
-                                loading={false}
-                                onScrollBottom={() => { }}
-                                searchPlaceholder="Search department..."
-                                error={!!errors.department}
-                            />
-                            {errors.department && <div className="bd-error-text">{errors.department}</div>}
-                        </div>
-                        <div className="bd-field">
-                            <label className="bd-label">Cost Center</label>
-                            <SearchableSelect<any>
-                                value={costCenterLabel}
-                                placeholder={department ? "Select Cost Center" : "Select Department First"}
-                                isOpen={isCostCenterDropdownOpen}
-                                onToggle={() => setIsCostCenterDropdownOpen((prev) => !prev)}
-                                onClose={() => setIsCostCenterDropdownOpen(false)}
-                                searchTerm={costCenterSearchTerm}
-                                onSearchChange={setCostCenterSearchTerm}
-                                options={filteredCostCenterOptions}
-                                getOptionLabel={(c) => formatLabel(getCcName(c, costCenterOptions.indexOf(c)))}
-                                getOptionKey={(c) => getCcId(c, costCenterOptions.indexOf(c))}
-                                onSelect={(c) => {
-                                    const idx = costCenterOptions.indexOf(c);
-                                    setCostCenter(getCcId(c, idx));
-                                    setCostCenterLabel(formatLabel(getCcName(c, idx)));
-                                    setIsCostCenterDropdownOpen(false);
-                                    setCostCenterSearchTerm("");
-                                }}
-                                loading={false}
-                                onScrollBottom={() => { }}
-                                searchPlaceholder="Search cost center..."
-                                disabled={!department}
-                            />
-                            
-                        </div>
-                    </div>
-
-                    <div className="bd-row-2">
-                        <div className="bd-field">
-                            <label className="bd-label">Segment</label>
-                            <SearchableSelect<UnspscSegmentDto>
-                                value={segmentTitle}
-                                placeholder="Select Segment"
-                                isOpen={isSegmentDropdownOpen}
-                                onToggle={() => setIsSegmentDropdownOpen((prev) => !prev)}
-                                onClose={() => setIsSegmentDropdownOpen(false)}
-                                searchTerm={segmentSearchTerm}
-                                onSearchChange={setSegmentSearchTerm}
-                                options={filteredSegmentOptions}
-                                getOptionLabel={(o) => o.title}
-                                getOptionKey={(o) => String(o.segment)}
-                                onSelect={(o) => {
-                                    handleSegmentChange(String(o.segment));
-                                    setIsSegmentDropdownOpen(false);
-                                    setSegmentSearchTerm("");
-                                }}
-                                loading={false}
-                                onScrollBottom={() => { }}
-                                searchPlaceholder="Search segment..."
-                            />
-                            
-                        </div>
-                        <div className="bd-field">
-                            <label className="bd-label">Family</label>
-                            <SearchableSelect<UnspscFamilyDto>
-                                value={familyTitle}
-                                placeholder={segmentCode ? "Select Family" : "Select Segment First"}
-                                isOpen={isFamilyDropdownOpen}
-                                onToggle={() => setIsFamilyDropdownOpen((prev) => !prev)}
-                                onClose={() => setIsFamilyDropdownOpen(false)}
-                                searchTerm={familySearchTerm}
-                                onSearchChange={setFamilySearchTerm}
-                                options={filteredFamilyOptions}
-                                getOptionLabel={(o) => o.title}
-                                getOptionKey={(o) => String(o.family)}
-                                onSelect={(o) => {
-                                    handleFamilyChange(String(o.family));
-                                    setIsFamilyDropdownOpen(false);
-                                    setFamilySearchTerm("");
-                                }}
-                                loading={false}
-                                onScrollBottom={() => { }}
-                                searchPlaceholder="Search family..."
-                                disabled={!segmentCode}
-                            />
-                            
-                        </div>
-                    </div>
-
-                    <div className="bd-field">
-                        <label className="bd-label">Description*</label>
-                        <textarea
-                            className={`bd-textarea ${errors.description ? "bd-input-error" : ""}`}
-                            style={errors.description ? { borderColor: "#ef4444" } : undefined}
-                            rows={3}
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                        onBlur={() => setErrors((p) => { const np = { ...p }; delete np.description; return np; })}
-                        />
-                        {errors.description && <div className="bd-error-text">{errors.description}</div>}
-                    </div>
-
-                    <div className="bd-row-2">
-                        <div className="bd-field">
-                            <label className="bd-label">Currency*</label>
-                            <SearchableSelect<CurrencyDto>
-                                value={currency}
-                                placeholder="Select Currency"
-                                isOpen={isCurrencyDropdownOpen}
-                                onToggle={() => setIsCurrencyDropdownOpen((prev) => !prev)}
-                                onClose={() => setIsCurrencyDropdownOpen(false)}
-                                searchTerm={currencySearchTerm}
-                                onSearchChange={setCurrencySearchTerm}
-                                options={currencySelect.options}
-                                getOptionLabel={(o) => o.currencyName}
-                                getOptionKey={(o) => o.id}
-                                onSelect={(o) => {
-                                    setCurrency(o.currencyName);
-                                    setIsCurrencyDropdownOpen(false);
-                                    setCurrencySearchTerm("");
-                                    setErrors((p) => { const np = { ...p }; delete np.currency; return np; });
-                                }}
-                                loading={currencySelect.loading}
-                                onScrollBottom={currencySelect.loadMore}
-                                hideSearch
-                                error={!!errors.currency}
-                            />
-                            {errors.currency && <div className="bd-error-text">{errors.currency}</div>}
-                        </div>
-                    </div>
-
-                    <div className="bd-row-2">
-                        <div className="bd-field">
-                            <label className="bd-label">Region*</label>
-                            <SearchableSelect<CountryDto>
-                                value={region}
-                                placeholder="Select Region"
-                                isOpen={isRegionDropdownOpen}
-                                onToggle={() => setIsRegionDropdownOpen((prev) => !prev)}
-                                onClose={() => setIsRegionDropdownOpen(false)}
-                                searchTerm={regionSearchTerm}
-                                onSearchChange={setRegionSearchTerm}
-                                options={regionSelect.options}
-                                getOptionLabel={(o) => o.countryName}
-                                getOptionKey={(o) => o.id}
-                                onSelect={(o) => {
-                                    setRegion(o.countryName);
-                                    setIsRegionDropdownOpen(false);
-                                    setRegionSearchTerm("");
-                                    setErrors((p) => { const np = { ...p }; delete np.region; return np; });
-                                }}
-                                loading={regionSelect.loading}
-                                onScrollBottom={regionSelect.loadMore}
-                                searchPlaceholder="Search country..."
-                                error={!!errors.region}
-                            />
-                            {errors.region && <div className="bd-error-text">{errors.region}</div>}
-                        </div>
-                        <div className="bd-field">
-                            <label className="bd-label">Delivery Location</label>
-                            <input
-                                className={`bd-input ${errors.deliveryLocation ? "bd-input-error" : ""}`}
-                                style={errors.deliveryLocation ? { borderColor: "#ef4444" } : undefined}
-                                type="text"
-                                value={deliveryLocation}
-                                onChange={(e) => {
-                                    setDeliveryLocation(e.target.value);
-                                    setErrors((p) => { const np = { ...p }; delete np.deliveryLocation; return np; });
-                                }}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="bd-row-2">
-                        <div className="bd-field">
-                            <label className="bd-label">Start Date &amp; Time (UTC)*</label>
-                            <DateTimePicker
-                                mode="datetime"
-                                value={startDateTime}
-                                min={getNowDateTimeLocalString()}
-                                error={!!errors.startDateTime}
-                                displayValue={formatDateTimeLabel(startDateTime)}
-                                onChange={(newStart) => {
-                                    setStartDateTime(newStart);
-                                    setErrors((p) => { const np = { ...p }; delete np.startDateTime; return np; });
-                                    if (endDateTime && newStart && endDateTime < newStart) {
-                                        setEndDateTime("");
-                                        setErrors((p) => { const np = { ...p }; delete np.endDateTime; return np; });
-                                    }
-                                    if (deliveryTargetDate && newStart && deliveryTargetDate < newStart) {
-                                        setDeliveryTargetDate("");
-                                        setErrors((p) => { const np = { ...p }; delete np.deliveryTargetDate; return np; });
-                                    }
-                                }}
-                            />
-                            {errors.startDateTime && <div className="bd-error-text">{errors.startDateTime}</div>}
-                        </div>
-                        <div className="bd-field">
-                            <label className="bd-label">End Date &amp; Time (UTC)</label>
-                            <DateTimePicker
-                                mode="datetime"
-                                value={endDateTime}
-                                min={startDateTime || undefined}
-                                disabled={!startDateTime}
-                                error={!!errors.endDateTime}
-                                displayValue={formatDateTimeLabel(endDateTime)}
-                                onChange={(newEnd) => {
-                                    setEndDateTime(newEnd);
-                                    if (newEnd && startDateTime && newEnd < startDateTime) {
-                                        setErrors((p) => ({ ...p, endDateTime: "End Date cannot be before Start Date." }));
-                                    } else {
-                                        setErrors((p) => { const np = { ...p }; delete np.endDateTime; return np; });
-                                    }
-                                }}
-                            />
-                            {errors.endDateTime && <div className="bd-error-text">{errors.endDateTime}</div>}
-                        </div>
-                    </div>
-
-                    <div className="bd-row-2">
-                        <div className="bd-field">
-                            <label className="bd-label">Delivery Target Date (UTC)</label>
-                            <DateTimePicker
-                                mode="datetime"
-                                value={deliveryTargetDate}
-                                min={startDateTime || undefined}
-                                disabled={!startDateTime}
-                                error={!!errors.deliveryTargetDate}
-                                displayValue={formatDateTimeLabel(deliveryTargetDate)}
-                                onChange={(newTarget) => {
-                                    setDeliveryTargetDate(newTarget);
-                                    if (newTarget && startDateTime && newTarget < startDateTime) {
-                                        setErrors((p) => ({ ...p, deliveryTargetDate: "Delivery Target Date cannot be before Start Date." }));
-                                    } else {
-                                        setErrors((p) => { const np = { ...p }; delete np.deliveryTargetDate; return np; });
-                                    }
-                                }}
-                            />
-                            {errors.deliveryTargetDate && <div className="bd-error-text">{errors.deliveryTargetDate}</div>}
-                        </div>
-                    </div>
-
-                    <div className="bd-row-2">
-                        <div className="bd-field">
-                            <label className="bd-label">Attachments (Technical Specifications)</label>
-                            <div
-                                className="bd-dropzone"
-                                onClick={() => techSpecInputRef.current?.click()}
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={(e) => {
-                                    e.preventDefault();
-                                    handleFilesChosen(e.dataTransfer.files, setTechSpecFiles);
-                                }}
-                            >
-                                Click to select file or drag and drop here
+                    <section className="bd-form-section sila-form-section" aria-labelledby="bd-sec-general">
+                        <h2 className="sila-form-section-title" id="bd-sec-general">RFQ information</h2>
+                        <p className="sila-form-section-description">Title, owning department and procurement category.</p>
+                        <div className="sila-form-grid bd-form-grid">
+                            <div className={`bd-field sila-field sila-field--full${errors.rfqTitle ? " sila-field--error" : ""}`}>
+                                <label className="bd-label sila-label" htmlFor="bd-rfq-title">
+                                    RFQ Title<span className="sila-required" aria-hidden="true">*</span>
+                                </label>
+                                <input
+                                    id="bd-rfq-title"
+                                    className={`bd-input ${errors.rfqTitle ? "bd-input-error" : ""}`}
+                                    type="text"
+                                    required
+                                    aria-invalid={!!errors.rfqTitle || undefined}
+                                    aria-describedby={errors.rfqTitle ? "bd-rfq-title-error" : undefined}
+                                    value={rfqTitle}
+                                    onChange={(e) => {
+                                        setRfqTitle(e.target.value);
+                                        setErrors((p) => { const np = { ...p }; delete np.rfqTitle; return np; });
+                                    }}
+                                    onBlur={() => setErrors((p) => { const np = { ...p }; delete np.rfqTitle; return np; })}
+                                />
+                                {errors.rfqTitle && <div className="bd-error-text sila-error-text" id="bd-rfq-title-error">{errors.rfqTitle}</div>}
                             </div>
-                            <input
-                                ref={techSpecInputRef}
-                                type="file"
-                                multiple
-                                className="bd-hidden-file-input"
-                                onChange={(e) => {
-                                    handleFilesChosen(e.target.files, setTechSpecFiles);
-                                    e.target.value = "";
-                                }}
-                            />
-                            {techSpecFiles.length > 0 && (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
-                                    {techSpecFiles.map((file, idx) => (
-                                        <span key={idx} className="bd-chip">
-                                            {file.name.length > 18 ? `${file.name.slice(0, 15)}...` : file.name}
-                                            <button
-                                                className="bd-chip-remove"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setTechSpecFiles((prev) => prev.filter((_, i) => i !== idx));
-                                                }}
-                                                type="button"
-                                            >
-                                                ×
-                                            </button>
-                                        </span>
-                                    ))}
+
+                            <div className={`bd-field sila-field${errors.department ? " sila-field--error" : ""}`}>
+                                <label className="bd-label sila-label" htmlFor="bd-rfq-department">
+                                    Department<span className="sila-required" aria-hidden="true">*</span>
+                                </label>
+                                <SearchableSelect<any>
+                                    id="bd-rfq-department"
+                                    describedBy={errors.department ? "bd-rfq-department-error" : undefined}
+                                    value={departmentLabel}
+                                    placeholder="Select Department"
+                                    isOpen={isDepartmentDropdownOpen}
+                                    onToggle={() => setIsDepartmentDropdownOpen((prev) => !prev)}
+                                    onClose={() => setIsDepartmentDropdownOpen(false)}
+                                    searchTerm={departmentSearchTerm}
+                                    onSearchChange={setDepartmentSearchTerm}
+                                    options={filteredDepartmentOptions}
+                                    getOptionLabel={(d) => formatLabel(getDeptName(d, departmentOptions.indexOf(d)))}
+                                    getOptionKey={(d) => getDeptId(d, departmentOptions.indexOf(d))}
+                                    onSelect={(d) => {
+                                        const idx = departmentOptions.indexOf(d);
+                                        setDepartment(getDeptId(d, idx));
+                                        setDepartmentLabel(formatLabel(getDeptName(d, idx)));
+                                        setCostCenter("");
+                                        setCostCenterLabel("");
+                                        setIsDepartmentDropdownOpen(false);
+                                        setDepartmentSearchTerm("");
+                                        setErrors((p) => { const np = { ...p }; delete np.department; return np; });
+                                    }}
+                                    loading={false}
+                                    onScrollBottom={() => { }}
+                                    searchPlaceholder="Search department..."
+                                    error={!!errors.department}
+                                />
+                                {errors.department && <div className="bd-error-text sila-error-text" id="bd-rfq-department-error">{errors.department}</div>}
+                            </div>
+                            <div className="bd-field sila-field">
+                                <label className="bd-label sila-label" htmlFor="bd-rfq-cost-center">Cost Center</label>
+                                <SearchableSelect<any>
+                                    id="bd-rfq-cost-center"
+                                    value={costCenterLabel}
+                                    placeholder={department ? "Select Cost Center" : "Select Department First"}
+                                    isOpen={isCostCenterDropdownOpen}
+                                    onToggle={() => setIsCostCenterDropdownOpen((prev) => !prev)}
+                                    onClose={() => setIsCostCenterDropdownOpen(false)}
+                                    searchTerm={costCenterSearchTerm}
+                                    onSearchChange={setCostCenterSearchTerm}
+                                    options={filteredCostCenterOptions}
+                                    getOptionLabel={(c) => formatLabel(getCcName(c, costCenterOptions.indexOf(c)))}
+                                    getOptionKey={(c) => getCcId(c, costCenterOptions.indexOf(c))}
+                                    onSelect={(c) => {
+                                        const idx = costCenterOptions.indexOf(c);
+                                        setCostCenter(getCcId(c, idx));
+                                        setCostCenterLabel(formatLabel(getCcName(c, idx)));
+                                        setIsCostCenterDropdownOpen(false);
+                                        setCostCenterSearchTerm("");
+                                    }}
+                                    loading={false}
+                                    onScrollBottom={() => { }}
+                                    searchPlaceholder="Search cost center..."
+                                    disabled={!department}
+                                />
+                            </div>
+
+                            <div className="bd-field sila-field">
+                                <label className="bd-label sila-label" htmlFor="bd-rfq-segment">Segment</label>
+                                <SearchableSelect<UnspscSegmentDto>
+                                    id="bd-rfq-segment"
+                                    value={segmentTitle}
+                                    placeholder="Select Segment"
+                                    isOpen={isSegmentDropdownOpen}
+                                    onToggle={() => setIsSegmentDropdownOpen((prev) => !prev)}
+                                    onClose={() => setIsSegmentDropdownOpen(false)}
+                                    searchTerm={segmentSearchTerm}
+                                    onSearchChange={setSegmentSearchTerm}
+                                    options={filteredSegmentOptions}
+                                    getOptionLabel={(o) => o.title}
+                                    getOptionKey={(o) => String(o.segment)}
+                                    onSelect={(o) => {
+                                        handleSegmentChange(String(o.segment));
+                                        setIsSegmentDropdownOpen(false);
+                                        setSegmentSearchTerm("");
+                                    }}
+                                    loading={false}
+                                    onScrollBottom={() => { }}
+                                    searchPlaceholder="Search segment..."
+                                />
+                            </div>
+                            <div className="bd-field sila-field">
+                                <label className="bd-label sila-label" htmlFor="bd-rfq-family">Family</label>
+                                <SearchableSelect<UnspscFamilyDto>
+                                    id="bd-rfq-family"
+                                    value={familyTitle}
+                                    placeholder={segmentCode ? "Select Family" : "Select Segment First"}
+                                    isOpen={isFamilyDropdownOpen}
+                                    onToggle={() => setIsFamilyDropdownOpen((prev) => !prev)}
+                                    onClose={() => setIsFamilyDropdownOpen(false)}
+                                    searchTerm={familySearchTerm}
+                                    onSearchChange={setFamilySearchTerm}
+                                    options={filteredFamilyOptions}
+                                    getOptionLabel={(o) => o.title}
+                                    getOptionKey={(o) => String(o.family)}
+                                    onSelect={(o) => {
+                                        handleFamilyChange(String(o.family));
+                                        setIsFamilyDropdownOpen(false);
+                                        setFamilySearchTerm("");
+                                    }}
+                                    loading={false}
+                                    onScrollBottom={() => { }}
+                                    searchPlaceholder="Search family..."
+                                    disabled={!segmentCode}
+                                />
+                            </div>
+
+                            <div className={`bd-field sila-field sila-field--full${errors.description ? " sila-field--error" : ""}`}>
+                                <label className="bd-label sila-label" htmlFor="bd-rfq-description">
+                                    Description<span className="sila-required" aria-hidden="true">*</span>
+                                </label>
+                                <textarea
+                                    id="bd-rfq-description"
+                                    className={`bd-textarea ${errors.description ? "bd-input-error" : ""}`}
+                                    rows={3}
+                                    required
+                                    aria-invalid={!!errors.description || undefined}
+                                    aria-describedby={errors.description ? "bd-rfq-description-error" : undefined}
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    onBlur={() => setErrors((p) => { const np = { ...p }; delete np.description; return np; })}
+                                />
+                                {errors.description && <div className="bd-error-text sila-error-text" id="bd-rfq-description-error">{errors.description}</div>}
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="bd-form-section sila-form-section" aria-labelledby="bd-sec-commercial">
+                        <h2 className="sila-form-section-title" id="bd-sec-commercial">Commercial &amp; delivery</h2>
+                        <p className="sila-form-section-description">Currency, sourcing region, delivery point and budget.</p>
+                        <div className="sila-form-grid bd-form-grid">
+                            <div className={`bd-field sila-field${errors.currency ? " sila-field--error" : ""}`}>
+                                <label className="bd-label sila-label" htmlFor="bd-rfq-currency">
+                                    Currency<span className="sila-required" aria-hidden="true">*</span>
+                                </label>
+                                <SearchableSelect<CurrencyDto>
+                                    id="bd-rfq-currency"
+                                    describedBy={errors.currency ? "bd-rfq-currency-error" : undefined}
+                                    value={currency}
+                                    placeholder="Select Currency"
+                                    isOpen={isCurrencyDropdownOpen}
+                                    onToggle={() => setIsCurrencyDropdownOpen((prev) => !prev)}
+                                    onClose={() => setIsCurrencyDropdownOpen(false)}
+                                    searchTerm={currencySearchTerm}
+                                    onSearchChange={setCurrencySearchTerm}
+                                    options={currencySelect.options}
+                                    getOptionLabel={(o) => o.currencyName}
+                                    getOptionKey={(o) => o.id}
+                                    onSelect={(o) => {
+                                        setCurrency(o.currencyName);
+                                        setIsCurrencyDropdownOpen(false);
+                                        setCurrencySearchTerm("");
+                                        setErrors((p) => { const np = { ...p }; delete np.currency; return np; });
+                                    }}
+                                    loading={currencySelect.loading}
+                                    onScrollBottom={currencySelect.loadMore}
+                                    hideSearch
+                                    error={!!errors.currency}
+                                />
+                                {errors.currency && <div className="bd-error-text sila-error-text" id="bd-rfq-currency-error">{errors.currency}</div>}
+                            </div>
+
+                            <div className={`bd-field sila-field${errors.region ? " sila-field--error" : ""}`}>
+                                <label className="bd-label sila-label" htmlFor="bd-rfq-region">
+                                    Region<span className="sila-required" aria-hidden="true">*</span>
+                                </label>
+                                <SearchableSelect<CountryDto>
+                                    id="bd-rfq-region"
+                                    describedBy={errors.region ? "bd-rfq-region-error" : undefined}
+                                    value={region}
+                                    placeholder="Select Region"
+                                    isOpen={isRegionDropdownOpen}
+                                    onToggle={() => setIsRegionDropdownOpen((prev) => !prev)}
+                                    onClose={() => setIsRegionDropdownOpen(false)}
+                                    searchTerm={regionSearchTerm}
+                                    onSearchChange={setRegionSearchTerm}
+                                    options={regionSelect.options}
+                                    getOptionLabel={(o) => o.countryName}
+                                    getOptionKey={(o) => o.id}
+                                    onSelect={(o) => {
+                                        setRegion(o.countryName);
+                                        setIsRegionDropdownOpen(false);
+                                        setRegionSearchTerm("");
+                                        setErrors((p) => { const np = { ...p }; delete np.region; return np; });
+                                    }}
+                                    loading={regionSelect.loading}
+                                    onScrollBottom={regionSelect.loadMore}
+                                    searchPlaceholder="Search country..."
+                                    error={!!errors.region}
+                                />
+                                {errors.region && <div className="bd-error-text sila-error-text" id="bd-rfq-region-error">{errors.region}</div>}
+                            </div>
+                            <div className="bd-field sila-field">
+                                <label className="bd-label sila-label" htmlFor="bd-rfq-delivery-location">Delivery Location</label>
+                                <input
+                                    id="bd-rfq-delivery-location"
+                                    className={`bd-input ${errors.deliveryLocation ? "bd-input-error" : ""}`}
+                                    type="text"
+                                    aria-invalid={!!errors.deliveryLocation || undefined}
+                                    value={deliveryLocation}
+                                    onChange={(e) => {
+                                        setDeliveryLocation(e.target.value);
+                                        setErrors((p) => { const np = { ...p }; delete np.deliveryLocation; return np; });
+                                    }}
+                                />
+                            </div>
+
+                            <div className="bd-field sila-field">
+                                <label className="bd-label sila-label" htmlFor="bd-rfq-budget">Total Budget</label>
+                                <input
+                                    id="bd-rfq-budget"
+                                    className="bd-input bd-input-num"
+                                    type="text"
+                                    value={totalBudget}
+                                    onChange={(e) => setTotalBudget(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="bd-toggle-row">
+                            <div>
+                                <div className="bd-toggle-row-title" id="bd-rfq-lot-title">Lot Option</div>
+                                <div className="bd-toggle-row-desc" id="bd-rfq-lot-desc">
+                                    Disable item-level price evaluation. When enabled, evaluation is based on Total Budget.
                                 </div>
-                            )}
-                        </div>
-                        <div className="bd-field">
-                            <label className="bd-label">Terms &amp; Conditions</label>
-                            <div
-                                className="bd-dropzone"
-                                onClick={() => termsInputRef.current?.click()}
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={(e) => {
-                                    e.preventDefault();
-                                    handleFilesChosen(e.dataTransfer.files, setTermsFiles);
-                                }}
-                            >
-                                Click to select file or drag and drop here
                             </div>
-                            <input
-                                ref={termsInputRef}
-                                type="file"
-                                multiple
-                                className="bd-hidden-file-input"
-                                onChange={(e) => {
-                                    handleFilesChosen(e.target.files, setTermsFiles);
-                                    e.target.value = "";
-                                }}
-                            />
-                            {termsFiles.length > 0 && (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
-                                    {termsFiles.map((file, idx) => (
-                                        <span key={idx} className="bd-chip">
-                                            {file.name.length > 18 ? `${file.name.slice(0, 15)}...` : file.name}
-                                            <button
-                                                className="bd-chip-remove"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setTermsFiles((prev) => prev.filter((_, i) => i !== idx));
-                                                }}
-                                                type="button"
-                                            >
-                                                ×
-                                            </button>
-                                        </span>
-                                    ))}
+                            <label className="bd-switch">
+                                <input
+                                    type="checkbox"
+                                    role="switch"
+                                    aria-labelledby="bd-rfq-lot-title"
+                                    aria-describedby="bd-rfq-lot-desc"
+                                    checked={lotOption}
+                                    onChange={(e) => setLotOption(e.target.checked)}
+                                />
+                                <span className="bd-switch-slider" aria-hidden="true" />
+                            </label>
+                        </div>
+                    </section>
+
+                    <section className="bd-form-section sila-form-section" aria-labelledby="bd-sec-schedule">
+                        <h2 className="sila-form-section-title" id="bd-sec-schedule">Schedule</h2>
+                        <p className="sila-form-section-description">Bidding window and requested delivery date. All times are UTC.</p>
+                        <div className="sila-form-grid bd-form-grid">
+                            <div className={`bd-field sila-field${errors.startDateTime ? " sila-field--error" : ""}`}>
+                                <label className="bd-label sila-label">
+                                    Start Date &amp; Time (UTC)<span className="sila-required" aria-hidden="true">*</span>
+                                </label>
+                                <DateTimePicker
+                                    mode="datetime"
+                                    value={startDateTime}
+                                    min={getNowDateTimeLocalString()}
+                                    error={!!errors.startDateTime}
+                                    displayValue={formatDateTimeLabel(startDateTime)}
+                                    onChange={(newStart) => {
+                                        setStartDateTime(newStart);
+                                        setErrors((p) => { const np = { ...p }; delete np.startDateTime; return np; });
+                                        if (endDateTime && newStart && endDateTime < newStart) {
+                                            setEndDateTime("");
+                                            setErrors((p) => { const np = { ...p }; delete np.endDateTime; return np; });
+                                        }
+                                        if (deliveryTargetDate && newStart && deliveryTargetDate < newStart) {
+                                            setDeliveryTargetDate("");
+                                            setErrors((p) => { const np = { ...p }; delete np.deliveryTargetDate; return np; });
+                                        }
+                                    }}
+                                />
+                                {errors.startDateTime && <div className="bd-error-text sila-error-text">{errors.startDateTime}</div>}
+                            </div>
+                            <div className={`bd-field sila-field${errors.endDateTime ? " sila-field--error" : ""}`}>
+                                <label className="bd-label sila-label">End Date &amp; Time (UTC)</label>
+                                <DateTimePicker
+                                    mode="datetime"
+                                    value={endDateTime}
+                                    min={startDateTime || undefined}
+                                    disabled={!startDateTime}
+                                    error={!!errors.endDateTime}
+                                    displayValue={formatDateTimeLabel(endDateTime)}
+                                    onChange={(newEnd) => {
+                                        setEndDateTime(newEnd);
+                                        if (newEnd && startDateTime && newEnd < startDateTime) {
+                                            setErrors((p) => ({ ...p, endDateTime: "End Date cannot be before Start Date." }));
+                                        } else {
+                                            setErrors((p) => { const np = { ...p }; delete np.endDateTime; return np; });
+                                        }
+                                    }}
+                                />
+                                {errors.endDateTime && <div className="bd-error-text sila-error-text">{errors.endDateTime}</div>}
+                            </div>
+                            <div className={`bd-field sila-field${errors.deliveryTargetDate ? " sila-field--error" : ""}`}>
+                                <label className="bd-label sila-label">Delivery Target Date (UTC)</label>
+                                <DateTimePicker
+                                    mode="datetime"
+                                    value={deliveryTargetDate}
+                                    min={startDateTime || undefined}
+                                    disabled={!startDateTime}
+                                    error={!!errors.deliveryTargetDate}
+                                    displayValue={formatDateTimeLabel(deliveryTargetDate)}
+                                    onChange={(newTarget) => {
+                                        setDeliveryTargetDate(newTarget);
+                                        if (newTarget && startDateTime && newTarget < startDateTime) {
+                                            setErrors((p) => ({ ...p, deliveryTargetDate: "Delivery Target Date cannot be before Start Date." }));
+                                        } else {
+                                            setErrors((p) => { const np = { ...p }; delete np.deliveryTargetDate; return np; });
+                                        }
+                                    }}
+                                />
+                                {errors.deliveryTargetDate && <div className="bd-error-text sila-error-text">{errors.deliveryTargetDate}</div>}
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="bd-form-section sila-form-section" aria-labelledby="bd-sec-attachments">
+                        <h2 className="sila-form-section-title" id="bd-sec-attachments">Attachments</h2>
+                        <p className="sila-form-section-description">Specifications and commercial terms shared with invited suppliers.</p>
+                        <div className="bd-row-2">
+                            <div className="bd-field sila-field">
+                                <span className="bd-label sila-label" id="bd-rfq-techspec-label">Attachments (Technical Specifications)</span>
+                                <div
+                                    className="bd-dropzone sila-dropzone"
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-labelledby="bd-rfq-techspec-label"
+                                    onClick={() => techSpecInputRef.current?.click()}
+                                    onKeyDown={openFilePicker(techSpecInputRef)}
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onDrop={(e) => {
+                                        e.preventDefault();
+                                        handleFilesChosen(e.dataTransfer.files, setTechSpecFiles);
+                                    }}
+                                >
+                                    <FaCloudUploadAlt className="bd-dropzone-icon" aria-hidden="true" />
+                                    <span>Click to select file or drag and drop here</span>
                                 </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="bd-toggle-row">
-                        <div>
-                            <div className="bd-toggle-row-title">Lot Option</div>
-                            <div className="bd-toggle-row-desc">
-                                Disable item-level price evaluation. When enabled, evaluation is based on Total Budget.
+                                <input
+                                    ref={techSpecInputRef}
+                                    type="file"
+                                    multiple
+                                    className="bd-hidden-file-input"
+                                    tabIndex={-1}
+                                    aria-hidden="true"
+                                    onChange={(e) => {
+                                        handleFilesChosen(e.target.files, setTechSpecFiles);
+                                        e.target.value = "";
+                                    }}
+                                />
+                                {renderFileList(techSpecFiles, setTechSpecFiles)}
+                            </div>
+                            <div className="bd-field sila-field">
+                                <span className="bd-label sila-label" id="bd-rfq-terms-label">Terms &amp; Conditions</span>
+                                <div
+                                    className="bd-dropzone sila-dropzone"
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-labelledby="bd-rfq-terms-label"
+                                    onClick={() => termsInputRef.current?.click()}
+                                    onKeyDown={openFilePicker(termsInputRef)}
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onDrop={(e) => {
+                                        e.preventDefault();
+                                        handleFilesChosen(e.dataTransfer.files, setTermsFiles);
+                                    }}
+                                >
+                                    <FaCloudUploadAlt className="bd-dropzone-icon" aria-hidden="true" />
+                                    <span>Click to select file or drag and drop here</span>
+                                </div>
+                                <input
+                                    ref={termsInputRef}
+                                    type="file"
+                                    multiple
+                                    className="bd-hidden-file-input"
+                                    tabIndex={-1}
+                                    aria-hidden="true"
+                                    onChange={(e) => {
+                                        handleFilesChosen(e.target.files, setTermsFiles);
+                                        e.target.value = "";
+                                    }}
+                                />
+                                {renderFileList(termsFiles, setTermsFiles)}
                             </div>
                         </div>
-                        <label className="bd-switch">
-                            <input
-                                type="checkbox"
-                                checked={lotOption}
-                                onChange={(e) => setLotOption(e.target.checked)}
-                            />
-                            <span className="bd-switch-slider" />
-                        </label>
-                    </div>
+                    </section>
 
-                    <div className="bd-field">
-                        <label className="bd-label">Total Budget</label>
-                        <input
-                            className="bd-input"
-                            type="text"
-                            value={totalBudget}
-                            onChange={(e) => setTotalBudget(e.target.value)}
-                        />
-                    </div>
+                    <section className="bd-form-section sila-form-section" aria-labelledby="bd-sec-dsr">
                     <div className="bd-dsr-box">
-                        <div className="bd-dsr-header">
+                        <h2 className="bd-dsr-header" id="bd-sec-dsr">
                             <IconSourcing /> Dynamic Sourcing Requirements (Flexible Fields)
-                        </div>
-                        <div className="bd-dsr-sub">
+                        </h2>
+                        <p className="bd-dsr-sub">
                             Configure additional fields (Text, Dropdown, Radio, Checkbox) for suppliers to submit as part
                             of their compliance checklist.
-                        </div>
+                        </p>
 
                         <div className="bd-dsr-builder">
                             <div className="bd-dsr-builder-title">Create Custom Field Definition</div>
                             <div className="bd-dsr-builder-row">
                                 <div className="bd-item-add-field">
-                                    <label className="bd-label-sm">QUESTION/LABEL</label>
+                                    <label className="bd-label-sm" htmlFor="bd-dsr-label">Question / Label</label>
                                     <input
+                                        id="bd-dsr-label"
                                         className="bd-input-sm"
                                         type="text"
                                         placeholder="eg. Is the delivery charge separate?..."
@@ -1477,8 +1577,9 @@ if (Array.isArray(data)) {
                                     />
                                 </div>
                                 <div className="bd-item-add-field">
-                                    <label className="bd-label-sm">INPUT FIELD TYPE</label>
+                                    <label className="bd-label-sm" htmlFor="bd-dsr-type">Input field type</label>
                                     <select
+                                        id="bd-dsr-type"
                                         className="bd-select-sm"
                                         value={newFieldType}
                                         onChange={(e) => {
@@ -1495,10 +1596,11 @@ if (Array.isArray(data)) {
                                     </select>
                                 </div>
                                 <div className="bd-item-add-field">
-                                    <label className="bd-label-sm">OPTIONS</label>
+                                    <label className="bd-label-sm" htmlFor="bd-dsr-options">Options</label>
 
                                     {newFieldType === "INPUT" && (
                                         <input
+                                            id="bd-dsr-options"
                                             className="bd-input-sm"
                                             type="text"
                                             disabled
@@ -1508,6 +1610,7 @@ if (Array.isArray(data)) {
 
                                     {newFieldType === "FILE" && (
                                         <input
+                                            id="bd-dsr-options"
                                             className="bd-input-sm"
                                             type="text"
                                             disabled
@@ -1516,11 +1619,11 @@ if (Array.isArray(data)) {
                                     )}
 
                                     {newFieldType === "RADIO_BUTTON" && (
-                                        <div style={{ display: "flex", gap: 16, alignItems: "center", padding: "6px 0" }}>
-                                            <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "default", fontSize: 13, color: "#374151" }}>
+                                        <div className="bd-radio-preview">
+                                            <label className="bd-radio-preview-option">
                                                 <input type="radio" disabled name="radio-preview" /> Yes
                                             </label>
-                                            <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "default", fontSize: 13, color: "#374151" }}>
+                                            <label className="bd-radio-preview-option">
                                                 <input type="radio" disabled name="radio-preview" /> No
                                             </label>
                                         </div>
@@ -1528,8 +1631,9 @@ if (Array.isArray(data)) {
 
                                     {newFieldType === "CHECK_BOX" && (
                                         <div>
-                                            <div style={{ display: "flex", gap: 8 }}>
+                                            <div className="bd-option-input-row">
                                                 <input
+                                                    id="bd-dsr-options"
                                                     className="bd-input-sm"
                                                     type="text"
                                                     placeholder="Type option..."
@@ -1543,27 +1647,27 @@ if (Array.isArray(data)) {
                                                     }}
                                                 />
                                                 <button
-                                                    className="bd-btn-add"
-                                                    style={{ padding: "6px 10px", minWidth: "auto" }}
+                                                    className="bd-btn-add bd-btn-add--icon"
                                                     onClick={handleAddCheckboxOption}
                                                     type="button"
                                                     title="Add option"
+                                                    aria-label="Add option"
                                                 >
                                                     <IconPlus />
                                                 </button>
                                             </div>
                                             {checkboxOptions.length > 0 && (
-                                                <div className="bd-dsr-field-options" style={{ marginTop: 8 }}>
+                                                <div className="bd-dsr-field-options bd-dsr-field-options--spaced">
                                                     {checkboxOptions.map((opt, idx) => (
                                                         <span className="bd-dsr-option-pill" key={idx}>
                                                             {opt}
                                                             <button
-                                                                className="bd-chip-remove"
+                                                                className="bd-chip-remove bd-option-remove"
                                                                 onClick={() => handleRemoveCheckboxOption(idx)}
                                                                 type="button"
-                                                                style={{ marginLeft: 4 }}
+                                                                aria-label={`Remove option ${opt}`}
                                                             >
-                                                                ×
+                                                                <FaTimes aria-hidden="true" />
                                                             </button>
                                                         </span>
                                                     ))}
@@ -1587,8 +1691,9 @@ if (Array.isArray(data)) {
                                                 onClick={() => handleRemoveCustomField(field.id)}
                                                 type="button"
                                                 title="Remove field"
+                                                aria-label={`Remove field ${field.label}`}
                                             >
-                                                ×
+                                                <FaTimes aria-hidden="true" />
                                             </button>
                                             <div className="bd-dsr-field-type">{getFieldTypeLabel(field.type)}</div>
                                             <div className="bd-dsr-field-label">{field.label}</div>
@@ -1596,22 +1701,11 @@ if (Array.isArray(data)) {
                                                 <div className="bd-dsr-field-options">
                                                     {field.type === "RADIO_BUTTON" ? (
                                                         field.options.map((opt, idx) => (
-                                                            <label
-                                                                key={idx}
-                                                                style={{
-                                                                    display: "inline-flex",
-                                                                    alignItems: "center",
-                                                                    gap: 6,
-                                                                    marginRight: 12,
-                                                                    fontSize: 12,
-                                                                    color: "#4b5563",
-                                                                }}
-                                                            >
+                                                            <label key={idx} className="bd-radio-preview-option bd-radio-preview-option--sm">
                                                                 <input
                                                                     type="radio"
                                                                     disabled
                                                                     name={`preview-${field.id}`}
-                                                                    style={{ margin: 0 }}
                                                                 />{" "}
                                                                 {opt}
                                                             </label>
@@ -1631,27 +1725,30 @@ if (Array.isArray(data)) {
                             )}
                         </div>
                     </div>
+                    </section>
 
-                    <hr className="bd-section-divider" />
-                    <div className="bd-section-label">Add materials or services required</div>
+                    <section className="bd-form-section sila-form-section" aria-labelledby="bd-sec-items">
+                    <h2 className="sila-form-section-title bd-section-label" id="bd-sec-items">Line items</h2>
+                    <p className="sila-form-section-description">Add materials or services required</p>
 
                     <div className="bd-item-add-row">
                         <div className="bd-item-add-grid-top">
                             <div className="bd-item-add-field">
-                                <label className="bd-label-sm">DESCRIPTION</label>
+                                <label className="bd-label-sm" htmlFor="bd-item-desc">Description</label>
                                 <input
+                                    id="bd-item-desc"
                                     className="bd-input-sm"
                                     type="text"
                                     placeholder="Select a material code to auto-fill"
                                     value={newItemDesc}
                                     readOnly
-                                    style={{ background: "#f8fafc", color: "#6b7280", cursor: "default" }}
                                 />
                             </div>
                             <div className="bd-item-add-field">
-                                <label className="bd-label-sm">QUANTITY</label>
+                                <label className="bd-label-sm" htmlFor="bd-item-qty">Quantity</label>
                                 <input
-                                    className="bd-input-sm"
+                                    id="bd-item-qty"
+                                    className="bd-input-sm bd-input-num"
                                     type="number"
                                     min={1}
                                     value={newItemQty}
@@ -1659,8 +1756,9 @@ if (Array.isArray(data)) {
                                 />
                             </div>
                             <div className="bd-item-add-field">
-                                <label className="bd-label-sm">UOM</label>
+                                <label className="bd-label-sm" htmlFor="bd-item-uom">UOM</label>
                                 <SearchableSelect<UnitDto>
+                                    id="bd-item-uom"
                                     value={newItemUom}
                                     placeholder="Select UOM"
                                     isOpen={isUomDropdownOpen}
@@ -1685,8 +1783,9 @@ if (Array.isArray(data)) {
                         </div>
                         <div className="bd-item-add-grid-bottom">
                             <div className="bd-item-add-field">
-                                <label className="bd-label-sm">MATERIAL CODE</label>
+                                <label className="bd-label-sm" htmlFor="bd-item-material">Material code</label>
                                 <select
+                                    id="bd-item-material"
                                     className="bd-select-sm"
                                     value={newItemMaterialCode}
                                     onChange={(e) => handleMaterialCodeChange(e.target.value)}
@@ -1708,42 +1807,44 @@ if (Array.isArray(data)) {
                                 </button>
                                 <button
                                     type="button"
-                                    className="bd-btn-add"
+                                    className="bd-btn-add bd-btn-add--secondary"
                                     onClick={() => setIsItemMasterModalOpen(true)}
                                 >
-                                    + Add Item Master
+                                    <IconPlus /> Add Item Master
                                 </button>
                             </div>
                         </div>
                     </div>
 
                     <div className="bd-line-items-label">
-                        <IconList /> LINE ITEMS
+                        <IconList /> Line items
+                        <span className="bd-line-items-count">{lineItems.length}</span>
                     </div>
-                    <div className="bd-table-responsive" style={errors.lineItems ? { border: "1px solid #ef4444", padding: 8, borderRadius: 6 } : undefined}>
+                    <div className={`bd-table-responsive${errors.lineItems ? " bd-table-responsive--error" : ""}`}>
                         <table className="bd-table">
                             <thead>
                                 <tr>
                                     <th>Description</th>
                                     <th>Material Code</th>
-                                    <th>Quantity</th>
+                                    <th className="bd-num">Quantity</th>
                                     <th>UOM</th>
-                                    <th>Action</th>
+                                    <th className="bd-cell-actions">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {lineItems.map((li) => (
                                     <tr key={li.id}>
                                         <td>{li.description}</td>
-                                        <td>{li.materialCode}</td>
-                                        <td>{li.quantity}</td>
+                                        <td>{li.materialCode ? <span className="sila-ref">{li.materialCode}</span> : null}</td>
+                                        <td className="bd-num">{li.quantity}</td>
                                         <td>{li.uom}</td>
-                                        <td>
+                                        <td className="bd-cell-actions">
                                             <button
                                                 className="bd-icon-btn"
                                                 onClick={() => handleRemoveLineItem(li.id)}
                                                 type="button"
                                                 title="Remove item"
+                                                aria-label={`Remove ${li.description}`}
                                             >
                                                 <IconTrash />
                                             </button>
@@ -1760,11 +1861,12 @@ if (Array.isArray(data)) {
                             </tbody>
                         </table>
                     </div>
-                    {errors.lineItems && <div className="bd-error-text" style={{ marginTop: 8, color: '#ef4444' }}>{errors.lineItems}</div>}
+                    {errors.lineItems && <div className="bd-error-text sila-error-text bd-error-text--block" role="alert">{errors.lineItems}</div>}
+                    </section>
 
                     <div className="bd-form-footer">
                         <button className="bd-btn-next" onClick={handleNext} type="button">
-                            Next
+                            Next <IconArrowRight />
                         </button>
                     </div>
                 </>
@@ -1782,6 +1884,7 @@ if (Array.isArray(data)) {
                         <div className="bd-suppliers-filters">
                             <select
                                 className="bd-select bd-category-filter"
+                                aria-label="Filter suppliers by verification"
                                 value={supplierTypeFilter}
                                 onChange={(e) => setSupplierTypeFilter(e.target.value as "ALL" | SupplierVerificationType)}
                             >
@@ -1795,7 +1898,8 @@ if (Array.isArray(data)) {
                                 </span>
                                 <input
                                     className="bd-input bd-search-input"
-                                    type="text"
+                                    type="search"
+                                    aria-label="Search suppliers"
                                     placeholder="Search supplier by name or id..."
                                     value={supplierSearchQuery}
                                     onChange={(e) => setSupplierSearchQuery(e.target.value)}
@@ -1803,15 +1907,16 @@ if (Array.isArray(data)) {
                             </div>
                             <Button
                                 type="button"
+                                variant="secondary"
                                 onClick={() => setIsExternalSupplierModalOpen(true)}
                             >
-                                Add External Supplier
+                                <IconPlus /> Add External Supplier
                             </Button>
                         </div>
                     </div>
 
                     {suppliersError && (
-                        <div className="bd-status-unverified" style={{ marginBottom: 12 }}>
+                        <div className="bd-alert sila-alert sila-alert--danger" role="alert">
                             {suppliersError}
                         </div>
                     )}
@@ -1830,12 +1935,15 @@ if (Array.isArray(data)) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {suppliers.map((s) => (
-                                    <tr key={s.supplierId}>
+                                {suppliers.map((s) => {
+                                    const isSelected = selectedSupplierIds.includes(s.supplierId);
+                                    return (
+                                    <tr key={s.supplierId} className={isSelected ? "sila-row-selected" : undefined}>
                                         <td className="bd-checkbox-cell">
                                             <input
                                                 type="checkbox"
-                                                checked={selectedSupplierIds.includes(s.supplierId)}
+                                                aria-label={`Select ${s.supplierName}`}
+                                                checked={isSelected}
                                                 onChange={() => toggleSupplier(s.supplierId)}
                                             />
                                         </td>
@@ -1843,20 +1951,16 @@ if (Array.isArray(data)) {
                                             <div className="bd-supplier-name">{s.supplierName}</div>
                                         </td>
                                         <td>
-                                            <div className="bd-supplier-sn-id">{s.snid}</div>
+                                            <span className="bd-supplier-sn-id sila-ref">{s.snid}</span>
                                         </td>
                                         <td>
                                             <span className="bd-supplier-email">{s.email}</span>
                                         </td>
                                         <td>
                                             {s.isVerified ? (
-                                                <span className="bd-status-verified">
-                                                    <IconCheckCircle /> Verified
-                                                </span>
+                                                <StatusBadge status="Verified" label={<><IconCheckCircle /> Verified</>} />
                                             ) : (
-                                                <span className="bd-status-unverified">
-                                                    <IconXCircle /> Not Verified
-                                                </span>
+                                                <StatusBadge status="Not Verified" tone="warning" label={<><IconXCircle /> Not Verified</>} />
                                             )}
                                         </td>
                                         <td>
@@ -1873,24 +1977,12 @@ if (Array.isArray(data)) {
                                         <td>
                                             <Button
                                                 type="button"
-                                                disabled={!selectedSupplierIds.includes(s.supplierId)}
-                                                title={
-                                                    selectedSupplierIds.includes(s.supplierId)
-                                                        ? undefined
-                                                        : "Select this supplier first"
-                                                }
+                                                size="sm"
+                                                variant={isSelected ? "outline" : "secondary"}
+                                                className="bd-users-btn"
+                                                disabled={!isSelected}
+                                                title={isSelected ? undefined : "Select this supplier first"}
                                                 onClick={() => setActiveSupplierForUsers(s)}
-                                                style={{
-                                                    width: "140px",
-                                                    whiteSpace: "nowrap",
-                                                    ...(!selectedSupplierIds.includes(s.supplierId) && {
-                                                        background: "#e2e8f0",
-                                                        color: "#94a3b8",
-                                                        border: "1px solid #e2e8f0",
-                                                        boxShadow: "none",
-                                                        cursor: "not-allowed",
-                                                    }),
-                                                }}
                                             >
                                                 {(supplierSelectedUserIds[s.supplierId]?.length ?? 0) > 0
                                                     ? `${supplierSelectedUserIds[s.supplierId].length} Selected`
@@ -1898,18 +1990,19 @@ if (Array.isArray(data)) {
                                             </Button>
                                         </td>
                                     </tr>
-                                ))}
+                                    );
+                                })}
                                 {!suppliersLoading && suppliers.length === 0 && (
                                     <tr>
-                                        <td colSpan={6} className="bd-table-empty">
+                                        <td colSpan={7} className="bd-table-empty">
                                             {suppliersError ? "Could not load suppliers." : "No suppliers match your search."}
                                         </td>
                                     </tr>
                                 )}
                                 {suppliersLoading && (
                                     <tr>
-                                        <td colSpan={6} className="bd-table-empty">
-                                            Loading suppliers...
+                                        <td colSpan={7} className="bd-table-empty">
+                                            <Loader size={20} message="Loading suppliers..." />
                                         </td>
                                     </tr>
                                 )}
@@ -1918,7 +2011,7 @@ if (Array.isArray(data)) {
                     </div>
 
                     {externalSuppliers.length > 0 && (
-                        <div className="bd-table-card" style={{ marginTop: 16 }}>
+                        <div className="bd-table-card">
                             <table className="bd-table bd-suppliers-table">
                                 <thead>
                                     <tr>
@@ -1926,7 +2019,7 @@ if (Array.isArray(data)) {
                                         <th>Email</th>
                                         <th>Contact Number</th>
                                         <th>Address</th>
-                                        <th></th>
+                                        <th className="bd-cell-actions"><span className="sila-visually-hidden">Actions</span></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1944,11 +2037,12 @@ if (Array.isArray(data)) {
                                             <td>
                                                 <div className="bd-supplier-sn-id">{s.address}</div>
                                             </td>
-                                            <td>
+                                            <td className="bd-cell-actions">
                                                 <button
                                                     type="button"
-                                                    className="bd-btn-back"
+                                                    className="bd-btn-back bd-btn-sm"
                                                     onClick={() => handleRemoveExternalSupplier(idx)}
+                                                    aria-label={`Remove ${s.supplierName}`}
                                                 >
                                                     Remove
                                                 </button>
@@ -1960,19 +2054,22 @@ if (Array.isArray(data)) {
                         </div>
                     )}
 
-                    {hasUnverifiedSelected && (
+                    {(externalSuppliers.length > 0 || hasUnverifiedSelected) && (
                         <div className="bd-onboarding-box">
                             <div className="bd-onboarding-header">
-                                <IconShieldCheck /> Supplier Onboarding Required
+                                <FaShieldAlt aria-hidden="true" /> Supplier Onboarding Required
                             </div>
                             <p className="bd-onboarding-sub">
                                 Some selected vendors are unverified. They will receive an invitation to register first.
                             </p>
                             <div className="bd-onboarding-grid">
                                 <div className="bd-onboarding-left">
-                                    <label className="bd-label">Registration Template*</label>
+                                    <label className="bd-label sila-label" htmlFor="bd-rfq-reg-template">
+                                        Registration Template<span className="sila-required" aria-hidden="true">*</span>
+                                    </label>
                                     <div className="bd-template-row">
                                         <SearchableSelect<VerificationTemplate>
+                                            id="bd-rfq-reg-template"
                                             value={registrationTemplate}
                                             placeholder="Select Template"
                                             isOpen={isTemplateDropdownOpen}
@@ -2002,31 +2099,13 @@ if (Array.isArray(data)) {
                                             <IconEye /> View Template
                                         </button>
                                     </div>
-                                    {/* <label className="bd-label bd-reg-link-label">Supplier Registration Link</label>
-                                    <input className="bd-input bd-reg-link-box" type="text" readOnly value={supplierRegistrationLink} /> */}
                                 </div>
-                                {/* <div className="bd-onboarding-right">
-                                    <div className="bd-metrics-title">Pipeline Metrics</div>
-                                    <div className="bd-metrics-grid">
-                                        <div className="bd-metric-card bd-metric-card-green">
-                                            <div className="bd-metric-number">{verifiedSelectedCount}</div>
-                                            <div className="bd-metric-label">Verified Suppliers</div>
-                                        </div>
-                                        <div className="bd-metric-card bd-metric-card-orange">
-                                            <div className="bd-metric-number">{unverifiedSelectedCount}</div>
-                                            <div className="bd-metric-label">Registration Required</div>
-                                        </div>
-                                    </div>
-                                    <p className="bd-metrics-note">
-                                        Unverified suppliers will be redirected to complete the selected form before bidding.
-                                    </p>
-                                </div> */}
-                            </div>  
+                            </div>
                         </div>
                     )}
 
                     {submitError && (
-                        <div className="bd-status-unverified" style={{ marginBottom: 16 }}>
+                        <div className="bd-alert sila-alert sila-alert--danger" role="alert">
                             {submitError}
                         </div>
                     )}
@@ -2040,8 +2119,10 @@ if (Array.isArray(data)) {
                             onClick={handleSubmitRFQ}
                             type="button"
                             disabled={(selectedSupplierIds.length === 0 && externalSuppliers.length === 0) || isSubmittingRFQ}
+                            aria-busy={isSubmittingRFQ || undefined}
                         >
-                            <IconSend /> {isSubmittingRFQ ? "Submitting..." : "Submit RFQ"}
+                            {isSubmittingRFQ ? <span className="sila-spinner" aria-hidden="true" /> : <IconSend />}
+                            {isSubmittingRFQ ? "Submitting..." : "Submit RFQ"}
                         </button>
                     </div>
                 </div>
@@ -2049,12 +2130,12 @@ if (Array.isArray(data)) {
 
             {activeStep === "summary" && (
                 <div className="bd-success-wrap">
-                    <div className="bd-success-icon-circle">
+                    <div className="bd-success-icon-circle" aria-hidden="true">
                         <IconCheckBig />
                     </div>
-                    <div className="bd-success-title">RFQ Submitted Successfully!</div>
+                    <h2 className="bd-success-title">RFQ Submitted Successfully!</h2>
                     <p className="bd-success-sub">
-                        The RFQ was registered as <strong>{rfqNumber}</strong>. Interactive logic dispatched notifications to invited vendors.
+                        The RFQ was registered as <strong className="sila-ref">{rfqNumber}</strong>. Interactive logic dispatched notifications to invited vendors.
                     </p>
 
                     <div className="bd-table-card bd-success-table-card">
@@ -2073,13 +2154,9 @@ if (Array.isArray(data)) {
                                         <td>{s.email}</td>
                                         <td>
                                             {s.isVerified ? (
-                                                <span className="bd-delivery-pill bd-delivery-pill-green">
-                                                    <span className="bd-dot" /> RFQ Sent
-                                                </span>
+                                                <StatusBadge status="Sent" tone="success" label="RFQ Sent" dot />
                                             ) : (
-                                                <span className="bd-delivery-pill bd-delivery-pill-orange">
-                                                    <span className="bd-dot" /> Invitation Sent
-                                                </span>
+                                                <StatusBadge status="Sent" tone="warning" label="Invitation Sent" dot />
                                             )}
                                         </td>
                                     </tr>
@@ -2089,9 +2166,7 @@ if (Array.isArray(data)) {
                                         <td>{s.supplierName}</td>
                                         <td>{s.email}</td>
                                         <td>
-                                            <span className="bd-delivery-pill bd-delivery-pill-orange">
-                                                <span className="bd-dot" /> Invitation Sent
-                                            </span>
+                                            <StatusBadge status="Sent" tone="warning" label="Invitation Sent" dot />
                                         </td>
                                     </tr>
                                 ))}
@@ -2107,27 +2182,42 @@ if (Array.isArray(data)) {
                     </div>
 
                     <div className="bd-success-footer">
-                        <button className="bd-btn-dark" onClick={handleReset} type="button">
-                            View RFQs List
-                        </button>
-                        <button className="bd-btn-back" onClick={handleReset} type="button">
+                        <button
+                            className="bd-btn-back"
+                            onClick={() => onNavClick("dashboard")}
+                            type="button"
+                        >
                             Back to Dashboard
+                        </button>
+                        <button
+                            className="bd-btn-dark"
+                            onClick={() => onNavClick("activeRFQs")}
+                            type="button"
+                        >
+                            View RFQs List
                         </button>
                     </div>
                 </div>
             )}
+            </div>
 
             {isViewTemplateOpen && (
                 <div className="bd-template-modal-overlay" onClick={closeViewTemplate}>
-                    <div className="bd-template-modal" onClick={(e) => e.stopPropagation()}>
+                    <div
+                        className="bd-template-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="bd-template-modal-title"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="bd-template-modal-header">
                             <div>
-                                <div className="bd-template-modal-title">
+                                <h2 className="bd-template-modal-title" id="bd-template-modal-title">
                                     {viewTemplateData?.templateName || "Registration Template"}
-                                </div>
+                                </h2>
                                 <div className="bd-template-modal-subtitle">
                                     {viewTemplateData?.templateType ? `${viewTemplateData.templateType} • ` : ""}
-                                    Code: {viewTemplateData?.templateCode || "-"}
+                                    Code: {viewTemplateData?.templateCode ? <span className="sila-ref">{viewTemplateData.templateCode}</span> : "-"}
                                 </div>
                             </div>
                             <button type="button" className="bd-template-modal-close" onClick={closeViewTemplate}>
@@ -2137,10 +2227,12 @@ if (Array.isArray(data)) {
 
                         <div className="bd-template-modal-body">
                             {viewTemplateLoading && (
-                                <div className="bd-template-modal-status">Loading template...</div>
+                                <div className="bd-template-modal-status">
+                                    <Loader size={24} message="Loading template..." />
+                                </div>
                             )}
                             {!viewTemplateLoading && viewTemplateError && (
-                                <div className="bd-template-modal-status bd-template-modal-error">{viewTemplateError}</div>
+                                <div className="bd-template-modal-error sila-alert sila-alert--danger" role="alert">{viewTemplateError}</div>
                             )}
                             {!viewTemplateLoading && !viewTemplateError && viewTemplateData && (
                                 viewTemplateData.questions && viewTemplateData.questions.length > 0 ? (
@@ -2149,15 +2241,17 @@ if (Array.isArray(data)) {
                                         .sort((a, b) => a.displayOrder - b.displayOrder)
                                         .map((q) => (
                                             <div className="bd-template-question-card" key={q.questionId}>
-                                                <div className="bd-template-question-label">{q.question}</div>
+                                                <div className="bd-template-question-head">
+                                                    <div className="bd-template-question-label">{q.question}</div>
+                                                    {q.isRequired && (
+                                                        <span className="bd-template-question-mandatory sila-badge sila-badge--danger sila-badge--sm">MANDATORY</span>
+                                                    )}
+                                                </div>
                                                 <div className="bd-template-question-meta">Type: {q.questionType}</div>
                                                 {q.options && q.options.length > 0 && (
                                                     <div className="bd-template-question-meta">
                                                         Options: {q.options.join(", ")}
                                                     </div>
-                                                )}
-                                                {q.isRequired && (
-                                                    <div className="bd-template-question-mandatory">MANDATORY</div>
                                                 )}
                                             </div>
                                         ))

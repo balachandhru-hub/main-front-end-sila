@@ -6,7 +6,6 @@ import type {
   AssetDownloadResponseDto,
   ErrorResponseDto,
 } from '../dto/platformDto';
-import { invalidatePersonDetailCache } from './networkAdminApi';
 export interface CreateDepartmentRequestDto {
   organizationId: string;
   department: string;
@@ -136,8 +135,6 @@ export const logoutPlatformUser = async (): Promise<void> => {
     const responseData = error.response?.data;
     const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
     throw new Error(`${errMsg} (${status})`);
-  } finally {
-    invalidatePersonDetailCache();
   }
 };
 
@@ -398,3 +395,326 @@ export const getTokenClaims = async (skipRefresh = false) => {
   });
   return response.data;
 };
+
+export interface BuyerAssetDto {
+  fileName?: string;
+  fileType?: string;
+  contentType?: string;
+  fileBytes?: string;
+  url?: string;
+  fileUrl?: string;
+}
+
+export interface AssetErrorDto {
+  statusCode: number;
+  message: string;
+  description: string;
+}
+
+export const fetchBuyerAsset = async (
+  assetId: string
+): Promise<BuyerAssetDto | AssetErrorDto> => {
+  try {
+    try {
+      const response = await platformInstance.get<BuyerAssetDto>(
+        `/api/v1/buyer/asset/${assetId}`
+      );
+      if (response.data) return response.data;
+    } catch (e) {
+      // fallback to supplier asset endpoint
+    }
+
+    const response = await platformInstance.get<BuyerAssetDto>(
+      `/api/v1/supplier/asset/${assetId}`
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch asset',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching the asset.',
+    };
+  }
+};
+
+/**
+ * Files a supplier uploaded as answers to RFQ questions are stored against the supplier,
+ * so they are read from the supplier asset endpoint rather than the buyer one.
+ */
+export const fetchSupplierAnswerAsset = async (
+  assetId: string
+): Promise<BuyerAssetDto | AssetErrorDto> => {
+  try {
+    const response = await platformInstance.get<BuyerAssetDto>(`/api/v1/supplier/asset/${assetId}`);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch asset',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching the asset.',
+    };
+  }
+};
+
+export interface RfqAwardSelectionDto {
+  rfqItemId: string;
+  supplierId: string;
+}
+
+export interface RfqAwardRequestDto {
+  rfqId: string;
+  // selectionMode?: string;
+  remarks?: string;
+  selections: RfqAwardSelectionDto[];
+}
+
+export interface RfqAwardResponseDto {
+  success?: boolean;
+  message?: string;
+  [key: string]: any;
+}
+
+export interface RfqAwardErrorDto {
+  statusCode?: number;
+  status_code?: number;
+  message: string;
+  description?: string;
+}
+
+export const awardRfq = async (
+  payload: RfqAwardRequestDto
+): Promise<RfqAwardResponseDto | RfqAwardErrorDto> => {
+  try {
+    const response = await platformInstance.post<RfqAwardResponseDto>(
+      '/api/v1/buyer/rfq-award',
+      payload
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to award RFQ.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Unexpected error while awarding RFQ.',
+    };
+  }
+};
+
+export interface RfqAssetAttachmentDto {
+  id: string;
+  assetType?: string;
+  assetName?: string;
+  fileType?: string;
+  fileName?: string;
+}
+
+export interface SupplierTermsConditionStatusDto {
+  termsAndCondition: boolean;
+  supplierId: string;
+  supplierName: string;
+  attachments: RfqAssetAttachmentDto[];
+}
+
+export interface SupplierEsignStatusDto {
+  supplierId: string;
+  supplierName: string;
+  attachments: RfqAssetAttachmentDto[];
+}
+
+export interface StatusUpdateResponseDto {
+  statusCode: number;
+  message: string;
+  description?: string;
+  id?: string;
+}
+
+/**
+ * The supplier's terms & conditions status, as seen internally by the buyer.
+ */
+export const fetchSupplierTermsConditionStatus = async (
+  rfqId: string
+): Promise<SupplierTermsConditionStatusDto[] | AssetErrorDto> => {
+  try {
+    const response = await platformInstance.get('/api/v1/buyer/interal/supplier-terms-condition-status', {
+      params: { rfqId },
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch supplier terms & conditions status.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Failed to fetch supplier terms & conditions status.',
+      description: '',
+    };
+  }
+};
+
+/**
+ * Buyer's acceptance/rejection status of the supplier's terms & conditions.
+ */
+export const updateSupplierTermsConditionStatus = async (
+  rfqId: string,
+  status: string
+): Promise<StatusUpdateResponseDto | AssetErrorDto> => {
+  try {
+    const response = await platformInstance.put('/api/v1/buyer/supplier-terms-condition-status', null, {
+      params: { rfqId, status },
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to update supplier terms & conditions status.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Failed to update supplier terms & conditions status.',
+      description: '',
+    };
+  }
+};
+
+export const fetchBuyerRfqEsign = async (
+  rfqId: string
+): Promise<SupplierEsignStatusDto[] | AssetErrorDto> => {
+  try {
+    const response = await platformInstance.get('/api/v1/buyer/rfq-esign', { params: { rfqId } });
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch e-signature status.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Failed to fetch e-signature status.',
+      description: '',
+    };
+  }
+};
+
+export const uploadBuyerRfqEsign = async (
+  rfqId: string,
+  payload: {
+    entityType?: string;
+    entityId?: string;
+    assetType?: string;
+    fileBytes?: string;
+    fileName?: string;
+    contentType?: string;
+    isSingletonAsset?: boolean;
+    id?: string;
+  }
+): Promise<any> => {
+  try {
+    const response = await platformInstance.post('/api/v1/buyer/rfq-esign', payload, {
+      params: { rfqId },
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    if (error.response?.data) {
+      return error.response.data;
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Failed to upload buyer e-signature.',
+    };
+  }
+};

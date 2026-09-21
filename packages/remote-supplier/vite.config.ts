@@ -1,9 +1,15 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import federation from '@originjs/vite-plugin-federation';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { federationSafeAliases } from '../shared-ui/build/federationAliases';
 
-export default defineConfig({
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const rootNodeModules = path.resolve(__dirname, '../../node_modules');
+
+export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     federation({
@@ -20,6 +26,22 @@ export default defineConfig({
       ],
     }),
   ],
+  resolve: {
+    dedupe: ['react', 'react-dom', 'react-router-dom'],
+    alias: [
+      ...federationSafeAliases,
+      ...(command === 'serve'
+        ? Object.entries({
+            react: path.resolve(rootNodeModules, 'react'),
+            'react-dom': path.resolve(rootNodeModules, 'react-dom'),
+            'react-router-dom': path.resolve(rootNodeModules, 'react-router-dom'),
+          }).map(([find, replacement]) => ({ find, replacement }))
+        : []),
+    ],
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom'],
+  },
   server: {
     port: 6003,
     strictPort: true,
@@ -40,4 +62,4 @@ export default defineConfig({
     target: 'esnext',
     cssCodeSplit: false,
   },
-});
+}));

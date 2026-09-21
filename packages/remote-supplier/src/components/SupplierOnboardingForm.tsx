@@ -3,6 +3,7 @@ import { fetchOnboardingDetails, fetchMetadataReferenceList, fetchSegments, fetc
 import type { MetadataReferenceItem } from '../dto/supplierDto';
 import { Country, State, City } from 'country-state-city';
 import './SupplierOnboardingForm.css';
+import { FaChevronDown } from 'react-icons/fa';
 
 export const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -204,10 +205,12 @@ const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
 
         <div className="vob-grid">
           <div className="vob-field">
-            <label className="vob-label vob-label--required">Industry</label>
+            <label className="vob-label vob-label--required" htmlFor="vob-industry">Industry</label>
             <select
+              id="vob-industry"
               data-field="industry"
               className={`vob-select ${industryError ? 'vob-select--error' : ''}`}
+              aria-invalid={Boolean(industryError) || undefined}
               value={data.industry}
               onChange={(e) => handleField('industry', e.target.value)}
               onBlur={() => setTouched((prev) => ({ ...prev, industry: true }))}
@@ -217,14 +220,16 @@ const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
                 <option key={opt.id} value={opt.key}>{formatMetadataLabel(opt.key)}</option>
               ))}
             </select>
-            {industryError && <span className="vob-error-text">{industryError}</span>}
+            {industryError && <span className="vob-error-text" role="alert">{industryError}</span>}
           </div>
 
           <div className="vob-field">
-            <label className="vob-label vob-label--required">Business Type</label>
+            <label className="vob-label vob-label--required" htmlFor="vob-business-type">Business Type</label>
             <select
+              id="vob-business-type"
               data-field="businessType"
               className={`vob-select ${businessTypeError ? 'vob-select--error' : ''}`}
+              aria-invalid={Boolean(businessTypeError) || undefined}
               value={data.businessType}
               onChange={(e) => handleField('businessType', e.target.value)}
               onBlur={() => setTouched((prev) => ({ ...prev, businessType: true }))}
@@ -234,12 +239,13 @@ const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
                 <option key={opt.id} value={opt.key}>{formatMetadataLabel(opt.key)}</option>
               ))}
             </select>
-            {businessTypeError && <span className="vob-error-text">{businessTypeError}</span>}
+            {businessTypeError && <span className="vob-error-text" role="alert">{businessTypeError}</span>}
           </div>
 
           <div className="vob-field">
-            <label className="vob-label">Employee Count</label>
+            <label className="vob-label" htmlFor="vob-employee-count">Employee Count</label>
             <input
+              id="vob-employee-count"
               type="number"
               min="0"
               placeholder="Employee Count"
@@ -255,8 +261,9 @@ const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
           </div>
 
           <div className="vob-field">
-            <label className="vob-label">Annual Turnover</label>
+            <label className="vob-label" htmlFor="vob-annual-turnover">Annual Turnover</label>
             <input
+              id="vob-annual-turnover"
               type="text"
               placeholder="Annual Turnover"
               className="vob-input"
@@ -271,8 +278,9 @@ const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
           </div>
 
           <div className="vob-field">
-            <label className="vob-label">Currency</label>
+            <label className="vob-label" htmlFor="vob-currency">Currency</label>
             <select
+              id="vob-currency"
               className="vob-select"
               value={data.currency}
               onChange={(e) => handleField('currency', e.target.value)}
@@ -284,8 +292,9 @@ const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
           </div>
 
           <div className="vob-field">
-            <label className="vob-label">Year Established</label>
+            <label className="vob-label" htmlFor="vob-year-established">Year Established</label>
             <select
+              id="vob-year-established"
               className="vob-select"
               value={data.yearEstablished}
               onChange={(e) => handleField('yearEstablished', e.target.value)}
@@ -298,8 +307,9 @@ const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
           </div>
 
           <div className="vob-field vob-field--full">
-            <label className="vob-label">Website</label>
+            <label className="vob-label" htmlFor="vob-website">Website</label>
             <input
+              id="vob-website"
               type="url"
               placeholder="https://"
               className="vob-input"
@@ -309,8 +319,9 @@ const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
           </div>
 
           <div className="vob-field vob-field--full">
-            <label className="vob-label">Company Description</label>
+            <label className="vob-label" htmlFor="vob-company-description">Company Description</label>
             <textarea
+              id="vob-company-description"
               rows={4}
               placeholder="Tell buyers about your company, products, services and capabilities..."
               className="vob-textarea"
@@ -375,7 +386,7 @@ const Step1BusinessInfo: React.FC<Step1BusinessInfoProps> = ({
             </div>
           </div>
         ) : (
-          <div style={{ color: '#868e96', fontSize: '13px' }}>Loading company information...</div>
+          <div className="vob-loading-text" role="status">Loading company information...</div>
         )}
       </div>
     </>
@@ -490,8 +501,9 @@ const Step2Registrations: React.FC<Step2RegistrationsProps> = ({
 
       <div className="vob-grid">
         <div className="vob-field">
-          <label className="vob-label">Registration Type</label>
+          <label className="vob-label" htmlFor="vob-registration-type">Registration Type</label>
           <select
+            id="vob-registration-type"
             className="vob-select"
             value={draft.type}
             onChange={(e) => handleDraftField('type', e.target.value)}
@@ -503,36 +515,41 @@ const Step2Registrations: React.FC<Step2RegistrationsProps> = ({
         </div>
 
         <div className="vob-field">
-          <label className="vob-label vob-label--required">Registration Number</label>
+          <label className="vob-label vob-label--required" htmlFor="vob-registration-number">Registration Number</label>
           <input
+            id="vob-registration-number"
             data-field="number"
             type="text"
             placeholder="Registration Number"
             className={`vob-input ${numberError ? 'vob-input--error' : ''}`}
+            aria-invalid={Boolean(numberError) || undefined}
             value={draft.number}
             onChange={(e) => handleDraftField('number', e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, number: true }))}
           />
-          {numberError && <span className="vob-error-text">{numberError}</span>}
+          {numberError && <span className="vob-error-text" role="alert">{numberError}</span>}
         </div>
 
         <div className="vob-field">
-          <label className="vob-label vob-label--required">Registration Name</label>
+          <label className="vob-label vob-label--required" htmlFor="vob-registration-name">Registration Name</label>
           <input
+            id="vob-registration-name"
             data-field="name"
             type="text"
             placeholder="Registration Name"
             className={`vob-input ${nameError ? 'vob-input--error' : ''}`}
+            aria-invalid={Boolean(nameError) || undefined}
             value={draft.name}
             onChange={(e) => handleDraftField('name', e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
           />
-          {nameError && <span className="vob-error-text">{nameError}</span>}
+          {nameError && <span className="vob-error-text" role="alert">{nameError}</span>}
         </div>
 
         <div className="vob-field">
-          <label className="vob-label">Expiry Date</label>
+          <label className="vob-label" htmlFor="vob-expiry-date">Expiry Date</label>
           <input
+            id="vob-expiry-date"
             type="date"
             className="vob-input"
             value={draft.expiryDate}
@@ -541,8 +558,17 @@ const Step2Registrations: React.FC<Step2RegistrationsProps> = ({
         </div>
       </div>
 
-      <label className="vob-label">Upload Certificate</label>
+      <span className="vob-label" id="vob-upload-certificate-label">Upload Certificate</span>
       <div
+        role="button"
+        tabIndex={0}
+        aria-labelledby="vob-upload-certificate-label"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            fileInputRef.current?.click();
+          }
+        }}
         onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
         onDragLeave={() => setDragActive(false)}
         onDrop={handleDrop}
@@ -562,7 +588,7 @@ const Step2Registrations: React.FC<Step2RegistrationsProps> = ({
         onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
       />
 
-      <div className="vob-action-row" style={{ justifyContent: 'flex-end' }}>
+      <div className="vob-action-row vob-action-row--end">
         <button
           type="button"
           onClick={handleAddRegistration}
@@ -743,54 +769,62 @@ const Step3BankInfo: React.FC<Step3BankInfoProps> = ({ data, onChange, onValidat
 
       <div className="vob-grid">
         <div className="vob-field">
-          <label className="vob-label vob-label--required">Account Holder Name</label>
+          <label className="vob-label vob-label--required" htmlFor="vob-account-holder-name">Account Holder Name</label>
           <input
+            id="vob-account-holder-name"
             data-field="accountHolderName"
             type="text"
             placeholder="Account Holder Name"
             className={`vob-input ${accountHolderNameError ? 'vob-input--error' : ''}`}
+            aria-invalid={Boolean(accountHolderNameError) || undefined}
             value={draft.accountHolderName}
             onChange={(e) => handleDraftField('accountHolderName', e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, accountHolderName: true }))}
           />
-          {accountHolderNameError && <span className="vob-error-text">{accountHolderNameError}</span>}
+          {accountHolderNameError && <span className="vob-error-text" role="alert">{accountHolderNameError}</span>}
         </div>
 
         <div className="vob-field">
-          <label className="vob-label vob-label--required">Bank Name</label>
+          <label className="vob-label vob-label--required" htmlFor="vob-bank-name">Bank Name</label>
           <input
+            id="vob-bank-name"
             data-field="bankName"
             type="text"
             placeholder="Bank Name"
             className={`vob-input ${bankNameError ? 'vob-input--error' : ''}`}
+            aria-invalid={Boolean(bankNameError) || undefined}
             value={draft.bankName}
             onChange={(e) => handleDraftField('bankName', e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, bankName: true }))}
           />
-          {bankNameError && <span className="vob-error-text">{bankNameError}</span>}
+          {bankNameError && <span className="vob-error-text" role="alert">{bankNameError}</span>}
         </div>
 
         <div className="vob-field">
-          <label className="vob-label vob-label--required">Branch Name</label>
+          <label className="vob-label vob-label--required" htmlFor="vob-branch-name">Branch Name</label>
           <input
+            id="vob-branch-name"
             data-field="branchName"
             type="text"
             placeholder="Branch Name"
             className={`vob-input ${branchNameError ? 'vob-input--error' : ''}`}
+            aria-invalid={Boolean(branchNameError) || undefined}
             value={draft.branchName}
             onChange={(e) => handleDraftField('branchName', e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, branchName: true }))}
           />
-          {branchNameError && <span className="vob-error-text">{branchNameError}</span>}
+          {branchNameError && <span className="vob-error-text" role="alert">{branchNameError}</span>}
         </div>
 
         <div className="vob-field">
-          <label className="vob-label vob-label--required">Account Number</label>
+          <label className="vob-label vob-label--required" htmlFor="vob-account-number">Account Number</label>
           <input
+            id="vob-account-number"
             data-field="accountNumber"
             type="text"
             placeholder="Account Number"
             className={`vob-input ${accountNumberError ? 'vob-input--error' : ''}`}
+            aria-invalid={Boolean(accountNumberError) || undefined}
             value={draft.accountNumber}
             onChange={(e) => {
               const val = e.target.value;
@@ -800,26 +834,29 @@ const Step3BankInfo: React.FC<Step3BankInfoProps> = ({ data, onChange, onValidat
             }}
             onBlur={() => setTouched((prev) => ({ ...prev, accountNumber: true }))}
           />
-          {accountNumberError && <span className="vob-error-text">{accountNumberError}</span>}
+          {accountNumberError && <span className="vob-error-text" role="alert">{accountNumberError}</span>}
         </div>
 
         <div className="vob-field">
-          <label className="vob-label vob-label--required">IFSC Code</label>
+          <label className="vob-label vob-label--required" htmlFor="vob-ifsc-code">IFSC Code</label>
           <input
+            id="vob-ifsc-code"
             data-field="ifscCode"
             type="text"
             placeholder="IFSC Code"
             className={`vob-input ${ifscCodeError ? 'vob-input--error' : ''}`}
+            aria-invalid={Boolean(ifscCodeError) || undefined}
             value={draft.ifscCode}
             onChange={(e) => handleDraftField('ifscCode', e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, ifscCode: true }))}
           />
-          {ifscCodeError && <span className="vob-error-text">{ifscCodeError}</span>}
+          {ifscCodeError && <span className="vob-error-text" role="alert">{ifscCodeError}</span>}
         </div>
 
         <div className="vob-field">
-          <label className="vob-label">SWIFT Code</label>
+          <label className="vob-label" htmlFor="vob-swift-code">SWIFT Code</label>
           <input
+            id="vob-swift-code"
             type="text"
             placeholder="SWIFT Code"
             className="vob-input"
@@ -829,8 +866,9 @@ const Step3BankInfo: React.FC<Step3BankInfoProps> = ({ data, onChange, onValidat
         </div>
 
         <div className="vob-field">
-          <label className="vob-label">IBAN</label>
+          <label className="vob-label" htmlFor="vob-iban">IBAN</label>
           <input
+            id="vob-iban"
             type="text"
             placeholder="IBAN"
             className="vob-input"
@@ -840,8 +878,9 @@ const Step3BankInfo: React.FC<Step3BankInfoProps> = ({ data, onChange, onValidat
         </div>
 
         <div className="vob-field">
-          <label className="vob-label vob-label--required">Currency</label>
+          <label className="vob-label vob-label--required" htmlFor="vob-currency-2">Currency</label>
           <select
+            id="vob-currency-2"
             className="vob-select"
             value={draft.currency}
             onChange={(e) => handleDraftField('currency', e.target.value)}
@@ -1068,23 +1107,26 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
 
       <div className="vob-grid">
         <div className="vob-field">
-          <label className="vob-label vob-label--required">Location Name</label>
+          <label className="vob-label vob-label--required" htmlFor="vob-location-name">Location Name</label>
           <input
+            id="vob-location-name"
             data-field="locationName"
             type="text"
             placeholder="Location Name"
             className={`vob-input ${locationNameError ? 'vob-input--error' : ''}`}
+            aria-invalid={Boolean(locationNameError) || undefined}
             value={draft.locationName}
             onChange={(e) => handleDraftField('locationName', e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, locationName: true }))}
             disabled={isReadOnly}
           />
-          {locationNameError && <span className="vob-error-text">{locationNameError}</span>}
+          {locationNameError && <span className="vob-error-text" role="alert">{locationNameError}</span>}
         </div>
 
         <div className="vob-field">
-          <label className="vob-label">Contact Person</label>
+          <label className="vob-label" htmlFor="vob-contact-person">Contact Person</label>
           <input
+            id="vob-contact-person"
             type="text"
             placeholder="Contact Person"
             className="vob-input"
@@ -1095,10 +1137,12 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
         </div>
 
         <div className="vob-field">
-          <label className="vob-label vob-label--required">Country</label>
+          <label className="vob-label vob-label--required" htmlFor="vob-country">Country</label>
           <select
+            id="vob-country"
             data-field="country"
             className={`vob-select ${countryError ? 'vob-select--error' : ''}`}
+            aria-invalid={Boolean(countryError) || undefined}
             value={draft.country}
             onChange={(e) => {
               handleDraftField('country', e.target.value);
@@ -1116,14 +1160,16 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
               <option value={draft.country}>{draft.country}</option>
             )}
           </select>
-          {countryError && <span className="vob-error-text">{countryError}</span>}
+          {countryError && <span className="vob-error-text" role="alert">{countryError}</span>}
         </div>
 
         <div className="vob-field">
-          <label className="vob-label vob-label--required">State</label>
+          <label className="vob-label vob-label--required" htmlFor="vob-state">State</label>
           <select
+            id="vob-state"
             data-field="state"
             className={`vob-select ${stateError ? 'vob-select--error' : ''}`}
+            aria-invalid={Boolean(stateError) || undefined}
             value={draft.state}
             onChange={(e) => {
               handleDraftField('state', e.target.value);
@@ -1140,27 +1186,30 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
               <option value={draft.state}>{draft.state}</option>
             )}
           </select>
-          {stateError && <span className="vob-error-text">{stateError}</span>}
+          {stateError && <span className="vob-error-text" role="alert">{stateError}</span>}
         </div>
 
         <div className="vob-field">
-          <label className="vob-label vob-label--required">Address Line 1</label>
+          <label className="vob-label vob-label--required" htmlFor="vob-address-line-1">Address Line 1</label>
           <input
+            id="vob-address-line-1"
             data-field="addressLine1"
             type="text"
             placeholder="Address Line 1"
             className={`vob-input ${addressLine1Error ? 'vob-input--error' : ''}`}
+            aria-invalid={Boolean(addressLine1Error) || undefined}
             value={draft.addressLine1}
             onChange={(e) => handleDraftField('addressLine1', e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, addressLine1: true }))}
             disabled={isReadOnly}
           />
-          {addressLine1Error && <span className="vob-error-text">{addressLine1Error}</span>}
+          {addressLine1Error && <span className="vob-error-text" role="alert">{addressLine1Error}</span>}
         </div>
 
         <div className="vob-field">
-          <label className="vob-label">Address Line 2</label>
+          <label className="vob-label" htmlFor="vob-address-line-2">Address Line 2</label>
           <input
+            id="vob-address-line-2"
             type="text"
             placeholder="Address Line 2"
             className="vob-input"
@@ -1171,10 +1220,12 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
         </div>
 
         <div className="vob-field">
-          <label className="vob-label vob-label--required">City</label>
+          <label className="vob-label vob-label--required" htmlFor="vob-city">City</label>
           <select
+            id="vob-city"
             data-field="city"
             className={`vob-select ${cityError ? 'vob-select--error' : ''}`}
+            aria-invalid={Boolean(cityError) || undefined}
             value={draft.city}
             onChange={(e) => handleDraftField('city', e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, city: true }))}
@@ -1188,27 +1239,30 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
               <option value={draft.city}>{draft.city}</option>
             )}
           </select>
-          {cityError && <span className="vob-error-text">{cityError}</span>}
+          {cityError && <span className="vob-error-text" role="alert">{cityError}</span>}
         </div>
 
         <div className="vob-field">
-          <label className="vob-label vob-label--required">PIN / ZIP Code</label>
+          <label className="vob-label vob-label--required" htmlFor="vob-pin-zip-code">PIN / ZIP Code</label>
           <input
+            id="vob-pin-zip-code"
             data-field="pinCode"
             type="text"
             placeholder="PIN / ZIP Code"
             className={`vob-input ${pinCodeError ? 'vob-input--error' : ''}`}
+            aria-invalid={Boolean(pinCodeError) || undefined}
             value={draft.pinCode}
             onChange={(e) => handleDraftField('pinCode', e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, pinCode: true }))}
             disabled={isReadOnly}
           />
-          {pinCodeError && <span className="vob-error-text">{pinCodeError}</span>}
+          {pinCodeError && <span className="vob-error-text" role="alert">{pinCodeError}</span>}
         </div>
 
         <div className="vob-field">
-          <label className="vob-label">Contact Email ID</label>
+          <label className="vob-label" htmlFor="vob-contact-email-id">Contact Email ID</label>
           <input
+            id="vob-contact-email-id"
             type="email"
             placeholder="Contact Email ID"
             className="vob-input"
@@ -1219,8 +1273,9 @@ const Step4DispatchLocations: React.FC<Step4DispatchLocationsProps> = ({ data, o
         </div>
 
         <div className="vob-field">
-          <label className="vob-label">Contact Phone Number</label>
+          <label className="vob-label" htmlFor="vob-contact-phone-number">Contact Phone Number</label>
           <input
+            id="vob-contact-phone-number"
             type="tel"
             placeholder="Contact Phone Number"
             className="vob-input"
@@ -1404,13 +1459,26 @@ function ProductDropdown({
 
   return (
     <div ref={containerRef} className="custom-dropdown-container">
-      <div className="custom-dropdown-trigger" onClick={() => setIsOpen(!isOpen)}>
+      <div
+        className="custom-dropdown-trigger"
+        role="button"
+        tabIndex={0}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsOpen(!isOpen);
+          }
+        }}
+      >
         <span>Select product</span>
-        <span>▼</span>
+        <FaChevronDown aria-hidden="true" className="vob-dropdown-caret" />
       </div>
 
       {isOpen && (
-        <div className="custom-dropdown-menu">
+        <div className="custom-dropdown-menu" role="listbox">
           {loading ? (
             <div className="custom-dropdown-item-loading">Loading products...</div>
           ) : segments.length === 0 ? (
@@ -1422,7 +1490,7 @@ function ProductDropdown({
                 <div key={seg.segment} className="custom-dropdown-item-wrapper">
                   <div className="segment-row" onClick={(e) => toggleExpand(seg.segment, e)}>
                     <span>{seg.title}</span>
-                    <button type="button" onClick={(e) => toggleExpand(seg.segment, e)}>
+                    <button type="button" aria-expanded={isExpanded} aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${seg.title}`} onClick={(e) => toggleExpand(seg.segment, e)}>
                       {isExpanded ? '−' : '+'}
                     </button>
                   </div>
@@ -1432,9 +1500,19 @@ function ProductDropdown({
                         <div
                           key={fam.family}
                           className="nested-item-row"
+                          role="option"
+                          aria-selected={false}
+                          tabIndex={0}
                           onClick={() => {
                             onSelect({ segment: seg.segment, family: fam.family, title: fam.title });
                             setIsOpen(false);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onSelect({ segment: seg.segment, family: fam.family, title: fam.title });
+                              setIsOpen(false);
+                            }
                           }}
                         >
                           {fam.title} ({fam.family})
@@ -1490,14 +1568,25 @@ function SubProductDropdown({
     <div ref={containerRef} className="custom-dropdown-container">
       <div
         className={`custom-dropdown-trigger ${disabled ? 'custom-dropdown-trigger-disabled' : ''}`}
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-disabled={disabled || undefined}
+        aria-haspopup="listbox"
+        aria-expanded={!disabled && isOpen}
         onClick={() => !disabled && setIsOpen(!isOpen)}
+        onKeyDown={(e) => {
+          if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            setIsOpen(!isOpen);
+          }
+        }}
       >
         <span>{disabled ? 'Please select a product first' : 'Select sub-product'}</span>
-        <span>▼</span>
+        <FaChevronDown aria-hidden="true" className="vob-dropdown-caret" />
       </div>
 
       {!disabled && isOpen && (
-        <div className="custom-dropdown-menu">
+        <div className="custom-dropdown-menu" role="listbox">
           {loading ? (
             <div className="custom-dropdown-item-loading">Loading sub-products...</div>
           ) : classes.length === 0 ? (
@@ -1509,7 +1598,7 @@ function SubProductDropdown({
                 <div key={cls.class} className="custom-dropdown-item-wrapper">
                   <div className="class-row" onClick={(e) => toggleExpand(cls.class, e)}>
                     <span>{cls.title}</span>
-                    <button type="button" onClick={(e) => toggleExpand(cls.class, e)}>
+                    <button type="button" aria-expanded={isExpanded} aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${cls.title}`} onClick={(e) => toggleExpand(cls.class, e)}>
                       {isExpanded ? '−' : '+'}
                     </button>
                   </div>
@@ -1519,9 +1608,19 @@ function SubProductDropdown({
                         <div
                           key={com.commodity}
                           className="nested-item-row"
+                          role="option"
+                          aria-selected={false}
+                          tabIndex={0}
                           onClick={() => {
                             onSelect({ class: cls.class, commodity: com.commodity, title: com.title });
                             setIsOpen(false);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onSelect({ class: cls.class, commodity: com.commodity, title: com.title });
+                              setIsOpen(false);
+                            }
                           }}
                         >
                           {com.title} ({com.commodity})
@@ -1639,9 +1738,9 @@ const Step2Categories: React.FC<Step2CategoriesProps> = ({
 
       <div className="vob-category-section">
         <div className="vob-field">
-          <label>
-            Select Product (Segment &amp; Family)<span className="vob-required">*</span>
-          </label>
+          <span className="vob-label">
+            Select Product (Segment &amp; Family)<span className="vob-required" aria-hidden="true">*</span>
+          </span>
           <ProductDropdown
             segments={segments}
             onSelect={handleSelectProduct}
@@ -1649,11 +1748,11 @@ const Step2Categories: React.FC<Step2CategoriesProps> = ({
           />
         </div>
 
-        <div className="vob-category-section-subtitle" style={{ marginTop: '16px' }}>
+        <div className="vob-category-section-subtitle vob-category-section-subtitle--spaced">
           Selected Products ({selectedProducts.length}) - <em>Click a tag to select it for sub-products</em>
         </div>
 
-        <div className="vob-category-tags" style={{ margin: '8px 0 16px 0' }}>
+        <div className="vob-category-tags vob-category-tags--products">
           {selectedProducts.length === 0 ? (
             <span className="custom-dropdown-item-empty">No products selected yet.</span>
           ) : (
@@ -1664,10 +1763,20 @@ const Step2Categories: React.FC<Step2CategoriesProps> = ({
                   key={p.family}
                   className={`vob-category-tag ${isActive ? 'vob-category-tag-active' : ''}`}
                   onClick={() => setActiveProduct(p)}
+                  onKeyDown={(e) => {
+                    if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      setActiveProduct(p);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isActive}
                 >
                   {p.title} ({p.family})
                   <button
                     type="button"
+                    aria-label={`Remove ${p.title}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleRemoveProduct(p.family);
@@ -1684,11 +1793,11 @@ const Step2Categories: React.FC<Step2CategoriesProps> = ({
         <div className="vob-selector-divider" />
 
         <div className="vob-field">
-          <label>
+          <span className="vob-label">
             Select Sub-Product (Class &amp; Commodity)
-            {activeProduct && <span style={{ color: '#1976d2', fontWeight: 600 }}> - for {activeProduct.title}</span>}
-            <span className="vob-required">*</span>
-          </label>
+            {activeProduct && <span className="vob-active-product"> - for {activeProduct.title}</span>}
+            <span className="vob-required" aria-hidden="true">*</span>
+          </span>
           <SubProductDropdown
             classes={classes}
             onSelect={handleSelectSubProduct}
@@ -1697,18 +1806,18 @@ const Step2Categories: React.FC<Step2CategoriesProps> = ({
           />
         </div>
 
-        <div className="vob-category-section-subtitle" style={{ marginTop: '16px' }}>
+        <div className="vob-category-section-subtitle vob-category-section-subtitle--spaced">
           Selected Sub-Products ({selectedSubProducts.length})
         </div>
 
-        <div className="vob-category-tags" style={{ margin: '8px 0 0 0' }}>
+        <div className="vob-category-tags vob-category-tags--subproducts">
           {selectedSubProducts.length === 0 ? (
             <span className="custom-dropdown-item-empty">No sub-products selected yet.</span>
           ) : (
             selectedSubProducts.map((p) => (
               <span key={p.commodity} className="vob-category-tag vob-category-tag-active-sub">
                 {p.title} ({p.commodity})
-                <button type="button" onClick={() => handleRemoveSubProduct(p.commodity)}>
+                <button type="button" aria-label={`Remove ${p.title}`} onClick={() => handleRemoveSubProduct(p.commodity)}>
                   &times;
                 </button>
               </span>
@@ -1862,11 +1971,11 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
   return (
     <div className="vob-page">
       <header className="vob-header">
-        <img src={sila_logo} alt="SILA" style={{ height: 32 }} />
+        <img src={sila_logo} alt="SILA" className="vob-logo" />
       </header>
 
       <main className="vob-main">
-        <aside className="vob-sidebar">
+        <aside className="vob-sidebar" aria-label="Onboarding progress">
           <ol className="vob-step-list">
             {STEPS.map((step, index) => {
               const isCompleted = step.id < currentStep;
@@ -1875,10 +1984,8 @@ const SupplierOnboardingForm: React.FC<SupplierOnboardingFormProps> = ({ onCompl
               return (
                 <li
                   key={step.id}
-                  className="vob-step-item"
-                  style={{
-                    borderBottom: index < STEPS.length - 1 ? '1px solid #f1f3f5' : 'none',
-                  }}
+                  className={`vob-step-item${index < STEPS.length - 1 ? ' vob-step-item--connected' : ''}${isCompleted ? ' vob-step-item--done' : ''}`}
+                  aria-current={isActive ? 'step' : undefined}
                 >
                   <span
                     className={`vob-step-number ${isCompleted

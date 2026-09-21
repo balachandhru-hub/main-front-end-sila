@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { FaTimes } from "react-icons/fa";
 import { toastService } from "@vosox/shared-ui";
 import { getOrganizationUsersForRfq } from "../../api/networkAdminApi";
 import type { User } from "../../types";
@@ -93,11 +94,14 @@ const SupplierUsersModal: React.FC<SupplierUsersModalProps> = ({
         >
             <div
                 className="supplier-users-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="supplier-users-modal-title"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="supplier-users-modal-header">
                     <div>
-                        <h2 className="supplier-users-modal-title">
+                        <h2 className="supplier-users-modal-title" id="supplier-users-modal-title">
                             Select Users
                         </h2>
 
@@ -112,17 +116,20 @@ const SupplierUsersModal: React.FC<SupplierUsersModalProps> = ({
                         onClick={handleClose}
                         aria-label="Close"
                     >
-                        ×
+                        <FaTimes aria-hidden="true" />
                     </button>
                 </div>
 
                 <div className="supplier-users-modal-body">
                     {loading && (
-                        <div className="supplier-users-modal-state">Loading users...</div>
+                        <div className="supplier-users-modal-state">
+                            <span className="sila-spinner" aria-hidden="true" />
+                            Loading users...
+                        </div>
                     )}
 
                     {!loading && error && (
-                        <div className="supplier-users-modal-state supplier-users-modal-error">{error}</div>
+                        <div className="supplier-users-modal-state supplier-users-modal-error" role="alert">{error}</div>
                     )}
 
                     {!loading && !error && users.length === 0 && (
@@ -134,7 +141,10 @@ const SupplierUsersModal: React.FC<SupplierUsersModalProps> = ({
                     {!loading && !error && users.length > 0 && (
                         <ul className="supplier-users-list">
                             {users.map((user) => (
-                                <li key={user.id} className="supplier-users-list-item">
+                                <li
+                                    key={user.id}
+                                    className={`supplier-users-list-item${selectedIds.has(user.id) ? " supplier-users-list-item-selected" : ""}`}
+                                >
                                     <label>
                                         <input
                                             type="checkbox"
@@ -156,7 +166,7 @@ const SupplierUsersModal: React.FC<SupplierUsersModalProps> = ({
                 <div className="supplier-users-modal-footer">
                     <button
                         type="button"
-                        className="supplier-users-cancel-btn"
+                        className="supplier-users-cancel-btn sila-btn sila-btn--secondary"
                         onClick={handleClose}
                     >
                         Cancel
@@ -164,7 +174,7 @@ const SupplierUsersModal: React.FC<SupplierUsersModalProps> = ({
 
                     <button
                         type="button"
-                        className="supplier-users-save-btn"
+                        className="supplier-users-save-btn sila-btn sila-btn--primary"
                         onClick={handleSave}
                         disabled={loading || !!error}
                     >

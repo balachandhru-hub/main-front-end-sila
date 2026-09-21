@@ -23,7 +23,8 @@ import {
   FaIndustry,
   FaBriefcase,
   FaTags,
-  FaUserCircle
+  FaUserCircle,
+  FaChevronRight,
 } from 'react-icons/fa';
 import type {
   CompanyProfileData,
@@ -32,6 +33,9 @@ import type {
   BankAccountDto,
   DispatchLocationDto,
 } from './CompanyProfile.types';
+import { EmptyState } from '../EmptyState';
+import { Loader } from '../Loader';
+import { StatusBadge, type StatusTone } from '../StatusBadge';
 import './CompanyProfile.css';
 
 interface CompanyProfileProps {
@@ -76,6 +80,19 @@ const statusLabelMap: Record<string, string> = {
   REJECTED: 'Rejected',
 };
 
+/* Badge tone for each status class above (unknown statuses fall back to "pending"). */
+const statusToneMap: Record<string, StatusTone> = {
+  'cp-status-pending': 'warning',
+  'cp-status-verified': 'success',
+  'cp-status-rejected': 'danger',
+};
+
+const YesNoBadge: React.FC<{ value?: boolean }> = ({ value }) => (
+  <span className={`sila-badge sila-badge--sm cp-status-pill ${value ? 'sila-badge--success' : 'sila-badge--neutral'}`}>
+    {value ? 'Yes' : 'No'}
+  </span>
+);
+
 const SectionHeader: React.FC<{
   icon: React.ReactNode;
   title: string;
@@ -83,12 +100,12 @@ const SectionHeader: React.FC<{
   onToggle: () => void;
   extra?: React.ReactNode;
 }> = ({ icon, title, isOpen, onToggle, extra }) => (
-  <div className="cp-card-title" onClick={onToggle} role="button" tabIndex={0}>
-    <span className="cp-card-icon">{icon}</span>
+  <button type="button" className="cp-card-title" onClick={onToggle} aria-expanded={isOpen}>
+    <span className="cp-card-icon" aria-hidden="true">{icon}</span>
     <span className="cp-card-title-text">{title}</span>
     {extra}
-    <span className="cp-card-chevron">{isOpen ? <FaChevronUp /> : <FaChevronDown />}</span>
-  </div>
+    <span className="cp-card-chevron" aria-hidden="true">{isOpen ? <FaChevronUp /> : <FaChevronDown />}</span>
+  </button>
 );
 
 const MaskedAccountNumber: React.FC<{ accountNumber?: string }> = ({ accountNumber }) => {
@@ -100,15 +117,16 @@ const MaskedAccountNumber: React.FC<{ accountNumber?: string }> = ({ accountNumb
       : accountNumber;
   return (
     <span className="cp-field-value cp-field-masked">
-      {revealed ? accountNumber : masked}
+      <span className="cp-field-mono">{revealed ? accountNumber : masked}</span>
       <button
         type="button"
         className="cp-icon-toggle"
         onClick={() => setRevealed((v) => !v)}
-        aria-label="Toggle account number visibility"
+        aria-label={revealed ? 'Hide account number' : 'Show account number'}
+        aria-pressed={revealed}
         title={revealed ? 'Hide' : 'Show'}
       >
-        {revealed ? <FaEyeSlash /> : <FaEye />}
+        {revealed ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
       </button>
     </span>
   );
@@ -168,8 +186,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
   if (isLoading) {
     return (
       <div className="cp-loading-container">
-        <div className="cp-spinner"></div>
-        <p>Loading company profile...</p>
+        <Loader message="Loading company profile..." />
       </div>
     );
   }
@@ -177,8 +194,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
   if (error) {
     return (
       <div className="cp-error-container">
-        <FaInfoCircle className="cp-error-icon" />
-        <p>{error}</p>
+        <EmptyState variant="error" icon={<FaInfoCircle className="cp-error-icon" aria-hidden="true" />} title={error} />
       </div>
     );
   }
@@ -186,8 +202,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
   if (!profile) {
     return (
       <div className="cp-empty-container">
-        <FaBuilding className="cp-empty-icon" />
-        <p>No company profile found.</p>
+        <EmptyState icon={<FaBuilding className="cp-empty-icon" aria-hidden="true" />} title="No company profile found." />
       </div>
     );
   }
@@ -207,73 +222,60 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
   const isPending = statusUpper === 'PENDING_VERIFICATION' || statusUpper === 'PENDING' || statusUpper === '' || statusUpper === 'PENDING_REVIEW';
   const statusClass = statusClassMap[statusKey] || statusClassMap[statusUpper] || 'cp-status-pending';
   const statusLabel = statusLabelMap[statusKey] || statusLabelMap[statusUpper] || statusKey || '-';
+  const statusTone = statusToneMap[statusClass] || 'warning';
+
+  const statusBadge = (
+    <StatusBadge status={statusKey || 'PENDING'} label={statusLabel} tone={statusTone} dot />
+  );
 
   return (
     <div className="cp-page">
       {showHeader && (
-        <div className="cp-page-header" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {onBack && (
-            <button
-              onClick={onBack}
-              title="Back to Dashboard"
-              style={{
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '8px 14px',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                color: '#334155',
-                fontSize: '14px',
-                fontWeight: 600,
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              <FaArrowLeft style={{ marginRight: '6px' }} /> Back
-            </button>
-          )}
-          <div>
-            <h1 className="cp-page-title">Company Details</h1>
-            <p className="cp-page-subtitle">View and manage {entityLabel.toLowerCase()} information</p>
+        <div className="sila-page-header cp-page-header">
+          <div className="sila-page-header-main cp-page-header-left">
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                title="Back to Dashboard"
+                aria-label="Back to Dashboard"
+                className="sila-btn sila-btn--secondary sila-btn--icon sila-btn--sm sila-page-back cp-back-btn"
+              >
+                <FaArrowLeft className="cp-back-btn-icon" aria-hidden="true" />
+              </button>
+            )}
+            <div>
+              <h1 className="sila-page-title cp-page-title">Company Details</h1>
+              <p className="sila-page-description cp-page-subtitle">View and manage {entityLabel.toLowerCase()} information</p>
+            </div>
           </div>
         </div>
       )}
 
       {statusError && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '14px' }}>
-          {statusError}
+        <div className="sila-alert sila-alert--danger cp-status-error-banner" role="alert">
+          <FaInfoCircle className="cp-alert-icon" aria-hidden="true" />
+          <span>{statusError}</span>
         </div>
       )}
 
       <div className="cp-container">
         <div className="cp-header-card">
           {onBack && !showHeader && (
-            <div style={{ marginBottom: '12px' }}>
+            <div className="cp-back-btn-wrapper">
               <button
+                type="button"
                 onClick={onBack}
                 title="Back to Dashboard"
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '6px 14px',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  color: '#334155',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                }}
+                className="sila-btn sila-btn--ghost sila-btn--sm cp-back-btn cp-back-btn-sm"
               >
-                <FaArrowLeft style={{ marginRight: '6px' }} /> Back
+                <FaArrowLeft className="cp-back-btn-icon" aria-hidden="true" /> Back
               </button>
             </div>
           )}
           <div className="cp-header-top">
             <div className="cp-header-left">
-              <div className="cp-org-icon">
+              <div className="cp-org-icon" aria-hidden="true">
                 <FaBuilding />
               </div>
               <div className="cp-org-info">
@@ -281,13 +283,13 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                 <div className="cp-org-contact">
                   {bp.email && (
                     <span className="cp-contact-item">
-                      <FaEnvelope />
+                      <FaEnvelope aria-hidden="true" />
                       {bp.email}
                     </span>
                   )}
                   {bp.phone && (
                     <span className="cp-contact-item">
-                      <FaPhone />
+                      <FaPhone aria-hidden="true" />
                       +91 {bp.phone}
                     </span>
                   )}
@@ -299,23 +301,25 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
               <div className="cp-header-actions">
                 {onVerify && (
                   <button
-                    className="cp-btn cp-btn-verify"
+                    type="button"
+                    className="sila-btn sila-btn--success cp-btn-verify"
                     title="Verify this company"
                     onClick={onVerify}
                     disabled={isStatusLoading}
                   >
-                    <FaCheck />
+                    <FaCheck aria-hidden="true" />
                     Verify
                   </button>
                 )}
                 {onReject && (
                   <button
-                    className="cp-btn cp-btn-reject"
+                    type="button"
+                    className="sila-btn sila-btn--secondary cp-btn-reject-action"
                     title="Reject this company"
                     onClick={onReject}
                     disabled={isStatusLoading}
                   >
-                    <FaTimes />
+                    <FaTimes aria-hidden="true" />
                     Reject
                   </button>
                 )}
@@ -324,12 +328,9 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
           </div>
 
           <div className="cp-org-badges">
-            <span className={`cp-badge ${statusClass}`}>
-              <span className="cp-status-dot"></span>
-              {statusLabel}
-            </span>
-            {bp.businessType && <span className="cp-badge cp-badge-outline">{bp.businessType}</span>}
-            {bp.industry && <span className="cp-badge cp-badge-outline">{bp.industry}</span>}
+            {statusBadge}
+            {bp.businessType && <span className="sila-badge sila-badge--neutral">{bp.businessType}</span>}
+            {bp.industry && <span className="sila-badge sila-badge--neutral">{bp.industry}</span>}
           </div>
         </div>
 
@@ -404,14 +405,14 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                         <span className="cp-field-value">{bp.currency || '-'}</span>
                       </div>
                       <div className="cp-field">
-                        <span className="cp-field-label ">Description</span>
+                        <span className="cp-field-label">Description</span>
                         <span className="cp-field-value">{bp.description || '-'}</span>
                       </div>
                     </div>
 
                     <div className="cp-grid-column cp-address-box">
                       <span className="cp-field-label cp-field-label-icon">
-                        <FaMapMarkerAlt />
+                        <FaMapMarkerAlt aria-hidden="true" />
                         Address
                       </span>
                       <span className="cp-field-value">
@@ -453,8 +454,8 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                   {registrations.length === 0 ? (
                     <p className="cp-empty-inline">No registrations added</p>
                   ) : (
-                    <div className="cp-table-wrapper">
-                      <table className="cp-table">
+                    <div className="sila-table-wrap cp-table-wrapper">
+                      <table className="sila-table cp-table">
                         <thead>
                           <tr>
                             <th>Type</th>
@@ -467,33 +468,36 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                         <tbody>
                           {registrations.map((reg, idx) => (
                             <tr key={idx}>
-                              <td>{reg.registrationType || '-'}</td>
-                              <td>{reg.registrationNumber || '-'}</td>
+                              <td className="sila-cell-strong">{reg.registrationType || '-'}</td>
+                              <td><span className="sila-ref">{reg.registrationNumber || '-'}</span></td>
                               <td>{reg.registrationName || '-'}</td>
-                              <td>{formatDate(reg.expiryDate)}</td>
+                              <td className="cp-cell-nowrap">{formatDate(reg.expiryDate)}</td>
                               <td>
                                 {reg.asset?.fileName || (reg.asset as any)?.id ? (
-                                  <div className="cp-doc-link-wrapper">
-                                    <span className="cp-doc-link" title={reg.asset?.fileName}>
+                                  <div className="sila-file cp-doc-link-wrapper">
+                                    <span className="sila-file-icon cp-doc-file-icon" aria-hidden="true">
                                       <FaFilePdf className="cp-pdf-icon" />
+                                    </span>
+                                    <span className="sila-file-name cp-doc-link" title={reg.asset?.fileName}>
                                       {reg.asset?.fileName || 'Document'}
                                     </span>
-                                    <span
-                                      className="cp-doc-actions"
+                                    <button
+                                      type="button"
+                                      className={`sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm cp-doc-actions ${onViewDocument ? 'cp-doc-actions-clickable' : 'cp-doc-actions-default'}`}
                                       onClick={() => {
                                         const assetId = reg.asset?.id || (reg.asset as any)?.id;
                                         if (assetId && onViewDocument) {
                                           onViewDocument(assetId, reg.asset?.fileName);
                                         }
                                       }}
-                                      style={{ cursor: onViewDocument ? 'pointer' : 'default' }}
                                       title="View Document"
+                                      aria-label={`View document ${reg.asset?.fileName || ''}`.trim()}
                                     >
-                                      <FaEye className="cp-eye-icon" />
-                                    </span>
+                                      <FaEye className="cp-eye-icon" aria-hidden="true" />
+                                    </button>
                                   </div>
                                 ) : (
-                                  '-'
+                                  <span className="sila-cell-muted">-</span>
                                 )}
                               </td>
                             </tr>
@@ -515,8 +519,8 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                   onToggle={() => toggleSection('bank')}
                   extra={
                     bankAccounts.some((a) => a.isPrimary) ? (
-                      <span className="cp-pill cp-pill-yes">
-                        <FaCheck /> Primary Account
+                      <span className="sila-badge sila-badge--sm sila-badge--success cp-pill">
+                        <FaCheck aria-hidden="true" /> Primary Account
                       </span>
                     ) : undefined
                   }
@@ -550,13 +554,11 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                           </div>
                           <div className="cp-field">
                             <span className="cp-field-label">IFSC Code</span>
-                            <span className="cp-field-value">{acc.ifscCode || '-'}</span>
+                            <span className="cp-field-value cp-field-mono">{acc.ifscCode || '-'}</span>
                           </div>
                           <div className="cp-field">
                             <span className="cp-field-label">Primary Account</span>
-                            <span className={`cp-status-pill ${acc.isPrimary ? 'cp-pill-green' : 'cp-pill-red'}`}>
-                              {acc.isPrimary ? 'Yes' : 'No'}
-                            </span>
+                            <YesNoBadge value={acc.isPrimary} />
                           </div>
 
                           <div className="cp-field">
@@ -565,13 +567,11 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                           </div>
                           <div className="cp-field">
                             <span className="cp-field-label">SWIFT Code</span>
-                            <span className="cp-field-value">{acc.swiftCode || '-'}</span>
+                            <span className="cp-field-value cp-field-mono">{acc.swiftCode || '-'}</span>
                           </div>
                           <div className="cp-field">
                             <span className="cp-field-label">Verified</span>
-                            <span className={`cp-status-pill ${acc.isVerified ? 'cp-pill-green' : 'cp-pill-red'}`}>
-                              {acc.isVerified ? 'Yes' : 'No'}
-                            </span>
+                            <YesNoBadge value={acc.isVerified} />
                           </div>
                         </div>
                       </React.Fragment>
@@ -613,9 +613,7 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                           </div>
                           <div className="cp-field">
                             <span className="cp-field-label">Default Location</span>
-                            <span className={`cp-status-pill ${loc.isDefault ? 'cp-pill-green' : 'cp-pill-red'}`}>
-                              {loc.isDefault ? 'Yes' : 'No'}
-                            </span>
+                            <YesNoBadge value={loc.isDefault} />
                           </div>
 
                           <div className="cp-field">
@@ -658,25 +656,25 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
                       <div className="cp-category-chain" key={idx}>
                         <div className="cp-category-step">
                           <span className="cp-category-label cp-category-label-segment">Segment</span>
-                          <span className="cp-field-value">{cat.segment ?? '-'}</span>
+                          <span className="cp-field-value cp-field-mono">{cat.segment ?? '-'}</span>
                           <span className="cp-category-sub">{cat.segmentTitle || '-'}</span>
                         </div>
-                        <span className="cp-category-arrow">→</span>
+                        <span className="cp-category-arrow" aria-hidden="true"><FaChevronRight /></span>
                         <div className="cp-category-step">
                           <span className="cp-category-label cp-category-label-family">Family</span>
-                          <span className="cp-field-value">{cat.family ?? '-'}</span>
+                          <span className="cp-field-value cp-field-mono">{cat.family ?? '-'}</span>
                           <span className="cp-category-sub">{cat.familyTitle || '-'}</span>
                         </div>
-                        <span className="cp-category-arrow">→</span>
+                        <span className="cp-category-arrow" aria-hidden="true"><FaChevronRight /></span>
                         <div className="cp-category-step">
                           <span className="cp-category-label cp-category-label-class">Class</span>
-                          <span className="cp-field-value">{cat.class ?? '-'}</span>
+                          <span className="cp-field-value cp-field-mono">{cat.class ?? '-'}</span>
                           <span className="cp-category-sub">{cat.classTitle || '-'}</span>
                         </div>
-                        <span className="cp-category-arrow">→</span>
+                        <span className="cp-category-arrow" aria-hidden="true"><FaChevronRight /></span>
                         <div className="cp-category-step">
                           <span className="cp-category-label cp-category-label-commodity">Commodity</span>
-                          <span className="cp-field-value">{cat.commodity ?? '-'}</span>
+                          <span className="cp-field-value cp-field-mono">{cat.commodity ?? '-'}</span>
                           <span className="cp-category-sub">{cat.commodityTitle || '-'}</span>
                         </div>
                       </div>
@@ -690,91 +688,88 @@ const CompanyProfile: React.FC<CompanyProfileProps> = ({
           <aside className="cp-side-col">
             <div className="cp-card cp-summary-card">
               <div className="cp-card-title cp-card-title-static">
-                <span className="cp-card-icon">
+                <span className="cp-card-icon" aria-hidden="true">
                   <FaInfoCircle />
                 </span>
-                <span className="cp-card-title-text">{entityLabel} Summary</span>
+                <h2 className="cp-card-title-text">{entityLabel} Summary</h2>
               </div>
 
               <div className="cp-summary-content">
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaBuilding className="cp-summary-icon" /> Organization Name
+                    <FaBuilding className="cp-summary-icon" aria-hidden="true" /> Organization Name
                   </span>
                   <span className="cp-summary-value">{bp.organizationName || '-'}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaInfoCircle className="cp-summary-icon" /> Status
+                    <FaInfoCircle className="cp-summary-icon" aria-hidden="true" /> Status
                   </span>
-                  <span className={`cp-status-dot-inline ${statusClass}`}>
-                    <span className="cp-status-dot"></span>
-                    {statusLabel}
-                  </span>
+                  <StatusBadge status={statusKey || 'PENDING'} label={statusLabel} tone={statusTone} size="sm" />
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaIndustry className="cp-summary-icon" /> Industry
+                    <FaIndustry className="cp-summary-icon" aria-hidden="true" /> Industry
                   </span>
                   <span className="cp-summary-value">{bp.industry || '-'}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaBriefcase className="cp-summary-icon" /> Business Type
+                    <FaBriefcase className="cp-summary-icon" aria-hidden="true" /> Business Type
                   </span>
                   <span className="cp-summary-value">{bp.businessType || '-'}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaUsers className="cp-summary-icon" /> Employees
+                    <FaUsers className="cp-summary-icon" aria-hidden="true" /> Employees
                   </span>
-                  <span className="cp-summary-value">{bp.employeeCount ?? '-'}</span>
+                  <span className="cp-summary-value cp-field-num">{bp.employeeCount ?? '-'}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaMoneyBillWave className="cp-summary-icon" /> Annual Turnover
+                    <FaMoneyBillWave className="cp-summary-icon" aria-hidden="true" /> Annual Turnover
                   </span>
-                  <span className="cp-summary-value">{formatCurrency(bp.annualTurnover, bp.currency)}</span>
+                  <span className="cp-summary-value cp-field-num">{formatCurrency(bp.annualTurnover, bp.currency)}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaCalendarAlt className="cp-summary-icon" /> Year Established
+                    <FaCalendarAlt className="cp-summary-icon" aria-hidden="true" /> Year Established
                   </span>
-                  <span className="cp-summary-value">{bp.yearEstablished ?? '-'}</span>
+                  <span className="cp-summary-value cp-field-num">{bp.yearEstablished ?? '-'}</span>
                 </div>
 
                 <div className="cp-divider" />
 
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaFileContract className="cp-summary-icon" /> Registrations
+                    <FaFileContract className="cp-summary-icon" aria-hidden="true" /> Registrations
                   </span>
-                  <span className="cp-summary-value">{registrations.length}</span>
+                  <span className="cp-summary-value cp-field-num">{registrations.length}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaUniversity className="cp-summary-icon" /> Bank Accounts
+                    <FaUniversity className="cp-summary-icon" aria-hidden="true" /> Bank Accounts
                   </span>
-                  <span className="cp-summary-value">{bankAccounts.length}</span>
+                  <span className="cp-summary-value cp-field-num">{bankAccounts.length}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaMapMarkerAlt className="cp-summary-icon" /> Dispatch Locations
+                    <FaMapMarkerAlt className="cp-summary-icon" aria-hidden="true" /> Dispatch Locations
                   </span>
-                  <span className="cp-summary-value">{dispatchLocations.length}</span>
+                  <span className="cp-summary-value cp-field-num">{dispatchLocations.length}</span>
                 </div>
                 <div className="cp-summary-row">
                   <span className="cp-summary-label">
-                    <FaTags className="cp-summary-icon" /> Product Categories
+                    <FaTags className="cp-summary-icon" aria-hidden="true" /> Product Categories
                   </span>
-                  <span className="cp-summary-value">{categories.length}</span>
+                  <span className="cp-summary-value cp-field-num">{categories.length}</span>
                 </div>
 
                 <div className="cp-divider" />
 
                 <div className="cp-summary-row cp-summary-row-stacked">
                   <span className="cp-summary-label">
-                    <FaUserCircle className="cp-summary-icon" /> Created By
+                    <FaUserCircle className="cp-summary-icon" aria-hidden="true" /> Created By
                   </span>
                   <span className="cp-summary-value cp-summary-value-link">{bp.email || '-'}</span>
                 </div>

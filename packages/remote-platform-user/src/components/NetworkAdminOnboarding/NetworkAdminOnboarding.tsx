@@ -9,6 +9,17 @@ import type { NetworkAdminProfileResponse } from "../../dto/networkAdminDto";
 import { useNetworkAdminAuthStore } from "../../store/useAuthStore";
 import { logoutNetworkAdmin } from "../../api/networkAdminApi";
 import { ToastContainer, toastService } from "@vosox/shared-ui";
+import {
+    FaCheck,
+    FaChevronDown,
+    FaCloudUploadAlt,
+    FaExclamationCircle,
+    FaMinus,
+    FaPaperclip,
+    FaPlus,
+    FaTimes,
+    FaTrash,
+} from "react-icons/fa";
 
 interface BusinessInfo {
     industry: string;
@@ -154,12 +165,23 @@ const emptyLocationDraft = {
 };
 
 const LogoutIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
         <polyline points="16 17 21 12 16 7" />
         <line x1="21" y1="12" x2="9" y2="12" />
     </svg>
 );
+
+/** Enter / Space activation for non-button elements that act as buttons. */
+function onActivateKey(handler: () => void) {
+    return (e: React.KeyboardEvent<HTMLElement>) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handler();
+        }
+    };
+}
 
 function makeId(): string {
     return Math.random().toString(36).slice(2, 10);
@@ -174,11 +196,13 @@ function maskAccountNumber(accountNumber: string): string {
 function ProductDropdown({
     segments,
     onSelect,
-    loading
+    loading,
+    triggerId,
 }: {
     segments: any[];
     onSelect: (family: SelectedProduct) => void;
     loading: boolean;
+    triggerId?: string;
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [expandedSegments, setExpandedSegments] = useState<number[]>([]);
@@ -205,10 +229,17 @@ function ProductDropdown({
 
     return (
         <div ref={containerRef} className="custom-dropdown-container">
-            <div className="custom-dropdown-trigger" onClick={() => setIsOpen(!isOpen)}>
+            <button
+                type="button"
+                id={triggerId}
+                className="custom-dropdown-trigger"
+                aria-haspopup="true"
+                aria-expanded={isOpen}
+                onClick={() => setIsOpen(!isOpen)}
+            >
                 <span>Select product</span>
-                <span>▼</span>
-            </div>
+                <FaChevronDown className="custom-dropdown-caret" aria-hidden="true" />
+            </button>
 
             {isOpen && (
                 <div className="custom-dropdown-menu">
@@ -227,8 +258,13 @@ function ProductDropdown({
                                 <div key={seg.segment} className="custom-dropdown-item-wrapper">
                                     <div className="segment-row" onClick={(e) => toggleExpand(seg.segment, e)}>
                                         <span>{seg.title}</span>
-                                        <button type="button" onClick={(e) => toggleExpand(seg.segment, e)}>
-                                            {isExpanded ? '−' : '+'}
+                                        <button
+                                            type="button"
+                                            aria-expanded={isExpanded}
+                                            aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${seg.title}`}
+                                            onClick={(e) => toggleExpand(seg.segment, e)}
+                                        >
+                                            {isExpanded ? <FaMinus aria-hidden="true" /> : <FaPlus aria-hidden="true" />}
                                         </button>
                                     </div>
                                     {isExpanded && seg.family && (
@@ -237,10 +273,16 @@ function ProductDropdown({
                                                 <div
                                                     key={fam.family}
                                                     className="nested-item-row"
+                                                    role="button"
+                                                    tabIndex={0}
                                                     onClick={() => {
                                                         onSelect({ segment: seg.segment, family: fam.family, title: fam.title });
                                                         setIsOpen(false);
                                                     }}
+                                                    onKeyDown={onActivateKey(() => {
+                                                        onSelect({ segment: seg.segment, family: fam.family, title: fam.title });
+                                                        setIsOpen(false);
+                                                    })}
                                                 >
                                                     {fam.title} ({fam.family})
                                                 </div>
@@ -261,12 +303,14 @@ function SubProductDropdown({
     classes,
     onSelect,
     disabled,
-    loading
+    loading,
+    triggerId,
 }: {
     classes: any[];
     onSelect: (commodity: SelectedSubProduct) => void;
     disabled: boolean;
     loading: boolean;
+    triggerId?: string;
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [expandedClasses, setExpandedClasses] = useState<number[]>([]);
@@ -293,15 +337,20 @@ function SubProductDropdown({
 
     return (
         <div ref={containerRef} className="custom-dropdown-container">
-            <div
+            <button
+                type="button"
+                id={triggerId}
                 className={`custom-dropdown-trigger ${disabled ? 'custom-dropdown-trigger-disabled' : ''}`}
+                aria-haspopup="true"
+                aria-expanded={!disabled && isOpen}
+                disabled={disabled}
                 onClick={() => !disabled && setIsOpen(!isOpen)}
             >
                 <span>
                     {disabled ? 'Please select a product first' : 'Select sub-product'}
                 </span>
-                <span>▼</span>
-            </div>
+                <FaChevronDown className="custom-dropdown-caret" aria-hidden="true" />
+            </button>
 
             {!disabled && isOpen && (
                 <div className="custom-dropdown-menu">
@@ -320,8 +369,13 @@ function SubProductDropdown({
                                 <div key={cls.class} className="custom-dropdown-item-wrapper">
                                     <div className="class-row" onClick={(e) => toggleExpand(cls.class, e)}>
                                         <span>{cls.title}</span>
-                                        <button type="button" onClick={(e) => toggleExpand(cls.class, e)}>
-                                            {isExpanded ? '−' : '+'}
+                                        <button
+                                            type="button"
+                                            aria-expanded={isExpanded}
+                                            aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${cls.title}`}
+                                            onClick={(e) => toggleExpand(cls.class, e)}
+                                        >
+                                            {isExpanded ? <FaMinus aria-hidden="true" /> : <FaPlus aria-hidden="true" />}
                                         </button>
                                     </div>
                                     {isExpanded && cls.commodity && (
@@ -330,10 +384,16 @@ function SubProductDropdown({
                                                 <div
                                                     key={com.commodity}
                                                     className="nested-item-row"
+                                                    role="button"
+                                                    tabIndex={0}
                                                     onClick={() => {
                                                         onSelect({ class: cls.class, commodity: com.commodity, title: com.title });
                                                         setIsOpen(false);
                                                     }}
+                                                    onKeyDown={onActivateKey(() => {
+                                                        onSelect({ class: cls.class, commodity: com.commodity, title: com.title });
+                                                        setIsOpen(false);
+                                                    })}
                                                 >
                                                     {com.title} ({com.commodity})
                                                 </div>
@@ -352,12 +412,8 @@ function SubProductDropdown({
 
 export default function NetworkAdminOnboarding({ onComplete, onboardingData, rejectedProfile }: NetworkAdminOnboardingProps) {
     const navigate = useNavigate();
-    const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
     const logout = useNetworkAdminAuthStore((state) => state.logout);
-    const networkAdminHome =
-      currentUser?.userRole === 'SUPPLIER_NETWORK_ADMIN'
-        ? '/platform-user/supplier-network-admin'
-        : '/platform-user/buyer-network-admin';
+    const networkAdminHome = '/dashboard';
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [furthestStep, setFurthestStep] = useState<number>(1);
     const [loggingOut, setLoggingOut] = useState(false);
@@ -860,8 +916,12 @@ if (Array.isArray(data)) {
                             className={`bp-step-item ${isClickable ? "bp-step-clickable" : ""}`}
                             onClick={() => isClickable && goToStep(stepNum)}
                             disabled={!isClickable}
+                            aria-current={isCurrent ? "step" : undefined}
                         >
-                            <span className={circleClass}>{isComplete ? "✓" : stepNum}</span>
+                            <span className={circleClass} aria-hidden="true">
+                                {isComplete ? <FaCheck /> : stepNum}
+                            </span>
+                            {isComplete && <span className="sila-visually-hidden">Completed: </span>}
                             <span className={labelClass}>{label}</span>
                         </button>
                     );
@@ -874,7 +934,7 @@ if (Array.isArray(data)) {
         if (!onboardingData) return null;
 
         return (
-            <div className="bp-panel" style={{ marginTop: '20px' }}>
+            <div className="bp-panel">
                 <h2 className="bp-panel-title">Company Information</h2>
                 <div className="bp-divider" />
                 <div className="bp-company-info-grid">
@@ -932,14 +992,19 @@ if (Array.isArray(data)) {
                 <div className="bp-panel">
                     <h2 className="bp-panel-title">Step 1: Business Information</h2>
                     <div className="bp-divider" />
+                    <section className="sila-form-section bp-form-section" aria-labelledby="bp-sec-classification">
+                    <h3 id="bp-sec-classification" className="sila-form-section-title bp-form-section-title">Classification</h3>
                     <div className="bp-form-grid">
                         <div className="bp-field">
                             <label htmlFor="industry">
-                                Industry<span className="bp-required">*</span>
+                                Industry<span className="bp-required sila-required" aria-hidden="true">*</span>
                             </label>
                             <select
                                 id="industry"
                                 className={errors.industry ? "bp-input-error" : ""}
+                                aria-required="true"
+                                aria-invalid={errors.industry ? true : undefined}
+                                aria-describedby={errors.industry ? "industry-error" : undefined}
                                 value={businessInfo.industry}
                                 onFocus={handleIndustryFocus}
                                 onClick={handleIndustryFocus}
@@ -958,16 +1023,24 @@ if (Array.isArray(data)) {
                                         </option>
                                     ))}
                             </select>
-                            {errors.industry && <span className="bp-error-text">{errors.industry}</span>}
+                            {errors.industry && (
+                                <span id="industry-error" className="bp-error-text sila-error-text">
+                                    <FaExclamationCircle aria-hidden="true" />
+                                    {errors.industry}
+                                </span>
+                            )}
                         </div>
 
                         <div className="bp-field">
                             <label htmlFor="businessType">
-                                Business Type<span className="bp-required">*</span>
+                                Business Type<span className="bp-required sila-required" aria-hidden="true">*</span>
                             </label>
                             <select
                                 id="businessType"
                                 className={errors.businessType ? "bp-input-error" : ""}
+                                aria-required="true"
+                                aria-invalid={errors.businessType ? true : undefined}
+                                aria-describedby={errors.businessType ? "businessType-error" : undefined}
                                 value={businessInfo.businessType}
                                 onFocus={handleBusinessTypeFocus}
                                 onClick={handleBusinessTypeFocus}
@@ -986,8 +1059,19 @@ if (Array.isArray(data)) {
                                         </option>
                                     ))}
                             </select>
-                            {errors.businessType && <span className="bp-error-text">{errors.businessType}</span>}
+                            {errors.businessType && (
+                                <span id="businessType-error" className="bp-error-text sila-error-text">
+                                    <FaExclamationCircle aria-hidden="true" />
+                                    {errors.businessType}
+                                </span>
+                            )}
                         </div>
+                    </div>
+                    </section>
+
+                    <section className="sila-form-section bp-form-section" aria-labelledby="bp-sec-size">
+                    <h3 id="bp-sec-size" className="sila-form-section-title bp-form-section-title">Size &amp; Financials</h3>
+                    <div className="bp-form-grid">
 
                         <div className="bp-field">
                             <label htmlFor="employeeCount">Employee Count</label>
@@ -1041,7 +1125,12 @@ if (Array.isArray(data)) {
                                 ))}
                             </select>
                         </div>
+                    </div>
+                    </section>
 
+                    <section className="sila-form-section bp-form-section" aria-labelledby="bp-sec-presence">
+                    <h3 id="bp-sec-presence" className="sila-form-section-title bp-form-section-title">Company Profile</h3>
+                    <div className="bp-form-grid">
                         <div className="bp-field bp-field-wide">
                             <label htmlFor="website">Website</label>
                             <input
@@ -1064,9 +1153,10 @@ if (Array.isArray(data)) {
                             />
                         </div>
                     </div>
+                    </section>
                 </div>
                 {renderCompanyInfo()}
-                <div className="bp-actions bp-actions-right" style={{ marginTop: '20px' }}>
+                <div className="bp-actions bp-actions-right bp-actions-standalone">
                     <button type="button" className="bp-btn bp-btn-secondary" onClick={() => navigate('/login')}>
                         Back
                     </button>
@@ -1087,10 +1177,11 @@ if (Array.isArray(data)) {
                 <div className="bp-category-section">
 
                     <div className="bp-field">
-                        <label>
-                            Select Product (Segment &amp; Family)<span className="bp-required">*</span>
+                        <label htmlFor="bp-product-trigger">
+                            Select Product (Segment &amp; Family)<span className="bp-required sila-required" aria-hidden="true">*</span>
                         </label>
                         <ProductDropdown
+                            triggerId="bp-product-trigger"
                             segments={segments}
                             onSelect={(p)=>{
                                 handleSelectProduct(p)
@@ -1117,17 +1208,22 @@ if (Array.isArray(data)) {
                                     <span
                                         key={p.family}
                                         className={`bp-category-tag ${isActive ? 'bp-category-tag-active' : ''}`}
+                                        role="button"
+                                        tabIndex={0}
+                                        aria-pressed={isActive}
                                         onClick={() => setActiveProduct(p)}
+                                        onKeyDown={onActivateKey(() => setActiveProduct(p))}
                                     >
                                         {p.title} ({p.family})
                                         <button
                                             type="button"
+                                            aria-label={`Remove ${p.title}`}
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 handleRemoveProduct(p.family);
                                             }}
                                         >
-                                            &times;
+                                            <FaTimes aria-hidden="true" />
                                         </button>
                                     </span>
                                 );
@@ -1138,12 +1234,13 @@ if (Array.isArray(data)) {
                     <div className="bp-selector-divider" />
 
                     <div className="bp-field">
-                        <label>
+                        <label htmlFor="bp-subproduct-trigger">
                             Select Sub-Product (Class &amp; Commodity)
-                            {activeProduct && <span className="bp-logo-accent"> - for {activeProduct.title}</span>}
-                            <span className="bp-required">*</span>
+                            {activeProduct && <span className="bp-label-context"> - for {activeProduct.title}</span>}
+                            <span className="bp-required sila-required" aria-hidden="true">*</span>
                         </label>
                         <SubProductDropdown
+                            triggerId="bp-subproduct-trigger"
                             classes={classes}
                             onSelect={(p)=>{
                                 handleSelectSubProduct(p)
@@ -1173,9 +1270,10 @@ if (Array.isArray(data)) {
                                     {p.title} ({p.commodity})
                                     <button
                                         type="button"
+                                        aria-label={`Remove ${p.title}`}
                                         onClick={() => handleRemoveSubProduct(p.commodity)}
                                     >
-                                        &times;
+                                        <FaTimes aria-hidden="true" />
                                     </button>
                                 </span>
                             ))
@@ -1183,7 +1281,7 @@ if (Array.isArray(data)) {
                     </div>
                 </div>
 
-                <div className="bp-actions bp-actions-right">
+                <div className="bp-actions bp-actions-right bp-actions-footer">
                     <button type="button" className="bp-btn bp-btn-secondary" onClick={handleBack}>
                         Back
                     </button>
@@ -1200,6 +1298,8 @@ if (Array.isArray(data)) {
             <div className="bp-panel">
                 <h2 className="bp-panel-title">Step 3: Registrations &amp; Certifications</h2>
                 <div className="bp-divider" />
+                <section className="sila-form-section bp-form-section" aria-labelledby="bp-sec-reg-add">
+                <h3 id="bp-sec-reg-add" className="sila-form-section-title bp-form-section-title">Add Registration</h3>
                 <div className="bp-form-grid">
                     <div className="bp-field">
                         <label htmlFor="regType">Registration Type</label>
@@ -1252,8 +1352,15 @@ if (Array.isArray(data)) {
 
                     <div className="bp-field bp-field-wide">
                         <label htmlFor="regUpload">Upload Certificate</label>
-                        <label className="bp-dropzone" htmlFor="regUpload">
-                            {registrationDraft.attachmentName || "Click to select file or drag and drop certificate here"}
+                        <label className="bp-dropzone sila-dropzone" htmlFor="regUpload">
+                            {registrationDraft.attachmentName ? (
+                                <FaPaperclip className="bp-dropzone-icon" aria-hidden="true" />
+                            ) : (
+                                <FaCloudUploadAlt className="bp-dropzone-icon" aria-hidden="true" />
+                            )}
+                            <span className="bp-dropzone-text">
+                                {registrationDraft.attachmentName || "Click to select file or drag and drop certificate here"}
+                            </span>
                         </label>
                         <input
                             id="regUpload"
@@ -1265,11 +1372,16 @@ if (Array.isArray(data)) {
                 </div>
 
                 <div className="bp-actions bp-actions-right">
-                    <button type="button" className="bp-btn bp-btn-primary" onClick={addRegistration}>
-                        + Add Registration
+                    <button type="button" className="bp-btn bp-btn-secondary" onClick={addRegistration}>
+                        <FaPlus aria-hidden="true" />
+                        Add Registration
                     </button>
                 </div>
+                </section>
 
+                <section className="sila-form-section bp-form-section" aria-labelledby="bp-sec-reg-list">
+                <h3 id="bp-sec-reg-list" className="sila-form-section-title bp-form-section-title">Added Registrations</h3>
+                <div className="bp-table-wrap">
                 <table className="bp-table">
                     <thead>
                         <tr>
@@ -1278,7 +1390,7 @@ if (Array.isArray(data)) {
                             <th>Name</th>
                             <th>Expiry Date</th>
                             <th>Attachments</th>
-                            <th>Action</th>
+                            <th className="bp-col-action">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1297,24 +1409,25 @@ if (Array.isArray(data)) {
                                     <td>{r.expiryDate}</td>
                                     <td>
                                         {r.attachmentName ? (
-                                            <span className="bp-pill">
+                                            <span className="bp-pill" title={r.attachmentName}>
+                                                <FaPaperclip className="bp-pill-icon" aria-hidden="true" />
                                                 {r.attachmentName.length > 10
                                                     ? `${r.attachmentName.slice(0, 8)}...`
-                                                    : r.attachmentName}{" "}
-                                                <span className="bp-pill-icon">ⓘ</span>
+                                                    : r.attachmentName}
                                             </span>
                                         ) : (
                                             "—"
                                         )}
                                     </td>
-                                    <td>
+                                    <td className="bp-col-action">
                                         <button
                                             type="button"
                                             className="bp-icon-btn"
                                             aria-label={`Remove ${r.name}`}
+                                            title="Remove"
                                             onClick={() => removeRegistration(r.id)}
                                         >
-                                            🗑
+                                            <FaTrash aria-hidden="true" />
                                         </button>
                                     </td>
                                 </tr>
@@ -1322,8 +1435,10 @@ if (Array.isArray(data)) {
                         )}
                     </tbody>
                 </table>
+                </div>
+                </section>
 
-                <div className="bp-actions bp-actions-right">
+                <div className="bp-actions bp-actions-right bp-actions-footer">
                     <button type="button" className="bp-btn bp-btn-secondary" onClick={handleBack}>
                         Back
                     </button>
@@ -1340,10 +1455,12 @@ if (Array.isArray(data)) {
             <div className="bp-panel">
                 <h2 className="bp-panel-title">Step 4: Bank Account Information</h2>
                 <div className="bp-divider" />
+                <section className="sila-form-section bp-form-section" aria-labelledby="bp-sec-bank-add">
+                <h3 id="bp-sec-bank-add" className="sila-form-section-title bp-form-section-title">Account Details</h3>
                 <div className="bp-form-grid">
                     <div className="bp-field">
                         <label htmlFor="acctHolder">
-                            Account Holder Name<span className="bp-required">*</span>
+                            Account Holder Name<span className="bp-required sila-required" aria-hidden="true">*</span>
                         </label>
                         <input
                             id="acctHolder"
@@ -1355,7 +1472,7 @@ if (Array.isArray(data)) {
 
                     <div className="bp-field">
                         <label htmlFor="bankName">
-                            Bank Name<span className="bp-required">*</span>
+                            Bank Name<span className="bp-required sila-required" aria-hidden="true">*</span>
                         </label>
                         <input
                             id="bankName"
@@ -1367,7 +1484,7 @@ if (Array.isArray(data)) {
 
                     <div className="bp-field">
                         <label htmlFor="branchName">
-                            Branch Name<span className="bp-required">*</span>
+                            Branch Name<span className="bp-required sila-required" aria-hidden="true">*</span>
                         </label>
                         <input
                             id="branchName"
@@ -1379,7 +1496,7 @@ if (Array.isArray(data)) {
 
                     <div className="bp-field">
                         <label htmlFor="acctNumber">
-                            Account Number<span className="bp-required">*</span>
+                            Account Number<span className="bp-required sila-required" aria-hidden="true">*</span>
                         </label>
                         <input
                             id="acctNumber"
@@ -1391,7 +1508,7 @@ if (Array.isArray(data)) {
 
                     <div className="bp-field">
                         <label htmlFor="ifsc">
-                            IFSC Code<span className="bp-required">*</span>
+                            IFSC Code<span className="bp-required sila-required" aria-hidden="true">*</span>
                         </label>
                         <input
                             id="ifsc"
@@ -1423,7 +1540,7 @@ if (Array.isArray(data)) {
 
                     <div className="bp-field">
                         <label htmlFor="bankCurrency">
-                            Currency<span className="bp-required">*</span>
+                            Currency<span className="bp-required sila-required" aria-hidden="true">*</span>
                         </label>
                         <select
                             id="bankCurrency"
@@ -1448,11 +1565,16 @@ if (Array.isArray(data)) {
                         />
                         Primary Bank Account
                     </label>
-                    <button type="button" className="bp-btn bp-btn-primary" onClick={addBankAccount}>
-                        + Add Account
+                    <button type="button" className="bp-btn bp-btn-secondary" onClick={addBankAccount}>
+                        <FaPlus aria-hidden="true" />
+                        Add Account
                     </button>
                 </div>
+                </section>
 
+                <section className="sila-form-section bp-form-section" aria-labelledby="bp-sec-bank-list">
+                <h3 id="bp-sec-bank-list" className="sila-form-section-title bp-form-section-title">Added Accounts</h3>
+                <div className="bp-table-wrap">
                 <table className="bp-table">
                     <thead>
                         <tr>
@@ -1460,7 +1582,7 @@ if (Array.isArray(data)) {
                             <th>Account Holder Name</th>
                             <th>Account Number</th>
                             <th>Currency</th>
-                            <th>Action</th>
+                            <th className="bp-col-action">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1478,16 +1600,17 @@ if (Array.isArray(data)) {
                                         {b.isPrimary && <span className="bp-tag">Primary</span>}
                                     </td>
                                     <td>{b.accountHolderName}</td>
-                                    <td>{maskAccountNumber(b.accountNumber)}</td>
+                                    <td className="bp-mono">{maskAccountNumber(b.accountNumber)}</td>
                                     <td>{b.currency}</td>
-                                    <td>
+                                    <td className="bp-col-action">
                                         <button
                                             type="button"
                                             className="bp-icon-btn"
                                             aria-label={`Remove ${b.bankName} account`}
+                                            title="Remove"
                                             onClick={() => removeBankAccount(b.id)}
                                         >
-                                            🗑
+                                            <FaTrash aria-hidden="true" />
                                         </button>
                                     </td>
                                 </tr>
@@ -1495,8 +1618,10 @@ if (Array.isArray(data)) {
                         )}
                     </tbody>
                 </table>
+                </div>
+                </section>
 
-                <div className="bp-actions bp-actions-right">
+                <div className="bp-actions bp-actions-right bp-actions-footer">
                     <button type="button" className="bp-btn bp-btn-secondary" onClick={handleBack}>
                         Back
                     </button>
@@ -1515,10 +1640,12 @@ if (Array.isArray(data)) {
                 <div className="bp-divider" />
 
                 <form onSubmit={handleSubmitProfile}>
+                    <section className="sila-form-section bp-form-section" aria-labelledby="bp-sec-loc-add">
+                    <h3 id="bp-sec-loc-add" className="sila-form-section-title bp-form-section-title">Location Details</h3>
                     <div className="bp-form-grid">
                         <div className="bp-field">
                             <label htmlFor="locName">
-                                Location Name<span className="bp-required">*</span>
+                                Location Name<span className="bp-required sila-required" aria-hidden="true">*</span>
                             </label>
                             <input
                                 id="locName"
@@ -1540,7 +1667,7 @@ if (Array.isArray(data)) {
 
                         <div className="bp-field">
                             <label htmlFor="country">
-                                Country<span className="bp-required">*</span>
+                                Country<span className="bp-required sila-required" aria-hidden="true">*</span>
                             </label>
                             <select
                                 id="country"
@@ -1562,7 +1689,7 @@ if (Array.isArray(data)) {
 
                         <div className="bp-field">
                             <label htmlFor="state">
-                                State<span className="bp-required">*</span>
+                                State<span className="bp-required sila-required" aria-hidden="true">*</span>
                             </label>
                             <select
                                 id="state"
@@ -1584,7 +1711,7 @@ if (Array.isArray(data)) {
 
                         <div className="bp-field">
                             <label htmlFor="addr1">
-                                Address Line 1<span className="bp-required">*</span>
+                                Address Line 1<span className="bp-required sila-required" aria-hidden="true">*</span>
                             </label>
                             <input
                                 id="addr1"
@@ -1606,7 +1733,7 @@ if (Array.isArray(data)) {
 
                         <div className="bp-field">
                             <label htmlFor="city">
-                                City<span className="bp-required">*</span>
+                                City<span className="bp-required sila-required" aria-hidden="true">*</span>
                             </label>
                             <select
                                 id="city"
@@ -1625,7 +1752,7 @@ if (Array.isArray(data)) {
 
                         <div className="bp-field">
                             <label htmlFor="pinZip">
-                                PIN / ZIP Code<span className="bp-required">*</span>
+                                PIN / ZIP Code<span className="bp-required sila-required" aria-hidden="true">*</span>
                             </label>
                             <input
                                 id="pinZip"
@@ -1667,13 +1794,18 @@ if (Array.isArray(data)) {
                         </label>
                         <button
                             type="button"
-                            className="bp-btn bp-btn-primary"
+                            className="bp-btn bp-btn-secondary"
                             onClick={addLocation}
                         >
-                            + Add Location
+                            <FaPlus aria-hidden="true" />
+                            Add Location
                         </button>
                     </div>
+                    </section>
 
+                    <section className="sila-form-section bp-form-section" aria-labelledby="bp-sec-loc-list">
+                    <h3 id="bp-sec-loc-list" className="sila-form-section-title bp-form-section-title">Added Locations</h3>
+                    <div className="bp-table-wrap">
                     <table className="bp-table">
                         <thead>
                             <tr>
@@ -1682,7 +1814,7 @@ if (Array.isArray(data)) {
                                 <th>Contact Person</th>
                                 <th>State</th>
                                 <th>Phone Number</th>
-                                <th>Action</th>
+                                <th className="bp-col-action">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1700,20 +1832,26 @@ if (Array.isArray(data)) {
                                     >
                                         <td>
                                             {l.locationName}
-                                            {l.isDefault && <span className="bp-default-dot" title="Default Location" />}
+                                            {l.isDefault && (
+                                                <>
+                                                    <span className="bp-default-dot" title="Default Location" aria-hidden="true" />
+                                                    <span className="sila-visually-hidden"> (Default Location)</span>
+                                                </>
+                                            )}
                                         </td>
                                         <td>{l.city}</td>
                                         <td>{l.contactPerson}</td>
                                         <td>{State.getStateByCodeAndCountry(l.state, l.country)?.name || l.state}</td>
                                         <td>{l.contactPhone}</td>
-                                        <td>
+                                        <td className="bp-col-action">
                                             <button
                                                 type="button"
                                                 className="bp-icon-btn"
                                                 aria-label={`Remove ${l.locationName}`}
+                                                title="Remove"
                                                 onClick={() => removeLocation(l.id)}
                                             >
-                                                🗑
+                                                <FaTrash aria-hidden="true" />
                                             </button>
                                         </td>
                                     </tr>
@@ -1721,8 +1859,11 @@ if (Array.isArray(data)) {
                             )}
                         </tbody>
                     </table>
+                    </div>
+                    </section>
 
-                    <div className="bp-agreements">
+                    <fieldset className="bp-agreements">
+                        <legend className="sila-visually-hidden">Declarations</legend>
                         <label className="bp-checkbox-label">
                             <input
                                 type="checkbox"
@@ -1747,19 +1888,21 @@ if (Array.isArray(data)) {
                             />
                             I authorize CAS to verify the submitted documents.
                         </label>
-                    </div>
+                    </fieldset>
 
                     {error && (
-                        <div style={{ color: '#dc2626', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '6px', marginBottom: '15px', fontSize: '0.9rem', border: '1px solid #f87171' }}>
-                            {error}
+                        <div className="bp-error sila-alert sila-alert--danger" role="alert">
+                            <FaExclamationCircle className="bp-error-icon" aria-hidden="true" />
+                            <span>{error}</span>
                         </div>
                     )}
 
-                    <div className="bp-actions bp-actions-right">
+                    <div className="bp-actions bp-actions-right bp-actions-footer">
                         <button type="button" className="bp-btn bp-btn-secondary" onClick={handleBack} disabled={submitting}>
                             Back
                         </button>
                         <button type="submit" className="bp-btn bp-btn-primary" disabled={!canSubmit || submitting}>
+                            {submitting && <span className="sila-spinner" aria-hidden="true" />}
                             {submitting ? 'Submitting...' : 'Submit Profile'}
                         </button>
                     </div>
@@ -1807,7 +1950,7 @@ if (Array.isArray(data)) {
                 </header>
                 <main className="bp-main bp-main-centered">
                     <div className="bp-success-card">
-                        <div className="bp-success-icon">✓</div>
+                        <div className="bp-success-icon" aria-hidden="true"><FaCheck /></div>
                         <h2>Profile submitted</h2>
                         <p>Your organization profile has been submitted for verification. We'll notify you once it's reviewed.</p>
                         <button

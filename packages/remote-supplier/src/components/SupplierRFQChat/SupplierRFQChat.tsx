@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "../../../../remote-buyer/src/components/BuyerRFQChat/BuyerRFQChat.css";
 import { isErrorResponse } from "@vosox/shared-ui";
 import type { ChatMessageDto, ChatThreadDto } from "../../api/supplierApi";
@@ -8,12 +8,12 @@ import {
   markSupplierThreadAsRead,
   sendSupplierMessage,
   downloadSupplierMessageAttachment,
-  getPersonDetailCached,
 } from "../../api/supplierApi";
-import type { PersonDetailDto } from "../../api/supplierApi";
+import { useSupplierAuthStore } from "../../store/useSupplierAuthStore";
 import { toastService } from "@vosox/shared-ui";
 import SupplierChatConversation from "./SupplierChatConversation";
 import SupplierChatDetails from "./SupplierChatDetails";
+import type { ObservedParticipant } from "./types";
 import {
   downloadBase64File,
   fileToBase64,
@@ -21,6 +21,8 @@ import {
   getInitials,
 } from "../../../../remote-buyer/src/components/BuyerRFQChat/chatUtils";
 import { IconClose, IconMessageSquare } from "../../../../remote-buyer/src/components/BuyerRFQChat/ChatIcons";
+import { startRfqChatHub, stopRfqChatHub } from "../../../../remote-buyer/src/signalr/rfqChatHub";
+import { apiKey as supplierApiKey } from "../../api/supplierInstance";
 
 const HISTORY_PAGE_LIMIT = 20;
 
@@ -53,8 +55,10 @@ const SupplierRFQChat: React.FC<SupplierRFQChatProps> = ({
   const [mobileView, setMobileView] = useState<"list" | "conversation">("list");
   const [isChatDetailsOpen, setIsChatDetailsOpen] = useState(false);
 
-  const [myProfile, setMyProfile] = useState<PersonDetailDto | null>(null);
-  const [isLoadingMyProfile, setIsLoadingMyProfile] = useState(false);
+  // Sourced from the store, which fetches it once (on login and on reload) via
+  // SupplierApp's mount effect - no per-component fetch, no local cache.
+  const myProfile = useSupplierAuthStore((state) => state.personDetail);
+  const isLoadingMyProfile = useSupplierAuthStore((state) => state.personDetailLoading);
 
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -67,10 +71,28 @@ const SupplierRFQChat: React.FC<SupplierRFQChatProps> = ({
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<string | null>(null);
 
+  // Read inside the SignalR handler (registered once per rfqId/supplierId) so
+  // it always sees the current thread without needing to reconnect once the
+  // very first message resolves it.
+  const threadIdRef = useRef<string | null>(null);
+
   // buyerName/buyerId from the RFQ-by-id response are the source of truth for
   // the Buyer's identity — the threads API's counterpartyName is only a
   // fallback for when buyerName is unavailable.
   const counterpartyName = buyerName || thread?.counterpartyName || "Buyer";
+
+  // Other supplier-side people are only knowable from who has actually sent
+  // a message in this thread — not from any invited-users list.
+  const observedParticipants = useMemo<ObservedParticipant[]>(() => {
+    const seen = new Map<string, string>();
+    for (const message of messages) {
+      if (message.senderOrganizationType?.toLowerCase() !== "supplier") continue;
+      if (!message.senderUserId || !message.senderName) continue;
+      if (message.senderUserId === myProfile?.userId) continue;
+      if (!seen.has(message.senderUserId)) seen.set(message.senderUserId, message.senderName);
+    }
+    return Array.from(seen.entries()).map(([userId, name]) => ({ userId, name }));
+  }, [messages, myProfile?.userId]);
 
   const loadInitialHistory = async (threadId: string, unreadCount: number) => {
     setLoadingMessages(true);
@@ -139,24 +161,75 @@ const SupplierRFQChat: React.FC<SupplierRFQChatProps> = ({
   }, [rfqId, supplierId]);
 
   useEffect(() => {
-    let cancelled = false;
-    const loadMyProfile = async () => {
-      setIsLoadingMyProfile(true);
-      try {
-        const result = await getPersonDetailCached();
-        if (cancelled) return;
-        if (!isErrorResponse(result)) {
-          setMyProfile(result);
-        }
-      } finally {
-        if (!cancelled) setIsLoadingMyProfile(false);
+    threadIdRef.current = thread?.threadId || null;
+  }, [thread]);
+
+  // Routes a live SignalR message into the conversation. The connection is
+  // scoped to this rfqId+supplierId pair (see below), so every message it
+  // delivers already belongs to this supplier's single thread with the
+  // buyer — unlike the Buyer Admin chat there's no list of other threads to
+  // route around.
+  const handleIncomingMessages = (payload: ChatMessageDto | ChatMessageDto[]) => {
+    const incoming = Array.isArray(payload) ? payload : [payload];
+    if (incoming.length === 0) return;
+
+    const openThreadId = threadIdRef.current;
+    const relevant = openThreadId ? incoming.filter((m) => m.threadId === openThreadId) : incoming;
+    console.log("[SupplierRFQChat] Incoming SignalR payload:", {
+      incomingCount: incoming.length,
+      openThreadId,
+      relevantCount: relevant.length,
+    });
+    if (relevant.length === 0) return;
+
+    let appended: ChatMessageDto[] = [];
+    setMessages((prev) => {
+      const existingIds = new Set(prev.map((m) => m.id));
+      appended = relevant.filter((m) => !existingIds.has(m.id));
+      return appended.length > 0 ? [...prev, ...appended] : prev;
+    });
+
+    if (appended.length === 0) {
+      console.log("[SupplierRFQChat] All incoming messages were already present (duplicate) — nothing appended.");
+      return;
+    }
+
+    setScrollTick((t) => t + 1);
+
+    const latest = appended[appended.length - 1];
+    setThread((prev) => ({
+      threadId: latest.threadId,
+      rfqId,
+      rfqNumber: rfqNumber || prev?.rfqNumber || "",
+      buyerId: buyerId || prev?.buyerId || "",
+      supplierId,
+      counterpartyName: prev?.counterpartyName || counterpartyName,
+      lastMessageBody: latest.body || (latest.attachments?.length > 0 ? "Sent an attachment" : ""),
+      lastMessageAt: latest.dateCreated,
+      unreadCount: 0,
+    }));
+  };
+
+  useEffect(() => {
+    // supplierId is included so the backend scopes this connection to just
+    // this supplier's thread on the RFQ — a bare rfqId (as used by the Buyer
+    // Admin chat, which legitimately needs every supplier thread on the RFQ)
+    // would otherwise also deliver other suppliers' conversations here.
+    // The API key mirrors every other supplierInstance REST call (see
+    // supplierInstance.ts) — sent on the negotiate request; browsers cannot
+    // attach it to the WebSocket/SSE upgrade itself (a platform limitation,
+    // see rfqChatHub.ts).
+    startRfqChatHub({ rfqId, supplierId, headers: { "X-API-Key": supplierApiKey } }, handleIncomingMessages).catch(
+      (err) => {
+        console.error("[SupplierRFQChat] SignalR connection failed:", err);
       }
-    };
-    loadMyProfile();
+    );
+
     return () => {
-      cancelled = true;
+      stopRfqChatHub();
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rfqId, supplierId]);
 
   const handleSelectThread = () => setMobileView("conversation");
   const handleBackToList = () => setMobileView("list");
@@ -204,7 +277,9 @@ const SupplierRFQChat: React.FC<SupplierRFQChatProps> = ({
         return false;
       }
 
-      setMessages((prev) => [...prev, result]);
+      // The SignalR broadcast for this same message can arrive before this
+      // REST response does — dedup by id so it isn't appended twice.
+      setMessages((prev) => (prev.some((m) => m.id === result.id) ? prev : [...prev, result]));
       setThread((prev) => ({
         threadId: result.threadId,
         rfqId,
@@ -314,11 +389,13 @@ const SupplierRFQChat: React.FC<SupplierRFQChatProps> = ({
               counterpartyName={counterpartyName}
               myProfile={myProfile}
               isLoadingMyProfile={isLoadingMyProfile}
+              observedParticipants={observedParticipants}
               onBack={() => setIsChatDetailsOpen(false)}
             />
           ) : (
             <SupplierChatConversation
               counterpartyName={counterpartyName}
+              currentUserId={myProfile?.userId}
               hasThread={!!thread}
               messages={messages}
               isLoadingMessages={loadingMessages}

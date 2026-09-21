@@ -13,7 +13,8 @@ export interface ChatAttachmentDto {
 
 export interface SendBuyerMessagePayload {
   rfqId: string;
-  supplierId: string;
+  supplierId?: string;
+  externalSupplierId?: string;
   body: string;
   attachments: ChatAttachmentInputDto[];
 }
@@ -37,6 +38,7 @@ export interface ChatThreadDto {
   rfqNumber: string;
   buyerId: string;
   supplierId: string;
+  externalSupplierId?: string;
   counterpartyName: string;
   lastMessageBody: string;
   lastMessageAt: string;

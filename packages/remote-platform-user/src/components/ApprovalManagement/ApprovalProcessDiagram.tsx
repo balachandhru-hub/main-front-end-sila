@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import "./ApprovalProcessDiagram.css";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 export interface ApprovalStep {
   id: string;
@@ -18,7 +19,7 @@ interface ApprovalProcessDiagramProps {
 }
 
 const InfoIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
     <circle cx="12" cy="12" r="10" />
     <path d="M12 16v-4M12 8h.01" />
   </svg>
@@ -35,19 +36,11 @@ const GripIcon = () => (
   </svg>
 );
 
-const EditIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M12 20h9" />
-    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
-  </svg>
-);
-
 const ApprovalProcessDiagram: React.FC<ApprovalProcessDiagramProps> = ({
   steps,
   loading,
   error,
   onReorder,
-  onEdit,
   disabled,
 }) => {
   const [expanded, setExpanded] = useState(true);
@@ -139,8 +132,15 @@ const ApprovalProcessDiagram: React.FC<ApprovalProcessDiagramProps> = ({
   return (
     <div className="apm-page">
       <section className="apm-card">
-        <button type="button" className="apm-section-toggle" onClick={() => setExpanded((v) => !v)}>
-          <span className={`apm-caret ${expanded ? "apm-caret-open" : ""}`}>▶</span>
+        <button
+          type="button"
+          className="apm-section-toggle"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+        >
+          <span className={`apm-caret ${expanded ? "apm-caret-open" : ""}`} aria-hidden="true">
+            <FaChevronRight />
+          </span>
           <span className="apm-section-title">Approval Process Diagram</span>
           <span className="apm-info" title="Shows the order in which users approve this flow">
             <InfoIcon />
@@ -151,9 +151,12 @@ const ApprovalProcessDiagram: React.FC<ApprovalProcessDiagramProps> = ({
           <div className="apm-diagram">
             <div className="apm-flow" ref={scrollRef}>
               {loading ? (
-                <div className="apm-empty">Loading approvers...</div>
+                <div className="apm-empty">
+                  <span className="sila-spinner" aria-hidden="true" />
+                  Loading approvers...
+                </div>
               ) : error ? (
-                <div className="apm-empty apm-empty-error">{error}</div>
+                <div className="apm-empty apm-empty-error" role="alert">{error}</div>
               ) : currentSteps.length === 0 ? (
                 <div className="apm-empty">No approvers in this approval flow.</div>
               ) : null}
@@ -174,6 +177,7 @@ const ApprovalProcessDiagram: React.FC<ApprovalProcessDiagramProps> = ({
                         onClick={() => setSelectedId(step.id)}
                         role="button"
                         tabIndex={0}
+                        aria-pressed={selectedId === step.id}
                         onKeyDown={(e) => e.key === "Enter" && setSelectedId(step.id)}
                       >
                         <div className="apm-node-head">
@@ -194,28 +198,13 @@ const ApprovalProcessDiagram: React.FC<ApprovalProcessDiagramProps> = ({
                           <span className="apm-node-title" title={step.title}>
                             {step.title}
                           </span>
-                          <span className="apm-node-order">{i + 1}</span>
-                          {onEdit && (
-                            <button
-                              type="button"
-                              className="apm-node-edit"
-                              title="Edit"
-                              aria-label={`Edit ${step.title}`}
-                              disabled={disabled}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEdit(i);
-                              }}
-                            >
-                              <EditIcon />
-                            </button>
-                          )}
+                          <span className="apm-node-order" aria-label={`Step ${i + 1}`}>{i + 1}</span>
                         </div>
                         <div className="apm-node-body" title={step.description}>
                           {step.description}
                         </div>
                       </div>
-                      {i < currentSteps.length - 1 && <span className="apm-connector" />}
+                      {i < currentSteps.length - 1 && <span className="apm-connector" aria-hidden="true" />}
                     </React.Fragment>
                   );
                 })}
@@ -224,11 +213,11 @@ const ApprovalProcessDiagram: React.FC<ApprovalProcessDiagramProps> = ({
 
             <div className="apm-scrollbar">
               <button type="button" className="apm-scroll-btn" onClick={() => scrollBy(-1)} aria-label="Scroll left">
-                ◀
+                <FaChevronLeft aria-hidden="true" />
               </button>
               <div className="apm-scroll-spacer" />
               <button type="button" className="apm-scroll-btn" onClick={() => scrollBy(1)} aria-label="Scroll right">
-                ▶
+                <FaChevronRight aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -251,17 +240,13 @@ const ApprovalProcessDiagram: React.FC<ApprovalProcessDiagramProps> = ({
           <div className="apm-details-grid">
             <div>
               <span className="apm-label">Approval Order</span>
-              <span>
+              <span className="apm-value">
                 {currentSteps.indexOf(selectedStep) + 1} of {currentSteps.length}
               </span>
             </div>
-            <div>
-              <span className="apm-label">Role</span>
-              <span>{selectedStep.role || "—"}</span>
-            </div>
             <div className="apm-details-full">
-              <span className="apm-label">User ID</span>
-              <span>{selectedStep.description}</span>
+              <span className="apm-label">Email</span>
+              <span className="apm-value">{selectedStep.description}</span>
             </div>
           </div>
         </section>
