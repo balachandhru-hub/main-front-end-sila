@@ -18,9 +18,17 @@ import {
   type SubmitQuotationPayload,
   type RfqDocumentAssetDto,
   type SupplierQuotationByIdItem,
+  type PersonDetailDto,
   fetchBuyerAsset,
 } from "../api/supplierApi";
-import { Button, EmptyState, Loader, PageHeader, StatusBadge, isErrorResponse } from "@vosox/shared-ui";
+import { Button, EmptyState, Loader, PageHeader, StatusBadge, isErrorResponse, Dropdown } from "@vosox/shared-ui";
+
+const TYPE_OPTIONS = [
+  { name: "Percentage", value: "PERCENTAGE" },
+  { name: "Amount", value: "AMOUNT" },
+];
+
+const getTypeOption = (type: string) => TYPE_OPTIONS.find((option) => option.value === type) ?? null;
 
 const IconClose = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -116,6 +124,8 @@ interface SupplierRfqQuotationSummaryProps {
   setSelectedRfq: React.Dispatch<React.SetStateAction<RFQDetailResponse | null>>;
   setOwnQuotation: React.Dispatch<React.SetStateAction<SupplierQuotationByIdItem | null>>;
   onRfqsRefresh: () => void;
+  /** Passed by hosts whose logged-in profile isn't in the supplier auth store (Supplier Admin). */
+  personDetail?: PersonDetailDto | null;
 }
 
 const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = ({
@@ -130,6 +140,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
   setSelectedRfq,
   setOwnQuotation,
   onRfqsRefresh,
+  personDetail,
 }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -882,11 +893,22 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
       ? "The buyer has frozen this RFQ's bid. You can no longer submit a quotation."
       : "This RFQ's submission window has closed. You can no longer submit a quotation.";
 
-  const renderTypeOptions = () => (
-    <>
-      <option value="PERCENTAGE">Percentage</option>
-      <option value="AMOUNT">Amount</option>
-    </>
+  // Enter inside the dropdown's search box would otherwise submit the surrounding form.
+  const renderTypeDropdown = (value: string, onChange: (next: string) => void, className: string) => (
+    <div
+      className={className}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.preventDefault();
+      }}
+    >
+      <Dropdown
+        options={TYPE_OPTIONS}
+        value={getTypeOption(value)}
+        onChange={(next) => {
+          if (next) onChange(next.value);
+        }}
+      />
+    </div>
   );
 
   const renderDocumentGroup = (
@@ -1241,15 +1263,8 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                               </div>
 
                               <div className="sila-field">
-                                <label className="sila-label" htmlFor="sqs-lot-delivery-type">Delivery Type</label>
-                                <select
-                                  id="sqs-lot-delivery-type"
-                                  className="sila-select pud-rfq-form-input"
-                                  value={quoteDeliveryType}
-                                  onChange={(e) => handleOtherFieldChange("deliveryType", e.target.value)}
-                                >
-                                  {renderTypeOptions()}
-                                </select>
+                                <span className="sila-label">Delivery Type</span>
+                                {renderTypeDropdown(quoteDeliveryType, (v) => handleOtherFieldChange("deliveryType", v), "sqs-field-dropdown")}
                               </div>
 
                               <div className="sila-field">
@@ -1267,15 +1282,8 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                               </div>
 
                               <div className="sila-field">
-                                <label className="sila-label" htmlFor="sqs-lot-discount-type">Discount Type</label>
-                                <select
-                                  id="sqs-lot-discount-type"
-                                  className="sila-select pud-rfq-form-input"
-                                  value={quoteDiscountType}
-                                  onChange={(e) => handleOtherFieldChange("discountType", e.target.value)}
-                                >
-                                  {renderTypeOptions()}
-                                </select>
+                                <span className="sila-label">Discount Type</span>
+                                {renderTypeDropdown(quoteDiscountType, (v) => handleOtherFieldChange("discountType", v), "sqs-field-dropdown")}
                               </div>
 
                               <div className="sila-field">
@@ -1293,15 +1301,8 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                               </div>
 
                               <div className="sila-field">
-                                <label className="sila-label" htmlFor="sqs-lot-tax-type">Tax Type</label>
-                                <select
-                                  id="sqs-lot-tax-type"
-                                  className="sila-select pud-rfq-form-input"
-                                  value={quoteTaxType}
-                                  onChange={(e) => handleOtherFieldChange("taxType", e.target.value)}
-                                >
-                                  {renderTypeOptions()}
-                                </select>
+                                <span className="sila-label">Tax Type</span>
+                                {renderTypeDropdown(quoteTaxType, (v) => handleOtherFieldChange("taxType", v), "sqs-field-dropdown")}
                               </div>
                             </div>
 
@@ -1395,14 +1396,11 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                                         />
                                       </td>
                                       <td>
-                                        <select
-                                          className="sila-select sqs-cell-select"
-                                          value={line.deliveryType}
-                                          onChange={(e) => handleLineItemFieldChange(itemKey, "deliveryType", e.target.value)}
-                                          aria-label={`Delivery type for ${itemLabel}`}
-                                        >
-                                          {renderTypeOptions()}
-                                        </select>
+                                        {renderTypeDropdown(
+                                          line.deliveryType,
+                                          (next) => handleLineItemFieldChange(itemKey, "deliveryType", next),
+                                          "sqs-cell-dropdown"
+                                        )}
                                       </td>
                                       <td>
                                         <input
@@ -1417,14 +1415,11 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                                         />
                                       </td>
                                       <td>
-                                        <select
-                                          className="sila-select sqs-cell-select"
-                                          value={line.discountType}
-                                          onChange={(e) => handleLineItemFieldChange(itemKey, "discountType", e.target.value)}
-                                          aria-label={`Discount type for ${itemLabel}`}
-                                        >
-                                          {renderTypeOptions()}
-                                        </select>
+                                        {renderTypeDropdown(
+                                          line.discountType,
+                                          (next) => handleLineItemFieldChange(itemKey, "discountType", next),
+                                          "sqs-cell-dropdown"
+                                        )}
                                       </td>
                                       <td>
                                         <input
@@ -1439,14 +1434,11 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                                         />
                                       </td>
                                       <td>
-                                        <select
-                                          className="sila-select sqs-cell-select"
-                                          value={line.taxType}
-                                          onChange={(e) => handleLineItemFieldChange(itemKey, "taxType", e.target.value)}
-                                          aria-label={`Tax type for ${itemLabel}`}
-                                        >
-                                          {renderTypeOptions()}
-                                        </select>
+                                        {renderTypeDropdown(
+                                          line.taxType,
+                                          (next) => handleLineItemFieldChange(itemKey, "taxType", next),
+                                          "sqs-cell-dropdown"
+                                        )}
                                       </td>
                                       <td>
                                         <input
@@ -1879,6 +1871,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
           supplierId={supplierId}
           buyerId={selectedRfq?.buyerId}
           buyerName={selectedRfq?.buyerName}
+          personDetail={personDetail}
         />
       )}
     </>

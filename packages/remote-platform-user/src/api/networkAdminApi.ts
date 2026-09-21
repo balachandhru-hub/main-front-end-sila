@@ -76,7 +76,7 @@ export interface CreateSupplierBankAccountDto {
   currency: string;
   isPrimary: boolean;
 }
- 
+
 export interface CreateSupplierDeliveryLocationDto {
   locationName: string;
   addressLine1: string;
@@ -92,7 +92,7 @@ export interface CreateSupplierDeliveryLocationDto {
 }
 
 export interface UpdateSupplierBankAccountDto {
-  supplierId: string; 
+  supplierId: string;
   accountHolderName: string;
   bankName: string;
   branchName: string;
@@ -104,7 +104,7 @@ export interface UpdateSupplierBankAccountDto {
   isPrimary: boolean;
   isVerified: boolean;
 }
- 
+
 export interface SupplierQuotationItem {
   supplierQuotationItemId: string;
   supplierRFQItemId: string;
@@ -115,7 +115,7 @@ export interface SupplierQuotationItem {
   priceDifference: number;
   priceChanged: boolean;
 }
- 
+
 export interface SupplierQuotationComparisonResponse {
   supplierQuotationId: string;
   oldVersion: string;
@@ -239,7 +239,7 @@ export const getOrganizationUsersForRfq = async (organizationId: string): Promis
 export const getCountries = async (
   index: number = 0,
   limit: number = 50,
-  searchTerm: string = ''
+  searchTerm?: string
 ): Promise<CountriesResponseDto> => {
   try {
     const response = await platformInstance.get<CountriesResponseDto>(
@@ -248,7 +248,7 @@ export const getCountries = async (
         params: {
           index,
           limit,
-          searchTerm,
+          searchTerm: searchTerm || undefined,
         },
       }
     );
@@ -270,16 +270,15 @@ export const createPerson = async (data: CreatePersonRequestDto): Promise<string
     const response = await platformInstance.post<string>('/api/v1/identity/person', data);
     return response.data;
   } catch (error: any) {
+    const responseData = error.response?.data;
     const errorMsg =
-      error.response?.data?.message ||
-      error.response?.data?.description ||
-      error.message ||
+      (typeof responseData === 'string' && responseData.trim() ? responseData : null) ||
+      responseData?.message ||
+      responseData?.description ||
       'Failed to create person';
     throw new Error(errorMsg);
   }
 };
-
-
 export const deleteUser = async (personId: string): Promise<void> => {
   try {
     await platformInstance.delete('/api/v1/identity/delete-person', {
@@ -701,7 +700,7 @@ export const deleteBankAccount = async (
     };
   }
 };
- 
+
 export const createSupplierBankAccount = async (
   payload: CreateSupplierBankAccountDto
 ): Promise<BankAccountResponseDto | ErrorResponseDto> => {
@@ -720,7 +719,7 @@ export const createSupplierBankAccount = async (
         description: 'You are not authorized to perform this action. Please login again.',
       };
     }
- 
+
     if (error.response && error.response.data) {
       const errData = error.response.data;
       return {
@@ -729,7 +728,7 @@ export const createSupplierBankAccount = async (
         description: errData.description || 'No details provided',
       };
     }
- 
+
     return {
       statusCode: 500,
       message: 'Unexpected Error',
@@ -737,7 +736,7 @@ export const createSupplierBankAccount = async (
     };
   }
 };
- 
+
 export const createSupplierDeliveryLocation = async (
   payload: CreateSupplierDeliveryLocationDto
 ): Promise<DeliveryLocationResponseDto | ErrorResponseDto> => {
@@ -756,7 +755,7 @@ export const createSupplierDeliveryLocation = async (
         description: 'You are not authorized to perform this action. Please login again.',
       };
     }
- 
+
     if (error.response && error.response.data) {
       const errData = error.response.data;
       return {
@@ -765,7 +764,7 @@ export const createSupplierDeliveryLocation = async (
         description: errData.description || 'No details provided',
       };
     }
- 
+
     return {
       statusCode: 500,
       message: 'Unexpected Error',
@@ -773,7 +772,7 @@ export const createSupplierDeliveryLocation = async (
     };
   }
 };
- 
+
 export const updateSupplierBankAccount = async (
   id: string,
   payload: UpdateSupplierBankAccountDto
@@ -793,7 +792,7 @@ export const updateSupplierBankAccount = async (
         description: 'You are not authorized to perform this action. Please login again.',
       };
     }
- 
+
     if (error.response && error.response.data) {
       const errData = error.response.data;
       return {
@@ -802,7 +801,7 @@ export const updateSupplierBankAccount = async (
         description: errData.description || 'No details provided',
       };
     }
- 
+
     return {
       statusCode: 500,
       message: 'Unexpected Error',
@@ -810,7 +809,7 @@ export const updateSupplierBankAccount = async (
     };
   }
 };
- 
+
 export const updateSupplierDeliveryLocation = async (
   id: string,
   payload: UpdateSupplierDeliveryLocationDto
@@ -830,7 +829,7 @@ export const updateSupplierDeliveryLocation = async (
         description: 'You are not authorized to perform this action. Please login again.',
       };
     }
- 
+
     if (error.response && error.response.data) {
       const errData = error.response.data;
       return {
@@ -839,7 +838,7 @@ export const updateSupplierDeliveryLocation = async (
         description: errData.description || 'No details provided',
       };
     }
- 
+
     return {
       statusCode: 500,
       message: 'Unexpected Error',
@@ -847,11 +846,11 @@ export const updateSupplierDeliveryLocation = async (
     };
   }
 };
- 
+
 // ============================================
 // SUPPLIER DELETE API FUNCTIONS
 // ============================================
- 
+
 export const deleteSupplierBankAccount = async (
   id: string
 ): Promise<BankAccountResponseDto | ErrorResponseDto> => {
@@ -869,7 +868,7 @@ export const deleteSupplierBankAccount = async (
         description: 'You are not authorized to perform this action. Please login again.',
       };
     }
- 
+
     if (error.response && error.response.data) {
       const errData = error.response.data;
       return {
@@ -878,7 +877,7 @@ export const deleteSupplierBankAccount = async (
         description: errData.description || 'No details provided',
       };
     }
- 
+
     return {
       statusCode: 500,
       message: 'Unexpected Error',
@@ -886,7 +885,7 @@ export const deleteSupplierBankAccount = async (
     };
   }
 };
- 
+
 export const deleteSupplierDeliveryLocation = async (
   id: string
 ): Promise<DeliveryLocationResponseDto | ErrorResponseDto> => {
@@ -904,7 +903,7 @@ export const deleteSupplierDeliveryLocation = async (
         description: 'You are not authorized to perform this action. Please login again.',
       };
     }
- 
+
     if (error.response && error.response.data) {
       const errData = error.response.data;
       return {
@@ -913,7 +912,7 @@ export const deleteSupplierDeliveryLocation = async (
         description: errData.description || 'No details provided',
       };
     }
- 
+
     return {
       statusCode: 500,
       message: 'Unexpected Error',
@@ -921,7 +920,7 @@ export const deleteSupplierDeliveryLocation = async (
     };
   }
 };
- 
+
 export const fetchSupplierQuotationComparison = async (
   supplierQuotationId: string
 ): Promise<SupplierQuotationComparisonResponse | ErrorResponseDto> => {
@@ -939,7 +938,7 @@ export const fetchSupplierQuotationComparison = async (
         description: 'You are not authorized to perform this action. Please login again.',
       };
     }
- 
+
     if (error.response && error.response.data) {
       const errData = error.response.data;
       return {
@@ -948,7 +947,7 @@ export const fetchSupplierQuotationComparison = async (
         description: errData.description || 'No details provided',
       };
     }
- 
+
     return {
       statusCode: 500,
       message: 'Unexpected Error',

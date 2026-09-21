@@ -1,14 +1,14 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./CreateApprovalForm.css";
 import { FaTimes } from "react-icons/fa";
-import { toastService } from "@vosox/shared-ui";
+import { toastService, Dropdown } from "@vosox/shared-ui";
+import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from "@vosox/shared-ui";
 import type { OrganizationUserDto } from "../../dto/networkAdminDto";
 import {
   createMasterApprovalFlow,
   fetchApprovalTypes,
   fetchApprovalUsers,
   fetchCurrencies,
-  type ApprovalTypeOption,
   type CurrencyOption,
 } from "./approvalManagementApi";
 
@@ -27,6 +27,9 @@ interface FormState {
 }
 
 const AMOUNT_APPROVAL_TYPE = "CONTRACT_CREATE";
+
+// Page size used by the async (paginated) Currency Dropdown
+const CURRENCY_PAGE_SIZE = 40;
 
 const EMPTY_FORM: FormState = { approvalCode: "", approvalName: "", type: "", totalAmount: "", currency: "" };
 
@@ -50,28 +53,14 @@ const IconArrow = ({ up }: { up?: boolean }) => (
 
 const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId, onClose, onCreated }) => {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [types, setTypes] = useState<ApprovalTypeOption[]>([]);
-  const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
   const [users, setUsers] = useState<OrganizationUserDto[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(true);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [usersLoaded, setUsersLoaded] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
-  const [pendingUserId, setPendingUserId] = useState("");
+  const [selectedType, setSelectedType] = useState<DropdownValue | null>(null);
+  const [selectedCurrency, setSelectedCurrency] = useState<DropdownValue | null>(null);
+  const [selectedApprover, setSelectedApprover] = useState<DropdownValue | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<OrganizationUserDto[]>([]);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState | "users", string>>>({});
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    Promise.allSettled([fetchApprovalTypes(), fetchCurrencies()]).then(([typesResult, currenciesResult]) => {
-      if (typesResult.status === "fulfilled") setTypes(typesResult.value);
-      else toastService.error(typesResult.reason?.message || "Failed to load approval types");
-      if (currenciesResult.status === "fulfilled") setCurrencies(currenciesResult.value);
-      else toastService.error(currenciesResult.reason?.message || "Failed to load currencies");
-      setLoadingOptions(false);
-    });
-    loadUsers();
-  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !submitting && onClose();
@@ -79,39 +68,95 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, submitting]);
 
-  const loadUsers = async () => {
-    if (usersLoaded || loadingUsers) return;
-    if (!organizationId) {
-      setUsersError("Organization information is not available. Please log in again.");
-      return;
-    }
-    setLoadingUsers(true);
-    setUsersError(null);
+  // ---- Async loader for the Type Dropdown (reference-list API has no paging or search, so search client-side) ----
+  const loadTypeOptions = async ({ search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
     try {
-      setUsers(await fetchApprovalUsers(organizationId));
-      setUsersLoaded(true);
+      const types = await fetchApprovalTypes();
+      const term = search.trim().toLowerCase();
+      return {
+        options: types
+          .filter((t) => !term || t.key.toLowerCase().includes(term))
+          .map((t) => ({ name: t.key, value: t.key })),
+        hasMore: false,
+      };
     } catch (err: any) {
-      setUsersError(err.message || "Failed to load users.");
-    } finally {
-      setLoadingUsers(false);
+      toastService.error(err?.message || "Failed to load approval types");
+      return { options: [], hasMore: false };
     }
   };
 
-  const availableUsers = useMemo(
-    () => users.filter((u) => !selectedUsers.some((s) => s.userId === u.userId)),
-    [users, selectedUsers]
-  );
+  // ---- Async paginated loader for the Currency Dropdown (server has no search param, so search client-side) ----
+  // `index` is an offset: 0, then 0 + 40, then 0 + 40 + 40, ...
+  const loadCurrencyOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+    const toOption = (c: CurrencyOption) => ({ name: c.currencyName, value: c.currencyName });
+    const term = search.trim().toLowerCase();
+    try {
+      if (term) {
+        // Page through every currency so a match on a later page isn't missed, then filter here
+        const matches: CurrencyOption[] = [];
+        let index = 0;
+        let items: CurrencyOption[];
+        do {
+          items = await fetchCurrencies(index, CURRENCY_PAGE_SIZE);
+          matches.push(...items.filter((c) => c.currencyName.toLowerCase().includes(term)));
+          index += items.length;
+        } while (items.length === CURRENCY_PAGE_SIZE);
+        return { options: matches.map(toOption), hasMore: false };
+      }
+      const items = await fetchCurrencies(page * CURRENCY_PAGE_SIZE, CURRENCY_PAGE_SIZE);
+      return { options: items.map(toOption), hasMore: items.length === CURRENCY_PAGE_SIZE };
+    } catch (err: any) {
+      toastService.error(err?.message || "Failed to load currencies");
+      return { options: [], hasMore: false };
+    }
+  };
+
+  // ---- Async loader for the Approver Dropdown (loads on open, filters out already-selected users) ----
+  const loadApproverOptions = async ({ search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+    if (!organizationId) {
+      setUsersError("Organization information is not available. Please log in again.");
+      return { options: [], hasMore: false };
+    }
+    try {
+      const fetchedUsers = await fetchApprovalUsers(organizationId);
+      setUsers(fetchedUsers);
+      setUsersError(null);
+      const term = search.trim().toLowerCase();
+      const available = fetchedUsers.filter(
+        (u) =>
+          !selectedUsers.some((s) => s.userId === u.userId) &&
+          (!term || u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term))
+      );
+      return {
+        options: available.map((u) => ({ name: `${u.name} — ${u.email}`, value: u.userId })),
+        hasMore: false,
+      };
+    } catch (err: any) {
+      setUsersError(err?.message || "Failed to load users.");
+      return { options: [], hasMore: false };
+    }
+  };
 
   const setField = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
+  const handleTypeChange = (val: DropdownValue | null) => {
+    setSelectedType(val);
+    setField("type", val?.value || "");
+  };
+
+  const handleCurrencyChange = (val: DropdownValue | null) => {
+    setSelectedCurrency(val);
+    setField("currency", val?.value || "");
+  };
+
   const addUser = () => {
-    const user = users.find((u) => u.userId === pendingUserId);
+    const user = users.find((u) => u.userId === selectedApprover?.value);
     if (!user) return;
     setSelectedUsers((prev) => [...prev, user]);
-    setPendingUserId("");
+    setSelectedApprover(null);
     setErrors((prev) => ({ ...prev, users: undefined }));
   };
 
@@ -219,25 +264,18 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
               {errors.approvalName && <span className="apf-error">{errors.approvalName}</span>}
             </label>
 
-            <label className="apf-field">
-              <span className="apf-label">Type <em aria-hidden="true">*</em></span>
-              <select
-                className={`apf-input ${errors.type ? "apf-input-error" : ""}`}
-                aria-required="true"
-                aria-invalid={!!errors.type}
-                value={form.type}
-                onChange={(e) => setField("type", e.target.value)}
-                disabled={loadingOptions}
-              >
-                <option value="">{loadingOptions ? "Loading..." : "Select type"}</option>
-                {types.map((t) => (
-                  <option key={t.id} value={t.key} title={t.description}>
-                    {t.key}
-                  </option>
-                ))}
-              </select>
-              {errors.type && <span className="apf-error">{errors.type}</span>}
-            </label>
+            <div className="apf-field">
+              <Dropdown
+                label="Type"
+                isRequired
+                placeholder="Select type"
+                isAsync
+                loadOptions={loadTypeOptions}
+                value={selectedType}
+                onChange={handleTypeChange}
+                error={errors.type}
+              />
+            </div>
 
             {requiresAmount && (
               <div className="apf-field">
@@ -254,21 +292,14 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
                     onChange={(e) => setField("totalAmount", e.target.value)}
                     placeholder="0.00"
                   />
-                  <select
-                    className={`apf-input apf-currency ${errors.currency ? "apf-input-error" : ""}`}
-                    value={form.currency}
-                    onChange={(e) => setField("currency", e.target.value)}
-                    disabled={loadingOptions}
-                    aria-label="Currency"
-                    aria-invalid={!!errors.currency}
-                  >
-                    <option value="">{loadingOptions ? "..." : "Currency"}</option>
-                    {currencies.map((c) => (
-                      <option key={c.id} value={c.currencyName}>
-                        {c.currencyName}
-                      </option>
-                    ))}
-                  </select>
+                  <Dropdown
+                    placeholder="Currency"
+                    isAsync
+                    loadOptions={loadCurrencyOptions}
+                    value={selectedCurrency}
+                    onChange={handleCurrencyChange}
+                    className="apf-currency"
+                  />
                 </div>
                 {(errors.totalAmount || errors.currency) && (
                   <span className="apf-error">{errors.totalAmount || errors.currency}</span>
@@ -283,30 +314,20 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
           </div>
 
           <div className="apf-user-picker">
-            <select
-              className={`apf-input ${errors.users ? "apf-input-error" : ""}`}
-              aria-labelledby="apf-users-label"
-              aria-invalid={!!errors.users}
-              value={pendingUserId}
-              onFocus={loadUsers}
-              onMouseDown={loadUsers}
-              onChange={(e) => setPendingUserId(e.target.value)}
-              disabled={loadingUsers}
-            >
-              <option value="">
-                {loadingUsers ? "Loading users..." : usersLoaded && availableUsers.length === 0 ? "No more users to add" : "Select a user"}
-              </option>
-              {availableUsers.map((u) => (
-                <option key={u.userId} value={u.userId}>
-                  {u.name} — {u.email}
-                </option>
-              ))}
-            </select>
+            <Dropdown
+              placeholder="Select a user"
+              isAsync
+              loadOptions={loadApproverOptions}
+              cacheUniques={[selectedUsers.map((u) => u.userId).join(",")]}
+              value={selectedApprover}
+              onChange={setSelectedApprover}
+              error={errors.users}
+            />
             <button
               type="button"
               className="apf-add-btn sila-btn sila-btn--primary sila-btn--icon"
               onClick={addUser}
-              disabled={!pendingUserId}
+              disabled={!selectedApprover}
               title="Add user"
               aria-label="Add user"
             >

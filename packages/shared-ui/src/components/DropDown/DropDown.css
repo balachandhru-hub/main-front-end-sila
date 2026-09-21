@@ -20,17 +20,16 @@
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: 2.5rem;
+  min-height: var(--sila-control-height);
   box-sizing: border-box;
-  padding: 0 1rem;
-  border: 0.0625rem solid #b9babc;
-  border-radius: 0.5625rem;
-  background: #ffffff;
+  padding: 0 var(--sila-space-3);
+  border: 0.0625rem solid var(--sila-border-strong);
+  border-radius: var(--sila-radius);
+  background: var(--sila-surface);
+  box-shadow: var(--sila-shadow-xs);
   cursor: text;
   outline: none;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: var(--sila-transition);
 }
 /* =========================================
    Multi Select Field
@@ -135,14 +134,15 @@
   flex: 1;
   width: 100%;
   min-width: 4rem;
-  height: 2.5rem;
+  /* field height minus its top and bottom border */
+  height: calc(var(--sila-control-height) - 0.125rem);
   padding: 0;
   border: none;
   outline: none;
   background: transparent;
-  color: #111827;
+  color: var(--sila-text);
   font-family: inherit;
-  font-size: 0.9375rem;
+  font-size: var(--sila-text-md);
   font-weight: 400;
   line-height: 1.4;
 }
@@ -159,6 +159,7 @@
    Placeholder
 ========================================= */
 .sila-dropdown__input::placeholder {
+  color: var(--sila-text-subtle);
   opacity: 1;
 }
 .sila-dropdown__input:disabled {
@@ -170,19 +171,13 @@
 .sila-dropdown__label {
   display: block;
   z-index: 1;
-  padding-bottom: 0.25rem;
-  color: #374151;
-  font-size: 0.875rem;
-  font-weight: 400;
-  line-height: 1.2;
+  padding-bottom: var(--sila-space-1-5);
+  color: var(--sila-text-secondary);
+  font-size: var(--sila-text-sm);
+  font-weight: var(--sila-weight-medium);
+  line-height: var(--sila-leading-tight);
   pointer-events: none;
   transition: color 0.2s ease;
-}
-/* =========================================
-   Open Label
-========================================= */
-.sila-dropdown--open .sila-dropdown__label {
-  color: #4f46e5;
 }
 /* =========================================
    Required
@@ -212,7 +207,7 @@
 ========================================= */
 .sila-dropdown--open .sila-dropdown__arrow {
   transform: rotate(180deg);
-  color: #4f46e5;
+  color: var(--sila-primary);
 }
 /* =========================================
    Clear Button
@@ -249,16 +244,14 @@
    Hover
 ========================================= */
 .sila-dropdown__field:hover {
-  border-color: #9ca3af;
+  border-color: #b6c2d1;
 }
 /* =========================================
    Open / Focus State
 ========================================= */
 .sila-dropdown--open .sila-dropdown__field {
-  border-color: #6366f1;
-  box-shadow:
-    0 0 0 0.0625rem #6366f1,
-    0 0 0.625rem rgba(99, 102, 241, 0.18);
+  border-color: var(--sila-primary);
+  box-shadow: var(--sila-focus-ring);
 }
 /* =========================================
    Dropdown Menu
@@ -352,19 +345,14 @@
    Error
 ========================================= */
 .sila-dropdown--error .sila-dropdown__field {
-  border-color: #ef4444;
-  box-shadow:
-    0 0 0 0.0625rem rgba(239, 68, 68, 0.25),
-    0 0 0.625rem rgba(239, 68, 68, 0.16);
+  border-color: var(--sila-danger);
 }
 /* =========================================
    Error Open State
 ========================================= */
 .sila-dropdown--error.sila-dropdown--open .sila-dropdown__field {
-  border-color: #ef4444;
-  box-shadow:
-    0 0 0 0.0625rem #ef4444,
-    0 0 0.75rem rgba(239, 68, 68, 0.22);
+  border-color: var(--sila-danger);
+  box-shadow: 0 0 0 0.1875rem var(--sila-danger-ring);
 }
 .sila-dropdown--error .sila-dropdown__label {
   color: #dc2626;
@@ -430,8 +418,9 @@
    Disabled
 ========================================= */
 .sila-dropdown--disabled .sila-dropdown__field {
-  background: #f9fafb;
-  color: #9ca3af;
+  background: var(--sila-surface-subtle);
+  color: var(--sila-text-muted);
+  box-shadow: none;
   cursor: not-allowed;
 }
 .sila-dropdown--disabled .sila-dropdown__label {
