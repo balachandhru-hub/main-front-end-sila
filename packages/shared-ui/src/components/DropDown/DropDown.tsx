@@ -76,7 +76,10 @@ const Dropdown: FC<DropdownProps> = (props) => {
  
   const loadingPagesRef =
     useRef<Set<string>>(new Set());
- 
+
+  const wasOpenRef =
+    useRef(false);
+
   /*
    * Async cache.
    *
@@ -560,40 +563,62 @@ const Dropdown: FC<DropdownProps> = (props) => {
    * First checks the cache.
    * API is only called when page 0
    * is not cached.
+   *
+   * The very first load when the
+   * dropdown opens skips the debounce
+   * so options aren't shown as empty
+   * while waiting. Debounce only
+   * applies once the user is typing
+   * a search while it's open.
    */
   useEffect(() => {
     if (
       !isAsync ||
       !isOpen
     ) {
+      wasOpenRef.current = isOpen;
       return;
     }
- 
+
+    const justOpened =
+      !wasOpenRef.current;
+
+    wasOpenRef.current = isOpen;
+
     if (debounceRef.current) {
       clearTimeout(
         debounceRef.current
       );
     }
- 
-    debounceRef.current =
-      setTimeout(() => {
-        const cachedPage =
-          getCachedPage(
-            search,
-            0
-          );
- 
-        if (cachedPage) {
-          rebuildFromCache(search);
-          return;
-        }
- 
-        fetchPage(
+
+    const runSearch = () => {
+      const cachedPage =
+        getCachedPage(
           search,
           0
         );
-      }, debounceDelay);
- 
+
+      if (cachedPage) {
+        rebuildFromCache(search);
+        return;
+      }
+
+      fetchPage(
+        search,
+        0
+      );
+    };
+
+    if (justOpened) {
+      runSearch();
+    } else {
+      debounceRef.current =
+        setTimeout(
+          runSearch,
+          debounceDelay
+        );
+    }
+
     return () => {
       if (debounceRef.current) {
         clearTimeout(
