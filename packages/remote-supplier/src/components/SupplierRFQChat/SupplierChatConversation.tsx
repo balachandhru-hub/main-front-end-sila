@@ -155,7 +155,6 @@ const SupplierChatConversation: React.FC<SupplierChatConversationProps> = ({
               !!message.senderUserId &&
               message.senderUserId === myProfile.userId &&
               message.senderName === myProfile.userName;
-            console.log(message.senderName, "senderName", myProfile?.userName, "myProfile.userName", message.senderUserId, "senderUserId", myProfile?.userId, "myProfile.userId");
             const previousMessage = messages[index - 1];
             const showDateSeparator =
               !previousMessage || !isSameCalendarDay(previousMessage.dateCreated, message.dateCreated);
