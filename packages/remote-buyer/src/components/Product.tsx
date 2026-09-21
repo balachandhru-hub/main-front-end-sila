@@ -143,7 +143,7 @@ const Product: React.FC = () => {
   const loadSegmentOptions = async ({
     page,
   }: DropdownLoadParams): Promise<DropdownLoadResult> => {
-    const pageIndex = page + 1; // Dropdown pages are 0-based; the API is 1-based
+    const pageIndex = page + SEGMENT_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
     const segments = await fetchSegments(pageIndex, SEGMENT_PAGE_SIZE);
 
     if (!Array.isArray(segments)) {
@@ -171,7 +171,7 @@ const Product: React.FC = () => {
       return { options: [], hasMore: false };
     }
 
-    const pageIndex = page + 1; // Dropdown pages are 0-based; the API is 1-based
+    const pageIndex = page + FAMILY_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
     const families = await fetchFamilies(filters.segment, { pageIndex, pageSize: FAMILY_PAGE_SIZE });
 
     if (!Array.isArray(families)) {
@@ -199,7 +199,7 @@ const Product: React.FC = () => {
       return { options: [], hasMore: false };
     }
 
-    const pageIndex = page + 1; // Dropdown pages are 0-based; the API is 1-based
+    const pageIndex = page + CLASS_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
     const classes = await fetchClassifications(filters.family, { pageIndex, pageSize: CLASS_PAGE_SIZE });
 
     if (!Array.isArray(classes)) {
@@ -227,7 +227,7 @@ const Product: React.FC = () => {
       return { options: [], hasMore: false };
     }
 
-    const pageIndex = page + 1; // Dropdown pages are 0-based; the API is 1-based
+    const pageIndex = page + COMMODITY_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
     const commodities = await fetchCommodities(filters.class, { pageIndex, pageSize: COMMODITY_PAGE_SIZE });
 
     if (!Array.isArray(commodities)) {
