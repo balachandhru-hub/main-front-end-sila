@@ -18,7 +18,7 @@ import {
 import CreateRFQ from "./UserListTable/CreateRFQ";
 import { logoutPlatformUser } from "../api/platformApi";
 import { BuyerAnalytics, StatusBadge, toastService, useAsyncData, useRouteNav, type RouteNavPaths } from "@vosox/shared-ui";
-import UserTemplate from "./usertemplate"
+import UserTemplate from "./UserTemplate";
 import ApprovalManagement from "./ApprovalManagement/ApprovalManagement";
 import { ToastContainer } from "@vosox/shared-ui";
 import AdminQsAns from "../../../remote-buyer/src/components/Qsans";

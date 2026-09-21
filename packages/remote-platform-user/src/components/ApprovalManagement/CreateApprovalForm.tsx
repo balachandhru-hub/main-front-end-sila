@@ -9,7 +9,6 @@ import {
   fetchApprovalTypes,
   fetchApprovalUsers,
   fetchCurrencies,
-  type ApprovalTypeOption,
   type CurrencyOption,
 } from "./approvalManagementApi";
 
@@ -28,6 +27,9 @@ interface FormState {
 }
 
 const AMOUNT_APPROVAL_TYPE = "CONTRACT_CREATE";
+
+// Page size used by the async (paginated) Currency Dropdown
+const CURRENCY_PAGE_SIZE = 40;
 
 const EMPTY_FORM: FormState = { approvalCode: "", approvalName: "", type: "", totalAmount: "", currency: "" };
 
@@ -51,10 +53,7 @@ const IconArrow = ({ up }: { up?: boolean }) => (
 
 const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId, onClose, onCreated }) => {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [types, setTypes] = useState<ApprovalTypeOption[]>([]);
-  const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
   const [users, setUsers] = useState<OrganizationUserDto[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(true);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<DropdownValue | null>(null);
   const [selectedCurrency, setSelectedCurrency] = useState<DropdownValue | null>(null);
@@ -64,20 +63,53 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    Promise.allSettled([fetchApprovalTypes(), fetchCurrencies()]).then(([typesResult, currenciesResult]) => {
-      if (typesResult.status === "fulfilled") setTypes(typesResult.value);
-      else toastService.error(typesResult.reason?.message || "Failed to load approval types");
-      if (currenciesResult.status === "fulfilled") setCurrencies(currenciesResult.value);
-      else toastService.error(currenciesResult.reason?.message || "Failed to load currencies");
-      setLoadingOptions(false);
-    });
-  }, []);
-
-  useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !submitting && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, submitting]);
+
+  // ---- Async loader for the Type Dropdown (reference-list API has no paging or search, so search client-side) ----
+  const loadTypeOptions = async ({ search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+    try {
+      const types = await fetchApprovalTypes();
+      const term = search.trim().toLowerCase();
+      return {
+        options: types
+          .filter((t) => !term || t.key.toLowerCase().includes(term))
+          .map((t) => ({ name: t.key, value: t.key })),
+        hasMore: false,
+      };
+    } catch (err: any) {
+      toastService.error(err?.message || "Failed to load approval types");
+      return { options: [], hasMore: false };
+    }
+  };
+
+  // ---- Async paginated loader for the Currency Dropdown (server has no search param, so search client-side) ----
+  // `index` is an offset: 0, then 0 + 40, then 0 + 40 + 40, ...
+  const loadCurrencyOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+    const toOption = (c: CurrencyOption) => ({ name: c.currencyName, value: c.currencyName });
+    const term = search.trim().toLowerCase();
+    try {
+      if (term) {
+        // Page through every currency so a match on a later page isn't missed, then filter here
+        const matches: CurrencyOption[] = [];
+        let index = 0;
+        let items: CurrencyOption[];
+        do {
+          items = await fetchCurrencies(index, CURRENCY_PAGE_SIZE);
+          matches.push(...items.filter((c) => c.currencyName.toLowerCase().includes(term)));
+          index += items.length;
+        } while (items.length === CURRENCY_PAGE_SIZE);
+        return { options: matches.map(toOption), hasMore: false };
+      }
+      const items = await fetchCurrencies(page * CURRENCY_PAGE_SIZE, CURRENCY_PAGE_SIZE);
+      return { options: items.map(toOption), hasMore: items.length === CURRENCY_PAGE_SIZE };
+    } catch (err: any) {
+      toastService.error(err?.message || "Failed to load currencies");
+      return { options: [], hasMore: false };
+    }
+  };
 
   // ---- Async loader for the Approver Dropdown (loads on open, filters out already-selected users) ----
   const loadApproverOptions = async ({ search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
@@ -237,10 +269,10 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
                 label="Type"
                 isRequired
                 placeholder="Select type"
-                options={types.map((t) => ({ name: t.key, value: t.key }))}
+                isAsync
+                loadOptions={loadTypeOptions}
                 value={selectedType}
                 onChange={handleTypeChange}
-                isDisable={loadingOptions}
                 error={errors.type}
               />
             </div>
@@ -262,10 +294,10 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
                   />
                   <Dropdown
                     placeholder="Currency"
-                    options={currencies.map((c) => ({ name: c.currencyName, value: c.currencyName }))}
+                    isAsync
+                    loadOptions={loadCurrencyOptions}
                     value={selectedCurrency}
                     onChange={handleCurrencyChange}
-                    isDisable={loadingOptions}
                     className="apf-currency"
                   />
                 </div>

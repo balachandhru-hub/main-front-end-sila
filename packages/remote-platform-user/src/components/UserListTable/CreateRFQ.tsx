@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useMemo } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import "./CreateRFQ.css";
 import { Button, toastService, DateTimePicker, StatusBadge, Dropdown } from "@vosox/shared-ui";
 import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from "@vosox/shared-ui";
@@ -166,7 +166,8 @@ const registrationTemplateOptions = [
     "IT Hardware Vendor Verification",
 ];
 
-const PAGE_LIMIT = 10;
+// Page size used by every async (paginated) Dropdown
+const DROPDOWN_PAGE_SIZE = 40;
 
 /* ---------------------------------- Helpers ---------------------------------- */
 
@@ -236,8 +237,6 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
 
     const [rfqTitle, setRfqTitle] = useState("");
     const [department, setDepartment] = useState("");
-    const [departmentOptions, setDepartmentOptions] = useState<any[]>([]);
-    const [materialCodeOptions, setMaterialCodeOptions] = useState<any[]>([]);
     const [isItemMasterModalOpen, setIsItemMasterModalOpen] = useState(false);
     const [isExternalSupplierModalOpen, setIsExternalSupplierModalOpen] = useState(false);
 
@@ -247,14 +246,6 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
                 const profile = await getBuyerProfile();
                 if (profile?.id) {
                     setBuyerProfileId(profile.id);
-
-                    const res = await getAllDepartments(profile.id, 0, 10000);
-                    const data = res?.data?.data || res?.data || res || [];
-                    setDepartmentOptions(Array.isArray(data) ? data : []);
-
-                    const itemRes = await getAllItemMasters(profile.id, 0, 10000);
-                    const itemData = itemRes?.data?.data || itemRes?.data || itemRes || [];
-                    setMaterialCodeOptions(Array.isArray(itemData) ? itemData : []);
                 }
             } catch (err) {
                 console.error("Failed to fetch initial data", err);
@@ -263,46 +254,56 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
         fetchInitialData();
     }, []);
     const [costCenter, setCostCenter] = useState("");
-    const [costCenterOptions, setCostCenterOptions] = useState<any[]>([]);
     const [selectedDepartment, setSelectedDepartment] = useState<DropdownValue | null>(null);
     const [selectedCostCenter, setSelectedCostCenter] = useState<DropdownValue | null>(null);
-
-    useEffect(() => {
-        const fetchCostCenters = async () => {
-            if (!department) {
-                setCostCenterOptions([]);
-                return;
-            }
-            try {
-                const res = await getAllCostCenters(department, 0, 10000);
-                const data = res?.data?.data || res?.data || res || [];
-                setCostCenterOptions(Array.isArray(data) ? data : []);
-            } catch (err) {
-                console.error("Failed to fetch cost centers", err);
-            }
-        };
-        fetchCostCenters();
-    }, [department]);
 
     const getDeptName = (d: any, idx: number) =>
         typeof d === "string" ? d : (d.department || d.name || d.Name || `Dept ${idx}`);
     const getDeptId = (d: any, idx: number) =>
         typeof d === "string" ? d : (d.id || getDeptName(d, idx));
 
-    const departmentDropdownOptions = useMemo(
-        () => departmentOptions.map((d, idx) => ({ name: formatLabel(getDeptName(d, idx)), value: String(getDeptId(d, idx)) })),
-        [departmentOptions]
-    );
+    // ---- Async paginated loader for the Department Dropdown (`index` is an offset: 0, 40, 80, ...) ----
+    const loadDepartmentOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!buyerProfileId) {
+            return { options: [], hasMore: false };
+        }
+        try {
+            const res = await getAllDepartments(buyerProfileId, page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+            const data = res?.data?.data || res?.data || res || [];
+            const departments: any[] = Array.isArray(data) ? data : [];
+            return {
+                options: departments.map((d, idx) => ({ name: formatLabel(getDeptName(d, idx)), value: String(getDeptId(d, idx)) })),
+                hasMore: departments.length === DROPDOWN_PAGE_SIZE,
+            };
+        } catch (err) {
+            console.error("Failed to fetch departments", err);
+            return { options: [], hasMore: false };
+        }
+    };
 
     const getCcName = (c: any, idx: number) =>
         typeof c === "string" ? c : (c.costCenter || c.name || c.Name || `CC ${idx}`);
     const getCcId = (c: any, idx: number) =>
         typeof c === "string" ? c : (c.id || getCcName(c, idx));
 
-    const costCenterDropdownOptions = useMemo(
-        () => costCenterOptions.map((c, idx) => ({ name: formatLabel(getCcName(c, idx)), value: String(getCcId(c, idx)) })),
-        [costCenterOptions]
-    );
+    // ---- Async paginated loader for the Cost Center Dropdown (`index` is an offset: 0, 40, 80, ...) ----
+    const loadCostCenterOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!department) {
+            return { options: [], hasMore: false };
+        }
+        try {
+            const res = await getAllCostCenters(department, page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+            const data = res?.data?.data || res?.data || res || [];
+            const costCenters: any[] = Array.isArray(data) ? data : [];
+            return {
+                options: costCenters.map((c, idx) => ({ name: formatLabel(getCcName(c, idx)), value: String(getCcId(c, idx)) })),
+                hasMore: costCenters.length === DROPDOWN_PAGE_SIZE,
+            };
+        } catch (err) {
+            console.error("Failed to fetch cost centers", err);
+            return { options: [], hasMore: false };
+        }
+    };
 
     const handleDepartmentChange = (val: DropdownValue | null) => {
         setSelectedDepartment(val);
@@ -324,16 +325,14 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
     const familyCode = selectedFamily?.value || "";
     const familyTitle = selectedFamily?.name || "";
 
-    const SEGMENT_PAGE_SIZE = 50;
-
     // ---- Async paginated loader for the Segment Dropdown ----
     const loadSegmentOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
         try {
-            const pageIndex = page + 1; // Dropdown pages are 0-based; the API is 1-based
-            const segments = await getUnspscSegments(pageIndex, SEGMENT_PAGE_SIZE, search || undefined);
+            const pageIndex = page * DROPDOWN_PAGE_SIZE; // index of the first item on the page: 0, 40, 80, ...
+            const segments = await getUnspscSegments(pageIndex, DROPDOWN_PAGE_SIZE, search || undefined);
             return {
                 options: segments.map((seg) => ({ name: seg.title, value: String(seg.segment) })),
-                hasMore: segments.length === SEGMENT_PAGE_SIZE,
+                hasMore: segments.length === DROPDOWN_PAGE_SIZE,
             };
         } catch (err) {
             console.error("Failed to fetch UNSPSC segments", err);
@@ -341,21 +340,19 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
         }
     };
 
-    const FAMILY_PAGE_SIZE = 50;
-
     // ---- Async paginated loader for the Family Dropdown (server has no search param, so filter client-side) ----
     const loadFamilyOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
         if (!segmentCode) {
             return { options: [], hasMore: false };
         }
         try {
-            const pageIndex = page + 1; // Dropdown pages are 0-based; the API is 1-based
-            const families = await getUnspscFamilies(Number(segmentCode), pageIndex, FAMILY_PAGE_SIZE);
+            const pageIndex = page * DROPDOWN_PAGE_SIZE; // index of the first item on the page: 0, 40, 80, ...
+            const families = await getUnspscFamilies(Number(segmentCode), pageIndex, DROPDOWN_PAGE_SIZE);
             const searchTerm = search.trim().toLowerCase();
             const options = families
                 .filter((fam) => !searchTerm || fam.title.toLowerCase().includes(searchTerm))
                 .map((fam) => ({ name: fam.title, value: String(fam.family) }));
-            return { options, hasMore: families.length === FAMILY_PAGE_SIZE };
+            return { options, hasMore: families.length === DROPDOWN_PAGE_SIZE };
         } catch (err) {
             console.error("Failed to fetch UNSPSC families", err);
             return { options: [], hasMore: false };
@@ -425,30 +422,51 @@ const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: (
     const region = selectedRegion?.name || "";
     const newItemUom = selectedUom?.value || "EA";
 
-    // ---- Async paginated loader for the Currency Dropdown (server has no search param) ----
-    const loadCurrencyOptions = async ({ page }: DropdownLoadParams): Promise<DropdownLoadResult> => {
-        const res = await getCurrenciesSafe(page, PAGE_LIMIT);
+    // ---- Async paginated loader for the Currency Dropdown (server has no search param, so search client-side) ----
+    // For the masterdata APIs `index` is an offset: 0, then 0 + 40, then 0 + 40 + 40, ...
+    const loadCurrencyOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        const toOption = (c: CurrencyDto) => ({ name: c.currencyName, value: c.id });
+        const searchTerm = search.trim().toLowerCase();
+
+        if (searchTerm) {
+            // Page through every currency so a match on a later page isn't missed, then filter here
+            const matches: CurrencyDto[] = [];
+            let index = 0;
+            let totalCount = 0;
+            do {
+                const res = await getCurrenciesSafe(index, DROPDOWN_PAGE_SIZE);
+                matches.push(...res.items.filter((c) => c.currencyName.toLowerCase().includes(searchTerm)));
+                totalCount = res.totalCount;
+                if (res.items.length === 0) break;
+                index += res.items.length;
+            } while (index < totalCount);
+            return { options: matches.map(toOption), hasMore: false, total: matches.length };
+        }
+
+        const index = page * DROPDOWN_PAGE_SIZE;
+        const res = await getCurrenciesSafe(index, DROPDOWN_PAGE_SIZE);
         return {
-            options: res.items.map((c) => ({ name: c.currencyName, value: c.id })),
-            hasMore: res.items.length === PAGE_LIMIT,
+            options: res.items.map(toOption),
+            hasMore: index + res.items.length < res.totalCount,
+            total: res.totalCount,
         };
     };
 
     // ---- Async paginated loader for the Region (Country) Dropdown ----
     const loadRegionOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
-        const res = await getCountriesSafe(page, PAGE_LIMIT, search || undefined);
+        const res = await getCountriesSafe(page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
         return {
             options: res.items.map((c) => ({ name: c.countryName, value: c.id })),
-            hasMore: res.items.length === PAGE_LIMIT,
+            hasMore: res.items.length === DROPDOWN_PAGE_SIZE,
         };
     };
 
     // ---- Async paginated loader for the Unit of Measure Dropdown ----
     const loadUomOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
-        const res = await getUnitsSafe(page, PAGE_LIMIT, search || undefined);
+        const res = await getUnitsSafe(page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
         return {
             options: res.items.map((u) => ({ name: u.key, value: u.key })),
-            hasMore: res.items.length === PAGE_LIMIT,
+            hasMore: res.items.length === DROPDOWN_PAGE_SIZE,
         };
     };
     const [description, setDescription] = useState("");
@@ -501,18 +519,36 @@ if (Array.isArray(data)) {
     const [newItemPrice, setNewItemPrice] = useState("");
     const [newItemMaterialCode, setNewItemMaterialCode] = useState("");
 
+    // Descriptions of the material codes loaded so far, used to prefill the item description on select
+    const materialCodeDescriptions = useRef<Record<string, string>>({});
+
+    // ---- Async paginated loader for the Material Code Dropdown (`index` is an offset: 0, 40, 80, ...) ----
+    const loadMaterialCodeOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+        if (!buyerProfileId) {
+            return { options: [], hasMore: false };
+        }
+        try {
+            const res = await getAllItemMasters(buyerProfileId, page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE, search || undefined);
+            const data = res?.data?.data || res?.data || res || [];
+            const items: any[] = Array.isArray(data) ? data : [];
+            const options = items.map((m, idx) => {
+                const code: string = typeof m === "string" ? m : (m.materialCode || m.id || `Code ${idx}`);
+                materialCodeDescriptions.current[code] = getMaterialCodeDescription(m);
+                return { name: code, value: code };
+            });
+            return { options, hasMore: items.length === DROPDOWN_PAGE_SIZE };
+        } catch (err) {
+            console.error("Failed to fetch material codes", err);
+            return { options: [], hasMore: false };
+        }
+    };
+
     const handleMaterialCodeChange = (code: string) => {
         setNewItemMaterialCode(code);
         if (!code) return;
-        const selected = materialCodeOptions.find((m: any) => {
-            const mCode = typeof m === 'string' ? m : (m.materialCode || m.id);
-            return mCode === code;
-        });
-        if (selected) {
-            const desc = getMaterialCodeDescription(selected);
-            if (desc && !newItemDesc) {
-                setNewItemDesc(desc);
-            }
+        const desc = materialCodeDescriptions.current[code];
+        if (desc && !newItemDesc) {
+            setNewItemDesc(desc);
         }
     };
 
@@ -866,7 +902,9 @@ if (Array.isArray(data)) {
                                 label="Department"
                                 isRequired
                                 placeholder="Select Department"
-                                options={departmentDropdownOptions}
+                                isAsync
+                                loadOptions={loadDepartmentOptions}
+                                cacheUniques={[buyerProfileId]}
                                 value={selectedDepartment}
                                 onChange={handleDepartmentChange}
                                 error={errors.department}
@@ -876,7 +914,8 @@ if (Array.isArray(data)) {
                             <Dropdown
                                 label="Cost Center"
                                 placeholder={department ? "Select Cost Center" : "Select Department First"}
-                                options={costCenterDropdownOptions}
+                                isAsync
+                                loadOptions={loadCostCenterOptions}
                                 value={selectedCostCenter}
                                 onChange={handleCostCenterChange}
                                 cacheUniques={[department]}
@@ -1396,23 +1435,16 @@ if (Array.isArray(data)) {
                         </div>
                         <div className="bd-item-add-grid-bottom">
                             <div className="bd-item-add-field">
-                                <label className="bd-label-sm" htmlFor="crfq-item-material">Material Code</label>
-                                <select
-                                    id="crfq-item-material"
-                                    className="bd-select-sm"
-                                    value={newItemMaterialCode}
-                                    onChange={(e) => handleMaterialCodeChange(e.target.value)}
-                                >
-                                    <option value="">Select Material Code</option>
-                                    {materialCodeOptions.map((m: any, idx) => {
-                                        const code = typeof m === 'string' ? m : (m.materialCode || m.id || `Code ${idx}`);
-                                        return (
-                                            <option key={code} value={code}>
-                                                {code}
-                                            </option>
-                                        );
-                                    })}
-                                </select>
+                                <span className="bd-label-sm">Material Code</span>
+                                <Dropdown
+                                    placeholder="Select Material Code"
+                                    isAsync
+                                    loadOptions={loadMaterialCodeOptions}
+                                    cacheUniques={[buyerProfileId]}
+                                    value={newItemMaterialCode ? { name: newItemMaterialCode, value: newItemMaterialCode } : null}
+                                    onChange={(val) => handleMaterialCodeChange(val?.value || "")}
+                                    isClearable
+                                />
                             </div>
                             <div className="bd-item-button-section">
                                 <button className="bd-btn-add" onClick={handleAddLineItem} type="button">
