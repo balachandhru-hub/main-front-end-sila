@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import "./CreateRFQ.css";
-import { Button, toastService, DateTimePicker } from "@vosox/shared-ui";
+import { Button, toastService, DateTimePicker, StatusBadge } from "@vosox/shared-ui";
 import { getBuyerProfile, getAllDepartments, getAllCostCenters, getAllItemMasters, createRFQ, getVerifiedSuppliers, getUnspscSegments, getUnspscFamilies } from "../../../../remote-buyer/src/api/Buyerapi";
 import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../../../../remote-buyer/src/api/masterdataApi";
 import type { CreateRFQPayload, ExternalSupplierDto, RfqDocumentAssetDto, RfqItemDto, RfqQuestionDto, SupplierInviteDto, VerifiedSupplierDto, SupplierVerificationType } from "../../../../remote-buyer/src/dto/rfqDto";
@@ -36,21 +36,21 @@ interface CustomField {
 
 
 const IconTrash = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <polyline points="3 6 5 6 21 6" />
         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
     </svg>
 );
 
 const IconPlus = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <line x1="12" y1="5" x2="12" y2="19" />
         <line x1="5" y1="12" x2="19" y2="12" />
     </svg>
 );
 
 const IconList = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <line x1="8" y1="6" x2="21" y2="6" />
         <line x1="8" y1="12" x2="21" y2="12" />
         <line x1="8" y1="18" x2="21" y2="18" />
@@ -61,78 +61,97 @@ const IconList = () => (
 );
 
 const IconSourcing = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M12 2a10 10 0 1 0 10 10" />
         <path d="M12 2v10l7 4" />
     </svg>
 );
 
 
-const IconArrowRight = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="5" y1="12" x2="19" y2="12" />
-        <polyline points="12 5 19 12 12 19" />
+const IconFile = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+    </svg>
+);
+
+const IconUpload = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="17 8 12 3 7 8" />
+        <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+);
+
+const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const activateOnKey = (e: React.KeyboardEvent, action: () => void) => {
+    if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        action();
+    }
+};
+
+const IconCheckSmall = () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <polyline points="20 6 9 17 4 12" />
     </svg>
 );
 
 const IconSearch = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="8" />
         <line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>
 );
 
 const IconCheckCircle = () => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="10" />
         <polyline points="16 9 10.5 15 8 12.5" />
     </svg>
 );
 
-const IconXCircle = () => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="14.5" y1="9.5" x2="9.5" y2="14.5" />
-        <line x1="9.5" y1="9.5" x2="14.5" y2="14.5" />
-    </svg>
-);
-
 const IconMail = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="2" y="4" width="20" height="16" rx="2" />
         <path d="m22 6-10 7L2 6" />
     </svg>
 );
 
 const IconSend = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <line x1="22" y1="2" x2="11" y2="13" />
         <polygon points="22 2 15 22 11 13 2 9 22 2" />
     </svg>
 );
 
 const IconShieldCheck = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="#4f46e5" stroke="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M21.8 12l-2.4-2.8.5-3.7-3.6-.9-1.9-3.1-3.4 1.5-3.4-1.5-1.9 3.1-3.6.9.5 3.7-2.4 2.8 2.4 2.8-.5 3.7 3.6.9 1.9 3.1 3.4-1.5 3.4 1.5 1.9-3.1 3.6-.9-.5-3.7 2.4-2.8z" />
         <polyline points="9 12 11 14 15 10" stroke="#ffffff" fill="none" strokeWidth="3" />
     </svg>
 );
 
 const IconEye = () => (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
         <circle cx="12" cy="12" r="3" />
     </svg>
 );
 
 const IconCheckBig = () => (
-    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <polyline points="20 6 9 17 4 12" />
     </svg>
 );
 
 const IconChevronDown = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <polyline points="6 9 12 15 18 9" />
     </svg>
 );
@@ -183,7 +202,7 @@ const buildDocumentAsset = async (
         fileBytes,
         fileName: file.name,
         contentType: file.type || "application/octet-stream",
-        isSingletonAsset: true,
+        isSingletonAsset: false,
     };
 };
 
@@ -334,9 +353,15 @@ function SearchableSelect<T,>({
     return (
         <div className="bd-custom-select-container" ref={containerRef}>
             <div
-                className={`${small ? "bd-input-sm" : "bd-input"} bd-custom-select-trigger${disabled ? " disabled" : ""}${error ? " bd-input-error" : ""}`}
+                className={`${small ? "bd-input-sm" : "bd-input"} bd-custom-select-trigger${disabled ? " disabled" : ""}${error ? " bd-input-error" : ""}${value ? "" : " bd-custom-select-placeholder"}`}
                 onClick={() => !disabled && onToggle()}
-                style={{ cursor: disabled ? "not-allowed" : "pointer", borderColor: error ? '#ef4444' : undefined }}
+                onKeyDown={(e) => !disabled && activateOnKey(e, onToggle)}
+                role="button"
+                tabIndex={disabled ? -1 : 0}
+                aria-haspopup="listbox"
+                aria-expanded={isOpen}
+                aria-disabled={disabled || undefined}
+                aria-invalid={error || undefined}
             >
                 <span className="bd-custom-select-value">{value || placeholder}</span>
                 <IconChevronDown />
@@ -350,9 +375,9 @@ function SearchableSelect<T,>({
                                     <IconSearch />
                                 </span>
                                 <input
-                                    className="bd-input bd-search-input"
-                                    style={{ width: "100%" }}
+                                    className="bd-input bd-search-input bd-search-input-full"
                                     type="text"
+                                    aria-label={searchPlaceholder || "Search"}
                                     placeholder={searchPlaceholder || "Search..."}
                                     value={searchTerm}
                                     onChange={(e) => onSearchChange(e.target.value)}
@@ -362,12 +387,16 @@ function SearchableSelect<T,>({
                             </div>
                         </div>
                     )}
-                    <ul className="bd-custom-select-menu" onScroll={handleScroll}>
+                    <ul className="bd-custom-select-menu" role="listbox" onScroll={handleScroll}>
                         {options.map((opt) => (
                             <li
                                 key={getOptionKey(opt)}
                                 className={`bd-custom-select-option${getOptionLabel(opt) === value ? " selected" : ""}`}
+                                role="option"
+                                aria-selected={getOptionLabel(opt) === value}
+                                tabIndex={0}
                                 onClick={() => onSelect(opt)}
+                                onKeyDown={(e) => activateOnKey(e, () => onSelect(opt))}
                                 title={getOptionLabel(opt)}
                             >
                                 {getOptionLabel(opt)}
@@ -386,7 +415,7 @@ function SearchableSelect<T,>({
 
 /* ---------------------------------- Component ---------------------------------- */
 
-const CreateRFQ: React.FC = () => {
+const CreateRFQ: React.FC <{ onNavClick: (key: string) => void ; onRfqCreated: () => Promise<void>;}> = ({ onNavClick,onRfqCreated })=> {
     const [activeStep, setActiveStep] = useState<StepKey>("details");
 
     const [buyerProfileId, setBuyerProfileId] = useState<string>("");
@@ -874,11 +903,11 @@ if (Array.isArray(data)) {
 
         try {
             const technicalSpecificationDocuments: RfqDocumentAssetDto[] = await Promise.all(
-                techSpecFiles.map((file) => buildDocumentAsset(file, buyerProfileId, "TechnicalSpecification"))
+                techSpecFiles.map((file) => buildDocumentAsset(file, buyerProfileId, "TECHNICAL_SPECIFICATION"))
             );
 
             const termsConditionDocuments: RfqDocumentAssetDto[] = await Promise.all(
-                termsFiles.map((file) => buildDocumentAsset(file, buyerProfileId, "TermsAndConditions"))
+                termsFiles.map((file) => buildDocumentAsset(file, buyerProfileId, "TERMS_CONDITION"))
             );
 
             const questionTypeLegacyMap: Record<string, string> = {
@@ -934,6 +963,7 @@ if (Array.isArray(data)) {
 
             const response = await createRFQ(payload);
             setRfqNumber(response.id);
+            await onRfqCreated();
             setActiveStep("summary");
         } catch (err: any) {
             setSubmitError(err?.message || "Failed to submit RFQ. Please try again.");
@@ -942,9 +972,9 @@ if (Array.isArray(data)) {
         }
     };
 
-    const handleReset = () => {
-        setActiveStep("details");
-    };
+    // const handleReset = () => {
+    //     setActiveStep("details");
+    // };
 
     return (
         <div className="bd-rfq-card">
@@ -955,29 +985,36 @@ if (Array.isArray(data)) {
                         Draft your requirements, item catalogs, and dispatch directly to approved suppliers.
                     </div>
                 </div>
-                <div className="bd-stepper">
-                    {steps.map((step, idx) => (
-                        <React.Fragment key={step.key}>
-                            <span className={`bd-step${activeStep === step.key ? " bd-step-active" : ""}`}>
-                                {step.label}
-                            </span>
-                            {idx < steps.length - 1 && (
-                                <span className="bd-step-sep">
-                                    <IconArrowRight />
+                <ol className="bd-stepper sila-steps" aria-label="RFQ progress">
+                    {steps.map((step, idx) => {
+                        const activeIndex = steps.findIndex((s) => s.key === activeStep);
+                        const state = idx < activeIndex ? " sila-step--done" : idx === activeIndex ? " sila-step--current" : "";
+                        return (
+                            <li
+                                key={step.key}
+                                className={`bd-step sila-step${state}${activeStep === step.key ? " bd-step-active" : ""}`}
+                                aria-current={activeStep === step.key ? "step" : undefined}
+                            >
+                                <span className="sila-step-marker">
+                                    {idx < activeIndex ? <IconCheckSmall /> : idx + 1}
                                 </span>
-                            )}
-                        </React.Fragment>
-                    ))}
-                </div>
+                                {step.label.replace(/^\d+\.\s*/, "")}
+                            </li>
+                        );
+                    })}
+                </ol>
             </div>
 
             {activeStep === "details" && (
                 <>
+                    <h3 className="bd-form-section-title bd-form-section-title-first">General Information</h3>
                     <div className="bd-field">
-                        <label className="bd-label">RFQ Title*</label>
+                        <label className="bd-label" htmlFor="crfq-title">RFQ Title<span className="sila-required" aria-hidden="true">*</span></label>
                         <input
+                            id="crfq-title"
                             className={`bd-input ${errors.rfqTitle ? "bd-input-error" : ""}`}
-                            style={errors.rfqTitle ? { borderColor: "#ef4444" } : undefined}
+                            aria-required="true"
+                            aria-invalid={!!errors.rfqTitle}
                             type="text"
                             value={rfqTitle}
                             onChange={(e) => { setRfqTitle(e.target.value); setErrors((p) => { const np = { ...p }; delete np.rfqTitle; return np; }); }}
@@ -987,7 +1024,7 @@ if (Array.isArray(data)) {
 
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Department*</label>
+                            <label className="bd-label">Department<span className="sila-required" aria-hidden="true">*</span></label>
                             <SearchableSelect<any>
                                 value={departmentLabel}
                                 placeholder="Select Department"
@@ -1013,6 +1050,7 @@ if (Array.isArray(data)) {
                                 searchPlaceholder="Search department..."
                                 error={!!errors.department}
                             />
+                            {errors.department && <div className="bd-error-text">{errors.department}</div>}
                         </div>
                         <div className="bd-field">
                             <label className="bd-label">Cost Center</label>
@@ -1093,10 +1131,12 @@ if (Array.isArray(data)) {
                     </div>
 
                     <div className="bd-field">
-                        <label className="bd-label">Description*</label>
+                        <label className="bd-label" htmlFor="crfq-description">Description<span className="sila-required" aria-hidden="true">*</span></label>
                         <textarea
+                            id="crfq-description"
                             className={`bd-textarea ${errors.description ? "bd-input-error" : ""}`}
-                            style={errors.description ? { borderColor: "#ef4444" } : undefined}
+                            aria-required="true"
+                            aria-invalid={!!errors.description}
                             rows={3}
                             value={description}
                             onChange={(e) => { setDescription(e.target.value); setErrors((p) => { const np = { ...p }; delete np.description; return np; }); }}
@@ -1104,9 +1144,10 @@ if (Array.isArray(data)) {
                         {errors.description && <div className="bd-error-text">{errors.description}</div>}
                     </div>
 
+                    <h3 className="bd-form-section-title">Commercial &amp; Delivery</h3>
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Currency*</label>
+                            <label className="bd-label">Currency<span className="sila-required" aria-hidden="true">*</span></label>
                             <SearchableSelect<CurrencyDto>
                                 value={currency}
                                 placeholder="Select Currency"
@@ -1128,12 +1169,13 @@ if (Array.isArray(data)) {
                                 hideSearch
                                 error={!!errors.currency}
                             />
+                            {errors.currency && <div className="bd-error-text">{errors.currency}</div>}
                         </div>
                     </div>
 
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Region*</label>
+                            <label className="bd-label">Region<span className="sila-required" aria-hidden="true">*</span></label>
                             <SearchableSelect<CountryDto>
                                 value={region}
                                 placeholder="Select Region"
@@ -1155,12 +1197,14 @@ if (Array.isArray(data)) {
                                 searchPlaceholder="Search country..."
                                 error={!!errors.region}
                             />
+                            {errors.region && <div className="bd-error-text">{errors.region}</div>}
                         </div>
                         <div className="bd-field">
-                            <label className="bd-label">Delivery Location</label>
+                            <label className="bd-label" htmlFor="crfq-delivery-location">Delivery Location</label>
                             <input
+                                id="crfq-delivery-location"
                                 className={`bd-input ${errors.deliveryLocation ? "bd-input-error" : ""}`}
-                                style={errors.deliveryLocation ? { borderColor: "#ef4444" } : undefined}
+                                aria-invalid={!!errors.deliveryLocation}
                                 type="text"
                                 value={deliveryLocation}
                                 onChange={(e) => { setDeliveryLocation(e.target.value); setErrors((p) => { const np = { ...p }; delete np.deliveryLocation; return np; }); }}
@@ -1169,9 +1213,10 @@ if (Array.isArray(data)) {
                         </div>
                     </div>
 
+                    <h3 className="bd-form-section-title">Schedule</h3>
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Start Date &amp; Time (UTC)*</label>
+                            <label className="bd-label">Start Date &amp; Time (UTC)<span className="sila-required" aria-hidden="true">*</span></label>
                             <DateTimePicker
                                 mode="datetime"
                                 value={startDateTime}
@@ -1238,11 +1283,16 @@ if (Array.isArray(data)) {
                         </div>
                     </div>
 
+                    <h3 className="bd-form-section-title">Attachments</h3>
                     <div className="bd-row-2">
                         <div className="bd-field">
-                            <label className="bd-label">Attachments (Technical Specifications)</label>
+                            <label className="bd-label" id="crfq-techspec-label">Attachments (Technical Specifications)</label>
                             <div
-                                className="bd-dropzone"
+                                className="bd-dropzone sila-dropzone"
+                                role="button"
+                                tabIndex={0}
+                                aria-labelledby="crfq-techspec-label"
+                                onKeyDown={(e) => activateOnKey(e, () => techSpecInputRef.current?.click())}
                                 onClick={() => techSpecInputRef.current?.click()}
                                 onDragOver={(e) => e.preventDefault()}
                                 onDrop={(e) => {
@@ -1250,6 +1300,7 @@ if (Array.isArray(data)) {
                                     handleFilesChosen(e.dataTransfer.files, setTechSpecFiles);
                                 }}
                             >
+                                <IconUpload />
                                 Click to select file or drag and drop here
                             </div>
                             <input
@@ -1263,10 +1314,12 @@ if (Array.isArray(data)) {
                                 }}
                             />
                             {techSpecFiles.length > 0 && (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                                <ul className="bd-file-list sila-file-list">
                                     {techSpecFiles.map((file, idx) => (
-                                        <span key={idx} className="bd-chip">
-                                            {file.name.length > 18 ? `${file.name.slice(0, 15)}...` : file.name}
+                                        <li key={idx} className="bd-chip sila-file">
+                                            <span className="sila-file-icon"><IconFile /></span>
+                                            <span className="sila-file-name" title={file.name}>{file.name}</span>
+                                            <span className="sila-file-meta">{formatFileSize(file.size)}</span>
                                             <button
                                                 className="bd-chip-remove"
                                                 onClick={(e) => {
@@ -1274,18 +1327,24 @@ if (Array.isArray(data)) {
                                                     setTechSpecFiles((prev) => prev.filter((_, i) => i !== idx));
                                                 }}
                                                 type="button"
+                                                aria-label={`Remove ${file.name}`}
+                                                title="Remove file"
                                             >
-                                                ×
+                                                <IconTrash />
                                             </button>
-                                        </span>
+                                        </li>
                                     ))}
-                                </div>
+                                </ul>
                             )}
                         </div>
                         <div className="bd-field">
-                            <label className="bd-label">Terms &amp; Conditions</label>
+                            <label className="bd-label" id="crfq-terms-label">Terms &amp; Conditions</label>
                             <div
-                                className="bd-dropzone"
+                                className="bd-dropzone sila-dropzone"
+                                role="button"
+                                tabIndex={0}
+                                aria-labelledby="crfq-terms-label"
+                                onKeyDown={(e) => activateOnKey(e, () => termsInputRef.current?.click())}
                                 onClick={() => termsInputRef.current?.click()}
                                 onDragOver={(e) => e.preventDefault()}
                                 onDrop={(e) => {
@@ -1293,6 +1352,7 @@ if (Array.isArray(data)) {
                                     handleFilesChosen(e.dataTransfer.files, setTermsFiles);
                                 }}
                             >
+                                <IconUpload />
                                 Click to select file or drag and drop here
                             </div>
                             <input
@@ -1306,10 +1366,12 @@ if (Array.isArray(data)) {
                                 }}
                             />
                             {termsFiles.length > 0 && (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                                <ul className="bd-file-list sila-file-list">
                                     {termsFiles.map((file, idx) => (
-                                        <span key={idx} className="bd-chip">
-                                            {file.name.length > 18 ? `${file.name.slice(0, 15)}...` : file.name}
+                                        <li key={idx} className="bd-chip sila-file">
+                                            <span className="sila-file-icon"><IconFile /></span>
+                                            <span className="sila-file-name" title={file.name}>{file.name}</span>
+                                            <span className="sila-file-meta">{formatFileSize(file.size)}</span>
                                             <button
                                                 className="bd-chip-remove"
                                                 onClick={(e) => {
@@ -1317,19 +1379,22 @@ if (Array.isArray(data)) {
                                                     setTermsFiles((prev) => prev.filter((_, i) => i !== idx));
                                                 }}
                                                 type="button"
+                                                aria-label={`Remove ${file.name}`}
+                                                title="Remove file"
                                             >
-                                                ×
+                                                <IconTrash />
                                             </button>
-                                        </span>
+                                        </li>
                                     ))}
-                                </div>
+                                </ul>
                             )}
                         </div>
                     </div>
 
+                    <h3 className="bd-form-section-title">Evaluation</h3>
                     <div className="bd-toggle-row">
                         <div>
-                            <div className="bd-toggle-row-title">Lot Option</div>
+                            <div className="bd-toggle-row-title" id="crfq-lot-label">Lot Option</div>
                             <div className="bd-toggle-row-desc">
                                 Disable item-level price evaluation. When enabled, evaluation is based on Total Budget.
                             </div>
@@ -1337,6 +1402,7 @@ if (Array.isArray(data)) {
                         <label className="bd-switch">
                             <input
                                 type="checkbox"
+                                aria-labelledby="crfq-lot-label"
                                 checked={lotOption}
                                 onChange={(e) => setLotOption(e.target.checked)}
                             />
@@ -1345,9 +1411,10 @@ if (Array.isArray(data)) {
                     </div>
 
                     <div className="bd-field">
-                        <label className="bd-label">Total Budget</label>
+                        <label className="bd-label" htmlFor="crfq-total-budget">Total Budget</label>
                         <input
-                            className="bd-input"
+                            id="crfq-total-budget"
+                            className="bd-input bd-input-number"
                             type="text"
                             value={totalBudget}
                             onChange={(e) => setTotalBudget(e.target.value)}
@@ -1366,8 +1433,9 @@ if (Array.isArray(data)) {
                             <div className="bd-dsr-builder-title">Create Custom Field Definition</div>
                             <div className="bd-dsr-builder-row">
                                 <div className="bd-item-add-field">
-                                    <label className="bd-label-sm">QUESTION/LABEL</label>
+                                    <label className="bd-label-sm" htmlFor="crfq-field-label">Question / Label</label>
                                     <input
+                                        id="crfq-field-label"
                                         className="bd-input-sm"
                                         type="text"
                                         placeholder="eg. Is the delivery charge separate?..."
@@ -1376,8 +1444,9 @@ if (Array.isArray(data)) {
                                     />
                                 </div>
                                 <div className="bd-item-add-field">
-                                    <label className="bd-label-sm">INPUT FIELD TYPE</label>
+                                    <label className="bd-label-sm" htmlFor="crfq-field-type">Input Field Type</label>
                                     <select
+                                        id="crfq-field-type"
                                         className="bd-select-sm"
                                         value={newFieldType}
                                         onChange={(e) => {
@@ -1394,7 +1463,7 @@ if (Array.isArray(data)) {
                                     </select>
                                 </div>
                                 <div className="bd-item-add-field">
-                                    <label className="bd-label-sm">OPTIONS</label>
+                                    <label className="bd-label-sm">Options</label>
 
                                     {newFieldType === "INPUT" && (
                                         <input
@@ -1415,11 +1484,11 @@ if (Array.isArray(data)) {
                                     )}
 
                                     {newFieldType === "RADIO_BUTTON" && (
-                                        <div style={{ display: "flex", gap: 16, alignItems: "center", padding: "6px 0" }}>
-                                            <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "default", fontSize: 13, color: "#374151" }}>
+                                        <div className="bd-radio-preview">
+                                            <label className="bd-radio-preview-option">
                                                 <input type="radio" disabled name="radio-preview" /> Yes
                                             </label>
-                                            <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "default", fontSize: 13, color: "#374151" }}>
+                                            <label className="bd-radio-preview-option">
                                                 <input type="radio" disabled name="radio-preview" /> No
                                             </label>
                                         </div>
@@ -1427,10 +1496,11 @@ if (Array.isArray(data)) {
 
                                     {newFieldType === "CHECK_BOX" && (
                                         <div>
-                                            <div style={{ display: "flex", gap: 8 }}>
+                                            <div className="bd-option-input-row">
                                                 <input
                                                     className="bd-input-sm"
                                                     type="text"
+                                                    aria-label="New checkbox option"
                                                     placeholder="Type option..."
                                                     value={checkboxOptionInput}
                                                     onChange={(e) => setCheckboxOptionInput(e.target.value)}
@@ -1442,25 +1512,25 @@ if (Array.isArray(data)) {
                                                     }}
                                                 />
                                                 <button
-                                                    className="bd-btn-add"
-                                                    style={{ padding: "6px 10px", minWidth: "auto" }}
+                                                    className="bd-btn-add bd-btn-add-icon"
                                                     onClick={handleAddCheckboxOption}
                                                     type="button"
                                                     title="Add option"
+                                                    aria-label="Add option"
                                                 >
                                                     <IconPlus />
                                                 </button>
                                             </div>
                                             {checkboxOptions.length > 0 && (
-                                                <div className="bd-dsr-field-options" style={{ marginTop: 8 }}>
+                                                <div className="bd-dsr-field-options bd-dsr-field-options-spaced">
                                                     {checkboxOptions.map((opt, idx) => (
                                                         <span className="bd-dsr-option-pill" key={idx}>
                                                             {opt}
                                                             <button
-                                                                className="bd-chip-remove"
+                                                                className="bd-chip-remove bd-chip-remove-inline"
                                                                 onClick={() => handleRemoveCheckboxOption(idx)}
                                                                 type="button"
-                                                                style={{ marginLeft: 4 }}
+                                                                aria-label={`Remove option ${opt}`}
                                                             >
                                                                 ×
                                                             </button>
@@ -1486,6 +1556,7 @@ if (Array.isArray(data)) {
                                                 onClick={() => handleRemoveCustomField(field.id)}
                                                 type="button"
                                                 title="Remove field"
+                                                aria-label={`Remove field ${field.label}`}
                                             >
                                                 ×
                                             </button>
@@ -1495,22 +1566,11 @@ if (Array.isArray(data)) {
                                                 <div className="bd-dsr-field-options">
                                                     {field.type === "RADIO_BUTTON" ? (
                                                         field.options.map((opt, idx) => (
-                                                            <label
-                                                                key={idx}
-                                                                style={{
-                                                                    display: "inline-flex",
-                                                                    alignItems: "center",
-                                                                    gap: 6,
-                                                                    marginRight: 12,
-                                                                    fontSize: 12,
-                                                                    color: "#4b5563",
-                                                                }}
-                                                            >
+                                                            <label key={idx} className="bd-dsr-radio-preview">
                                                                 <input
                                                                     type="radio"
                                                                     disabled
                                                                     name={`preview-${field.id}`}
-                                                                    style={{ margin: 0 }}
                                                                 />{" "}
                                                                 {opt}
                                                             </label>
@@ -1532,6 +1592,7 @@ if (Array.isArray(data)) {
                     </div>
 
                     <hr className="bd-section-divider" />
+                    <h3 className="bd-form-section-title bd-form-section-title-flush">Line Items</h3>
                     <div className="bd-section-label">Add materials or services required</div>
 
                     <div className="bd-item-add-row">
@@ -1547,20 +1608,21 @@ if (Array.isArray(data)) {
                                 />
                             </div> */}
                             <div className="bd-item-add-field">
-                                <label className="bd-label-sm">DESCRIPTION*</label>
+                                <label className="bd-label-sm" htmlFor="crfq-item-desc">Description<span className="sila-required" aria-hidden="true">*</span></label>
                                 <input
-                                    className="bd-input-sm"
+                                    id="crfq-item-desc"
+                                    className="bd-input-sm bd-input-readonly"
                                     type="text"
                                     placeholder="Select a material code to auto-fill"
                                     value={newItemDesc}
                                     readOnly
-                                    style={{ background: "#f8fafc", color: "#6b7280", cursor: "default" }}
                                 />
                             </div>
                             <div className="bd-item-add-field">
-                                <label className="bd-label-sm">QUANTITY</label>
+                                <label className="bd-label-sm" htmlFor="crfq-item-qty">Quantity</label>
                                 <input
-                                    className="bd-input-sm"
+                                    id="crfq-item-qty"
+                                    className="bd-input-sm bd-input-number"
                                     type="number"
                                     min={1}
                                     value={newItemQty}
@@ -1568,7 +1630,7 @@ if (Array.isArray(data)) {
                                 />
                             </div>
                             <div className="bd-item-add-field">
-                                <label className="bd-label-sm">UOM</label>
+                                <label className="bd-label-sm">UoM</label>
                                 <SearchableSelect<UnitDto>
                                     value={newItemUom}
                                     placeholder="Select UOM"
@@ -1594,8 +1656,9 @@ if (Array.isArray(data)) {
                         </div>
                         <div className="bd-item-add-grid-bottom">
                             <div className="bd-item-add-field">
-                                <label className="bd-label-sm">MATERIAL CODE</label>
+                                <label className="bd-label-sm" htmlFor="crfq-item-material">Material Code</label>
                                 <select
+                                    id="crfq-item-material"
                                     className="bd-select-sm"
                                     value={newItemMaterialCode}
                                     onChange={(e) => handleMaterialCodeChange(e.target.value)}
@@ -1617,7 +1680,7 @@ if (Array.isArray(data)) {
                                 </button>
                                 <button
                                     type="button"
-                                    className="bd-btn-add"
+                                    className="bd-btn-add bd-btn-add-secondary"
                                     onClick={() => setIsItemMasterModalOpen(true)}
                                 >
                                     + Add Item Master
@@ -1627,34 +1690,36 @@ if (Array.isArray(data)) {
                     </div>
 
                     <div className="bd-line-items-label">
-                        <IconList /> LINE ITEMS
+                        <IconList /> Line Items
+                        <span className="bd-line-items-count">{lineItems.length}</span>
                     </div>
-                    <div className="bd-table-responsive" style={errors.lineItems ? { border: "1px solid #ef4444", padding: 8, borderRadius: 6 } : undefined}>
+                    <div className={`bd-table-responsive${errors.lineItems ? " bd-table-responsive-error" : ""}`}>
                         <table className="bd-table">
                             <thead>
                                 <tr>
                                     {/* <th>Item Name</th> */}
                                     <th>Description</th>
                                     <th>Material Code</th>
-                                    <th>Quantity</th>
-                                    <th>UOM</th>
-                                    <th>Action</th>
+                                    <th className="bd-num">Quantity</th>
+                                    <th>UoM</th>
+                                    <th className="bd-cell-actions">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {lineItems.map((li) => (
                                     <tr key={li.id}>
                                         {/* <td>{li.itemName}</td> */}
-                                        <td>{li.description}</td>
-                                        <td>{li.materialCode}</td>
-                                        <td>{li.quantity}</td>
+                                        <td className="bd-cell-strong">{li.description}</td>
+                                        <td><span className="sila-ref">{li.materialCode}</span></td>
+                                        <td className="bd-num">{li.quantity}</td>
                                         <td>{li.uom}</td>
-                                        <td>
+                                        <td className="bd-cell-actions">
                                             <button
                                                 className="bd-icon-btn"
                                                 onClick={() => handleRemoveLineItem(li.id)}
                                                 type="button"
                                                 title="Remove item"
+                                                aria-label={`Remove ${li.description || "line item"}`}
                                             >
                                                 <IconTrash />
                                             </button>
@@ -1671,7 +1736,7 @@ if (Array.isArray(data)) {
                             </tbody>
                         </table>
                     </div>
-                    {errors.lineItems && <div className="bd-error-text" style={{ marginTop: 8, color: '#ef4444' }}>{errors.lineItems}</div>}
+                    {errors.lineItems && <div className="bd-error-text bd-error-text-spaced" role="alert">{errors.lineItems}</div>}
 
                     <div className="bd-form-footer">
                         <button className="bd-btn-next" onClick={handleNext} type="button">
@@ -1693,6 +1758,7 @@ if (Array.isArray(data)) {
                         <div className="bd-suppliers-filters">
                             <select
                                 className="bd-select bd-category-filter"
+                                aria-label="Filter suppliers by verification"
                                 value={supplierTypeFilter}
                                 onChange={(e) => setSupplierTypeFilter(e.target.value as "ALL" | SupplierVerificationType)}
                             >
@@ -1707,6 +1773,7 @@ if (Array.isArray(data)) {
                                 <input
                                     className="bd-input bd-search-input"
                                     type="text"
+                                    aria-label="Search suppliers"
                                     placeholder="Search supplier by name or id..."
                                     value={supplierSearchQuery}
                                     onChange={(e) => setSupplierSearchQuery(e.target.value)}
@@ -1722,7 +1789,7 @@ if (Array.isArray(data)) {
                     </div>
 
                     {suppliersError && (
-                        <div className="bd-status-unverified" style={{ marginBottom: 12 }}>
+                        <div className="bd-status-unverified bd-inline-alert" role="alert">
                             {suppliersError}
                         </div>
                     )}
@@ -1731,7 +1798,7 @@ if (Array.isArray(data)) {
                         <table className="bd-table bd-suppliers-table">
                             <thead>
                                 <tr>
-                                    <th className="bd-checkbox-cell">Select</th>
+                                    <th className="bd-checkbox-cell"><span className="sila-visually-hidden">Select</span></th>
                                     <th>Supplier Name</th>
                                     <th>SN ID</th>
                                     <th>Email</th>
@@ -1746,6 +1813,7 @@ if (Array.isArray(data)) {
                                         <td className="bd-checkbox-cell">
                                             <input
                                                 type="checkbox"
+                                                aria-label={`Select ${s.supplierName}`}
                                                 checked={selectedSupplierIds.includes(s.supplierId)}
                                                 onChange={() => toggleSupplier(s.supplierId)}
                                             />
@@ -1754,20 +1822,16 @@ if (Array.isArray(data)) {
                                             <div className="bd-supplier-name">{s.supplierName}</div>
                                         </td>
                                         <td>
-                                            <div className="bd-supplier-sn-id">{s.snid}</div>
+                                            <div className="bd-supplier-sn-id sila-ref">{s.snid}</div>
                                         </td>
                                         <td>
                                             <span className="bd-supplier-email">{s.email}</span>
                                         </td>
                                         <td>
                                             {s.isVerified ? (
-                                                <span className="bd-status-verified">
-                                                    <IconCheckCircle /> Verified
-                                                </span>
+                                                <StatusBadge status="Verified" className="bd-status-badge" />
                                             ) : (
-                                                <span className="bd-status-unverified">
-                                                    <IconXCircle /> Not Verified
-                                                </span>
+                                                <StatusBadge status="Not Verified" label="Not Verified" tone="warning" className="bd-status-badge" />
                                             )}
                                         </td>
                                         <td>
@@ -1784,6 +1848,9 @@ if (Array.isArray(data)) {
                                         <td>
                                             <Button
                                                 type="button"
+                                                variant="secondary"
+                                                size="sm"
+                                                className="bd-users-btn"
                                                 disabled={!selectedSupplierIds.includes(s.supplierId)}
                                                 title={
                                                     selectedSupplierIds.includes(s.supplierId)
@@ -1791,17 +1858,6 @@ if (Array.isArray(data)) {
                                                         : "Select this supplier first"
                                                 }
                                                 onClick={() => setActiveSupplierForUsers(s)}
-                                                style={{
-                                                    width: "140px",
-                                                    whiteSpace: "nowrap",
-                                                    ...(!selectedSupplierIds.includes(s.supplierId) && {
-                                                        background: "#e2e8f0",
-                                                        color: "#94a3b8",
-                                                        border: "1px solid #e2e8f0",
-                                                        boxShadow: "none",
-                                                        cursor: "not-allowed",
-                                                    }),
-                                                }}
                                             >
                                                 {(supplierSelectedUserIds[s.supplierId]?.length ?? 0) > 0
                                                     ? `${supplierSelectedUserIds[s.supplierId].length} Selected`
@@ -1812,15 +1868,15 @@ if (Array.isArray(data)) {
                                 ))}
                                 {!suppliersLoading && suppliers.length === 0 && (
                                     <tr>
-                                        <td colSpan={6} className="bd-table-empty">
+                                        <td colSpan={7} className="bd-table-empty">
                                             {suppliersError ? "Could not load suppliers." : "No suppliers match your search."}
                                         </td>
                                     </tr>
                                 )}
                                 {suppliersLoading && (
                                     <tr>
-                                        <td colSpan={6} className="bd-table-empty">
-                                            Loading suppliers...
+                                        <td colSpan={7} className="bd-table-empty">
+                                            <span className="sila-spinner" aria-hidden="true" /> Loading suppliers...
                                         </td>
                                     </tr>
                                 )}
@@ -1829,7 +1885,7 @@ if (Array.isArray(data)) {
                     </div>
 
                     {externalSuppliers.length > 0 && (
-                        <div className="bd-table-card" style={{ marginTop: 16 }}>
+                        <div className="bd-table-card bd-table-card-spaced">
                             <table className="bd-table bd-suppliers-table">
                                 <thead>
                                     <tr>
@@ -1837,7 +1893,7 @@ if (Array.isArray(data)) {
                                         <th>Email</th>
                                         <th>Contact Number</th>
                                         <th>Address</th>
-                                        <th></th>
+                                        <th className="bd-cell-actions"><span className="sila-visually-hidden">Actions</span></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1855,10 +1911,10 @@ if (Array.isArray(data)) {
                                             <td>
                                                 <div className="bd-supplier-sn-id">{s.address}</div>
                                             </td>
-                                            <td>
+                                            <td className="bd-cell-actions">
                                                 <button
                                                     type="button"
-                                                    className="bd-btn-back"
+                                                    className="bd-btn-back bd-btn-remove-row"
                                                     onClick={() => handleRemoveExternalSupplier(idx)}
                                                 >
                                                     Remove
@@ -1871,7 +1927,7 @@ if (Array.isArray(data)) {
                         </div>
                     )}
 
-                    {hasUnverifiedSelected && (
+                    {(externalSuppliers.length > 0 || hasUnverifiedSelected) && (
                         <div className="bd-onboarding-box">
                             <div className="bd-onboarding-header">
                                 <IconShieldCheck /> Supplier Onboarding Required
@@ -1881,9 +1937,10 @@ if (Array.isArray(data)) {
                             </p>
                             <div className="bd-onboarding-grid">
                                 <div className="bd-onboarding-left">
-                                    <label className="bd-label">Registration Template*</label>
+                                    <label className="bd-label" htmlFor="crfq-reg-template">Registration Template<span className="sila-required" aria-hidden="true">*</span></label>
                                     <div className="bd-template-row">
                                         <select
+                                            id="crfq-reg-template"
                                             className="bd-select"
                                             value={registrationTemplate}
                                             onChange={(e) => setRegistrationTemplate(e.target.value)}
@@ -1923,7 +1980,7 @@ if (Array.isArray(data)) {
                     )}
 
                     {submitError && (
-                        <div className="bd-status-unverified" style={{ marginBottom: 16 }}>
+                        <div className="bd-status-unverified bd-inline-alert" role="alert">
                             {submitError}
                         </div>
                     )}
@@ -1946,7 +2003,7 @@ if (Array.isArray(data)) {
 
             {activeStep === "summary" && (
                 <div className="bd-success-wrap">
-                    <div className="bd-success-icon-circle">
+                    <div className="bd-success-icon-circle" aria-hidden="true">
                         <IconCheckBig />
                     </div>
                     <div className="bd-success-title">RFQ Submitted Successfully!</div>
@@ -1970,13 +2027,9 @@ if (Array.isArray(data)) {
                                         <td>{s.email}</td>
                                         <td>
                                             {s.isVerified ? (
-                                                <span className="bd-delivery-pill bd-delivery-pill-green">
-                                                    <span className="bd-dot" /> RFQ Sent
-                                                </span>
+                                                <StatusBadge status="Sent" label="RFQ Sent" tone="success" dot className="bd-delivery-pill" />
                                             ) : (
-                                                <span className="bd-delivery-pill bd-delivery-pill-orange">
-                                                    <span className="bd-dot" /> Invitation Sent
-                                                </span>
+                                                <StatusBadge status="Sent" label="Invitation Sent" tone="warning" dot className="bd-delivery-pill" />
                                             )}
                                         </td>
                                     </tr>
@@ -1986,9 +2039,7 @@ if (Array.isArray(data)) {
                                         <td>{s.supplierName}</td>
                                         <td>{s.email}</td>
                                         <td>
-                                            <span className="bd-delivery-pill bd-delivery-pill-orange">
-                                                <span className="bd-dot" /> Invitation Sent
-                                            </span>
+                                            <StatusBadge status="Sent" label="Invitation Sent" tone="warning" dot className="bd-delivery-pill" />
                                         </td>
                                     </tr>
                                 ))}
@@ -2002,15 +2053,23 @@ if (Array.isArray(data)) {
                             </tbody>
                         </table>
                     </div>
+<div className="bd-success-footer">
+    <button
+        className="bd-btn-dark"
+        onClick={() => onNavClick("activeRFQs")}
+        type="button"
+    >
+        View RFQs List
+    </button>
 
-                    <div className="bd-success-footer">
-                        <button className="bd-btn-dark" onClick={handleReset} type="button">
-                            View RFQs List
-                        </button>
-                        <button className="bd-btn-back" onClick={handleReset} type="button">
-                            Back to Dashboard
-                        </button>
-                    </div>
+    <button
+        className="bd-btn-back"
+        onClick={() => onNavClick("dashboard")}
+        type="button"
+    >
+        Back to Dashboard
+    </button>
+</div>
                 </div>
             )}
 

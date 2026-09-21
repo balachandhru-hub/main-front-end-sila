@@ -12,39 +12,40 @@ import {
   fetchBuyerAsset,
   fetchBuyerCatalogDetail} from "../api/Buyerapi";
 import type { BuyerCatalogResponse as BuyerCatalogResponseType } from "../api/Buyerapi";
-import { isErrorResponse } from "@vosox/shared-ui";
+import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from "@vosox/shared-ui";
+import { EmptyState, Loader, isErrorResponse, Dropdown } from "@vosox/shared-ui";
 
 /* ============================== Icons ============================== */
 
 const IconSearch = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8" />
     <path d="m21 21-4.35-4.35" />
   </svg>
 );
 
 const IconFilter = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
   </svg>
 );
 
 const IconFileGeneric = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
     <path d="M14 2v6h6" />
   </svg>
 );
 
 const IconLoader = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pud-loader">
+  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pud-loader">
     <circle cx="12" cy="12" r="10" />
     <path d="M12 6v6l4 2" />
   </svg>
 );
 
 const IconExternalLink = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
     <polyline points="15 3 21 3 21 9" />
     <line x1="10" y1="14" x2="21" y2="3" />
@@ -52,13 +53,13 @@ const IconExternalLink = () => (
 );
 
 const IconChevronLeft = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="15 18 9 12 15 6" />
   </svg>
 );
 
 const IconChevronRight = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="9 18 15 12 9 6" />
   </svg>
 );
@@ -96,10 +97,6 @@ const Product: React.FC = () => {
   const [commodityOptions, setCommodityOptions] = useState<Array<{ commodity: number; commodityTitle: string }>>([]);
 
   // ---- Loading States ----
-  const [loadingSegments, setLoadingSegments] = useState(false);
-  const [loadingFamilies, setLoadingFamilies] = useState(false);
-  const [loadingClasses, setLoadingClasses] = useState(false);
-  const [loadingCommodities, setLoadingCommodities] = useState(false);
   const [loadingResults, setLoadingResults] = useState(false);
 
   // ---- Results State ----
@@ -129,7 +126,6 @@ const Product: React.FC = () => {
   const [punchOutIframeBlocked, setPunchOutIframeBlocked] = useState(false);
 
   useEffect(() => {
-    loadSegments();
     fetchProducts({
       segment: "",
       family: "",
@@ -141,17 +137,113 @@ const Product: React.FC = () => {
     });
   }, []);
 
-  const loadSegments = async () => {
-    setLoadingSegments(true);
-    try {
-      const segments = await fetchSegments();
-      if (Array.isArray(segments)) {
-        setSegmentOptions(segments);
-      }
-    } catch (err) {
-    } finally {
-      setLoadingSegments(false);
+  const SEGMENT_PAGE_SIZE = 40;
+
+  // ---- Async paginated loader for the Segment Dropdown ----
+  const loadSegmentOptions = async ({
+    page,
+    search,
+  }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+    const pageIndex = page + SEGMENT_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
+    const segments = await fetchSegments(pageIndex, SEGMENT_PAGE_SIZE, search || undefined);
+
+    if (!Array.isArray(segments)) {
+      return { options: [], hasMore: false };
     }
+
+    setSegmentOptions((prev) => (page === 0 ? segments : [...prev, ...segments]));
+
+    return {
+      options: segments.map((seg) => ({
+        name: `${seg.segment} - ${seg.title}`,
+        value: String(seg.segment),
+      })),
+      hasMore: segments.length === SEGMENT_PAGE_SIZE,
+    };
+  };
+
+  const FAMILY_PAGE_SIZE = 40;
+
+  // ---- Async paginated loader for the Family Dropdown ----
+  const loadFamilyOptions = async ({
+    page,
+  }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+    if (!filters.segment) {
+      return { options: [], hasMore: false };
+    }
+
+    const pageIndex = page + FAMILY_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
+    const families = await fetchFamilies(filters.segment, { pageIndex, pageSize: FAMILY_PAGE_SIZE });
+
+    if (!Array.isArray(families)) {
+      return { options: [], hasMore: false };
+    }
+
+    setFamilyOptions((prev) => (page === 0 ? families : [...prev, ...families]));
+
+    return {
+      options: families.map((fam) => ({
+        name: `${fam.family} - ${fam.title}`,
+        value: String(fam.family),
+      })),
+      hasMore: families.length === FAMILY_PAGE_SIZE,
+    };
+  };
+
+  const CLASS_PAGE_SIZE = 40;
+
+  // ---- Async paginated loader for the Class Dropdown ----
+  const loadClassOptions = async ({
+    page,
+  }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+    if (!filters.family) {
+      return { options: [], hasMore: false };
+    }
+
+    const pageIndex = page + CLASS_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
+    const classes = await fetchClassifications(filters.family, { pageIndex, pageSize: CLASS_PAGE_SIZE });
+
+    if (!Array.isArray(classes)) {
+      return { options: [], hasMore: false };
+    }
+
+    setClassOptions((prev) => (page === 0 ? classes : [...prev, ...classes]));
+
+    return {
+      options: classes.map((cls) => ({
+        name: `${cls.class} - ${cls.classTitle}`,
+        value: String(cls.class),
+      })),
+      hasMore: classes.length === CLASS_PAGE_SIZE,
+    };
+  };
+
+  const COMMODITY_PAGE_SIZE = 40;
+
+  // ---- Async paginated loader for the Commodity Dropdown ----
+  const loadCommodityOptions = async ({
+    page,
+  }: DropdownLoadParams): Promise<DropdownLoadResult> => {
+    if (!filters.class) {
+      return { options: [], hasMore: false };
+    }
+
+    const pageIndex = page + COMMODITY_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
+    const commodities = await fetchCommodities(filters.class, { pageIndex, pageSize: COMMODITY_PAGE_SIZE });
+
+    if (!Array.isArray(commodities)) {
+      return { options: [], hasMore: false };
+    }
+
+    setCommodityOptions((prev) => (page === 0 ? commodities : [...prev, ...commodities]));
+
+    return {
+      options: commodities.map((com) => ({
+        name: `${com.commodity} - ${com.commodityTitle}`,
+        value: String(com.commodity),
+      })),
+      hasMore: commodities.length === COMMODITY_PAGE_SIZE,
+    };
   };
 
   // ---- Handle Segment Selection ----
@@ -169,19 +261,6 @@ const Product: React.FC = () => {
     setFamilyOptions([]);
     setClassOptions([]);
     setCommodityOptions([]);
-
-    if (segmentNum) {
-      setLoadingFamilies(true);
-      try {
-        const families = await fetchFamilies(segmentNum);
-        if (Array.isArray(families)) {
-          setFamilyOptions(families);
-        }
-      } catch (err) {
-      } finally {
-        setLoadingFamilies(false);
-      }
-    }
   };
 
   // ---- Handle Family Selection ----
@@ -197,19 +276,6 @@ const Product: React.FC = () => {
 
     setClassOptions([]);
     setCommodityOptions([]);
-
-    if (familyNum) {
-      setLoadingClasses(true);
-      try {
-        const classes = await fetchClassifications(familyNum);
-        if (Array.isArray(classes)) {
-          setClassOptions(classes);
-        }
-      } catch (err) {
-      } finally {
-        setLoadingClasses(false);
-      }
-    }
   };
 
   // ---- Handle Class Selection ----
@@ -223,19 +289,6 @@ const Product: React.FC = () => {
     }));
 
     setCommodityOptions([]);
-
-    if (classNum) {
-      setLoadingCommodities(true);
-      try {
-        const commodities = await fetchCommodities(classNum);
-        if (Array.isArray(commodities)) {
-          setCommodityOptions(commodities);
-        }
-      } catch (err) {
-      } finally {
-        setLoadingCommodities(false);
-      }
-    }
   };
 
   // ---- Handle Commodity Selection ----
@@ -414,10 +467,10 @@ const Product: React.FC = () => {
 
           <div className="pud-punchout-fullpage-viewer">
             {punchOutIframeBlocked ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', color: '#64748b' }}>
-                <div style={{ fontSize: '14px', textAlign: 'center', maxWidth: '400px' }}>
-                  <p style={{ fontWeight: '600' }}>Website Cannot Be Embedded</p>
-                  <p style={{ fontSize: '12px' }}>
+              <div className="pud-product-embed-blocked">
+                <div className="pud-product-embed-blocked-text">
+                  <p className="pud-product-embed-blocked-title">Website Cannot Be Embedded</p>
+                  <p className="pud-product-embed-blocked-desc">
                     This website has restricted embedding for security reasons.
                   </p>
                 </div>
@@ -426,7 +479,6 @@ const Product: React.FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="pud-btn pud-btn-message"
-                  style={{ background: "#2563eb", color: "#ffffff", textDecoration: "none" }}
                 >
                   <IconExternalLink /> Open in New Tab
                 </a>
@@ -434,7 +486,7 @@ const Product: React.FC = () => {
             ) : (
               <iframe
                 src={punchOutPreviewUrl}
-                style={{ width: "100%", height: "100%", border: "none" }}
+                className="pud-product-embed-frame"
                 title="PunchOut Catalog"
                 onError={() => setPunchOutIframeBlocked(true)}
                 sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-pointer-lock"
@@ -457,35 +509,14 @@ const Product: React.FC = () => {
           </div>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "32px",
-            alignItems: "flex-start",
-            padding: "2rem 0.5rem 1rem",
-          }}
-        >
-          <div style={{ flex: "1 1 360px", maxWidth: "480px", minWidth: "280px" }}>
-            <div
-              style={{
-                position: "relative",
-                width: "100%",
-                aspectRatio: "1 / 1",
-                background: "#f8fafc",
-                border: "1px solid #e2e8f0",
-                borderRadius: "12px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                overflow: "hidden",
-              }}
-            >
+        <div className="pud-product-detail">
+          <div className="pud-product-detail-gallery">
+            <div className="pud-product-detail-media">
               {loadingProductDetail || loadingSelectedImages ? (
-                <div className="pud-spinner" />
+                <Loader size={28} />
               ) : productDetailError ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
-                  <div style={{ fontSize: '15px', marginBottom: '16px' }}>{productDetailError}</div>
+                <div className="pud-product-detail-error" role="alert">
+                  <div className="pud-product-detail-error-text">{productDetailError}</div>
                   <button
                     type="button"
                     className="pud-btn pud-btn-outline"
@@ -498,55 +529,29 @@ const Product: React.FC = () => {
                 <img
                   src={selectedProductImages[selectedImageIndex]}
                   alt={selectedProduct.catalogName}
-                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                  className="pud-product-detail-image"
                 />
               ) : (
-                <div style={{ color: "#94a3b8" }}><IconFileGeneric /></div>
+                <div className="pud-product-detail-placeholder"><IconFileGeneric /></div>
               )}
 
               {selectedProductImages.length > 1 && (
                 <>
                   <button
                     type="button"
+                    className="pud-product-detail-nav pud-product-detail-nav-prev"
                     onClick={goToPrevProductImage}
                     title="Previous image"
-                    style={{
-                      position: "absolute",
-                      left: "10px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      width: "36px",
-                      height: "36px",
-                      borderRadius: "50%",
-                      border: "1px solid #e2e8f0",
-                      background: "rgba(255,255,255,0.9)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                    }}
+                    aria-label="Previous image"
                   >
                     <IconChevronLeft />
                   </button>
                   <button
                     type="button"
+                    className="pud-product-detail-nav pud-product-detail-nav-next"
                     onClick={goToNextProductImage}
                     title="Next image"
-                    style={{
-                      position: "absolute",
-                      right: "10px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      width: "36px",
-                      height: "36px",
-                      borderRadius: "50%",
-                      border: "1px solid #e2e8f0",
-                      background: "rgba(255,255,255,0.9)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                    }}
+                    aria-label="Next image"
                   >
                     <IconChevronRight />
                   </button>
@@ -555,40 +560,35 @@ const Product: React.FC = () => {
             </div>
 
             {selectedProductImages.length > 1 && (
-              <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
+              <div className="pud-product-detail-thumbs">
                 {selectedProductImages.map((src, idx) => (
-                  <div
+                  <button
+                    type="button"
                     key={idx}
+                    className={`pud-product-detail-thumb${idx === selectedImageIndex ? " pud-product-detail-thumb-active" : ""}`}
                     onClick={() => setSelectedImageIndex(idx)}
-                    style={{
-                      width: "56px",
-                      height: "56px",
-                      borderRadius: "8px",
-                      overflow: "hidden",
-                      cursor: "pointer",
-                      border: idx === selectedImageIndex ? "2px solid #2563eb" : "1px solid #e2e8f0",
-                      opacity: idx === selectedImageIndex ? 1 : 0.75,
-                    }}
+                    aria-label={`Show image ${idx + 1}`}
+                    aria-pressed={idx === selectedImageIndex}
                   >
-                    <img src={src} alt={`thumb-${idx}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  </div>
+                    <img src={src} alt={`thumb-${idx}`} />
+                  </button>
                 ))}
               </div>
             )}
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", flex: "1 1 320px" }}>
+          <div className="pud-product-detail-info">
             <h1 className="pud-title">{selectedProduct.catalogName}</h1>
             <p className="pud-product-item-supplier">by {selectedProduct.supplierName}</p>
 
             {selectedProduct.catalogType && (
-              <span className="pud-catalog-card-tag" style={{ display: "inline-block", width: "fit-content" }}>
+              <span className="pud-catalog-card-tag pud-product-detail-tag">
                 {selectedProduct.catalogType}
               </span>
             )}
 
             {selectedProduct.description && (
-              <p style={{ color: "#475569", fontSize: "0.9rem", lineHeight: 1.6 }}>{selectedProduct.description}</p>
+              <p className="pud-product-detail-desc">{selectedProduct.description}</p>
             )}
 
             <div className="pud-catalog-card-meta">
@@ -602,7 +602,7 @@ const Product: React.FC = () => {
               )}
             </div>
 
-            {/* ✅ FIXED: Show classification even if titles are null */}
+            {/* Show classification even if titles are null */}
             {(selectedProduct.segment || selectedProduct.family || selectedProduct.class || selectedProduct.commodity) && (
               <div className="pud-catalog-card-classification">
                 <div className="pud-catalog-form-section-title">Classification</div>
@@ -679,101 +679,101 @@ const Product: React.FC = () => {
           <div className="pud-product-filter-grid">
             {/* Segment */}
             <div className="pud-product-filter-field">
-              <label className="pud-product-filter-label">Segment</label>
-              <select
-                className="pud-product-filter-select"
-                value={filters.segment}
-                onChange={(e) => handleSegmentChange(e.target.value)}
-              >
-                <option value="">
-                  {loadingSegments ? "Loading..." : "Select Segment"}
-                </option>
-                {segmentOptions.map((seg) => (
-                  <option key={seg.segment} value={seg.segment}>
-                    {seg.segment} - {seg.title}
-                  </option>
-                ))}
-              </select>
+              <Dropdown
+                label="Segment"
+                placeholder="Select Segment"
+                isAsync
+                loadOptions={loadSegmentOptions}
+                value={
+                  filters.segment
+                    ? {
+                        name: `${filters.segment} - ${
+                          segmentOptions.find((seg) => seg.segment === filters.segment)?.title ?? ""
+                        }`,
+                        value: String(filters.segment),
+                      }
+                    : null
+                }
+                onChange={(val: DropdownValue | null) => handleSegmentChange(val?.value ?? "")}
+              />
             </div>
 
             {/* Family */}
             <div className="pud-product-filter-field">
-              <label className="pud-product-filter-label">Family</label>
-              <select
-                className="pud-product-filter-select"
-                value={filters.family}
-                onChange={(e) => handleFamilyChange(e.target.value)}
-                disabled={!filters.segment}
-              >
-                <option value="">
-                  {!filters.segment
-                    ? "Select Segment first"
-                    : loadingFamilies
-                      ? "Loading..."
-                      : "Select Family"}
-                </option>
-                {familyOptions.map((fam) => (
-                  <option key={fam.family} value={fam.family}>
-                    {fam.family} - {fam.title}
-                  </option>
-                ))}
-              </select>
+              <Dropdown
+                label="Family"
+                placeholder={!filters.segment ? "Select Segment first" : "Select Family"}
+                isDisable={!filters.segment}
+                isAsync
+                loadOptions={loadFamilyOptions}
+                cacheUniques={[filters.segment]}
+                value={
+                  filters.family
+                    ? {
+                        name: `${filters.family} - ${
+                          familyOptions.find((fam) => fam.family === filters.family)?.title ?? ""
+                        }`,
+                        value: String(filters.family),
+                      }
+                    : null
+                }
+                onChange={(val: DropdownValue | null) => handleFamilyChange(val?.value ?? "")}
+              />
             </div>
 
             {/* Class */}
             <div className="pud-product-filter-field">
-              <label className="pud-product-filter-label">Class</label>
-              <select
-                className="pud-product-filter-select"
-                value={filters.class}
-                onChange={(e) => handleClassChange(e.target.value)}
-                disabled={!filters.family}
-              >
-                <option value="">
-                  {!filters.family
-                    ? "Select Family first"
-                    : loadingClasses
-                      ? "Loading..."
-                      : "Select Class"}
-                </option>
-                {classOptions.map((cls) => (
-                  <option key={cls.class} value={cls.class}>
-                    {cls.class} - {cls.classTitle}
-                  </option>
-                ))}
-              </select>
+              <Dropdown
+                label="Class"
+                placeholder={!filters.family ? "Select Family first" : "Select Class"}
+                isDisable={!filters.family}
+                isAsync
+                loadOptions={loadClassOptions}
+                cacheUniques={[filters.family]}
+                value={
+                  filters.class
+                    ? {
+                        name: `${filters.class} - ${
+                          classOptions.find((cls) => cls.class === filters.class)?.classTitle ?? ""
+                        }`,
+                        value: String(filters.class),
+                      }
+                    : null
+                }
+                onChange={(val: DropdownValue | null) => handleClassChange(val?.value ?? "")}
+              />
             </div>
 
             {/* Commodity */}
             <div className="pud-product-filter-field">
-              <label className="pud-product-filter-label">Commodity</label>
-              <select
-                className="pud-product-filter-select"
-                value={filters.commodity}
-                onChange={(e) => handleCommodityChange(e.target.value)}
-                disabled={!filters.class}
-              >
-                <option value="">
-                  {!filters.class
-                    ? "Select Class first"
-                    : loadingCommodities
-                      ? "Loading..."
-                      : "Select Commodity"}
-                </option>
-                {commodityOptions.map((com) => (
-                  <option key={com.commodity} value={com.commodity}>
-                    {com.commodity} - {com.commodityTitle}
-                  </option>
-                ))}
-              </select>
+              <Dropdown
+                label="Commodity"
+                placeholder={!filters.class ? "Select Class first" : "Select Commodity"}
+                isDisable={!filters.class}
+                isAsync
+                loadOptions={loadCommodityOptions}
+                cacheUniques={[filters.class]}
+                value={
+                  filters.commodity
+                    ? {
+                        name: `${filters.commodity} - ${
+                          commodityOptions.find((com) => com.commodity === filters.commodity)?.commodityTitle ?? ""
+                        }`,
+                        value: String(filters.commodity),
+                      }
+                    : null
+                }
+                onChange={(val: DropdownValue | null) => handleCommodityChange(val?.value ?? "")}
+              />
             </div>
           </div>
 
           {/* Search Input */}
           <div className="pud-product-search-field">
-            <label className="pud-product-filter-label">Search Products</label>
+            <label className="pud-product-filter-label" htmlFor="pud-product-search">Search Products</label>
             <div className="pud-product-search-input-wrapper">
               <input
+                id="pud-product-search"
                 type="text"
                 className="pud-product-search-input"
                 placeholder="Search by product name, description..."
@@ -784,9 +784,11 @@ const Product: React.FC = () => {
                 }}
               />
               <button
+                type="button"
                 className="pud-product-search-button"
                 onClick={handleSearchSubmit}
                 disabled={loadingResults}
+                aria-label="Search products"
               >
                 {loadingResults ? <IconLoader /> : <IconSearch />}
               </button>
@@ -798,21 +800,22 @@ const Product: React.FC = () => {
       {/* ---- Results Section ---- */}
       <div className="pud-product-results">
         {error && (
-          <div className="pud-product-error">
+          <div className="pud-product-error" role="alert">
             <p>{error}</p>
           </div>
         )}
 
         {loadingResults ? (
           <div className="pud-product-loading">
-            <IconLoader /> Loading products...
+            <Loader size={28} message="Loading products..." />
           </div>
         ) : hasSearched && catalogResults.length === 0 ? (
-          <div className="pud-product-empty">
-            <div className="pud-product-empty-icon"><IconFileGeneric /></div>
-            <p className="pud-product-empty-text">No products found</p>
-            <p className="pud-product-empty-subtext">Try adjusting your filters or search terms</p>
-          </div>
+          <EmptyState
+            className="pud-product-empty"
+            icon={<IconFileGeneric />}
+            title="No products found"
+            description="Try adjusting your filters or search terms"
+          />
         ) : hasSearched && catalogResults.length > 0 ? (
           <>
             <div className="pud-product-results-header">
@@ -830,8 +833,14 @@ const Product: React.FC = () => {
                     className="pud-catalog-card"
                     key={item.catalogId}
                     onClick={() => openProductDetail(item.catalogId)}
-                    style={{ cursor: "pointer" }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        openProductDetail(item.catalogId);
+                      }
+                    }}
                     role="button"
+                    tabIndex={0}
                     title={`View ${item.catalogName}`}
                   >
                     <div className="pud-catalog-card-media">
@@ -869,7 +878,7 @@ const Product: React.FC = () => {
             </div>
 
             {catalogResults.length > PRODUCT_PAGE_SIZE && (
-              <div className="pud-catalog-pagination">
+              <nav className="pud-catalog-pagination" aria-label="Product pages">
                 <button
                   type="button"
                   className="pud-btn pud-btn-outline"
@@ -889,16 +898,17 @@ const Product: React.FC = () => {
                 >
                   Next <IconChevronRight />
                 </button>
-              </div>
+              </nav>
             )}
           </>
         ) : (
           !hasSearched && (
-            <div className="pud-product-empty">
-              <div className="pud-product-empty-icon"><IconSearch /></div>
-              <p className="pud-product-empty-text">Start searching</p>
-              <p className="pud-product-empty-subtext">Select filters or enter a search term to find products</p>
-            </div>
+            <EmptyState
+              className="pud-product-empty"
+              icon={<IconSearch />}
+              title="Start searching"
+              description="Select filters or enter a search term to find products"
+            />
           )
         )}
       </div>

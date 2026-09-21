@@ -1,4 +1,5 @@
 import axiosInstance from "./axiosInstance";
+import type { BuyerDashboardAnalytics } from '@vosox/shared-ui';
 import type {
   CreateRFQPayload,
   CreateRFQResponse,
@@ -47,7 +48,6 @@ export interface BuyerCatalogResponse {
   asset: BuyerCatalogAssetItem[];
 }
 import type { ErrorResponseDto } from "@vosox/shared-ui";
-import { isErrorResponse } from "@vosox/shared-ui";
 
 export interface BuyerProfileResponse {
   id: string;
@@ -328,6 +328,16 @@ export interface ItemMasterDto {
   description: string;
   materialCode: string;
   materialGroup: string;
+  productType?: string;
+  baseUnitOfMeasure?: string;
+  orderUnitOfMeasure?: string;
+  alternateUnitOfMeasure?: string;
+  valuationClass?: string;
+  unitOfMeasureMapping?: string;
+  subUnit?: string;
+  microUnit?: string;
+  approvalFlowId?: string;
+  comment?: string;
 }
 
 export interface CreateItemMasterRequestDto {
@@ -335,7 +345,26 @@ export interface CreateItemMasterRequestDto {
   description: string;
   materialCode: string;
   materialGroup: string;
+  productType?: string;
+  baseUnitOfMeasure?: string;
+  orderUnitOfMeasure?: string;
+  alternateUnitOfMeasure?: string;
+  valuationClass?: string;
+  unitOfMeasureMapping?: string;
+  subUnit?: string;
+  microUnit?: string;
+  approvalFlowId?: string;
+  comment?: string;
 }
+
+export interface MasterApprovalFlowDto {
+  id: string;
+  approvalCode: string;
+  approvalName: string;
+  buyerId: string;
+}
+
+export interface ItemMasterDetailDto extends ItemMasterDto {}
 
 export const getBuyerProfile = async (): Promise<BuyerProfileResponse | null> => {
   try {
@@ -423,8 +452,6 @@ export const logoutBuyer = async (): Promise<void> => {
     const responseData = error.response?.data;
     const errMsg = responseData?.message || responseData?.description || 'Failed to logout.';
     throw new Error(`${errMsg} (${status})`);
-  } finally {
-    invalidatePersonDetailCache();
   }
 };
 
@@ -463,7 +490,7 @@ export const getAllCostCenters = async (departmentId: string, index = 0, limit =
     throw new Error('Could not reach the server. Please check your connection and try again.');
   }
 };
-
+ 
 
 export const getAllItemMasters = async (buyerId: string, index = 0, limit = 10, searchTerm?: string): Promise<any> => {
   try {
@@ -479,6 +506,61 @@ export const getAllItemMasters = async (buyerId: string, index = 0, limit = 10, 
       throw new Error(data?.message || data?.description || `Failed to fetch item masters (${error.response.status}).`);
     }
     throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+
+export const getMasterApprovalFlows = async (
+  buyerId: string,
+  index: number = 0,
+  limit: number = 10
+): Promise<MasterApprovalFlowDto[]> => {
+  try {
+    const response = await axiosInstance.get<MasterApprovalFlowDto[]>(
+      '/api/v1/buyer/master-approval-flow',
+      { params: { buyerId, index, limit } }
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to fetch approval flows (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+
+export const getItemMasterById = async (
+  id: string
+): Promise<ItemMasterDetailDto | ErrorResponseDto> => {
+  try {
+    const response = await axiosInstance.get<ItemMasterDetailDto>(`/api/v1/buyer/item-master/${id}`);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to fetch item master details',
+        description: errData.description || 'No details provided',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while fetching item master details.',
+    };
   }
 };
 
@@ -724,48 +806,6 @@ export const updatePersonDetail = async (
   }
 };
 
-
-export const PERSON_DETAIL_UPDATED_EVENT = 'person-detail:updated';
-
-let personDetailCacheGeneration = 0;
-let personDetailCache: PersonDetailDto | null = null;
-let personDetailInFlight: Promise<PersonDetailDto | ErrorResponseDto> | null = null;
-
-export const getPersonDetailCached = async (): Promise<PersonDetailDto | ErrorResponseDto> => {
-  if (personDetailCache) return personDetailCache;
-  if (personDetailInFlight) return personDetailInFlight;
-
-  const generation = personDetailCacheGeneration;
-
-  personDetailInFlight = getPersonDetail().then((result) => {
-    if (generation !== personDetailCacheGeneration) {
-      return result;
-    }
-    if (!isErrorResponse(result)) {
-      personDetailCache = result;
-    }
-    personDetailInFlight = null;
-    return result;
-  });
-
-  return personDetailInFlight;
-};
-
-export const invalidatePersonDetailCache = (updated?: PersonDetailDto) => {
-  // Only reseed the cache from a response that carries the full record; a
-  // partial payload would leave consumers reading missing fields.
-  const fresh = updated && updated.personId ? updated : null;
-
-  personDetailCacheGeneration += 1;
-  personDetailCache = fresh;
-  personDetailInFlight = null;
-
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent<PersonDetailDto | null>(PERSON_DETAIL_UPDATED_EVENT, { detail: fresh })
-    );
-  }
-};
 
 export interface BuyerAssetDownloadResponse {
   assetId: string;
@@ -1245,4 +1285,30 @@ export const createItemMaster = async (
 
     throw new Error(`${errMsg} (${status})`);
   }
+};
+
+/** Aggregated sourcing figures for the buyer dashboard (GET /api/v1/buyer/dashboard-analytics). */
+export const fetchBuyerDashboardAnalytics = async (): Promise<BuyerDashboardAnalytics> => {
+  // Users only ever see a neutral message; the technical reason goes to the console.
+  const unavailable = (detail: string, cause?: unknown): Error => {
+    console.warn(`[dashboard-analytics] /api/v1/buyer/dashboard-analytics: ${detail}`, cause ?? '');
+    return new Error('Dashboard figures are temporarily unavailable.');
+  };
+
+  let response;
+  try {
+    response = await axiosInstance.get<BuyerDashboardAnalytics>('/api/v1/buyer/dashboard-analytics');
+  } catch (error: any) {
+    if (!error?.response) throw unavailable('server unreachable', error);
+    if (error.response.status === 404) {
+      throw unavailable('endpoint not found (404) - deploy the latest Buyer API', error.response.data);
+    }
+    throw unavailable(`request failed (${error.response.status})`, error.response.data);
+  }
+
+  // An older server returns a different response shape; treat it as unavailable rather than crash.
+  if (!Array.isArray(response.data?.rfqsByDepartment)) {
+    throw unavailable('unexpected response shape - deploy the latest Buyer API', response.data);
+  }
+  return response.data;
 };

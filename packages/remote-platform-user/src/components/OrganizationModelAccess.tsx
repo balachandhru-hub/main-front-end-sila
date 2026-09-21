@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FaCube, FaCheck, FaSave, FaSpinner } from 'react-icons/fa';
+import { FaCube, FaCheck, FaSave } from 'react-icons/fa';
 import { getAllModels, updateOrganizationModels } from '../api/modelApi';
 import type { ModelDto } from '../api/modelApi';
 import { isErrorResponse } from '@vosox/shared-ui';
@@ -97,32 +97,39 @@ const OrganizationModelAccess: React.FC<OrganizationModelAccessProps> = ({
 
   if (isLoading) {
     return (
-      <div className="cp-section-box">
-        <p className="cp-empty-inline">Loading models...</p>
+      <div className="cp-section-box oma-root">
+        <div className="oma-state" role="status" aria-live="polite">
+          <span className="sila-spinner" aria-hidden="true" />
+          <span className="cp-empty-inline">Loading models...</span>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="cp-section-box">
-        <div className="cp-modal-error">{error}</div>
+      <div className="cp-section-box oma-root">
+        <div className="sila-alert sila-alert--danger cp-modal-error" role="alert">{error}</div>
       </div>
     );
   }
 
   return (
-    <div className="cp-section-box">
+    <div className="cp-section-box oma-root">
       <div className="oma-stack">
-        {saveError && <div className="cp-modal-error">{saveError}</div>}
+        {saveError && (
+          <div className="sila-alert sila-alert--danger cp-modal-error" role="alert">{saveError}</div>
+        )}
         {saveSuccess && (
-          <div className="oma-success-banner">Model access updated successfully.</div>
+          <div className="sila-alert sila-alert--success oma-success-banner" role="status">
+            Model access updated successfully.
+          </div>
         )}
 
         {allModels.length === 0 ? (
-          <p className="cp-empty-inline">No models available.</p>
+          <p className="cp-empty-inline oma-empty">No models available.</p>
         ) : (
-          <div className="oma-grid">
+          <div className="oma-grid" role="group" aria-label="Model access">
             {allModels.map((model) => {
               const checked = selectedIds.has(model.id);
               return (
@@ -131,7 +138,7 @@ const OrganizationModelAccess: React.FC<OrganizationModelAccessProps> = ({
                   className={`oma-card${checked ? ' oma-card-checked' : ''}`}
                   htmlFor={`model-${model.id}`}
                 >
-                  <div className="oma-card-icon">
+                  <div className="oma-card-icon" aria-hidden="true">
                     <FaCube />
                   </div>
                   <div className="oma-card-body">
@@ -145,7 +152,7 @@ const OrganizationModelAccess: React.FC<OrganizationModelAccessProps> = ({
                     onChange={() => toggleModel(model.id)}
                   />
                   {checked && (
-                    <span className="oma-check-badge">
+                    <span className="oma-check-badge" aria-hidden="true">
                       <FaCheck />
                     </span>
                   )}
@@ -156,19 +163,23 @@ const OrganizationModelAccess: React.FC<OrganizationModelAccessProps> = ({
         )}
 
         <div className="oma-actions">
+          <span className="oma-count">
+            {selectedIds.size} of {allModels.length} selected
+          </span>
           <button
             type="button"
-            className="cp-btn cp-btn-verify"
+            className="sila-btn sila-btn--primary"
             onClick={handleSave}
             disabled={isSaving || !isDirty}
+            aria-busy={isSaving || undefined}
           >
             {isSaving ? (
               <>
-                <FaSpinner className="cp-confirmation-spinner" /> Saving...
+                <span className="sila-spinner" aria-hidden="true" /> Saving...
               </>
             ) : (
               <>
-                <FaSave /> Save Access
+                <FaSave aria-hidden="true" /> Save Access
               </>
             )}
           </button>

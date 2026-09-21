@@ -24,9 +24,18 @@ export interface ReferenceListItemDto {
   description: string;  
 }
 
-export async function fetchSegments(): Promise<any[] | ErrorResponseDto> {
+export async function fetchSegments(
+    pageIndex: number = 1,
+    pageSize: number = 40,
+    searchTerm?: string
+): Promise<any[] | ErrorResponseDto> {
     try {
-        const res = await axiosInstance.get(`/api/v1/masterdata/unspsc/segment?pageIndex=1&pageSize=10`);
+        const params: Record<string, any> = { pageIndex, pageSize };
+        if (searchTerm) params.searchTerm = searchTerm;
+        const res = await axiosInstance.get(
+            `/api/v1/masterdata/unspsc/segment`,
+            { params }
+        );
         return Array.isArray(res.data) ? res.data : [];
     } catch (error: any) {
         if (error.response?.status === 401) {
@@ -58,7 +67,7 @@ export async function fetchSegments(): Promise<any[] | ErrorResponseDto> {
 export async function fetchClasses(segment: number, family: number): Promise<any[] | ErrorResponseDto> {
     try {
         const res = await axiosInstance.get(
-            `/api/v1/masterdata/unspsc/class-commodity?segment=${segment}&family=${family}&pageIndex=1&pageSize=10`
+            `/api/v1/masterdata/unspsc/class-commodity?segment=${segment}&family=${family}&pageIndex=1&pageSize=40`
         );
         if (Array.isArray(res.data)) {
             return res.data.filter(item => item && item.class !== null && item.title !== "");

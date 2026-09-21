@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { FaCube } from 'react-icons/fa';
+import { FaArrowRight, FaCube } from 'react-icons/fa';
 import { getMyOrganizationModels } from '../api/modelApi';
 import type { ModelDto } from '../api/modelApi';
-import { isErrorResponse } from '@vosox/shared-ui';
+import { EmptyState, Loader, isErrorResponse } from '@vosox/shared-ui';
 import './Models.css';
 
 const Models: React.FC = () => {
@@ -49,30 +49,36 @@ const Models: React.FC = () => {
 
       {isLoading ? (
         <div className="models-loading-wrapper">
-          <div className="models-loading-inner">
-            <div className="pud-spinner" />
-            <span>Loading models...</span>
-          </div>
+          <Loader size={28} message="Loading models..." />
         </div>
       ) : error ? (
-        <div className="models-message models-message-error">{error}</div>
+        <EmptyState className="models-message models-message-error" variant="error" title={error} />
       ) : models.length === 0 ? (
-        <div className="models-message models-message-empty">
-          No models have been assigned to your organization yet. Contact your administrator for access.
-        </div>
+        <EmptyState
+          className="models-message models-message-empty"
+          icon={<FaCube aria-hidden="true" />}
+          title="No models have been assigned to your organization yet."
+          description="Contact your administrator for access."
+        />
       ) : (
         <div className="models-grid">
           {models.map((model) => (
             <div className="models-card" key={model.id}>
-              <div className="models-card-icon">
+              <div className="models-card-icon" aria-hidden="true">
                 <FaCube />
               </div>
               <div className="models-card-body">
                 <div className="models-card-title">{model.modelName}</div>
               </div>
               <div className="models-card-footer">
-                <button type="button" className="models-open-btn" onClick={() => handleOpen(model)}>
-                  Open →
+                <button
+                  type="button"
+                  className="models-open-btn"
+                  onClick={() => handleOpen(model)}
+                  aria-label={`Open ${model.modelName}`}
+                >
+                  Open
+                  <FaArrowRight aria-hidden="true" />
                 </button>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaTimes } from "react-icons/fa";
 import "./ExternalSupplierModal.css";
 
 export interface ExternalSupplierFormValues {
@@ -99,11 +100,14 @@ const ExternalSupplierModal: React.FC<ExternalSupplierModalProps> = ({
         >
             <div
                 className="external-supplier-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="external-supplier-modal-title"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="external-supplier-modal-header">
                     <div>
-                        <h2 className="external-supplier-modal-title">
+                        <h2 className="external-supplier-modal-title" id="external-supplier-modal-title">
                             Add External Supplier
                         </h2>
 
@@ -118,7 +122,7 @@ const ExternalSupplierModal: React.FC<ExternalSupplierModalProps> = ({
                         onClick={handleClose}
                         aria-label="Close"
                     >
-                        ×
+                        <FaTimes aria-hidden="true" />
                     </button>
                 </div>
 
@@ -130,7 +134,7 @@ const ExternalSupplierModal: React.FC<ExternalSupplierModalProps> = ({
                         {/* Supplier Name */}
                         <div className="external-supplier-field">
                             <label htmlFor="external-supplier-name">
-                                External Supplier Name <span>*</span>
+                                External Supplier Name <span aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -139,6 +143,9 @@ const ExternalSupplierModal: React.FC<ExternalSupplierModalProps> = ({
                                 placeholder="Enter supplier name"
                                 value={supplierName}
                                 className={errors.supplierName ? "external-supplier-input-error" : ""}
+                                aria-required="true"
+                                aria-invalid={!!errors.supplierName}
+                                aria-describedby={errors.supplierName ? "external-supplier-name-error" : undefined}
                                 onChange={(e) => {
                                     setSupplierName(e.target.value);
                                     clearError("supplierName");
@@ -146,14 +153,14 @@ const ExternalSupplierModal: React.FC<ExternalSupplierModalProps> = ({
                             />
 
                             {errors.supplierName && (
-                                <div className="external-supplier-error">{errors.supplierName}</div>
+                                <div className="external-supplier-error" id="external-supplier-name-error">{errors.supplierName}</div>
                             )}
                         </div>
 
                         {/* Email */}
                         <div className="external-supplier-field">
                             <label htmlFor="external-supplier-email">
-                                Email <span>*</span>
+                                Email <span aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -162,6 +169,9 @@ const ExternalSupplierModal: React.FC<ExternalSupplierModalProps> = ({
                                 placeholder="Enter email address"
                                 value={email}
                                 className={errors.email ? "external-supplier-input-error" : ""}
+                                aria-required="true"
+                                aria-invalid={!!errors.email}
+                                aria-describedby={errors.email ? "external-supplier-email-error" : undefined}
                                 onChange={(e) => {
                                     setEmail(e.target.value);
                                     clearError("email");
@@ -169,14 +179,14 @@ const ExternalSupplierModal: React.FC<ExternalSupplierModalProps> = ({
                             />
 
                             {errors.email && (
-                                <div className="external-supplier-error">{errors.email}</div>
+                                <div className="external-supplier-error" id="external-supplier-email-error">{errors.email}</div>
                             )}
                         </div>
 
                         {/* Contact Number */}
                         <div className="external-supplier-field">
                             <label htmlFor="external-supplier-phone">
-                                Contact Number <span>*</span>
+                                Contact Number <span aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -185,6 +195,9 @@ const ExternalSupplierModal: React.FC<ExternalSupplierModalProps> = ({
                                 placeholder="Enter contact number"
                                 value={phoneNumber}
                                 className={errors.phoneNumber ? "external-supplier-input-error" : ""}
+                                aria-required="true"
+                                aria-invalid={!!errors.phoneNumber}
+                                aria-describedby={errors.phoneNumber ? "external-supplier-phone-error" : undefined}
                                 onChange={(e) => {
                                     setPhoneNumber(e.target.value);
                                     clearError("phoneNumber");
@@ -192,14 +205,14 @@ const ExternalSupplierModal: React.FC<ExternalSupplierModalProps> = ({
                             />
 
                             {errors.phoneNumber && (
-                                <div className="external-supplier-error">{errors.phoneNumber}</div>
+                                <div className="external-supplier-error" id="external-supplier-phone-error">{errors.phoneNumber}</div>
                             )}
                         </div>
 
                         {/* Address */}
-                        <div className="external-supplier-field">
+                        <div className="external-supplier-field external-supplier-field-full">
                             <label htmlFor="external-supplier-address">
-                                Address <span>*</span>
+                                Address <span aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -208,6 +221,9 @@ const ExternalSupplierModal: React.FC<ExternalSupplierModalProps> = ({
                                 placeholder="Enter address"
                                 value={address}
                                 className={errors.address ? "external-supplier-input-error" : ""}
+                                aria-required="true"
+                                aria-invalid={!!errors.address}
+                                aria-describedby={errors.address ? "external-supplier-address-error" : undefined}
                                 onChange={(e) => {
                                     setAddress(e.target.value);
                                     clearError("address");
@@ -215,7 +231,7 @@ const ExternalSupplierModal: React.FC<ExternalSupplierModalProps> = ({
                             />
 
                             {errors.address && (
-                                <div className="external-supplier-error">{errors.address}</div>
+                                <div className="external-supplier-error" id="external-supplier-address-error">{errors.address}</div>
                             )}
                         </div>
                     </div>
@@ -224,7 +240,7 @@ const ExternalSupplierModal: React.FC<ExternalSupplierModalProps> = ({
                     <div className="external-supplier-modal-footer">
                         <button
                             type="button"
-                            className="external-supplier-cancel-btn"
+                            className="external-supplier-cancel-btn sila-btn sila-btn--secondary"
                             onClick={handleClose}
                         >
                             Cancel
@@ -232,7 +248,7 @@ const ExternalSupplierModal: React.FC<ExternalSupplierModalProps> = ({
 
                         <button
                             type="submit"
-                            className="external-supplier-add-btn"
+                            className="external-supplier-add-btn sila-btn sila-btn--primary"
                         >
                             Add Supplier
                         </button>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaTimes } from 'react-icons/fa';
 import { getAllBuyers } from '../api/platformApi';
+import { EmptyState } from '@vosox/shared-ui';
 import UserTemplate from './usertemplate';
 import './PlatformUserTemplates.css';
 
@@ -68,20 +69,20 @@ export const PlatformUserTemplates: React.FC = () => {
 
             <button
               type="button"
-              className="put-close-btn"
+              className="put-close-btn sila-btn sila-btn--secondary sila-btn--icon"
               onClick={handleClose}
               title="Close"
               aria-label="Close"
             >
-              <FaTimes />
+              <FaTimes aria-hidden="true" />
             </button>
           </div>
 
           <div className="put-template-area">
             {loadingBuyers ? (
-              <div className="put-loading-container">
+              <div className="put-loading-container" role="status" aria-live="polite">
                 <div className="put-loading-content">
-                  <div className="put-loading-spinner" />
+                  <span className="put-loading-spinner sila-spinner sila-spinner--lg" aria-hidden="true" />
 
                   <span className="put-loading-text">
                     Loading templates...
@@ -90,13 +91,7 @@ export const PlatformUserTemplates: React.FC = () => {
               </div>
             ) : buyersError ? (
               <div className="put-error-container">
-                <h3 className="put-error-title">
-                  Error
-                </h3>
-
-                <p className="put-error-message">
-                  {buyersError}
-                </p>
+                <EmptyState variant="error" title="Error" description={buyersError} />
               </div>
             ) : selectedBuyerId ? (
               <div className="put-template-container">
@@ -104,9 +99,7 @@ export const PlatformUserTemplates: React.FC = () => {
               </div>
             ) : (
               <div className="put-empty-container">
-                <p className="put-empty-message">
-                  No organization data available.
-                </p>
+                <EmptyState title="No organization data available." />
               </div>
             )}
           </div>

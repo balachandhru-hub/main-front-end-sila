@@ -13,7 +13,8 @@ import {
 } from "../../../remote-supplier/src/api/supplierApi";
 import type { CatalogAssetDto, CatalogDetailDto } from "../../../remote-supplier/src/dto/supplierDto";
 import { fetchMetadataReferenceList } from "../../../remote-supplier/src/api/supplierApi"
-import { isErrorResponse } from "@vosox/shared-ui";
+import { EmptyState, Loader, isErrorResponse } from "@vosox/shared-ui";
+import { FaArrowLeft, FaPlus } from "react-icons/fa";
 
 /* ============================== Types ============================== */
 
@@ -94,20 +95,20 @@ const fileToBase64 = (file: File): Promise<string> => {
 /* ============================== Icons ============================== */
 
 const NavIconCatalog = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" />
         <circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none" />
     </svg>
 );
 
 const IconChevronRight = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <polyline points="9 18 15 12 9 6" />
     </svg>
 );
 
 const IconPlusCircle = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="10" />
         <line x1="12" y1="8" x2="12" y2="16" />
         <line x1="8" y1="12" x2="16" y2="12" />
@@ -115,7 +116,7 @@ const IconPlusCircle = () => (
 );
 
 const IconUploadCloud = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M16 16.5v.01" />
         <path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.78A6 6 0 1 0 6 18h11.5z" />
         <path d="M12 12v7" />
@@ -124,7 +125,7 @@ const IconUploadCloud = () => (
 );
 
 const IconUploadCloudLarge = () => (
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.78A6 6 0 1 0 6 18h11.5z" />
         <path d="M12 12v7" />
         <path d="m9.5 14.5 2.5-2.5 2.5 2.5" />
@@ -132,7 +133,7 @@ const IconUploadCloudLarge = () => (
 );
 
 const IconGrid = () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="3" y="3" width="7" height="7" rx="1.5" />
         <rect x="14" y="3" width="7" height="7" rx="1.5" />
         <rect x="3" y="14" width="7" height="7" rx="1.5" />
@@ -141,7 +142,7 @@ const IconGrid = () => (
 );
 
 const IconGridLarge = () => (
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="3" y="3" width="7" height="7" rx="1.5" />
         <rect x="14" y="3" width="7" height="7" rx="1.5" />
         <rect x="3" y="14" width="7" height="7" rx="1.5" />
@@ -150,27 +151,27 @@ const IconGridLarge = () => (
 );
 
 const IconClose = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <line x1="18" y1="6" x2="6" y2="18" />
         <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
 );
 
 const IconCheckCircle = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M20 6 9 17l-5-5" />
     </svg>
 );
 
 const IconTrash = () => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <polyline points="3 6 5 6 21 6" />
         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
     </svg>
 );
 
 const IconFileGeneric = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
         <path d="M14 2v6h6" />
     </svg>
@@ -340,7 +341,8 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                         fileBytes: fileBytes,
                         fileName: catalogFile.name,
                         contentType: catalogFile.type,
-                        isSingletonAsset: true,
+                        // Never a singleton: that would deactivate files this catalog still links to.
+                        isSingletonAsset: false,
                     },
                 ];
             }
@@ -533,38 +535,69 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
         setCatalogDetailError(null);
     };
 
+    /* Keyboard support for the div-based sidebar nav items and drop zones */
+    const onActivateKey = (action: () => void) => (e: React.KeyboardEvent<HTMLElement>) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            action();
+        }
+    };
+
     return (
         <>
             <div
                 className="pud-nav-item"
+                role="button"
+                tabIndex={0}
+                aria-expanded={isCatalogExpanded}
                 onClick={() => setIsCatalogExpanded((prev) => !prev)}
+                onKeyDown={onActivateKey(() => setIsCatalogExpanded((prev) => !prev))}
             >
-                <span className="pud-nav-icon"><NavIconCatalog /></span>
+                <span className="pud-nav-icon" aria-hidden="true"><NavIconCatalog /></span>
                 <span className="pud-nav-label">Catalog</span>
                 <span
-                    className="pud-nav-chevron"
+                    className={`pud-nav-chevron${isCatalogExpanded ? " pud-nav-chevron-expanded" : ""}`}
+                    aria-hidden="true"
                 >
                     <IconChevronRight />
                 </span>
             </div>
             {isCatalogExpanded && (
                 <div className="pud-nav-subgroup">
-                    <div className="pud-nav-subitem" onClick={() => setShowCreateCatalogModal(true)}>
-                        <span className="pud-nav-icon"><IconPlusCircle /></span>
+                    <div
+                        className="pud-nav-subitem"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setShowCreateCatalogModal(true)}
+                        onKeyDown={onActivateKey(() => setShowCreateCatalogModal(true))}
+                    >
+                        <span className="pud-nav-icon" aria-hidden="true"><IconPlusCircle /></span>
                         <span className="pud-nav-label">Create Catalog</span>
                     </div>
-                    <div className="pud-nav-subitem" onClick={() => setShowUploadCatalogModal(true)}>
-                        <span className="pud-nav-icon"><IconUploadCloud /></span>
+                    <div
+                        className="pud-nav-subitem"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setShowUploadCatalogModal(true)}
+                        onKeyDown={onActivateKey(() => setShowUploadCatalogModal(true))}
+                    >
+                        <span className="pud-nav-icon" aria-hidden="true"><IconUploadCloud /></span>
                         <span className="pud-nav-label">Upload Catalog</span>
                     </div>
                     <div
                         className="pud-nav-subitem"
+                        role="button"
+                        tabIndex={0}
                         onClick={() => {
                             setShowCatalogListModal(true);
                             onShowCatalogList?.();
                         }}
+                        onKeyDown={onActivateKey(() => {
+                            setShowCatalogListModal(true);
+                            onShowCatalogList?.();
+                        })}
                     >
-                        <span className="pud-nav-icon"><IconGrid /></span>
+                        <span className="pud-nav-icon" aria-hidden="true"><IconGrid /></span>
                         <span className="pud-nav-label">Show Catalogs</span>
                         {catalogItems.length > 0 && (
                             <span className="pud-nav-subitem-count">{catalogItems.length}</span>
@@ -574,30 +607,42 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
             )}
 
             {showCreateCatalogModal && (
-                <div className="pud-modal-overlay" onClick={closeCreateCatalogModal}>
-                    <div className="pud-modal pud-modal-rfq" onClick={(e) => e.stopPropagation()}>
-                        <div className="pud-modal-header">
-                            <button className="pud-modal-close" onClick={closeCreateCatalogModal} title="Close">
+                <div className="sila-overlay pud-modal-overlay" onClick={closeCreateCatalogModal}>
+                    <div
+                        className="sila-modal sila-modal--lg pud-modal pud-modal-rfq pud-catalog-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="pud-catalog-create-title"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="sila-modal-header pud-modal-header">
+                            <div className="pud-catalog-modal-heading">
+                                <span className="pud-modal-badge">New Catalog Item</span>
+                                <h2 id="pud-catalog-create-title" className="sila-modal-title pud-modal-name">Create Catalog</h2>
+                                <div className="pud-modal-meta">
+                                    <span>Add a product or service to your catalog</span>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm pud-modal-close"
+                                onClick={closeCreateCatalogModal}
+                                title="Close"
+                                aria-label="Close"
+                            >
                                 <IconClose />
                             </button>
-                            <span className="pud-modal-badge">
-                                <NavIconCatalog /> New Catalog Item
-                            </span>
-                            <h2 className="pud-modal-name">Create Catalog</h2>
-                            <div className="pud-modal-meta">
-                                <span>Add a product or service to your catalog</span>
-                            </div>
                         </div>
 
-                        <form onSubmit={handleCreateCatalogSubmit}>
-                            <div className="pud-modal-body">
+                        <form className="pud-catalog-modal-form" onSubmit={handleCreateCatalogSubmit}>
+                            <div className="sila-modal-body pud-modal-body">
                                 {createCatalogSuccess && (
-                                    <div className="pud-alert pud-alert-success">
+                                    <div className="sila-alert sila-alert--success pud-alert pud-alert-success" role="status">
                                         <IconCheckCircle /> Catalog created successfully!
                                     </div>
                                 )}
                                 {createCatalogError && (
-                                    <div className="pud-alert pud-alert-error">{createCatalogError}</div>
+                                    <div className="sila-alert sila-alert--danger pud-alert pud-alert-error" role="alert">{createCatalogError}</div>
                                 )}
 
                                 <div className="pud-catalog-form-grid">
@@ -606,11 +651,14 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                         <span className="pud-catalog-form-section-title">Basic Details</span>
                                     </div>
 
-                                    <div className="pud-catalog-form-field pud-catalog-form-full">
-                                        <label className="pud-catalog-form-label">Catalog Name *</label>
+                                    <div className="sila-field pud-catalog-form-field pud-catalog-form-full">
+                                        <label className="sila-label pud-catalog-form-label" htmlFor="pud-catalog-name">
+                                            Catalog Name<span className="sila-required" aria-hidden="true">*</span>
+                                        </label>
                                         <input
+                                            id="pud-catalog-name"
                                             type="text"
-                                            className="pud-catalog-form-input"
+                                            className="sila-input pud-catalog-form-input"
                                             value={catalogForm.catalogName}
                                             onChange={(e) => updateCatalogField("catalogName", e.target.value)}
                                             placeholder="e.g. Ergonomic Office Chair"
@@ -618,10 +666,11 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                         />
                                     </div>
 
-                                    <div className="pud-catalog-form-field pud-catalog-form-full">
-                                        <label className="pud-catalog-form-label">Description</label>
+                                    <div className="sila-field pud-catalog-form-field pud-catalog-form-full">
+                                        <label className="sila-label pud-catalog-form-label" htmlFor="pud-catalog-description">Description</label>
                                         <textarea
-                                            className="pud-catalog-form-textarea"
+                                            id="pud-catalog-description"
+                                            className="sila-textarea pud-catalog-form-textarea"
                                             value={catalogForm.description}
                                             onChange={(e) => updateCatalogField("description", e.target.value)}
                                             placeholder="Briefly describe this catalog item..."
@@ -629,23 +678,25 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                         />
                                     </div>
 
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Price ($)</label>
+                                    <div className="sila-field pud-catalog-form-field">
+                                        <label className="sila-label pud-catalog-form-label" htmlFor="pud-catalog-price">Price ($)</label>
                                         <input
+                                            id="pud-catalog-price"
                                             type="number"
                                             step="0.01"
                                             min="0"
-                                            className="pud-catalog-form-input"
+                                            className="sila-input pud-catalog-form-input pud-catalog-num"
                                             value={catalogForm.price}
                                             onChange={(e) => updateCatalogField("price", e.target.value)}
                                             placeholder="0.00"
                                         />
                                     </div>
 
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Unit of Measure</label>
+                                    <div className="sila-field pud-catalog-form-field">
+                                        <label className="sila-label pud-catalog-form-label" htmlFor="pud-catalog-uom">Unit of Measure</label>
                                         <select
-                                            className="pud-catalog-form-select"
+                                            id="pud-catalog-uom"
+                                            className="sila-select pud-catalog-form-select"
                                             value={catalogForm.unitOfMeasure}
                                             onChange={(e) => updateCatalogField("unitOfMeasure", e.target.value)}
                                             onClick={loadUnits}
@@ -661,10 +712,11 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                         </select>
                                     </div>
 
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Catalog Type</label>
+                                    <div className="sila-field pud-catalog-form-field">
+                                        <label className="sila-label pud-catalog-form-label" htmlFor="pud-catalog-type">Catalog Type</label>
                                         <select
-                                            className="pud-catalog-form-select"
+                                            id="pud-catalog-type"
+                                            className="sila-select pud-catalog-form-select"
                                             value={catalogForm.catalogType}
                                             onChange={(e) => updateCatalogField("catalogType", e.target.value)}
                                             onClick={loadCatalogTypes}
@@ -679,84 +731,92 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                         <span className="pud-catalog-form-section-title">Classification</span>
                                     </div>
 
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Segment</label>
+                                    <div className="sila-field pud-catalog-form-field">
+                                        <label className="sila-label pud-catalog-form-label" htmlFor="pud-catalog-segment">Segment</label>
                                         <input
+                                            id="pud-catalog-segment"
                                             type="number"
-                                            className="pud-catalog-form-input"
+                                            className="sila-input pud-catalog-form-input"
                                             value={catalogForm.segment}
                                             onChange={(e) => updateCatalogField("segment", e.target.value)}
                                             placeholder="e.g. 44000000"
                                         />
                                     </div>
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Segment Title</label>
+                                    <div className="sila-field pud-catalog-form-field">
+                                        <label className="sila-label pud-catalog-form-label" htmlFor="pud-catalog-segment-title">Segment Title</label>
                                         <input
+                                            id="pud-catalog-segment-title"
                                             type="text"
-                                            className="pud-catalog-form-input"
+                                            className="sila-input pud-catalog-form-input"
                                             value={catalogForm.segmentTitle}
                                             onChange={(e) => updateCatalogField("segmentTitle", e.target.value)}
                                             placeholder="e.g. Office Equipment"
                                         />
                                     </div>
 
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Family</label>
+                                    <div className="sila-field pud-catalog-form-field">
+                                        <label className="sila-label pud-catalog-form-label" htmlFor="pud-catalog-family">Family</label>
                                         <input
+                                            id="pud-catalog-family"
                                             type="number"
-                                            className="pud-catalog-form-input"
+                                            className="sila-input pud-catalog-form-input"
                                             value={catalogForm.family}
                                             onChange={(e) => updateCatalogField("family", e.target.value)}
                                             placeholder="e.g. 44120000"
                                         />
                                     </div>
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Family Title</label>
+                                    <div className="sila-field pud-catalog-form-field">
+                                        <label className="sila-label pud-catalog-form-label" htmlFor="pud-catalog-family-title">Family Title</label>
                                         <input
+                                            id="pud-catalog-family-title"
                                             type="text"
-                                            className="pud-catalog-form-input"
+                                            className="sila-input pud-catalog-form-input"
                                             value={catalogForm.familyTitle}
                                             onChange={(e) => updateCatalogField("familyTitle", e.target.value)}
                                             placeholder="e.g. Office Furniture"
                                         />
                                     </div>
 
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Commodity</label>
+                                    <div className="sila-field pud-catalog-form-field">
+                                        <label className="sila-label pud-catalog-form-label" htmlFor="pud-catalog-commodity">Commodity</label>
                                         <input
+                                            id="pud-catalog-commodity"
                                             type="number"
-                                            className="pud-catalog-form-input"
+                                            className="sila-input pud-catalog-form-input"
                                             value={catalogForm.commodity}
                                             onChange={(e) => updateCatalogField("commodity", e.target.value)}
                                             placeholder="e.g. 44121700"
                                         />
                                     </div>
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Commodity Title</label>
+                                    <div className="sila-field pud-catalog-form-field">
+                                        <label className="sila-label pud-catalog-form-label" htmlFor="pud-catalog-commodity-title">Commodity Title</label>
                                         <input
+                                            id="pud-catalog-commodity-title"
                                             type="text"
-                                            className="pud-catalog-form-input"
+                                            className="sila-input pud-catalog-form-input"
                                             value={catalogForm.commodityTitle}
                                             onChange={(e) => updateCatalogField("commodityTitle", e.target.value)}
                                             placeholder="e.g. Seating"
                                         />
                                     </div>
 
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Class</label>
+                                    <div className="sila-field pud-catalog-form-field">
+                                        <label className="sila-label pud-catalog-form-label" htmlFor="pud-catalog-class">Class</label>
                                         <input
+                                            id="pud-catalog-class"
                                             type="number"
-                                            className="pud-catalog-form-input"
+                                            className="sila-input pud-catalog-form-input"
                                             value={catalogForm.class}
                                             onChange={(e) => updateCatalogField("class", e.target.value)}
                                             placeholder="e.g. 44121701"
                                         />
                                     </div>
-                                    <div className="pud-catalog-form-field">
-                                        <label className="pud-catalog-form-label">Class Title</label>
+                                    <div className="sila-field pud-catalog-form-field">
+                                        <label className="sila-label pud-catalog-form-label" htmlFor="pud-catalog-class-title">Class Title</label>
                                         <input
+                                            id="pud-catalog-class-title"
                                             type="text"
-                                            className="pud-catalog-form-input"
+                                            className="sila-input pud-catalog-form-input"
                                             value={catalogForm.classTitle}
                                             onChange={(e) => updateCatalogField("classTitle", e.target.value)}
                                             placeholder="e.g. Office Chairs"
@@ -779,11 +839,14 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                     </div>
 
                                     {catalogForm.isPunchOut && (
-                                        <div className="pud-catalog-form-field pud-catalog-form-full">
-                                            <label className="pud-catalog-form-label">PunchOut URL *</label>
+                                        <div className="sila-field pud-catalog-form-field pud-catalog-form-full">
+                                            <label className="sila-label pud-catalog-form-label" htmlFor="pud-catalog-punchout-url">
+                                                PunchOut URL<span className="sila-required" aria-hidden="true">*</span>
+                                            </label>
                                             <input
+                                                id="pud-catalog-punchout-url"
                                                 type="url"
-                                                className="pud-catalog-form-input"
+                                                className="sila-input pud-catalog-form-input"
                                                 value={catalogForm.punchOutUrl}
                                                 onChange={(e) => updateCatalogField("punchOutUrl", e.target.value)}
                                                 placeholder="https://supplier.example.com/punchout"
@@ -797,11 +860,15 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                         <span className="pud-catalog-form-section-title">Attachment</span>
                                     </div>
 
-                                    <div className="pud-catalog-form-field pud-catalog-form-full">
-                                        <label className="pud-catalog-form-label">Upload File / Image</label>
+                                    <div className="sila-field pud-catalog-form-field pud-catalog-form-full">
+                                        <span className="sila-label pud-catalog-form-label" id="pud-catalog-file-label">Upload File / Image</span>
                                         <div
-                                            className={`pud-catalog-dropzone${isDraggingCatalogFile ? " pud-catalog-dropzone-active" : ""}`}
+                                            className={`sila-dropzone pud-catalog-dropzone${isDraggingCatalogFile ? " sila-dropzone--active pud-catalog-dropzone-active" : ""}`}
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-labelledby="pud-catalog-file-label"
                                             onClick={() => catalogFileInputRef.current?.click()}
+                                            onKeyDown={onActivateKey(() => catalogFileInputRef.current?.click())}
                                             onDragOver={(e) => { e.preventDefault(); setIsDraggingCatalogFile(true); }}
                                             onDragLeave={() => setIsDraggingCatalogFile(false)}
                                             onDrop={(e) => {
@@ -815,6 +882,8 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                             <input
                                                 ref={catalogFileInputRef}
                                                 type="file"
+                                                className="pud-catalog-hidden-input"
+                                                tabIndex={-1}
                                                 accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
                                                 onChange={(e) => handleCatalogFileSelect(e.target.files ? e.target.files[0] : null)}
                                             />
@@ -829,7 +898,7 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                             {catalogFile && (
                                                 <button
                                                     type="button"
-                                                    className="pud-catalog-dropzone-remove"
+                                                    className="sila-btn sila-btn--secondary sila-btn--sm pud-catalog-dropzone-remove"
                                                     onClick={(e) => { e.stopPropagation(); handleCatalogFileSelect(null); }}
                                                 >
                                                     <IconTrash /> Remove
@@ -840,19 +909,21 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                 </div>
                             </div>
 
-                            <div className="pud-modal-footer">
+                            <div className="sila-modal-footer pud-modal-footer">
                                 <button
                                     type="button"
-                                    className="pud-btn pud-btn-outline"
+                                    className="sila-btn sila-btn--secondary pud-btn pud-btn-outline"
                                     onClick={closeCreateCatalogModal}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="pud-btn pud-btn-message"
+                                    className="sila-btn sila-btn--primary pud-btn pud-btn-message"
                                     disabled={creatingCatalog}
+                                    aria-busy={creatingCatalog || undefined}
                                 >
+                                    {creatingCatalog && <span className="sila-spinner" aria-hidden="true" />}
                                     {creatingCatalog ? "Saving..." : "Save Catalog"}
                                 </button>
                             </div>
@@ -863,34 +934,50 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
 
             {/* ---------- Upload Catalog Modal ---------- */}
             {showUploadCatalogModal && (
-                <div className="pud-modal-overlay" onClick={closeUploadCatalogModal}>
-                    <div className="pud-modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="pud-modal-header">
-                            <button className="pud-modal-close" onClick={closeUploadCatalogModal} title="Close">
+                <div className="sila-overlay pud-modal-overlay" onClick={closeUploadCatalogModal}>
+                    <div
+                        className="sila-modal pud-modal pud-catalog-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="pud-catalog-upload-title"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="sila-modal-header pud-modal-header">
+                            <div className="pud-catalog-modal-heading">
+                                <span className="pud-modal-badge">Bulk Upload</span>
+                                <h2 id="pud-catalog-upload-title" className="sila-modal-title pud-modal-name">Upload Catalog</h2>
+                                <div className="pud-modal-meta">
+                                    <span>Add files or images to your catalog</span>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm pud-modal-close"
+                                onClick={closeUploadCatalogModal}
+                                title="Close"
+                                aria-label="Close"
+                            >
                                 <IconClose />
                             </button>
-                            <span className="pud-modal-badge">
-                                <IconUploadCloud /> Bulk Upload
-                            </span>
-                            <h2 className="pud-modal-name">Upload Catalog</h2>
-                            <div className="pud-modal-meta">
-                                <span>Add files or images to your catalog</span>
-                            </div>
                         </div>
 
-                        <div className="pud-modal-body">
+                        <div className="sila-modal-body pud-modal-body">
                             {uploadCatalogSuccess && (
-                                <div className="pud-alert pud-alert-success">
+                                <div className="sila-alert sila-alert--success pud-alert pud-alert-success" role="status">
                                     <IconCheckCircle /> Files uploaded successfully!
                                 </div>
                             )}
                             {uploadCatalogError && (
-                                <div className="pud-alert pud-alert-error">{uploadCatalogError}</div>
+                                <div className="sila-alert sila-alert--danger pud-alert pud-alert-error" role="alert">{uploadCatalogError}</div>
                             )}
 
                             <div
-                                className={`pud-catalog-dropzone pud-catalog-dropzone-large${isDraggingUploadFiles ? " pud-catalog-dropzone-active" : ""}`}
+                                className={`sila-dropzone pud-catalog-dropzone pud-catalog-dropzone-large${isDraggingUploadFiles ? " sila-dropzone--active pud-catalog-dropzone-active" : ""}`}
+                                role="button"
+                                tabIndex={0}
+                                aria-label="Click to upload or drag & drop files/images here"
                                 onClick={() => uploadCatalogInputRef.current?.click()}
+                                onKeyDown={onActivateKey(() => uploadCatalogInputRef.current?.click())}
                                 onDragOver={(e) => { e.preventDefault(); setIsDraggingUploadFiles(true); }}
                                 onDragLeave={() => setIsDraggingUploadFiles(false)}
                                 onDrop={(e) => {
@@ -902,6 +989,8 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                                 <input
                                     ref={uploadCatalogInputRef}
                                     type="file"
+                                    className="pud-catalog-hidden-input"
+                                    tabIndex={-1}
                                     multiple
                                     accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
                                     onChange={(e) => {
@@ -919,50 +1008,53 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
                             </div>
 
                             {uploadCatalogFiles.length > 0 && (
-                                <div className="pud-catalog-file-list">
+                                <ul className="sila-file-list pud-catalog-file-list">
                                     {uploadCatalogFiles.map((file, index) => (
-                                        <div className="pud-catalog-file-item" key={`${file.name}-${index}`}>
+                                        <li className="sila-file pud-catalog-file-item" key={`${file.name}-${index}`}>
                                             {file.type.startsWith("image/") ? (
                                                 <img
                                                     src={URL.createObjectURL(file)}
-                                                    alt={file.name}
+                                                    alt=""
                                                     className="pud-catalog-file-thumb"
                                                 />
                                             ) : (
-                                                <div className="pud-catalog-file-icon"><IconFileGeneric /></div>
+                                                <div className="sila-file-icon pud-catalog-file-icon"><IconFileGeneric /></div>
                                             )}
                                             <div className="pud-catalog-file-info">
-                                                <div className="pud-catalog-file-name">{file.name}</div>
-                                                <div className="pud-catalog-file-size">{formatFileSize(file.size)}</div>
+                                                <div className="sila-file-name pud-catalog-file-name" title={file.name}>{file.name}</div>
+                                                <div className="sila-file-meta pud-catalog-file-size">{formatFileSize(file.size)}</div>
                                             </div>
                                             <button
                                                 type="button"
-                                                className="pud-catalog-file-remove"
+                                                className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm pud-catalog-file-remove"
                                                 onClick={() => handleRemoveUploadCatalogFile(index)}
                                                 title="Remove"
+                                                aria-label={`Remove ${file.name}`}
                                             >
                                                 <IconClose />
                                             </button>
-                                        </div>
+                                        </li>
                                     ))}
-                                </div>
+                                </ul>
                             )}
                         </div>
 
-                        <div className="pud-modal-footer">
+                        <div className="sila-modal-footer pud-modal-footer">
                             <button
                                 type="button"
-                                className="pud-btn pud-btn-outline"
+                                className="sila-btn sila-btn--secondary pud-btn pud-btn-outline"
                                 onClick={closeUploadCatalogModal}
                             >
                                 Cancel
                             </button>
                             <button
                                 type="button"
-                                className="pud-btn pud-btn-message"
+                                className="sila-btn sila-btn--primary pud-btn pud-btn-message"
                                 disabled={uploadingCatalog || uploadCatalogFiles.length === 0}
+                                aria-busy={uploadingCatalog || undefined}
                                 onClick={handleUploadCatalogSubmit}
                             >
+                                {uploadingCatalog && <span className="sila-spinner" aria-hidden="true" />}
                                 {uploadingCatalog ? "Uploading..." : `Upload ${uploadCatalogFiles.length > 0 ? `(${uploadCatalogFiles.length})` : ""}`}
                             </button>
                         </div>
@@ -971,241 +1063,260 @@ const Catalog: React.FC<CatalogProps> = ({ onShowCatalogList, onCloseCatalogList
             )}
 
             {(showCatalogListModal || !!fullViewContainer) && fullViewContainer && createPortal(
-                <>
-                    <div className="pud-catalog-fullview-header">
-                        <div>
-                            <h1 className="pud-title">Your Catalogs</h1>
-                            <p className="pud-subtitle">
-                                <IconGrid /> {catalogItems.length} {catalogItems.length === 1 ? "Item" : "Items"} in your catalog
-                            </p>
+                <div className="pud-catalog-page">
+                    <div className="sila-page-header pud-catalog-fullview-header">
+                        <div className="sila-page-header-main">
+                            <div>
+                                <h1 className="sila-page-title pud-title">Your Catalogs</h1>
+                                <p className="sila-page-description pud-subtitle">
+                                    {catalogItems.length} {catalogItems.length === 1 ? "Item" : "Items"} in your catalog
+                                </p>
+                            </div>
                         </div>
-                        <div className="pud-catalog-fullview-actions">
+                        <div className="sila-page-actions pud-catalog-fullview-actions">
                             <button
                                 type="button"
-                                className="pud-btn pud-btn-outline"
+                                className="sila-btn sila-btn--secondary pud-btn pud-btn-outline"
                                 onClick={() => {
                                     setShowCatalogListModal(false);
                                     onCloseCatalogList?.();
                                 }}
                             >
-                                <IconChevronRight /> Back to Dashboard
+                                <FaArrowLeft aria-hidden="true" /> Back to Dashboard
                             </button>
                             <button
                                 type="button"
-                                className="pud-btn pud-btn-message"
+                                className="sila-btn sila-btn--primary pud-btn pud-btn-message"
                                 onClick={() => setShowCreateCatalogModal(true)}
                             >
-                                + Add Catalog
+                                <FaPlus aria-hidden="true" /> Add Catalog
                             </button>
                         </div>
                     </div>
 
-                    {loadingCatalogs ? (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '240px' }}>
-                            <div style={{ color: '#64748b', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                                <div className="pud-spinner" />
-                                <span>Loading catalogs...</span>
+                    <div className="sila-card pud-catalog-list-card">
+                        {loadingCatalogs ? (
+                            <Loader message="Loading catalogs..." />
+                        ) : catalogsError ? (
+                            <EmptyState variant="error" title={catalogsError} />
+                        ) : catalogItems.length === 0 ? (
+                            <EmptyState
+                                className="pud-catalog-empty-state"
+                                icon={<IconGridLarge />}
+                                title="No catalogs yet"
+                                description={'Use "Create Catalog" or "Upload Catalog" to add your first item.'}
+                            />
+                        ) : (
+                            <div className="sila-table-wrap pud-catalog-table-wrap">
+                                <table className="sila-table pud-catalog-table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Catalog Item</th>
+                                            <th scope="col">Type</th>
+                                            <th scope="col">Classification</th>
+                                            <th scope="col">Unit</th>
+                                            <th scope="col" className="sila-num">Price</th>
+                                            <th scope="col">Source</th>
+                                            <th scope="col">Added</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {catalogItems.map((item) => (
+                                            <tr
+                                                key={item.id || item.catalogName}
+                                                className={item.id ? "sila-row-clickable" : undefined}
+                                                tabIndex={item.id ? 0 : undefined}
+                                                onClick={() => item.id && handleCatalogCardClick(item.id)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter" && item.id) handleCatalogCardClick(item.id);
+                                                }}
+                                            >
+                                                <td>
+                                                    <div className="pud-catalog-item-cell">
+                                                        <span className="pud-catalog-item-thumb">
+                                                            {item.filePreview ? (
+                                                                <img src={item.filePreview} alt="" />
+                                                            ) : (
+                                                                <IconFileGeneric />
+                                                            )}
+                                                        </span>
+                                                        <div className="pud-catalog-item-text">
+                                                            <div className="sila-cell-strong pud-catalog-item-name" title={item.catalogName}>{item.catalogName}</div>
+                                                            {item.description && (
+                                                                <div className="pud-catalog-item-desc">{item.description}</div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div className="pud-catalog-item-tags">
+                                                        {item.catalogType ? (
+                                                            <span className="sila-badge sila-badge--neutral">{item.catalogType}</span>
+                                                        ) : !item.isPunchOut && (
+                                                            <span className="sila-cell-muted">—</span>
+                                                        )}
+                                                        {item.isPunchOut && <span className="sila-badge sila-badge--info">PunchOut</span>}
+                                                    </div>
+                                                </td>
+                                                <td className="sila-cell-muted">{item.classTitle || "—"}</td>
+                                                <td>{item.unitOfMeasure || <span className="sila-cell-muted">—</span>}</td>
+                                                <td className="sila-num">
+                                                    {item.price ? `$${Number(item.price).toFixed(2)}` : <span className="sila-cell-muted">—</span>}
+                                                </td>
+                                                <td>
+                                                    <span className="sila-badge sila-badge--neutral">
+                                                        {item.source === "created" ? "Created" : "Uploaded"}
+                                                    </span>
+                                                </td>
+                                                <td className="sila-cell-muted pud-catalog-nowrap">{formatCatalogDate(item.addedAt)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-                        </div>
-                    ) : catalogsError ? (
-                        <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
-                            {catalogsError}
-                        </div>
-                    ) : catalogItems.length === 0 ? (
-                        <div className="pud-catalog-empty-state">
-                            <div className="pud-catalog-dropzone-icon"><IconGridLarge /></div>
-                            <div className="pud-catalog-dropzone-text">No catalogs yet</div>
-                            <div className="pud-catalog-dropzone-subtext">
-                                Use "Create Catalog" or "Upload Catalog" to add your first item.
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="pud-catalog-grid">
-                            {catalogItems.map((item) => (
-                                <div 
-                                    key={item.id || item.catalogName}
-                                    className="pud-catalog-card"
-                                    onClick={() => item.id && handleCatalogCardClick(item.id)}
-                                    style={{ cursor: item.id ? 'pointer' : 'default' }}
-                                >
-                                    <div className="pud-catalog-card-media">
-                                        {item.filePreview ? (
-                                            <img src={item.filePreview} alt={item.catalogName} />
-                                        ) : (
-                                            <div className="pud-catalog-card-media-placeholder"><IconFileGeneric /></div>
-                                        )}
-                                        <span className={`pud-catalog-card-source pud-catalog-card-source-${item.source}`}>
-                                            {item.source === "created" ? "Created" : "Uploaded"}
-                                        </span>
-                                    </div>
-                                    <div className="pud-catalog-card-body">
-                                        <div className="pud-catalog-card-name" title={item.catalogName}>{item.catalogName}</div>
-                                        {item.description && (
-                                            <div className="pud-catalog-card-desc">{item.description}</div>
-                                        )}
-                                        <div className="pud-catalog-card-meta">
-                                            {!!item.price && (
-                                                <span className="pud-catalog-card-price">${Number(item.price).toFixed(2)}</span>
-                                            )}
-                                            {item.unitOfMeasure && (
-                                                <span className="pud-catalog-card-uom">{item.unitOfMeasure}</span>
-                                            )}
-                                        </div>
-                                        {(item.classTitle || item.catalogType || item.isPunchOut) && (
-                                            <div className="pud-catalog-card-badges">
-                                                {item.catalogType && <span className="pud-catalog-card-tag">{item.catalogType}</span>}
-                                                {item.classTitle && <span className="pud-catalog-card-tag">{item.classTitle}</span>}
-                                                {item.isPunchOut && <span className="pud-catalog-card-tag pud-catalog-card-tag-punchout">PunchOut</span>}
-                                            </div>
-                                        )}
-                                        <div className="pud-catalog-card-date">Added {formatCatalogDate(item.addedAt)}</div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </>,
+                        )}
+                    </div>
+                </div>,
                 fullViewContainer
             )}
 
             {/* ---------- Catalog Detail Modal ---------- */}
             {selectedCatalogForDetail && (
-                <div className="pud-modal-overlay" onClick={closeCatalogDetailModal}>
-                    <div className="pud-modal pud-modal-rfq" onClick={(e) => e.stopPropagation()}>
+                <div className="sila-overlay pud-modal-overlay" onClick={closeCatalogDetailModal}>
+                    <div
+                        className="sila-modal sila-modal--lg pud-modal pud-modal-rfq pud-catalog-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="pud-catalog-detail-title"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         {/* Modal Header */}
-                        <div className="pud-modal-header">
-                            <span className="pud-modal-badge">
-                                <NavIconCatalog /> Catalog Details
-                            </span>
-                            <button className="pud-modal-close" onClick={closeCatalogDetailModal} title="Close">
+                        <div className="sila-modal-header pud-modal-header">
+                            <div className="pud-catalog-modal-heading">
+                                <span className="pud-modal-badge">Catalog Details</span>
+                                <h2 id="pud-catalog-detail-title" className="sila-modal-title pud-modal-name">{selectedCatalogForDetail.catalogName}</h2>
+                                <div className="pud-modal-meta">
+                                    <span>Supplier: {selectedCatalogForDetail.supplierName}</span>
+                                    <span>Type: {selectedCatalogForDetail.catalogType}</span>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm pud-modal-close"
+                                onClick={closeCatalogDetailModal}
+                                title="Close"
+                                aria-label="Close"
+                            >
                                 <IconClose />
                             </button>
-                            <h2 className="pud-modal-name">{selectedCatalogForDetail.catalogName}</h2>
-                            <div className="pud-modal-meta">
-                                <span>Supplier: {selectedCatalogForDetail.supplierName}</span>
-                                <span>Type: {selectedCatalogForDetail.catalogType}</span>
-                            </div>
                         </div>
 
                         {/* Modal Body */}
-                        <div className="pud-modal-body">
+                        <div className="sila-modal-body pud-modal-body">
                             {loadingCatalogDetail && (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', gap: '12px' }}>
-                                    <div className="pud-spinner" />
-                                    <span style={{ color: '#64748b', fontSize: '14px' }}>Loading catalog details...</span>
-                                </div>
+                                <Loader message="Loading catalog details..." />
                             )}
 
                             {catalogDetailError && (
-                                <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
-                                    <div style={{ fontSize: '15px', marginBottom: '16px' }}>{catalogDetailError}</div>
-                                    <button
-                                        type="button"
-                                        className="pud-btn pud-btn-outline"
-                                        onClick={() => handleCatalogCardClick(selectedCatalogForDetail.catalogId)}
-                                    >
-                                        Retry Loading
-                                    </button>
-                                </div>
+                                <EmptyState
+                                    variant="error"
+                                    title={catalogDetailError}
+                                    action={
+                                        <button
+                                            type="button"
+                                            className="sila-btn sila-btn--secondary pud-btn pud-btn-outline"
+                                            onClick={() => handleCatalogCardClick(selectedCatalogForDetail.catalogId)}
+                                        >
+                                            Retry Loading
+                                        </button>
+                                    }
+                                />
                             )}
 
                             {selectedCatalogForDetail && !loadingCatalogDetail && !catalogDetailError && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                <div className="pud-catalog-detail">
                                     {/* Basic Info */}
-                                    <div>
-                                        <div className="pud-modal-section-title">Description</div>
-                                        <p className="pud-modal-desc" style={{ whiteSpace: 'pre-wrap' }}>
+                                    <section className="pud-catalog-detail-section">
+                                        <h3 className="pud-modal-section-title">Description</h3>
+                                        <p className="pud-modal-desc pud-catalog-detail-desc">
                                             {selectedCatalogForDetail.description || "No description provided."}
                                         </p>
 
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
-                                            <div>
-                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Price</div>
-                                                <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                                        <dl className="sila-meta-grid pud-catalog-detail-meta">
+                                            <div className="sila-meta-item">
+                                                <dt className="sila-meta-label">Price</dt>
+                                                <dd className="sila-meta-value pud-catalog-num">
                                                     {selectedCatalogForDetail.currency} {Number(selectedCatalogForDetail.price).toFixed(2)}
-                                                </div>
+                                                </dd>
                                             </div>
-                                            <div>
-                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Unit of Measure</div>
-                                                <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
+                                            <div className="sila-meta-item">
+                                                <dt className="sila-meta-label">Unit of Measure</dt>
+                                                <dd className="sila-meta-value">
                                                     {selectedCatalogForDetail.unitOfMeasure || "N/A"}
-                                                </div>
+                                                </dd>
                                             </div>
-                                        </div>
-                                    </div>
+                                        </dl>
+                                    </section>
 
                                     {/* Classification */}
-                                    <div>
-                                        <div className="pud-modal-section-title">Classification (UNSPSC)</div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                            <div>
-                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Segment</div>
-                                                <div style={{ fontSize: '12px', color: '#1e293b', marginTop: '2px' }}>
-                                                    {selectedCatalogForDetail.segment} - {selectedCatalogForDetail.segmentTitle}
-                                                </div>
+                                    <section className="pud-catalog-detail-section">
+                                        <h3 className="pud-modal-section-title">Classification (UNSPSC)</h3>
+                                        <dl className="sila-meta-grid pud-catalog-detail-meta pud-catalog-detail-meta-2">
+                                            <div className="sila-meta-item">
+                                                <dt className="sila-meta-label">Segment</dt>
+                                                <dd className="sila-meta-value pud-catalog-detail-code">
+                                                    <span className="sila-ref">{selectedCatalogForDetail.segment}</span> - {selectedCatalogForDetail.segmentTitle}
+                                                </dd>
                                             </div>
-                                            <div>
-                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Family</div>
-                                                <div style={{ fontSize: '12px', color: '#1e293b', marginTop: '2px' }}>
-                                                    {selectedCatalogForDetail.family} - {selectedCatalogForDetail.familyTitle}
-                                                </div>
+                                            <div className="sila-meta-item">
+                                                <dt className="sila-meta-label">Family</dt>
+                                                <dd className="sila-meta-value pud-catalog-detail-code">
+                                                    <span className="sila-ref">{selectedCatalogForDetail.family}</span> - {selectedCatalogForDetail.familyTitle}
+                                                </dd>
                                             </div>
-                                            <div>
-                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Commodity</div>
-                                                <div style={{ fontSize: '12px', color: '#1e293b', marginTop: '2px' }}>
-                                                    {selectedCatalogForDetail.commodity} - {selectedCatalogForDetail.commodityTitle}
-                                                </div>
+                                            <div className="sila-meta-item">
+                                                <dt className="sila-meta-label">Commodity</dt>
+                                                <dd className="sila-meta-value pud-catalog-detail-code">
+                                                    <span className="sila-ref">{selectedCatalogForDetail.commodity}</span> - {selectedCatalogForDetail.commodityTitle}
+                                                </dd>
                                             </div>
-                                            <div>
-                                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Class</div>
-                                                <div style={{ fontSize: '12px', color: '#1e293b', marginTop: '2px' }}>
-                                                    {selectedCatalogForDetail.class} - {selectedCatalogForDetail.classTitle}
-                                                </div>
+                                            <div className="sila-meta-item">
+                                                <dt className="sila-meta-label">Class</dt>
+                                                <dd className="sila-meta-value pud-catalog-detail-code">
+                                                    <span className="sila-ref">{selectedCatalogForDetail.class}</span> - {selectedCatalogForDetail.classTitle}
+                                                </dd>
                                             </div>
-                                        </div>
-                                    </div>
+                                        </dl>
+                                    </section>
 
                                     {/* Assets */}
                                     {selectedCatalogForDetail.asset && selectedCatalogForDetail.asset.length > 0 && (
-                                        <div>
-                                            <div className="pud-modal-section-title">Attachments</div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                                        <section className="pud-catalog-detail-section">
+                                            <h3 className="pud-modal-section-title">Attachments</h3>
+                                            <ul className="sila-file-list">
                                                 {selectedCatalogForDetail.asset.map((asset, idx) => (
-                                                    <div
-                                                        key={idx}
-                                                        style={{
-                                                            background: '#ffffff',
-                                                            border: '1px solid #e2e8f0',
-                                                            borderRadius: '8px',
-                                                            padding: '12px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '10px',
-                                                        }}
-                                                    >
-                                                        <IconFileGeneric />
-                                                        <div style={{ minWidth: 0 }}>
-                                                            <div style={{ fontSize: '12px', fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={asset.fileName}>
-                                                                {asset.fileName}
-                                                            </div>
-                                                            <div style={{ fontSize: '10px', color: '#64748b' }}>
-                                                                {asset.fileType || asset.assetType || "File"}
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                    <li key={idx} className="sila-file">
+                                                        <span className="sila-file-icon" aria-hidden="true"><IconFileGeneric /></span>
+                                                        <span className="sila-file-name" title={asset.fileName}>
+                                                            {asset.fileName}
+                                                        </span>
+                                                        <span className="sila-file-meta">
+                                                            {asset.fileType || asset.assetType || "File"}
+                                                        </span>
+                                                    </li>
                                                 ))}
-                                            </div>
-                                        </div>
+                                            </ul>
+                                        </section>
                                     )}
                                 </div>
                             )}
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="pud-modal-footer">
+                        <div className="sila-modal-footer pud-modal-footer">
                             <button
                                 type="button"
-                                className="pud-btn pud-btn-outline"
+                                className="sila-btn sila-btn--secondary pud-btn pud-btn-outline"
                                 onClick={closeCatalogDetailModal}
                             >
                                 Close

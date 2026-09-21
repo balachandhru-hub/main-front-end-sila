@@ -76,9 +76,15 @@ const to12Hour = (hour24: number): { hour12: number; ampm: 'AM' | 'PM' } => {
 };
 
 const CalendarIcon: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <rect x="3" y="4" width="18" height="18" rx="2" />
     <path d="M16 2v4M8 2v4M3 10h18" />
+  </svg>
+);
+
+const ChevronIcon: React.FC<{ direction: 'left' | 'right' }> = ({ direction }) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d={direction === 'left' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6'} />
   </svg>
 );
 
@@ -231,13 +237,28 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
   ];
 
   const triggerLabel = displayValue !== undefined ? displayValue : value;
+  const todayYear = now.getFullYear();
+  const todayMonth = now.getMonth() + 1;
+  const todayDay = now.getDate();
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape' && isOpen) {
+      e.stopPropagation();
+      setIsOpen(false);
+    }
+  };
 
   return (
-    <div className="vosox-dtp-container" ref={containerRef}>
-      <div
+    <div className="vosox-dtp-container" ref={containerRef} onKeyDown={handleKeyDown}>
+      <button
+        type="button"
         id={id}
-        className={`vosox-dtp-trigger${error ? ' vosox-dtp-trigger-error' : ''}${disabled ? ' vosox-dtp-trigger-disabled' : ''}`}
+        className={`vosox-dtp-trigger${error ? ' vosox-dtp-trigger-error' : ''}${disabled ? ' vosox-dtp-trigger-disabled' : ''}${isOpen ? ' vosox-dtp-trigger-open' : ''}`}
         onClick={() => !disabled && setIsOpen((o) => !o)}
+        disabled={disabled}
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
+        aria-invalid={error || undefined}
       >
         <span className="vosox-dtp-trigger-text">
           {triggerLabel || <span className="vosox-dtp-placeholder">{placeholder}</span>}
@@ -245,24 +266,24 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
         <span className="vosox-dtp-icon">
           <CalendarIcon />
         </span>
-      </div>
+      </button>
 
       {isOpen && !disabled && (
-        <div className="vosox-dtp-panel">
+        <div className="vosox-dtp-panel" role="dialog" aria-label={mode === 'date' ? 'Choose date' : 'Choose date and time'}>
           <div className="vosox-dtp-body">
           <div className="vosox-dtp-calendar">
             <div className="vosox-dtp-cal-header">
               <button type="button" className="vosox-dtp-nav-btn" onClick={goPrevMonth} aria-label="Previous month">
-                ‹
+                <ChevronIcon direction="left" />
               </button>
-              <span className="vosox-dtp-cal-title">
+              <span className="vosox-dtp-cal-title" aria-live="polite">
                 {MONTH_NAMES[viewMonth - 1]} {viewYear}
               </span>
               <button type="button" className="vosox-dtp-nav-btn" onClick={goNextMonth} aria-label="Next month">
-                ›
+                <ChevronIcon direction="right" />
               </button>
             </div>
-            <div className="vosox-dtp-weekdays">
+            <div className="vosox-dtp-weekdays" aria-hidden="true">
               {WEEKDAYS.map((wd) => (
                 <span key={wd}>{wd}</span>
               ))}
@@ -274,13 +295,17 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
                 }
                 const isSelected =
                   !!parsedValue && parsedValue.year === viewYear && parsedValue.month === viewMonth && parsedValue.day === day;
+                const isToday = viewYear === todayYear && viewMonth === todayMonth && day === todayDay;
                 return (
                   <button
                     type="button"
                     key={day}
-                    className={`vosox-dtp-day-cell${isSelected ? ' vosox-dtp-day-selected' : ''}`}
+                    className={`vosox-dtp-day-cell${isSelected ? ' vosox-dtp-day-selected' : ''}${isToday ? ' vosox-dtp-day-today' : ''}`}
                     disabled={isDayDisabled(viewYear, viewMonth, day)}
                     onClick={() => commitDay(day)}
+                    aria-pressed={isSelected}
+                    aria-current={isToday ? 'date' : undefined}
+                    aria-label={`${MONTH_NAMES[viewMonth - 1]} ${day}, ${viewYear}`}
                   >
                     {day}
                   </button>
@@ -293,12 +318,13 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
             <div className="vosox-dtp-time">
               <div className="vosox-dtp-time-col">
                 <div className="vosox-dtp-time-col-label">Hour</div>
-                <div className="vosox-dtp-time-col-list">
+                <div className="vosox-dtp-time-col-list" role="group" aria-label="Hour">
                   {HOURS_12.map((h) => (
                     <button
                       type="button"
                       key={h}
                       className={`vosox-dtp-time-cell${currentHour12 === h ? ' vosox-dtp-time-selected' : ''}`}
+                      aria-pressed={currentHour12 === h}
                       disabled={!parsedValue || isHourDisabled(h)}
                       onClick={() => commitHour(h)}
                     >
@@ -309,12 +335,13 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
               </div>
               <div className="vosox-dtp-time-col">
                 <div className="vosox-dtp-time-col-label">Minute</div>
-                <div className="vosox-dtp-time-col-list">
+                <div className="vosox-dtp-time-col-list" role="group" aria-label="Minute">
                   {MINUTES_60.map((m) => (
                     <button
                       type="button"
                       key={m}
                       className={`vosox-dtp-time-cell${parsedValue?.minute === m ? ' vosox-dtp-time-selected' : ''}`}
+                      aria-pressed={parsedValue?.minute === m}
                       disabled={!parsedValue || isMinuteDisabled(m)}
                       onClick={() => commitMinute(m)}
                     >
@@ -325,12 +352,13 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
               </div>
               <div className="vosox-dtp-time-col vosox-dtp-time-col-ampm">
                 <div className="vosox-dtp-time-col-label">AM/PM</div>
-                <div className="vosox-dtp-time-col-list">
+                <div className="vosox-dtp-time-col-list" role="group" aria-label="AM/PM">
                   {(['AM', 'PM'] as const).map((ap) => (
                     <button
                       type="button"
                       key={ap}
                       className={`vosox-dtp-time-cell${!!parsedValue && currentAmpm === ap ? ' vosox-dtp-time-selected' : ''}`}
+                      aria-pressed={!!parsedValue && currentAmpm === ap}
                       disabled={!parsedValue || isAmpmDisabled(ap)}
                       onClick={() => commitAmpm(ap)}
                     >

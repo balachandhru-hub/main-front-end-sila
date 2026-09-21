@@ -3,7 +3,7 @@ import { Button } from '@vosox/shared-ui';
 import Header from './Header';
 import './SupplierRegistration.css';
 import { CiMail } from "react-icons/ci";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaExclamationCircle } from "react-icons/fa";
 import { sendOtp, verifyOtp } from '../api/authApi';
 import { useNavigate } from 'react-router-dom';
 import { createOrganization } from '../api/organizationApi';
@@ -11,7 +11,7 @@ import { Country, State } from 'country-state-city';
 
 const CheckIcon = () => (
     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M4 12.5l5 5L20 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M4 12.5l5 5L20 6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
 );
 
@@ -234,426 +234,504 @@ const SupplierRegistration: React.FC<SupplierRegistrationProps> = ({
     };
 
     return (
-        <div
-            className="vr-page"
-            style={{ ['--primary-color' as any]: '#2f7cf6', ['--accent-color' as any]: '#1554c9' }}
-        >
+        <div className="vr-page">
             <Header />
 
             <main className="vr-main">
-                {step < 3 ? (
-                    <div className="vr-card">
-                        <div className="vr-card-header">
+                <div className={`vr-shell ${step === 3 ? 'vr-shell--wide' : ''}`}>
+                    <div className="vr-intro">
+                        <div className="vr-intro-text">
                             <h1 className="vr-title">Supplier Registration</h1>
-                            <p className="vr-subtitle">
-                                {step === 1
-                                    ? 'Create your supplier account to access sourcing opportunities'
-                                    : 'Email Verification'}
-                            </p>
+                            {step < 3 && (
+                                <p className="vr-subtitle">
+                                    {step === 1
+                                        ? 'Create your supplier account to access sourcing opportunities'
+                                        : 'Email Verification'}
+                                </p>
+                            )}
                         </div>
+                        <span className="vr-step-indicator">Step {step} of 3</span>
+                    </div>
 
-                        <div className="vr-stepper-row">
-                            <Stepper current={step} />
-                        </div>
+                    <div className="vr-stepper-row">
+                        <Stepper current={step} />
+                    </div>
 
-                        <div className="vr-card-body">
-                            {step === 1 && (
-                                <>
-                                    <h2 className="vr-section-title">Verify Your Email Address</h2>
-                                    <p className="vr-section-text">
-                                        Enter your business email address. We&apos;ll send a One-Time Password (OTP) to
-                                        verify your email before creating your supplier account.
-                                    </p>
+                    {step < 3 ? (
+                        <section className="vr-card">
+                            <div className="vr-card-body">
+                                {step === 1 && (
+                                    <>
+                                        <h2 className="vr-section-title">Verify Your Email Address</h2>
+                                        <p className="vr-section-text">
+                                            Enter your business email address. We&apos;ll send a One-Time Password (OTP) to
+                                            verify your email before creating your supplier account.
+                                        </p>
+
+                                        <div className="vr-field">
+                                            <label className="vr-label" htmlFor="vr-business-email">
+                                                Business Email Address<span className="sila-required" aria-hidden="true">*</span>
+                                            </label>
+                                            <div className="vr-input-wrap">
+                                                <CiMail className="vr-input-icon" aria-hidden="true" />
+                                                <input
+                                                    id="vr-business-email"
+                                                    className="sila-input vr-input vr-input--icon"
+                                                    type="email"
+                                                    autoComplete="email"
+                                                    placeholder="name@company.com"
+                                                    value={email}
+                                                    onChange={(e) => setEmail(e.target.value)}
+                                                    aria-invalid={otpError ? true : undefined}
+                                                    aria-describedby={otpError ? 'vr-email-hint vr-email-error' : 'vr-email-hint'}
+                                                />
+                                            </div>
+                                            <p className="vr-hint" id="vr-email-hint">Please use your official company email address.</p>
+                                            {otpError && (
+                                                <p className="vr-hint vr-hint--error" id="vr-email-error" role="alert">{otpError}</p>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+
+                                {step === 2 && (
+                                    <>
+                                        <h2 className="vr-section-title">Verify Your Email</h2>
+                                        <p className="vr-section-text">
+                                            Enter the 6-digit verification code sent to{' '}
+                                            <span className="vr-email-highlight">{email || 'supplier@company.com'}</span>
+                                        </p>
+
+                                        <div className="vr-otp-row" role="group" aria-label="One-time password">
+                                            {otp.map((digit, i) => (
+                                                <input
+                                                    key={i}
+                                                    ref={(el) => {
+                                                        otpRefs.current[i] = el;
+                                                    }}
+                                                    className={`vr-otp-box ${otpError ? 'vr-otp-box--error' : ''}`}
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                                                    maxLength={1}
+                                                    value={digit}
+                                                    aria-label={`Digit ${i + 1} of ${OTP_LENGTH}`}
+                                                    aria-invalid={otpError ? true : undefined}
+                                                    onChange={(e) => handleOtpChange(i, e.target.value)}
+                                                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                                                />
+                                            ))}
+                                        </div>
+
+                                        <div className="vr-otp-meta">
+                                            <p className="vr-hint">
+                                                OTP Expires in{' '}
+                                                <span className="vr-timer">{formatTime(secondsLeft)}</span>
+                                            </p>
+                                            <p className="vr-hint">
+                                                Didn&apos;t receive the code?{' '}
+                                                <button
+                                                    type="button"
+                                                    className={`vr-link ${isResendingOtp ? 'vr-link--disabled' : ''}`}
+                                                    aria-disabled={isResendingOtp || undefined}
+                                                    onClick={() => {
+                                                        if (!isResendingOtp) handleResend();
+                                                    }}
+                                                >
+                                                    {isResendingOtp ? 'Sending...' : 'Resend OTP'}
+                                                </button>
+                                            </p>
+                                        </div>
+                                        {otpError && (
+                                            <div className="sila-alert sila-alert--danger vr-alert" role="alert">
+                                                <FaExclamationCircle className="vr-alert-icon" aria-hidden="true" />
+                                                <span>{otpError}</span>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+
+                            <div className="vr-card-footer">
+                                {step === 1 && (
+                                    <Button
+                                        variant="primary"
+                                        size="md"
+                                        onClick={handleSendOtp}
+                                        disabled={!email || isSendingOtp}
+                                        loading={isSendingOtp}
+                                    >
+                                        {isSendingOtp ? 'Sending OTP...' : 'Continue'}
+                                    </Button>
+                                )}
+                                {step === 2 && (
+                                    <Button
+                                        variant="primary"
+                                        size="md"
+                                        onClick={handleVerifyOtp}
+                                        disabled={otp.join('').length !== OTP_LENGTH || isVerifyingOtp}
+                                        loading={isVerifyingOtp}
+                                    >
+                                        {isVerifyingOtp ? 'Verifying...' : 'Verify & Continue'}
+                                    </Button>
+                                )}
+                            </div>
+                        </section>
+                    ) : (
+                        <div className="vr-card vr-step3">
+                            <section className="vr-panel" aria-labelledby="vr-company-title">
+                                <h2 className="vr-panel-title" id="vr-company-title">Company Information</h2>
+                                <div className="vr-grid">
+                                    <div className="vr-field vr-field--full">
+                                        <label className="vr-label" htmlFor="vr-company-name">
+                                            Company Legal Name<Req />
+                                        </label>
+                                        <input
+                                            id="vr-company-name"
+                                            className={`sila-input vr-input ${fieldErrors.companyName ? 'vr-input--error' : ''}`}
+                                            autoComplete="organization"
+                                            value={companyName}
+                                            aria-invalid={fieldErrors.companyName ? true : undefined}
+                                            aria-describedby={fieldErrors.companyName ? 'vr-company-name-error' : undefined}
+                                            onChange={(e) => {
+                                                setCompanyName(e.target.value);
+                                                clearFieldError('companyName');
+                                            }}
+                                        />
+                                        <FieldError id="vr-company-name-error" message={fieldErrors.companyName} />
+                                    </div>
 
                                     <div className="vr-field">
-                                        <label className="vr-label"><CiMail /> Business Email Address</label>
+                                        <label className="vr-label" htmlFor="vr-phone">
+                                            Phone Number<Req />
+                                        </label>
                                         <input
-                                            className="vr-input"
-                                            type="email"
-                                            placeholder="name@company.com"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
+                                            id="vr-phone"
+                                            className={`sila-input vr-input ${fieldErrors.phone ? 'vr-input--error' : ''}`}
+                                            type="tel"
+                                            autoComplete="tel"
+                                            value={phone}
+                                            aria-invalid={fieldErrors.phone ? true : undefined}
+                                            aria-describedby={fieldErrors.phone ? 'vr-phone-error' : undefined}
+                                            onChange={(e) => {
+                                                setPhone(e.target.value);
+                                                clearFieldError('phone');
+                                            }}
                                         />
-                                        <p className="vr-hint">Please use your official company email address.</p>
-                                        {otpError && (
-                                            <p className="vr-hint vr-hint--error">{otpError}</p>
+                                        <FieldError id="vr-phone-error" message={fieldErrors.phone} />
+                                    </div>
+
+                                    <div className="vr-field">
+                                        <label className="vr-label" htmlFor="vr-country">
+                                            Country / Region<Req />
+                                        </label>
+                                        <select
+                                            id="vr-country"
+                                            className={`sila-select vr-input vr-select ${fieldErrors.country ? 'vr-input--error' : ''}`}
+                                            value={country}
+                                            aria-invalid={fieldErrors.country ? true : undefined}
+                                            aria-describedby={fieldErrors.country ? 'vr-country-error' : undefined}
+                                            onChange={(e) => {
+                                                setCountry(e.target.value);
+                                                setStateVal('');
+                                                clearFieldError('country');
+                                            }}
+                                        >
+                                            <option value="">Select Country</option>
+                                            {Country.getAllCountries().map((c: any) => (
+                                                <option key={c.isoCode} value={c.isoCode}>
+                                                    {c.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <FieldError id="vr-country-error" message={fieldErrors.country} />
+                                    </div>
+
+                                    <div className="vr-field">
+                                        <label className="vr-label" htmlFor="vr-address1">
+                                            Address Line 1<Req />
+                                        </label>
+                                        <input
+                                            id="vr-address1"
+                                            className={`sila-input vr-input ${fieldErrors.addressLine1 ? 'vr-input--error' : ''}`}
+                                            autoComplete="address-line1"
+                                            value={addressLine1}
+                                            aria-invalid={fieldErrors.addressLine1 ? true : undefined}
+                                            aria-describedby={fieldErrors.addressLine1 ? 'vr-address1-error' : undefined}
+                                            onChange={(e) => {
+                                                setAddressLine1(e.target.value);
+                                                clearFieldError('addressLine1');
+                                            }}
+                                        />
+                                        <FieldError id="vr-address1-error" message={fieldErrors.addressLine1} />
+                                    </div>
+
+                                    <div className="vr-field">
+                                        <label className="vr-label" htmlFor="vr-address2">Address Line 2</label>
+                                        <input
+                                            id="vr-address2"
+                                            className="sila-input vr-input"
+                                            autoComplete="address-line2"
+                                            value={addressLine2}
+                                            onChange={(e) => setAddressLine2(e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="vr-field">
+                                        <label className="vr-label" htmlFor="vr-city">
+                                            City<Req />
+                                        </label>
+                                        <input
+                                            id="vr-city"
+                                            className={`sila-input vr-input ${fieldErrors.city ? 'vr-input--error' : ''}`}
+                                            autoComplete="address-level2"
+                                            value={city}
+                                            aria-invalid={fieldErrors.city ? true : undefined}
+                                            aria-describedby={fieldErrors.city ? 'vr-city-error' : undefined}
+                                            onChange={(e) => {
+                                                setCity(e.target.value);
+                                                clearFieldError('city');
+                                            }}
+                                        />
+                                        <FieldError id="vr-city-error" message={fieldErrors.city} />
+                                    </div>
+
+                                    <div className="vr-field">
+                                        <label className="vr-label" htmlFor="vr-state">
+                                            State<Req />
+                                        </label>
+                                        <select
+                                            id="vr-state"
+                                            className={`sila-select vr-input vr-select ${fieldErrors.stateVal ? 'vr-input--error' : ''}`}
+                                            value={stateVal}
+                                            aria-invalid={fieldErrors.stateVal ? true : undefined}
+                                            aria-describedby={fieldErrors.stateVal ? 'vr-state-error' : undefined}
+                                            onChange={(e) => {
+                                                setStateVal(e.target.value);
+                                                clearFieldError('stateVal');
+                                            }}
+                                            disabled={!country}
+                                        >
+                                            <option value="">Select State</option>
+                                            {country && State.getStatesOfCountry(country).map((s: any) => (
+                                                <option key={s.isoCode} value={s.isoCode}>
+                                                    {s.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <FieldError id="vr-state-error" message={fieldErrors.stateVal} />
+                                    </div>
+
+                                    <div className="vr-field">
+                                        <label className="vr-label" htmlFor="vr-zip">
+                                            ZIP Code / Pin Code<Req />
+                                        </label>
+                                        <input
+                                            id="vr-zip"
+                                            className={`sila-input vr-input ${fieldErrors.zip ? 'vr-input--error' : ''}`}
+                                            autoComplete="postal-code"
+                                            value={zip}
+                                            aria-invalid={fieldErrors.zip ? true : undefined}
+                                            aria-describedby={fieldErrors.zip ? 'vr-zip-error' : undefined}
+                                            onChange={(e) => {
+                                                setZip(e.target.value);
+                                                clearFieldError('zip');
+                                            }}
+                                        />
+                                        <FieldError id="vr-zip-error" message={fieldErrors.zip} />
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section className="vr-panel" aria-labelledby="vr-admin-title">
+                                <h2 className="vr-panel-title" id="vr-admin-title">Administrator Account Information</h2>
+                                <div className="vr-grid">
+                                    <div className="vr-field">
+                                        <label className="vr-label" htmlFor="vr-admin-name">
+                                            Name<Req />
+                                        </label>
+                                        <input
+                                            id="vr-admin-name"
+                                            className={`sila-input vr-input ${fieldErrors.name ? 'vr-input--error' : ''}`}
+                                            autoComplete="name"
+                                            value={name}
+                                            aria-invalid={fieldErrors.name ? true : undefined}
+                                            aria-describedby={fieldErrors.name ? 'vr-admin-name-error' : undefined}
+                                            onChange={(e) => {
+                                                setName(e.target.value);
+                                                clearFieldError('name');
+                                            }}
+                                        />
+                                        <FieldError id="vr-admin-name-error" message={fieldErrors.name} />
+                                    </div>
+
+                                    <div className="vr-field">
+                                        <label className="vr-label" htmlFor="vr-admin-email">
+                                            Email<Req />
+                                        </label>
+                                        <input
+                                            id="vr-admin-email"
+                                            className={`sila-input vr-input ${fieldErrors.adminEmail ? 'vr-input--error' : ''}`}
+                                            type="email"
+                                            autoComplete="email"
+                                            value={adminEmail}
+                                            aria-invalid={fieldErrors.adminEmail ? true : undefined}
+                                            aria-describedby={fieldErrors.adminEmail ? 'vr-admin-email-error' : undefined}
+                                            onChange={(e) => {
+                                                setAdminEmail(e.target.value);
+                                                clearFieldError('adminEmail');
+                                            }}
+                                        />
+                                        <FieldError id="vr-admin-email-error" message={fieldErrors.adminEmail} />
+                                    </div>
+
+                                    <div className="vr-field">
+                                        <label className="vr-label" htmlFor="vr-pw">
+                                            Password<Req />
+                                        </label>
+                                        <div className="vr-input-wrap">
+                                            <input
+                                                id="vr-pw"
+                                                className={`sila-input vr-input vr-input--password ${fieldErrors.pw ? 'vr-input--error' : ''}`}
+                                                type={showPassword ? 'text' : 'password'}
+                                                autoComplete="new-password"
+                                                value={pw}
+                                                aria-invalid={fieldErrors.pw ? true : undefined}
+                                                aria-describedby={fieldErrors.pw ? 'vr-pw-hint vr-pw-error' : 'vr-pw-hint'}
+                                                onChange={(e) => {
+                                                    setPw(e.target.value);
+                                                    clearFieldError('pw');
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                className="vr-pw-toggle"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                                aria-pressed={showPassword}
+                                            >
+                                                {showPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
+                                            </button>
+                                        </div>
+                                        {fieldErrors.pw ? (
+                                            <FieldError id="vr-pw-error" message={fieldErrors.pw} />
+                                        ) : (
+                                            <p className="vr-hint" id="vr-pw-hint">At least 8 characters.</p>
                                         )}
                                     </div>
-                                </>
-                            )}
 
-                            {step === 2 && (
-                                <>
-                                    <h2 className="vr-section-title">Verify Your Email</h2>
-                                    <p className="vr-section-text">
-                                        Enter the 6-digit verification code sent to{' '}
-                                        <span className="vr-email-highlight">{email || 'supplier@company.com'}</span>
-                                    </p>
-
-                                    <div className="vr-otp-row">
-                                        {otp.map((digit, i) => (
+                                    <div className="vr-field">
+                                        <label className="vr-label" htmlFor="vr-pw2">
+                                            Repeat Password<Req />
+                                        </label>
+                                        <div className="vr-input-wrap">
                                             <input
-                                                key={i}
-                                                ref={(el) => {
-                                                    otpRefs.current[i] = el;
+                                                id="vr-pw2"
+                                                className={`sila-input vr-input vr-input--password ${fieldErrors.pw2 ? 'vr-input--error' : ''}`}
+                                                type={showPassword2 ? 'text' : 'password'}
+                                                autoComplete="new-password"
+                                                value={pw2}
+                                                aria-invalid={fieldErrors.pw2 ? true : undefined}
+                                                aria-describedby={fieldErrors.pw2 ? 'vr-pw2-error' : undefined}
+                                                onChange={(e) => {
+                                                    setPw2(e.target.value);
+                                                    clearFieldError('pw2');
                                                 }}
-                                                className="vr-otp-box"
-                                                type="text"
-                                                inputMode="numeric"
-                                                maxLength={1}
-                                                value={digit}
-                                                onChange={(e) => handleOtpChange(i, e.target.value)}
-                                                onKeyDown={(e) => handleOtpKeyDown(i, e)}
                                             />
-                                        ))}
+                                            <button
+                                                type="button"
+                                                className="vr-pw-toggle"
+                                                onClick={() => setShowPassword2(!showPassword2)}
+                                                aria-label={showPassword2 ? 'Hide password' : 'Show password'}
+                                                aria-pressed={showPassword2}
+                                            >
+                                                {showPassword2 ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
+                                            </button>
+                                        </div>
+                                        <FieldError id="vr-pw2-error" message={fieldErrors.pw2} />
                                     </div>
+                                </div>
+                            </section>
 
-                                    <p className="vr-hint">
-                                        OTP Expires in{' '}
-                                        <span className="vr-link vr-link--static">{formatTime(secondsLeft)}</span>
-                                    </p>
-                                    <p className="vr-hint">
-                                        Didn&apos;t receive the code?{' '}
-                                        <a
-                                            href="#"
-                                            className={`vr-link ${isResendingOtp ? 'vr-link--disabled' : ''}`}
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                if (!isResendingOtp) handleResend();
-                                            }}
-                                        >
-                                            {isResendingOtp ? 'Sending...' : 'Resend OTP'}
+                            {createError && (
+                                <div className="sila-alert sila-alert--danger vr-alert vr-alert--block" role="alert">
+                                    <FaExclamationCircle className="vr-alert-icon" aria-hidden="true" />
+                                    <span>{createError}</span>
+                                </div>
+                            )}
+
+                            <div className="vr-panel vr-panel--footer">
+                                <label className="vr-checkbox">
+                                    <input
+                                        type="checkbox"
+                                        className="vr-checkbox-input"
+                                        checked={agreeTerms}
+                                        onChange={() => setAgreeTerms(!agreeTerms)}
+                                    />
+                                    <span
+                                        className={`vr-checkbox-box ${agreeTerms ? 'vr-checkbox-box--checked' : ''}`}
+                                        aria-hidden="true"
+                                    >
+                                        {agreeTerms && <CheckIcon />}
+                                    </span>
+                                    <span>
+                                        I have read and agree with the{' '}
+                                        <a href="#" className="vr-link" onClick={(e) => e.preventDefault()}>
+                                            Terms of Use.
                                         </a>
-                                    </p>
-                                    {otpError && (
-                                        <p className="vr-hint vr-hint--error">{otpError}</p>
-                                    )}
-                                </>
-                            )}
-                        </div>
+                                    </span>
+                                </label>
 
-                        <div className="vr-card-footer">
-                            {step === 1 && (
                                 <Button
                                     variant="primary"
                                     size="md"
-                                    onClick={handleSendOtp}
-                                    disabled={!email || isSendingOtp}
+                                    onClick={handleCreateAccount}
+                                    disabled={isCreatingAccount}
+                                    loading={isCreatingAccount}
                                 >
-                                    {isSendingOtp ? 'Sending OTP...' : 'Continue'}
+                                    {isCreatingAccount ? 'Creating...' : 'Create Account'}
                                 </Button>
-                            )}
-                            {step === 2 && (
-                                <Button
-                                    variant="primary"
-                                    size="md"
-                                    onClick={handleVerifyOtp}
-                                    disabled={otp.join('').length !== OTP_LENGTH || isVerifyingOtp}
-                                >
-                                    {isVerifyingOtp ? 'Verifying...' : 'Verify & Continue'}
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="vr-step3">
-                        <div className="vr-step3-header">
-                            <h1 className="vr-title">Supplier Registration</h1>
-                            <span className="vr-step-indicator">Step 3 of 3</span>
-                        </div>
-
-                        <div className="vr-panel">
-                            <h2 className="vr-panel-title">Company Information</h2>
-                            <div className="vr-grid">
-                                <div className="vr-field vr-field--full">
-                                    <label className="vr-label vr-label--plain">Company Legal Name*</label>
-                                    <input
-                                        className={`vr-input ${fieldErrors.companyName ? 'vr-input--error' : ''}`}
-                                        value={companyName}
-                                        onChange={(e) => {
-                                            setCompanyName(e.target.value);
-                                            clearFieldError('companyName');
-                                        }}
-                                    />
-                                    {fieldErrors.companyName && (
-                                        <p className="vr-hint vr-hint--error">{fieldErrors.companyName}</p>
-                                    )}
-                                </div>
-
-                                <div className="vr-field vr-field--full">
-                                    <label className="vr-label vr-label--plain">Phone Number*</label>
-                                    <input
-                                        className={`vr-input ${fieldErrors.phone ? 'vr-input--error' : ''}`}
-                                        value={phone}
-                                        onChange={(e) => {
-                                            setPhone(e.target.value);
-                                            clearFieldError('phone');
-                                        }}
-                                    />
-                                    {fieldErrors.phone && (
-                                        <p className="vr-hint vr-hint--error">{fieldErrors.phone}</p>
-                                    )}
-                                </div>
-
-                                <div className="vr-field">
-                                    <label className="vr-label vr-label--plain">Country / Region*</label>
-                                    <select
-                                        className={`vr-input vr-select ${fieldErrors.country ? 'vr-input--error' : ''}`}
-                                        value={country}
-                                        onChange={(e) => {
-                                            setCountry(e.target.value);
-                                            setStateVal('');
-                                            clearFieldError('country');
-                                        }}
-                                    >
-                                        <option value="">Select Country</option>
-                                        {Country.getAllCountries().map((c: any) => (
-                                            <option key={c.isoCode} value={c.isoCode}>
-                                                {c.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {fieldErrors.country && (
-                                        <p className="vr-hint vr-hint--error">{fieldErrors.country}</p>
-                                    )}
-                                </div>
-                                <div className="vr-field">
-                                    <label className="vr-label vr-label--plain">Address Line 1*</label>
-                                    <input
-                                        className={`vr-input ${fieldErrors.addressLine1 ? 'vr-input--error' : ''}`}
-                                        value={addressLine1}
-                                        onChange={(e) => {
-                                            setAddressLine1(e.target.value);
-                                            clearFieldError('addressLine1');
-                                        }}
-                                    />
-                                    {fieldErrors.addressLine1 && (
-                                        <p className="vr-hint vr-hint--error">{fieldErrors.addressLine1}</p>
-                                    )}
-                                </div>
-
-                                <div className="vr-field">
-                                    <label className="vr-label vr-label--plain">Address Line 2</label>
-                                    <input
-                                        className="vr-input"
-                                        value={addressLine2}
-                                        onChange={(e) => setAddressLine2(e.target.value)}
-                                    />
-                                </div>
-                                <div className="vr-field">
-                                    <label className="vr-label vr-label--plain">City*</label>
-                                    <input
-                                        className={`vr-input ${fieldErrors.city ? 'vr-input--error' : ''}`}
-                                        value={city}
-                                        onChange={(e) => {
-                                            setCity(e.target.value);
-                                            clearFieldError('city');
-                                        }}
-                                    />
-                                    {fieldErrors.city && (
-                                        <p className="vr-hint vr-hint--error">{fieldErrors.city}</p>
-                                    )}
-                                </div>
-
-                                <div className="vr-field">
-                                    <label className="vr-label vr-label--plain">State*</label>
-                                    <select
-                                        className={`vr-input vr-select ${fieldErrors.stateVal ? 'vr-input--error' : ''}`}
-                                        value={stateVal}
-                                        onChange={(e) => {
-                                            setStateVal(e.target.value);
-                                            clearFieldError('stateVal');
-                                        }}
-                                        disabled={!country}
-                                    >
-                                        <option value="">Select State</option>
-                                        {country && State.getStatesOfCountry(country).map((s: any) => (
-                                            <option key={s.isoCode} value={s.isoCode}>
-                                                {s.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {fieldErrors.stateVal && (
-                                        <p className="vr-hint vr-hint--error">{fieldErrors.stateVal}</p>
-                                    )}
-                                </div>
-                                <div className="vr-field">
-                                    <label className="vr-label vr-label--plain">ZIP Code / Pin Code*</label>
-                                    <input
-                                        className={`vr-input ${fieldErrors.zip ? 'vr-input--error' : ''}`}
-                                        value={zip}
-                                        onChange={(e) => {
-                                            setZip(e.target.value);
-                                            clearFieldError('zip');
-                                        }}
-                                    />
-                                    {fieldErrors.zip && (
-                                        <p className="vr-hint vr-hint--error">{fieldErrors.zip}</p>
-                                    )}
-                                </div>
                             </div>
                         </div>
-
-                        <div className="vr-panel">
-                            <h2 className="vr-panel-title">Administrator Account Information</h2>
-                            <div className="vr-grid">
-                                <div className="vr-field">
-                                    <label className="vr-label vr-label--plain">Name*</label>
-                                    <input
-                                        className={`vr-input ${fieldErrors.name ? 'vr-input--error' : ''}`}
-                                        value={name}
-                                        onChange={(e) => {
-                                            setName(e.target.value);
-                                            clearFieldError('name');
-                                        }}
-                                    />
-                                    {fieldErrors.name && (
-                                        <p className="vr-hint vr-hint--error">{fieldErrors.name}</p>
-                                    )}
-                                </div>
-
-                                <div className="vr-field vr-field--full">
-                                    <label className="vr-label vr-label--plain">Email*</label>
-                                    <input
-                                        className={`vr-input ${fieldErrors.adminEmail ? 'vr-input--error' : ''}`}
-                                        type="email"
-                                        value={adminEmail}
-                                        onChange={(e) => {
-                                            setAdminEmail(e.target.value);
-                                            clearFieldError('adminEmail');
-                                        }}
-                                    />
-                                    {fieldErrors.adminEmail && (
-                                        <p className="vr-hint vr-hint--error">{fieldErrors.adminEmail}</p>
-                                    )}
-                                </div>
-
-                                <div className="vr-field">
-                                    <label className="vr-label vr-label--plain">Password*</label>
-                                    <div style={{ position: 'relative' }}>
-                                        <input
-                                            className={`vr-input ${fieldErrors.pw ? 'vr-input--error' : ''}`}
-                                            type={showPassword ? 'text' : 'password'}
-                                            value={pw}
-                                            onChange={(e) => {
-                                                setPw(e.target.value);
-                                                clearFieldError('pw');
-                                            }}
-                                            style={{ paddingRight: '40px' }}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            style={{
-                                                position: 'absolute',
-                                                right: '12px',
-                                                top: '50%',
-                                                transform: 'translateY(-50%)',
-                                                background: 'none',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                color: '#6b7280',
-                                                padding: '5px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '18px'
-                                            }}
-                                        >
-                                            {showPassword ? <FaEyeSlash /> : <FaEye />}
-                                        </button>
-                                    </div>
-                                    {fieldErrors.pw && (
-                                        <p className="vr-hint vr-hint--error">{fieldErrors.pw}</p>
-                                    )}
-                                </div>
-
-                                <div className="vr-field">
-                                    <label className="vr-label vr-label--plain">Repeat Password*</label>
-                                    <div style={{ position: 'relative' }}>
-                                        <input
-                                            className={`vr-input ${fieldErrors.pw2 ? 'vr-input--error' : ''}`}
-                                            type={showPassword2 ? 'text' : 'password'}
-                                            value={pw2}
-                                            onChange={(e) => {
-                                                setPw2(e.target.value);
-                                                clearFieldError('pw2');
-                                            }}
-                                            style={{ paddingRight: '40px' }}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword2(!showPassword2)}
-                                            style={{
-                                                position: 'absolute',
-                                                right: '12px',
-                                                top: '50%',
-                                                transform: 'translateY(-50%)',
-                                                background: 'none',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                color: '#6b7280',
-                                                padding: '5px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '18px'
-                                            }}
-                                        >
-                                            {showPassword2 ? <FaEyeSlash /> : <FaEye />}
-                                        </button>
-                                    </div>
-                                    {fieldErrors.pw2 && (
-                                        <p className="vr-hint vr-hint--error">{fieldErrors.pw2}</p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {createError && (
-                            <div className="vr-hint vr-hint--error" style={{ margin: '16px 24px 0' }}>{createError}</div>
-                        )}
-
-                        <div className="vr-panel vr-panel--footer">
-                            <label className="vr-checkbox">
-                                <span
-                                    className={`vr-checkbox-box ${agreeTerms ? 'vr-checkbox-box--checked' : ''}`}
-                                    onClick={() => setAgreeTerms(!agreeTerms)}
-                                >
-                                    {agreeTerms && <CheckIcon />}
-                                </span>
-                                I have read and agree with the{' '}
-                                <a href="#" className="vr-link" onClick={(e) => e.preventDefault()}>
-                                    Terms of Use.
-                                </a>
-                            </label>
-
-                            <Button
-                                variant="primary"
-                                size="md"
-                                onClick={handleCreateAccount}
-                                disabled={isCreatingAccount}
-                            >
-                                {isCreatingAccount ? 'Creating...' : 'Create Account'}
-                            </Button>
-                        </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </main>
         </div>
     );
 };
 
+const Req: React.FC = () => <span className="sila-required" aria-hidden="true">*</span>;
+
+const FieldError: React.FC<{ id: string; message?: string }> = ({ id, message }) =>
+    message ? (
+        <p className="vr-hint vr-hint--error" id={id}>
+            <FaExclamationCircle aria-hidden="true" />
+            {message}
+        </p>
+    ) : null;
+
+const STEP_LABELS = ['Email', 'Verification', 'Company details'] as const;
+
 const Stepper: React.FC<{ current: 1 | 2 | 3 }> = ({ current }) => {
     return (
-        <div className="vr-stepper">
-            {[1, 2, 3].map((n, i) => (
-                <React.Fragment key={n}>
-                    <div className={`vr-step-circle ${n <= current ? 'vr-step-circle--active' : ''}`}>{n}</div>
-                    {i < 2 && <div className={`vr-step-line ${n < current ? 'vr-step-line--active' : ''}`} />}
-                </React.Fragment>
-            ))}
-        </div>
+        <ol className="sila-steps vr-stepper" aria-label="Registration progress">
+            {STEP_LABELS.map((label, i) => {
+                const n = i + 1;
+                const state = n < current ? 'done' : n === current ? 'current' : 'upcoming';
+                return (
+                    <li
+                        key={label}
+                        className={`sila-step ${state === 'done' ? 'sila-step--done' : ''} ${state === 'current' ? 'sila-step--current' : ''}`}
+                        aria-current={state === 'current' ? 'step' : undefined}
+                    >
+                        <span className="sila-step-marker">
+                            {state === 'done' ? <CheckIcon /> : n}
+                        </span>
+                        <span className="vr-step-label">{label}</span>
+                    </li>
+                );
+            })}
+        </ol>
     );
 };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaPlus, FaTimes, FaBuilding, FaList, FaCheck, FaBox, FaClipboard } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaBuilding, FaList, FaCheck, FaBox, FaClipboard, FaExclamationCircle } from 'react-icons/fa';
+import { PageHeader } from '@vosox/shared-ui';
 import { getAllBuyers, createBuyerDepartment } from '../api/platformApi';
 import { useDepartmentStore } from './useDepartmentStore'; 
 import './departmentbuyer.css';
@@ -140,159 +141,197 @@ export const Department: React.FC = () => {
 
 
 
+  const settingsItems = [
+    {
+      key: 'item-master',
+      cardClass: '',
+      iconClass: 'item-master',
+      icon: <FaBox />,
+      title: 'Item Master',
+      desc: 'Manage item master data and configurations',
+      action: 'Open',
+      onClick: handleViewItemMaster,
+    },
+    {
+      key: 'dept',
+      cardClass: ' active',
+      iconClass: 'dept',
+      icon: <FaBuilding />,
+      title: 'Add Department & Cost Center',
+      desc: 'Create departments with associated cost centers for buyers',
+      action: 'Open',
+      onClick: openPopup,
+    },
+    {
+      key: 'list',
+      cardClass: '',
+      iconClass: 'list',
+      icon: <FaList />,
+      title: 'Department & Cost Center List',
+      desc: 'View and manage all departments and cost centers',
+      action: 'View',
+      onClick: handleViewDepartmentList,
+    },
+    {
+      key: 'templates',
+      cardClass: '',
+      iconClass: 'templates',
+      icon: <FaClipboard />,
+      title: 'Templates',
+      desc: 'Create and manage department templates for quick setup',
+      action: 'Manage',
+      onClick: handleViewTemplates,
+    },
+  ];
+
   return (
-    <div className="dept-page-container">
+    <div className="dept-page-container sila-root">
       <header className="dept-top-header">
         <img src={sila_logo} alt="SILA" className="dept-top-logo" />
       </header>
 
-      <div className="dept-content-wrapper">
+      <main className="dept-content-wrapper">
         <div className="dept-back-wrapper">
-          <button className="dept-back-btn-content" onClick={handleBack}>
-            <FaArrowLeft />
-            <span>Back</span>
-          </button>
+          <PageHeader
+            title="Settings"
+            onBack={handleBack}
+            backLabel="Back"
+          />
         </div>
 
-        <div className="dept-settings-list">
-          <div className="dept-settings-card">
-            <div className="dept-settings-card-icon item-master">
-              <FaBox />
-            </div>
-            <div className="dept-settings-card-content">
-              <h3 className="dept-settings-card-title">Item Master</h3>
-              <p className="dept-settings-card-desc">Manage item master data and configurations</p>
-            </div>
-            <button className="dept-settings-card-btn primary" onClick={handleViewItemMaster}>
-              Open
-            </button>
-          </div>
-
-          <div className="dept-settings-card active">
-            <div className="dept-settings-card-icon dept">
-              <FaBuilding />
-            </div>
-            <div className="dept-settings-card-content">
-              <h3 className="dept-settings-card-title">Add Department & Cost Center</h3>
-              <p className="dept-settings-card-desc">Create departments with associated cost centers for buyers</p>
-            </div>
-            <button className="dept-settings-card-btn primary" onClick={openPopup}>
-              Open
-            </button>
-          </div>
-
-          <div className="dept-settings-card">
-            <div className="dept-settings-card-icon list">
-              <FaList />
-            </div>
-            <div className="dept-settings-card-content">
-              <h3 className="dept-settings-card-title">Department & Cost Center List</h3>
-              <p className="dept-settings-card-desc">View and manage all departments and cost centers</p>
-            </div>
-            <button className="dept-settings-card-btn primary" onClick={handleViewDepartmentList}>
-              View
-            </button>
-          </div>
-
-          <div className="dept-settings-card">
-            <div className="dept-settings-card-icon templates">
-              <FaClipboard />
-            </div>
-            <div className="dept-settings-card-content">
-              <h3 className="dept-settings-card-title">Templates</h3>
-              <p className="dept-settings-card-desc">Create and manage department templates for quick setup</p>
-            </div>
-            <button className="dept-settings-card-btn primary" onClick={handleViewTemplates}>
-              Manage
-            </button>
-          </div>
-        </div>
-      </div>
+        <ul className="dept-settings-list" aria-label="Settings">
+          {settingsItems.map((item) => (
+            <li key={item.key} className={`dept-settings-card${item.cardClass}`}>
+              <span className={`dept-settings-card-icon ${item.iconClass}`} aria-hidden="true">
+                {item.icon}
+              </span>
+              <div className="dept-settings-card-content">
+                <h3 className="dept-settings-card-title">{item.title}</h3>
+                <p className="dept-settings-card-desc">{item.desc}</p>
+              </div>
+              <button
+                type="button"
+                className="dept-settings-card-btn primary sila-btn sila-btn--secondary sila-btn--sm"
+                onClick={item.onClick}
+                aria-label={`${item.action} ${item.title}`}
+              >
+                {item.action}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </main>
 
       {showPopup && (
-        <div className="dept-popup-overlay" onClick={closePopup}>
-          <div className="dept-popup" onClick={(e) => e.stopPropagation()}>
-            <div className="dept-popup-header">
-              <h2 className="dept-popup-title">
-                <FaBuilding className="dept-popup-title-icon" />
+        <div className="dept-popup-overlay sila-root sila-overlay" onClick={closePopup}>
+          <div
+            className="dept-popup sila-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dept-popup-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="dept-popup-header sila-modal-header">
+              <h2 id="dept-popup-title" className="dept-popup-title sila-modal-title">
+                <FaBuilding className="dept-popup-title-icon" aria-hidden="true" />
                 Add Department & Cost Center
               </h2>
-              <button className="dept-popup-close" onClick={closePopup}>
-                <FaTimes />
+              <button
+                type="button"
+                className="dept-popup-close sila-btn sila-btn--ghost sila-btn--sm sila-btn--icon"
+                onClick={closePopup}
+                aria-label="Close dialog"
+              >
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
 
-            <div className="dept-popup-body">
-              <div className="dept-form-group">
-                <label className="dept-form-label">
-                  Department Name <span className="dept-required">*</span>
-                  <span className="dept-hint">(Only one department per creation)</span>
+            <div className="dept-popup-body sila-modal-body">
+              <div className="dept-form-group sila-field">
+                <label htmlFor="dept-name-input" className="dept-form-label sila-label">
+                  Department Name <span className="dept-required sila-required" aria-hidden="true">*</span>
                 </label>
                 <input
+                  id="dept-name-input"
                   type="text"
-                  className={`dept-form-input ${!selectedBuyer ? 'dept-input-disabled' : ''}`}
+                  className={`dept-form-input sila-input ${!selectedBuyer ? 'dept-input-disabled' : ''}`}
                   placeholder={selectedBuyer ? 'Enter department name' : 'Select a buyer first'}
                   value={departmentName}
                   onChange={(e) => setDepartmentName(e.target.value)}
                   disabled={!selectedBuyer}
+                  aria-required="true"
+                  aria-describedby="dept-name-hint"
                 />
+                <span id="dept-name-hint" className="dept-hint sila-help">(Only one department per creation)</span>
               </div>
 
-              <div className="dept-form-group">
-                <label className="dept-form-label">
-                  Cost Centers <span className="dept-required">*</span>
-                  <span className="dept-hint">(At least one required, multiple allowed)</span>
-                </label>
+              <fieldset className="dept-form-group dept-fieldset sila-field" aria-describedby="dept-cc-hint">
+                <legend className="dept-form-label sila-label">
+                  Cost Centers <span className="dept-required sila-required" aria-hidden="true">*</span>
+                </legend>
+                <span id="dept-cc-hint" className="dept-hint sila-help">(At least one required, multiple allowed)</span>
                 <div className="dept-cost-centers-list">
                   {costCenters.map((cc, index) => (
                     <div key={index} className="dept-cost-center-row">
                       <input
                         type="text"
-                        className={`dept-form-input dept-cost-input ${!selectedBuyer ? 'dept-input-disabled' : ''}`}
+                        className={`dept-form-input dept-cost-input sila-input ${!selectedBuyer ? 'dept-input-disabled' : ''}`}
                         placeholder={selectedBuyer ? `Cost Center ${index + 1}` : 'Select a buyer first'}
                         value={cc}
                         onChange={(e) => handleCostCenterChange(index, e.target.value)}
                         disabled={!selectedBuyer}
+                        aria-label={`Cost center ${index + 1}`}
                       />
                       {costCenters.length > 1 && selectedBuyer && (
                         <button
-                          className="dept-remove-cc-btn"
+                          type="button"
+                          className="dept-remove-cc-btn sila-btn sila-btn--ghost sila-btn--icon"
                           onClick={() => handleRemoveCostCenter(index)}
                           title="Remove"
+                          aria-label={`Remove cost center ${index + 1}`}
                         >
-                          <FaTimes />
+                          <FaTimes aria-hidden="true" />
                         </button>
                       )}
                     </div>
                   ))}
                 </div>
                 <button
-                  className={`dept-add-cc-btn ${!selectedBuyer ? 'dept-btn-disabled' : ''}`}
+                  type="button"
+                  className={`dept-add-cc-btn sila-btn sila-btn--outline sila-btn--sm ${!selectedBuyer ? 'dept-btn-disabled' : ''}`}
                   onClick={handleAddCostCenter}
                   disabled={!selectedBuyer}
                 >
-                  <FaPlus />
+                  <FaPlus aria-hidden="true" />
                   Add
                 </button>
-              </div>
+              </fieldset>
 
-              {createError && <div className="dept-error-msg">{createError}</div>}
+              {createError && (
+                <div className="dept-error-msg sila-alert sila-alert--danger" role="alert">
+                  <FaExclamationCircle className="dept-msg-icon" aria-hidden="true" />
+                  <span>{createError}</span>
+                </div>
+              )}
               {createSuccess && (
-                <div className="dept-success-msg">
-                  <FaCheck /> {createSuccess}
+                <div className="dept-success-msg sila-alert sila-alert--success" role="status">
+                  <FaCheck className="dept-msg-icon" aria-hidden="true" />
+                  <span>{createSuccess}</span>
                 </div>
               )}
             </div>
 
-            <div className="dept-popup-footer">
-              <button className="dept-btn-secondary" onClick={closePopup}>
+            <div className="dept-popup-footer sila-modal-footer">
+              <button type="button" className="dept-btn-secondary sila-btn sila-btn--secondary" onClick={closePopup}>
                 Cancel
               </button>
               <button
-                className="dept-btn-primary"
+                type="button"
+                className="dept-btn-primary sila-btn sila-btn--primary"
                 onClick={handleCreate}
                 disabled={creating || !selectedBuyer}
               >
+                {creating && <span className="sila-spinner" aria-hidden="true" />}
                 {creating ? 'Creating...' : 'Create Department'}
               </button>
             </div>

@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./BuyerRFQChat.css";
-import type { RfqSupplierRefDto } from "../../dto/rfqDto";
+import type { RfqSupplierRefDto, RfqExternalSupplierRefDto } from "../../dto/rfqDto";
 import type { ChatMessageDto, ChatThreadDto } from "../../dto/chatDto";
 import {
   fetchBuyerMessageThreads,
@@ -8,15 +8,15 @@ import {
   markBuyerThreadAsRead,
   sendBuyerMessage,
   downloadBuyerMessageAttachment,
-  getPersonDetailCached,
 } from "../../api/Buyerapi";
 import type { PersonDetailDto } from "../../api/Buyerapi";
-import { toastService, isErrorResponse } from "@vosox/shared-ui";
+import { EmptyState, Loader, toastService } from "@vosox/shared-ui";
 import ChatConversation from "./ChatConversation";
 import ChatDetails from "./ChatDetails";
 import type { ChatSupplier, ObservedParticipant } from "./types";
 import { downloadBase64File, fileToBase64, formatThreadTime, getInitials } from "./chatUtils";
 import { IconClose, IconMessageSquare } from "./ChatIcons";
+import { startRfqChatHub, stopRfqChatHub } from "../../signalr/rfqChatHub";
 
 const HISTORY_PAGE_LIMIT = 20;
 
@@ -29,6 +29,17 @@ interface BuyerRFQChatProps {
   supplierIds: RfqSupplierRefDto[];
   /** supplierId -> known organization/supplier display name, e.g. sourced from supplierQuotation. */
   supplierNames?: Record<string, string>;
+  /** The ONLY source of which external suppliers appear in the chat and their display names. */
+  externalSupplierIds?: RfqExternalSupplierRefDto[];
+  /**
+   * The logged-in buyer's own profile, for the "Buyer" participant shown in
+   * Chat Details. Passed in rather than read from a store here because this
+   * component is shared across host apps (BuyerDashboard in remote-buyer,
+   * BuyerAdminDash in remote-platform-user) that keep that profile in their
+   * own, separate auth stores.
+   */
+  buyerProfile: PersonDetailDto | null;
+  isLoadingBuyerProfile?: boolean;
 }
 
 const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
@@ -38,6 +49,9 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
   rfqTitle,
   supplierIds,
   supplierNames,
+  externalSupplierIds = [],
+  buyerProfile,
+  isLoadingBuyerProfile = false,
 }) => {
   const [threads, setThreads] = useState<ChatThreadDto[]>([]);
   // Starts true (not false) because threads are always fetched on mount — this
@@ -48,9 +62,6 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
   const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "conversation">("list");
   const [isChatDetailsOpen, setIsChatDetailsOpen] = useState(false);
-
-  const [buyerProfile, setBuyerProfile] = useState<PersonDetailDto | null>(null);
-  const [isLoadingBuyerProfile, setIsLoadingBuyerProfile] = useState(false);
 
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -63,11 +74,18 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<string | null>(null);
 
-  // One chat thread per supplier. `supplierIds` from the RFQ is the ONLY
-  // source for which suppliers appear here — a matching thread (if any) is
-  // merged in, but a supplier with no thread still gets a "Start chat" entry.
+  // Read inside the SignalR handler (registered once per rfqId) so it always
+  // sees the currently open thread without reconnecting on every supplier switch.
+  const selectedThreadIdRef = useRef<string | null>(null);
+
+  // One chat thread per supplier. `supplierIds`/`externalSupplierIds` from the
+  // RFQ are the ONLY source for which suppliers appear here — a matching
+  // thread (if any) is merged in, but a supplier with no thread still gets a
+  // "Start chat" entry. External suppliers are kept in the same list, keyed
+  // by externalSupplierId instead of supplierId and flagged via isExternal so
+  // sending/thread-matching can route to the right id.
   const chatSuppliers = useMemo<ChatSupplier[]>(() => {
-    const list: ChatSupplier[] = supplierIds
+    const internal: ChatSupplier[] = supplierIds
       .filter((s) => !!s?.supplierId)
       .map((s) => {
         const thread = threads.find((t) => t.supplierId === s.supplierId) || null;
@@ -76,8 +94,27 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
           supplierId: s.supplierId,
           supplierName,
           thread,
+          isExternal: false,
         };
       });
+
+    const external: ChatSupplier[] = externalSupplierIds
+      .filter((s) => !!s?.externalSupplierId)
+      .map((s) => {
+        const thread =
+          threads.find(
+            (t) => t.externalSupplierId === s.externalSupplierId || t.supplierId === s.externalSupplierId
+          ) || null;
+        const supplierName = thread?.counterpartyName || s.externalSupplierName || "External Supplier";
+        return {
+          supplierId: s.externalSupplierId,
+          supplierName,
+          thread,
+          isExternal: true,
+        };
+      });
+
+    const list = [...internal, ...external];
 
     list.sort((a, b) => {
       const at = a.thread?.lastMessageAt ? new Date(a.thread.lastMessageAt).getTime() : 0;
@@ -86,7 +123,7 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
     });
 
     return list;
-  }, [supplierIds, threads, supplierNames]);
+  }, [supplierIds, externalSupplierIds, threads, supplierNames]);
 
   const currentSupplier = chatSuppliers.find((s) => s.supplierId === selectedSupplierId) || null;
   const totalUnread = threads.reduce((sum, t) => sum + (t.unreadCount || 0), 0);
@@ -97,33 +134,15 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
     const seen = new Map<string, string>();
     for (const message of messages) {
       if (message.senderOrganizationType?.toLowerCase() === "buyer") continue;
-      if (!message.senderUserId || !message.senderName) continue;
-      if (!seen.has(message.senderUserId)) seen.set(message.senderUserId, message.senderName);
+      if (!message.senderName) continue;
+      // External supplier messages have no senderUserId (they're an unregistered
+      // session-token contact, not an internal user) — fall back to the sender
+      // name itself as the dedup key so they still show up here.
+      const key = message.senderUserId || message.senderName;
+      if (!seen.has(key)) seen.set(key, message.senderName);
     }
     return Array.from(seen.entries()).map(([userId, name]) => ({ userId, name }));
   }, [messages]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadBuyerProfile = async () => {
-      setIsLoadingBuyerProfile(true);
-      try {
-        // Cached/shared with the dashboard Header, so this does not trigger a
-        // duplicate network call when the profile is already loaded.
-        const result = await getPersonDetailCached();
-        if (cancelled) return;
-        if (!isErrorResponse(result)) {
-          setBuyerProfile(result);
-        }
-      } finally {
-        if (!cancelled) setIsLoadingBuyerProfile(false);
-      }
-    };
-    loadBuyerProfile();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -145,6 +164,82 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
     return () => {
       cancelled = true;
     };
+  }, [rfqId]);
+
+  useEffect(() => {
+    selectedThreadIdRef.current = currentSupplier?.thread?.threadId || null;
+  }, [currentSupplier]);
+
+  // Routes a live SignalR message into the open conversation (if it belongs to
+  // the thread currently on screen) and/or the supplier list preview/unread
+  // count. Uses a ref for the selected thread instead of a dependency so the
+  // hub connection below doesn't need to be recreated every time the buyer
+  // switches suppliers.
+  const handleIncomingMessages = (payload: ChatMessageDto | ChatMessageDto[]) => {
+    const incoming = Array.isArray(payload) ? payload : [payload];
+    if (incoming.length === 0) return;
+
+    const openThreadId = selectedThreadIdRef.current;
+    console.log("[BuyerRFQChat] Incoming SignalR payload:", {
+      incomingCount: incoming.length,
+      openThreadId,
+      incomingThreadIds: incoming.map((m) => m.threadId),
+    });
+
+    setMessages((prev) => {
+      const existingIds = new Set(prev.map((m) => m.id));
+      const forOpenThread = incoming.filter(
+        (m) => m.threadId === openThreadId && !existingIds.has(m.id)
+      );
+      return forOpenThread.length > 0 ? [...prev, ...forOpenThread] : prev;
+    });
+
+    if (incoming.some((m) => m.threadId === openThreadId)) {
+      setScrollTick((t) => t + 1);
+    }
+
+    let hasUnknownThread = false;
+    setThreads((prev) => {
+      const next = [...prev];
+      incoming.forEach((message) => {
+        const idx = next.findIndex((t) => t.threadId === message.threadId);
+        if (idx === -1) {
+          hasUnknownThread = true;
+          return;
+        }
+        const isOpenThread = message.threadId === openThreadId;
+        next[idx] = {
+          ...next[idx],
+          lastMessageBody: message.body || (message.attachments?.length ? "Sent an attachment" : ""),
+          lastMessageAt: message.dateCreated,
+          unreadCount: isOpenThread ? 0 : next[idx].unreadCount + 1,
+        };
+      });
+      return next;
+    });
+
+    // A message for a thread this panel hasn't seen yet (e.g. a supplier's
+    // first reply) — refresh the thread list from the existing REST endpoint
+    // rather than guessing at a new ChatThreadDto's fields.
+    if (hasUnknownThread) {
+      fetchBuyerMessageThreads(rfqId)
+        .then((data) => setThreads(data))
+        .catch((err) => {
+          console.error("[BuyerRFQChat] Failed to refresh threads after an unrecognized SignalR message:", err);
+        });
+    }
+  };
+
+  useEffect(() => {
+    startRfqChatHub({ rfqId }, handleIncomingMessages).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error("[BuyerRFQChat] SignalR connection failed:", err);
+    });
+
+    return () => {
+      stopRfqChatHub();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rfqId]);
 
   useEffect(() => {
@@ -251,22 +346,29 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
 
       const response = await sendBuyerMessage({
         rfqId,
-        supplierId: selectedSupplierId,
+        ...(supplier.isExternal
+          ? { externalSupplierId: selectedSupplierId }
+          : { supplierId: selectedSupplierId }),
         body,
         attachments,
       });
 
-      setMessages((prev) => [...prev, response]);
+      // The SignalR broadcast for this same message can arrive before this
+      // REST response does — dedup by id so it isn't appended twice.
+      setMessages((prev) => (prev.some((m) => m.id === response.id) ? prev : [...prev, response]));
 
       setThreads((prev) => {
-        const idx = prev.findIndex((t) => t.supplierId === selectedSupplierId);
+        const idx = prev.findIndex((t) =>
+          supplier.isExternal ? t.externalSupplierId === selectedSupplierId : t.supplierId === selectedSupplierId
+        );
         if (idx === -1) {
           const newThread: ChatThreadDto = {
             threadId: response.threadId,
             rfqId,
             rfqNumber: rfqNumber || "",
             buyerId: "",
-            supplierId: selectedSupplierId,
+            supplierId: supplier.isExternal ? "" : selectedSupplierId,
+            externalSupplierId: supplier.isExternal ? selectedSupplierId : undefined,
             counterpartyName: supplier.supplierName,
             lastMessageBody: response.body,
             lastMessageAt: response.dateCreated,
@@ -310,16 +412,22 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
 
   return (
     <div className="brc-overlay" onClick={onClose}>
-      <div className="brc-drawer" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="brc-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="brc-drawer-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="brc-header">
           <div className="brc-header-title-row">
-            <span className="brc-header-icon">
+            <span className="brc-header-icon" aria-hidden="true">
               <IconMessageSquare />
             </span>
             <div className="brc-header-text">
-              <h2 className="brc-header-title">{rfqTitle ? `Chat — ${rfqTitle}` : "RFQ Chat"}</h2>
+              <h2 id="brc-drawer-title" className="brc-header-title">{rfqTitle ? `Chat — ${rfqTitle}` : "RFQ Chat"}</h2>
               <div className="brc-header-subtitle">
-                {rfqNumber ? `${rfqNumber}` : ""}
+                {rfqNumber ? <span className="sila-ref">{rfqNumber}</span> : ""}
                 {totalUnread > 0 ? `${rfqNumber ? " • " : ""}${totalUnread} unread` : ""}
               </div>
             </div>
@@ -329,12 +437,9 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
           </button>
         </div>
 
-        {supplierIds.length === 0 ? (
-          <div className="brc-empty-state">
-            <div className="brc-empty-state-icon">
-              <IconMessageSquare />
-            </div>
-            <div className="brc-empty-state-title">No suppliers are invited to this RFQ.</div>
+        {supplierIds.length === 0 && externalSupplierIds.length === 0 ? (
+          <div className="brc-state-wrap">
+            <EmptyState icon={<IconMessageSquare />} title="No suppliers are invited to this RFQ." />
           </div>
         ) : (
           <div className={`brc-body brc-mobile-${mobileView}`}>
@@ -342,13 +447,12 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
               <div className="brc-supplier-list-header">Chats</div>
               <div className="brc-supplier-items">
                 {loadingThreads ? (
-                  <div className="brc-loading-state">
-                    <div className="brc-spinner-md" />
-                    <span>Loading conversations...</span>
+                  <div className="brc-state-wrap">
+                    <Loader size={24} message="Loading conversations..." />
                   </div>
                 ) : chatSuppliers.length === 0 ? (
-                  <div className="brc-empty-state">
-                    <div className="brc-empty-state-title">No suppliers are invited to this RFQ.</div>
+                  <div className="brc-state-wrap">
+                    <EmptyState title="No suppliers are invited to this RFQ." />
                   </div>
                 ) : (
                   <>
@@ -357,12 +461,19 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
                         key={supplier.supplierId}
                         className={`brc-supplier-item${
                           supplier.supplierId === selectedSupplierId ? " brc-supplier-item-active" : ""
-                        }`}
+                        }${supplier.thread?.unreadCount ? " brc-supplier-item-unread" : ""}`}
                         onClick={() => handleSelectSupplier(supplier.supplierId)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleSelectSupplier(supplier.supplierId);
+                          }
+                        }}
                         role="button"
                         tabIndex={0}
+                        aria-current={supplier.supplierId === selectedSupplierId ? "true" : undefined}
                       >
-                        <div className="brc-supplier-avatar">{getInitials(supplier.supplierName)}</div>
+                        <div className="brc-supplier-avatar" aria-hidden="true">{getInitials(supplier.supplierName)}</div>
                         <div className="brc-supplier-info">
                           <div className="brc-supplier-name-row">
                             <span className="brc-supplier-name">{supplier.supplierName}</span>
@@ -381,7 +492,10 @@ const BuyerRFQChat: React.FC<BuyerRFQChatProps> = ({
                               <span className="brc-supplier-preview-start">Start chat</span>
                             )}
                             {!!supplier.thread?.unreadCount && (
-                              <span className="brc-unread-badge">
+                              <span
+                                className="brc-unread-badge"
+                                aria-label={`${supplier.thread.unreadCount} unread`}
+                              >
                                 {supplier.thread.unreadCount > 99 ? "99+" : supplier.thread.unreadCount}
                               </span>
                             )}

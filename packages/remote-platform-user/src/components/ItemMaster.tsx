@@ -19,6 +19,7 @@ import {
   uploadItemMasterExcel,
 } from '../api/itemmasterapi';
 import type { ItemMasterDto } from '../api/itemmasterapi';
+import { PageHeader, EmptyState, Loader } from '@vosox/shared-ui';
 import { useDepartmentStore } from './useDepartmentStore';
 import './ItemMaster.css';
 
@@ -44,20 +45,42 @@ const ConfirmPopup: React.FC<ConfirmPopupProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="im-popup-overlay" onClick={onCancel}>
-      <div className="im-popup" onClick={(e) => e.stopPropagation()}>
-        <div className="im-popup-header">
-          <FaExclamationTriangle className="im-popup-icon" />
-          <h3 className="im-popup-title">{title}</h3>
+    <div className="im-popup-overlay sila-root sila-overlay" onClick={onCancel}>
+      <div
+        className="im-popup sila-modal"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="im-popup-title"
+        aria-describedby="im-popup-message"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="im-popup-header sila-modal-header">
+          <div className="im-popup-heading">
+            <span className="im-popup-icon" aria-hidden="true">
+              <FaExclamationTriangle />
+            </span>
+            <h3 id="im-popup-title" className="im-popup-title sila-modal-title">{title}</h3>
+          </div>
         </div>
-        <div className="im-popup-body">
-          <p className="im-popup-message">{message}</p>
+        <div className="im-popup-body sila-modal-body">
+          <p id="im-popup-message" className="im-popup-message sila-modal-text">{message}</p>
         </div>
-        <div className="im-popup-footer">
-          <button className="im-popup-btn-cancel" onClick={onCancel} disabled={isLoading}>
+        <div className="im-popup-footer sila-modal-footer">
+          <button
+            type="button"
+            className="im-popup-btn-cancel sila-btn sila-btn--secondary"
+            onClick={onCancel}
+            disabled={isLoading}
+          >
             Cancel
           </button>
-          <button className="im-popup-btn-confirm" onClick={onConfirm} disabled={isLoading}>
+          <button
+            type="button"
+            className="im-popup-btn-confirm sila-btn sila-btn--danger"
+            onClick={onConfirm}
+            disabled={isLoading}
+          >
+            {isLoading && <span className="sila-spinner" aria-hidden="true" />}
             {isLoading ? 'Deleting...' : 'Yes, Delete'}
           </button>
         </div>
@@ -79,10 +102,14 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
   }, [onClose]);
 
   return (
-    <div className={`im-toast im-toast-${type}`}>
+    <div
+      className={`im-toast im-toast-${type} sila-root`}
+      role={type === 'error' ? 'alert' : 'status'}
+      aria-live={type === 'error' ? 'assertive' : 'polite'}
+    >
       <span>{message}</span>
-      <button className="im-toast-close" onClick={onClose}>
-        <FaTimes />
+      <button type="button" className="im-toast-close" onClick={onClose} aria-label="Dismiss notification">
+        <FaTimes aria-hidden="true" />
       </button>
     </div>
   );
@@ -324,224 +351,261 @@ export const ItemMaster: React.FC = () => {
   const isFormDisabled = !selectedBuyer;
 
   return (
-    <div className="im-page-container">
+    <div className="im-page-container sila-root">
       <header className="im-top-header">
         <img src={sila_logo} alt="SILA" className="im-top-logo" />
       </header>
 
-      <div className="im-content-wrapper">
-        <div className="im-page-title-section">
-          <div className="im-title-left">
-            <h1 className="im-page-title">Item Master</h1>
-            <p className="im-page-subtitle">Manage item master data for buyers</p>
-          </div>
-          <button className="im-close-btn" onClick={handleClose} title="Close">
-            <FaTimes />
-          </button>
-        </div>
+      <main className="im-content-wrapper">
+        <PageHeader
+          className="im-page-title-section"
+          title="Item Master"
+          description="Manage item master data for buyers"
+          actions={
+            <button
+              type="button"
+              className="im-close-btn sila-btn sila-btn--secondary sila-btn--icon"
+              onClick={handleClose}
+              title="Close"
+              aria-label="Close item master"
+            >
+              <FaTimes aria-hidden="true" />
+            </button>
+          }
+        />
 
-        <div className="im-form-section">
-          <div className="im-form-group">
-            <label className="im-form-label">
-              Description <span className="im-required">*</span>
-            </label>
-            <input
-              type="text"
-              className={`im-form-input ${isFormDisabled ? 'im-input-disabled' : ''}`}
-              placeholder={selectedBuyer ? 'Enter description' : 'Select a buyer first'}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={isFormDisabled}
-            />
-          </div>
+        <section className="im-form-section" aria-labelledby="im-form-heading">
+          <h2 id="im-form-heading" className="im-section-title">New item master</h2>
+          <div className="im-form-grid">
+            <div className="im-form-group sila-field">
+              <label htmlFor="im-description" className="im-form-label sila-label">
+                Description <span className="im-required sila-required" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="im-description"
+                type="text"
+                className={`im-form-input sila-input ${isFormDisabled ? 'im-input-disabled' : ''}`}
+                placeholder={selectedBuyer ? 'Enter description' : 'Select a buyer first'}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={isFormDisabled}
+                aria-required="true"
+              />
+            </div>
 
-          <div className="im-form-group">
-            <label className="im-form-label">
-              Material Code <span className="im-required">*</span>
-            </label>
-            <input
-              type="text"
-              className={`im-form-input ${isFormDisabled ? 'im-input-disabled' : ''}`}
-              placeholder={selectedBuyer ? 'Enter material code' : 'Select a buyer first'}
-              value={materialCode}
-              onChange={(e) => setMaterialCode(e.target.value)}
-              disabled={isFormDisabled}
-            />
-          </div>
+            <div className="im-form-group sila-field">
+              <label htmlFor="im-material-code" className="im-form-label sila-label">
+                Material Code <span className="im-required sila-required" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="im-material-code"
+                type="text"
+                className={`im-form-input sila-input ${isFormDisabled ? 'im-input-disabled' : ''}`}
+                placeholder={selectedBuyer ? 'Enter material code' : 'Select a buyer first'}
+                value={materialCode}
+                onChange={(e) => setMaterialCode(e.target.value)}
+                disabled={isFormDisabled}
+                aria-required="true"
+              />
+            </div>
 
-          <div className="im-form-group">
-            <label className="im-form-label">
-              Material Group <span className="im-required">*</span>
-            </label>
-            <input
-              type="text"
-              className={`im-form-input ${isFormDisabled ? 'im-input-disabled' : ''}`}
-              placeholder={selectedBuyer ? 'Enter material group' : 'Select a buyer first'}
-              value={materialGroup}
-              onChange={(e) => setMaterialGroup(e.target.value)}
-              disabled={isFormDisabled}
-            />
+            <div className="im-form-group sila-field">
+              <label htmlFor="im-material-group" className="im-form-label sila-label">
+                Material Group <span className="im-required sila-required" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="im-material-group"
+                type="text"
+                className={`im-form-input sila-input ${isFormDisabled ? 'im-input-disabled' : ''}`}
+                placeholder={selectedBuyer ? 'Enter material group' : 'Select a buyer first'}
+                value={materialGroup}
+                onChange={(e) => setMaterialGroup(e.target.value)}
+                disabled={isFormDisabled}
+                aria-required="true"
+              />
+            </div>
           </div>
 
           <div className="im-form-actions">
-            <button
-              className="im-btn-create"
-              onClick={handleCreate}
-              disabled={creating || isFormDisabled}
-            >
-              <FaPlus />
-              {creating ? 'Creating...' : 'Create Item Master'}
-            </button>
-
             {selectedBuyer && (
               <>
                 <input
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileSelect}
-                  style={{ display: 'none' }}
+                  className="im-file-input"
                   accept=".xlsx,.xls,.csv"
+                  tabIndex={-1}
+                  aria-hidden="true"
                 />
                 <button
-                  className="im-btn-upload"
+                  type="button"
+                  className="im-btn-upload sila-btn sila-btn--secondary"
                   onClick={triggerFileUpload}
                   disabled={uploading}
                 >
-                  <FaUpload />
+                  {uploading ? <span className="sila-spinner" aria-hidden="true" /> : <FaUpload aria-hidden="true" />}
                   {uploading ? 'Uploading...' : 'Upload Excel'}
                 </button>
               </>
             )}
+
+            <button
+              type="button"
+              className="im-btn-create sila-btn sila-btn--primary"
+              onClick={handleCreate}
+              disabled={creating || isFormDisabled}
+            >
+              {creating ? <span className="sila-spinner" aria-hidden="true" /> : <FaPlus aria-hidden="true" />}
+              {creating ? 'Creating...' : 'Create Item Master'}
+            </button>
           </div>
-        </div>
+        </section>
 
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-        <div className="im-table-section">
+        <section className="im-table-section" aria-label="Item masters">
           {!selectedBuyer ? (
-            <div className="im-empty-state">
-              <FaBox className="im-empty-icon" />
-              <h3 className="im-empty-title">Select a Buyer</h3>
-              <p className="im-empty-desc">Choose a buyer to view item masters.</p>
-            </div>
+            <EmptyState
+              className="im-empty-state"
+              icon={<FaBox aria-hidden="true" />}
+              title="Select a Buyer"
+              description="Choose a buyer to view item masters."
+            />
           ) : itemMastersLoading ? (
             <div className="im-loading-container">
-              <div className="im-spinner"></div>
-              <span>Loading item masters...</span>
+              <Loader size={24} message="Loading item masters..." />
             </div>
           ) : (
-            <div className="im-table-wrapper">
-              <table className="im-table">
+            <div className="im-table-wrapper sila-table-wrap">
+              <table className="im-table sila-table">
                 <thead>
                   <tr>
-                    <th className="im-th-desc">Description</th>
-                    <th className="im-th-code">Material Code</th>
-                    <th className="im-th-group">Material Group</th>
-                    <th className="im-th-edit">Edit</th>
-                    <th className="im-th-delete">Delete</th>
+                    <th scope="col" className="im-th-desc">Description</th>
+                    <th scope="col" className="im-th-code">Material Code</th>
+                    <th scope="col" className="im-th-group">Material Group</th>
+                    <th scope="col" className="im-th-edit">Edit</th>
+                    <th scope="col" className="im-th-delete">Delete</th>
                   </tr>
                 </thead>
                 <tbody>
                   {itemMasters.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="im-no-data">
-                        No item masters found for this buyer.
+                        <EmptyState
+                          icon={<FaBox aria-hidden="true" />}
+                          title="No item masters found for this buyer."
+                        />
                       </td>
                     </tr>
                   ) : (
-                    itemMasters.map((item, index) => (
-                      <tr
-                        key={item.id}
-                        className={index % 2 === 0 ? 'im-row-even' : 'im-row-odd'}
-                      >
-                        <td className="im-td-desc">
-                          {editingItem === item.id ? (
-                            <input
-                              type="text"
-                              className="im-edit-input"
-                              value={editDescription}
-                              onChange={(e) => setEditDescription(e.target.value)}
-                            />
-                          ) : (
-                            item.description
-                          )}
-                        </td>
+                    itemMasters.map((item, index) => {
+                      const isEditing = editingItem === item.id;
+                      return (
+                        <tr
+                          key={item.id}
+                          className={`${index % 2 === 0 ? 'im-row-even' : 'im-row-odd'}${isEditing ? ' im-row-editing' : ''}`}
+                        >
+                          <td className="im-td-desc">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                className="im-edit-input sila-input"
+                                value={editDescription}
+                                onChange={(e) => setEditDescription(e.target.value)}
+                                aria-label="Description"
+                              />
+                            ) : (
+                              item.description
+                            )}
+                          </td>
 
-                        <td className="im-td-code">
-                          {editingItem === item.id ? (
-                            <input
-                              type="text"
-                              className="im-edit-input"
-                              value={editMaterialCode}
-                              onChange={(e) => setEditMaterialCode(e.target.value)}
-                            />
-                          ) : (
-                            item.materialCode
-                          )}
-                        </td>
+                          <td className="im-td-code">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                className="im-edit-input sila-input"
+                                value={editMaterialCode}
+                                onChange={(e) => setEditMaterialCode(e.target.value)}
+                                aria-label="Material code"
+                              />
+                            ) : (
+                              <span className="sila-ref">{item.materialCode}</span>
+                            )}
+                          </td>
 
-                        <td className="im-td-group">
-                          {editingItem === item.id ? (
-                            <input
-                              type="text"
-                              className="im-edit-input"
-                              value={editMaterialGroup}
-                              onChange={(e) => setEditMaterialGroup(e.target.value)}
-                            />
-                          ) : (
-                            item.materialGroup
-                          )}
-                        </td>
+                          <td className="im-td-group">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                className="im-edit-input sila-input"
+                                value={editMaterialGroup}
+                                onChange={(e) => setEditMaterialGroup(e.target.value)}
+                                aria-label="Material group"
+                              />
+                            ) : (
+                              item.materialGroup
+                            )}
+                          </td>
 
-                        <td className="im-td-edit">
-                          {editingItem === item.id ? (
-                            <div className="im-edit-actions">
+                          <td className="im-td-edit">
+                            {isEditing ? (
+                              <div className="im-edit-actions">
+                                <button
+                                  type="button"
+                                  className="im-save-btn sila-btn sila-btn--primary sila-btn--sm sila-btn--icon"
+                                  onClick={() => handleSaveEdit(item.id)}
+                                  disabled={savingEdit}
+                                  title="Save"
+                                  aria-label={`Save ${item.description}`}
+                                >
+                                  {savingEdit ? <span className="sila-spinner" aria-hidden="true" /> : <FaCheck aria-hidden="true" />}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="im-cancel-btn sila-btn sila-btn--secondary sila-btn--sm sila-btn--icon"
+                                  onClick={cancelEdit}
+                                  disabled={savingEdit}
+                                  title="Cancel"
+                                  aria-label="Cancel editing"
+                                >
+                                  <FaTimes aria-hidden="true" />
+                                </button>
+                              </div>
+                            ) : (
                               <button
-                                className="im-save-btn"
-                                onClick={() => handleSaveEdit(item.id)}
-                                disabled={savingEdit}
-                                title="Save"
+                                type="button"
+                                className="im-edit-btn sila-btn sila-btn--ghost sila-btn--sm sila-btn--icon"
+                                onClick={() => startEdit(item)}
+                                title="Edit"
+                                aria-label={`Edit ${item.description}`}
                               >
-                                {savingEdit ? '...' : <FaCheck />}
+                                <FaPen aria-hidden="true" />
                               </button>
-                              <button
-                                className="im-cancel-btn"
-                                onClick={cancelEdit}
-                                disabled={savingEdit}
-                                title="Cancel"
-                              >
-                                <FaTimes />
-                              </button>
-                            </div>
-                          ) : (
+                            )}
+                          </td>
+
+                          <td className="im-td-delete">
                             <button
-                              className="im-edit-btn"
-                              onClick={() => startEdit(item)}
-                              title="Edit"
+                              type="button"
+                              className="im-delete-btn sila-btn sila-btn--ghost sila-btn--sm sila-btn--icon"
+                              onClick={() => openDeletePopup(item)}
+                              title="Delete"
+                              aria-label={`Delete ${item.description}`}
                             >
-                              <FaPen />
+                              <FaTrash aria-hidden="true" />
                             </button>
-                          )}
-                        </td>
-
-                        <td className="im-td-delete">
-                          <button
-                            className="im-delete-btn"
-                            onClick={() => openDeletePopup(item)}
-                            title="Delete"
-                          >
-                            <FaTrash />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
             </div>
           )}
-        </div>
-      </div>
+        </section>
+      </main>
 
       <ConfirmPopup
         isOpen={deletePopup.isOpen}

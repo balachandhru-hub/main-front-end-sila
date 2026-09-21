@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from '@vosox/shared-ui';
+import { Button, EmptyState, SearchInput, StatusBadge } from '@vosox/shared-ui';
 
 interface PO {
   id: string;
@@ -43,127 +43,126 @@ export const PurchaseOrders: React.FC = () => {
   };
 
   const filteredPOs = pos.filter(po => {
-    const matchesSearch = po.id.toLowerCase().includes(search.toLowerCase()) || 
+    const matchesSearch = po.id.toLowerCase().includes(search.toLowerCase()) ||
                           po.vendor.toLowerCase().includes(search.toLowerCase());
     const matchesFilter = filterStatus === 'All' || po.status === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
   return (
-    <div>
-      <div className="header-bar">
-        <div>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 700, marginBottom: '6px' }}>Purchase Orders</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Generate, track, and send purchase orders</p>
+    <div className="sila-root">
+      <div className="sila-page-header">
+        <div className="sila-page-header-main">
+          <div>
+            <h1 className="sila-page-title">Purchase Orders</h1>
+            <p className="sila-page-description">Generate, track, and send purchase orders</p>
+          </div>
         </div>
-        <Button variant="primary" onClick={() => setShowAddForm(!showAddForm)}>
-          {showAddForm ? 'Cancel PO creation' : 'Create New PO'}
-        </Button>
+        <div className="sila-page-actions">
+          <Button
+            variant={showAddForm ? 'secondary' : 'primary'}
+            onClick={() => setShowAddForm(!showAddForm)}
+            aria-expanded={showAddForm}
+          >
+            {showAddForm ? 'Cancel PO creation' : 'Create New PO'}
+          </Button>
+        </div>
       </div>
 
-      {showAddForm && (
-        <div className="glass-card" style={{ marginBottom: '30px', animation: 'fadeIn 0.3s ease' }}>
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', fontWeight: 600 }}>Create New Purchase Order</h3>
-          <form onSubmit={handleAddPO} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', alignItems: 'end' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Vendor Name</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="e.g. Acme Corp"
-                value={newVendor}
-                onChange={e => setNewVendor(e.target.value)}
-                required
-              />
+      <div className="sila-card">
+        {showAddForm && (
+          <>
+            <div className="sila-card-header">
+              <h3 className="sila-card-title">Create New Purchase Order</h3>
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Total Amount ($)</label>
-              <input
-                type="number"
-                className="form-input"
-                placeholder="e.g. 5000"
-                value={newAmount}
-                onChange={e => setNewAmount(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Button type="submit" variant="primary" fullWidth={true}>Save as Draft</Button>
-            </div>
-          </form>
-        </div>
-      )}
+            <form className="sila-card-body" onSubmit={handleAddPO}>
+              <div className="sila-form-grid">
+                <div className="sila-field">
+                  <label className="sila-label" htmlFor="po-new-vendor">
+                    Vendor Name <span className="sila-required" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="po-new-vendor"
+                    type="text"
+                    className="sila-input"
+                    placeholder="e.g. Acme Corp"
+                    value={newVendor}
+                    onChange={e => setNewVendor(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="sila-field">
+                  <label className="sila-label" htmlFor="po-new-amount">
+                    Total Amount ($) <span className="sila-required" aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="po-new-amount"
+                    type="number"
+                    className="sila-input"
+                    placeholder="e.g. 5000"
+                    value={newAmount}
+                    onChange={e => setNewAmount(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="sila-form-actions">
+                <Button type="submit" variant="primary">Save as Draft</Button>
+              </div>
+            </form>
+          </>
+        )}
 
-      {/* Filter and Search Bar */}
-      <div className="glass-card" style={{ padding: '16px 24px', marginBottom: '24px', display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '280px' }}>
-          <input
-            type="text"
-            className="form-input"
+        {/* Filter and Search Bar */}
+        <div className="sila-toolbar">
+          <SearchInput
             placeholder="Search PO ID or Vendor..."
+            label="Search PO ID or Vendor"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ maxWidth: '320px' }}
           />
+          <div className="sila-toolbar-group" role="group" aria-label="Filter by status">
+            <span className="sila-label">Status:</span>
+            {['All', 'Draft', 'Sent', 'Completed', 'Cancelled'].map(status => (
+              <button
+                key={status}
+                type="button"
+                className={`sila-btn sila-btn--sm ${filterStatus === status ? 'sila-btn--primary' : 'sila-btn--ghost'}`}
+                aria-pressed={filterStatus === status}
+                onClick={() => setFilterStatus(status)}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Status:</span>
-          {['All', 'Draft', 'Sent', 'Completed', 'Cancelled'].map(status => (
-            <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
-              style={{
-                background: filterStatus === status ? 'var(--primary-color)' : 'rgba(255, 255, 255, 0.05)',
-                border: 'none',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                color: 'var(--text-color)',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                transition: 'var(--transition-smooth)'
-              }}
-            >
-              {status}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* PO Table */}
-      <div className="glass-card">
-        <div className="table-container">
-          <table className="premium-table">
+        {/* PO Table */}
+        <div className="sila-table-wrap">
+          <table className="sila-table">
             <thead>
               <tr>
-                <th>PO ID</th>
-                <th>Vendor</th>
-                <th>Amount</th>
-                <th>Created Date</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th scope="col">PO ID</th>
+                <th scope="col">Vendor</th>
+                <th scope="col" className="sila-num">Amount</th>
+                <th scope="col">Created Date</th>
+                <th scope="col">Status</th>
+                <th scope="col" className="sila-cell-actions">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredPOs.length > 0 ? (
                 filteredPOs.map(po => (
                   <tr key={po.id}>
-                    <td style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{po.id}</td>
-                    <td>{po.vendor}</td>
-                    <td>{po.amount}</td>
-                    <td>{po.date}</td>
+                    <td><span className="sila-ref">{po.id}</span></td>
+                    <td className="sila-cell-strong">{po.vendor}</td>
+                    <td className="sila-num">{po.amount}</td>
+                    <td className="sila-cell-muted">{po.date}</td>
                     <td>
-                      <span className={`badge ${
-                        po.status === 'Completed' ? 'badge-success' :
-                        po.status === 'Sent' ? 'badge-info' :
-                        po.status === 'Draft' ? 'badge-warning' :
-                        'badge-danger'
-                      }`}>
-                        {po.status}
-                      </span>
+                      <StatusBadge status={po.status} label={po.status} />
                     </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                    <td className="sila-cell-actions">
+                      <div className="sila-btn-group">
                         {po.status === 'Draft' && (
                           <Button
                             variant="primary"
@@ -193,8 +192,8 @@ export const PurchaseOrders: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-dark)', padding: '30px' }}>
-                    No purchase orders found matching the filter criteria.
+                  <td colSpan={6}>
+                    <EmptyState title="No purchase orders found matching the filter criteria." />
                   </td>
                 </tr>
               )}

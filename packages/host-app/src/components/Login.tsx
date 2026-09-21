@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Loader } from '@vosox/shared-ui';
-import sila_logo2 from '../../public/assets/SILA_Logo2.png';
-import supplier_logo from '../assets/Supplier.png'
-import buyer_logo from '../assets/Buyer.png'
+import { Button } from '@vosox/shared-ui';
 import Header from './Header';
-import { FaUser, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
+import {
+  FaUser,
+  FaLock,
+  FaEye,
+  FaEyeSlash,
+  FaTruck,
+  FaBuilding,
+  FaShieldAlt,
+  FaExclamationCircle,
+} from 'react-icons/fa';
 import { login, getTokenClaims } from '../api/authApi';
 import './Login.css';
 
@@ -26,7 +32,7 @@ const ROLE_IDS = {
 
 const CheckIcon = () => (
   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M4 12.5l5 5L20 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M4 12.5l5 5L20 6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
@@ -66,22 +72,17 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
     }
   };
 
+  // Every role lands on the same role-neutral URL; the host picks the right app for the role.
   const getRedirectUrl = (roleId: string): string | null => {
     switch (roleId) {
       case ROLE_IDS.BUYER_ADMIN:
-        return '/platform-user/buyer-admin';
       case ROLE_IDS.SUPPLIER_ADMIN:
-        return '/platform-user/supplier-admin';
       case ROLE_IDS.BUYER_NETWORK_ADMIN:
-        return '/platform-user/buyer-network-admin';
       case ROLE_IDS.SUPPLIER_NETWORK_ADMIN:
-        return '/platform-user/supplier-network-admin';
       case ROLE_IDS.PLATFORM_ADMIN:
-        return '/platform-user/dashboard';
       case ROLE_IDS.SUPPLIER:
-        return '/supplier/dashboard';
       case ROLE_IDS.BUYER:
-        return '/buyer/dashboard';
+        return '/dashboard';
       default:
         return null;
     }
@@ -134,132 +135,135 @@ if (claims && claims.roleId) {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        backgroundColor: '#ffffff',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 9999
-      }}>
-        <Loader color="#2f7cf6" />
-      </div>
-    );
-  }
-
   return (
-    <div className="vx-page" style={{ ['--primary-color' as any]: '#2f7cf6', ['--accent-color' as any]: '#1554c9' }}>
+    <div className="vx-page">
       <Header />
 
       <main className="vx-main">
         <div className="vx-card">
-          <div className="vx-left">
-            <div className="vx-left-logo-box">
-              <img src={sila_logo2} alt="SILA" className="vx-logo-img vx-logo-img--boxed" />
-            </div>
+          <aside className="vx-left" aria-label="About the portal">
+            <span className="vx-left-overline">SILA Strategic Procurement Suite</span>
             <h2 className="vx-left-title">Supplier Onboarding &amp; Sourcing Portal</h2>
             <p className="vx-left-text">
               A secure enterprise portal for supplier registration, qualification, sourcing and collaboration
             </p>
-          </div>
+            <p className="vx-left-foot">
+              <FaShieldAlt aria-hidden="true" />
+              <span>Secure enterprise sign-in</span>
+            </p>
+          </aside>
 
           <div className="vx-right">
             <div className="vx-right-inner">
               {view === 'role-select' ? (
                 <>
                   <h1 className="vx-title">Welcome</h1>
-                  <p className="vx-subtitle">Select your role to continue</p>
+                  <p className="vx-subtitle" id="vx-role-hint">Select your role to continue</p>
 
-                  <div className="vx-role-grid">
+                  <div className="vx-role-grid" role="radiogroup" aria-labelledby="vx-role-hint">
                     <button
                       type="button"
+                      role="radio"
+                      aria-checked={role === 'supplier'}
                       className={`vx-role-card ${role === 'supplier' ? 'vx-role-card--active' : ''}`}
                       onClick={() => setRole('supplier')}
                     >
-                      <span className="vx-role-icon"><img src={supplier_logo} alt="Supplier" /></span>
+                      <span className="vx-role-icon" aria-hidden="true"><FaTruck /></span>
                       <span className="vx-role-label">Supplier</span>
+                      <span className="vx-role-radio" aria-hidden="true" />
                     </button>
                     <button
                       type="button"
+                      role="radio"
+                      aria-checked={role === 'buyer'}
                       className={`vx-role-card ${role === 'buyer' ? 'vx-role-card--active' : ''}`}
                       onClick={() => setRole('buyer')}
                     >
-                      <span className="vx-role-icon"><img src={buyer_logo} alt="Buyer" /></span>
+                      <span className="vx-role-icon" aria-hidden="true"><FaBuilding /></span>
                       <span className="vx-role-label">Buyer</span>
+                      <span className="vx-role-radio" aria-hidden="true" />
                     </button>
                   </div>
 
                   <Button variant="primary" size="lg" fullWidth onClick={handleContinue}>
                     Continue as {role === 'supplier' ? 'Supplier' : 'Buyer'}
                   </Button>
+
+                  <p className="vx-footer-text">
+                    Already have an account?{' '}
+                    <button type="button" className="vx-link" onClick={() => setView('sign-in')}>
+                      Sign In
+                    </button>
+                  </p>
                 </>
               ) : (
-                <form onSubmit={handleSignIn}>
-                  <h1 className="vx-title-sec">Sign In</h1>
-                  <p className="vx-subtitle-sec">Enter your credentials to continue</p>
+                <form onSubmit={handleSignIn} noValidate aria-busy={isLoading || undefined}>
+                  <h1 className="vx-title">Sign In</h1>
+                  <p className="vx-subtitle">Enter your credentials to continue</p>
                   {error && (
-                    <div style={{ color: '#dc2626', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '6px', marginBottom: '15px', fontSize: '0.9rem', border: '1px solid #f87171' }}>
-                      {error}
+                    <div className="sila-alert sila-alert--danger vx-alert" role="alert" id="vx-login-error">
+                      <FaExclamationCircle className="vx-alert-icon" aria-hidden="true" />
+                      <span>{error}</span>
                     </div>
                   )}
                   <div className="vx-field">
-                    <label className="vx-label"><FaUser /> Username</label>
-                    <input
-                      className="vx-input"
-                      type="text"
-                      placeholder="Enter your username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                    />
+                    <label className="vx-label" htmlFor="vx-username">Username</label>
+                    <div className="vx-input-wrap">
+                      <FaUser className="vx-input-icon" aria-hidden="true" />
+                      <input
+                        id="vx-username"
+                        className="sila-input vx-input"
+                        type="text"
+                        autoComplete="username"
+                        placeholder="Enter your username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        disabled={isLoading}
+                        aria-invalid={error && !username ? true : undefined}
+                        aria-describedby={error ? 'vx-login-error' : undefined}
+                      />
+                    </div>
                   </div>
 
                   <div className="vx-field">
-                    <label className="vx-label"><FaLock /> Password</label>
-                    <div style={{ position: 'relative' }}>
+                    <label className="vx-label" htmlFor="vx-password">Password</label>
+                    <div className="vx-input-wrap">
+                      <FaLock className="vx-input-icon" aria-hidden="true" />
                       <input
-                        className="vx-input"
+                        id="vx-password"
+                        className="sila-input vx-input vx-input--password"
                         type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
                         placeholder="Enter your password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        style={{ paddingRight: '40px' }}
+                        disabled={isLoading}
+                        aria-invalid={error && !password ? true : undefined}
+                        aria-describedby={error ? 'vx-login-error' : undefined}
                       />
                       <button
                         type="button"
+                        className="vx-pw-toggle"
                         onClick={() => setShowPassword(!showPassword)}
-                        style={{
-                          position: 'absolute',
-                          right: '12px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: '#6b7280',
-                          padding: '5px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '18px'
-                        }}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        aria-pressed={showPassword}
                       >
-                        {showPassword ? <FaEyeSlash /> : <FaEye />}
+                        {showPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
                       </button>
                     </div>
                   </div>
 
                   <div className="vx-row-between">
                     <label className="vx-checkbox">
+                      <input
+                        type="checkbox"
+                        className="vx-checkbox-input"
+                        checked={rememberMe}
+                        onChange={() => setRememberMe(!rememberMe)}
+                      />
                       <span
                         className={`vx-checkbox-box ${rememberMe ? 'vx-checkbox-box--checked' : ''}`}
-                        onClick={() => setRememberMe(!rememberMe)}
+                        aria-hidden="true"
                       >
                         {rememberMe && <CheckIcon />}
                       </span>
@@ -270,7 +274,7 @@ if (claims && claims.roleId) {
                     </a>
                   </div>
 
-                  <Button type="submit" variant="primary" size="lg" fullWidth disabled={isLoading}>
+                  <Button type="submit" variant="primary" size="lg" fullWidth loading={isLoading}>
                     {isLoading ? 'Logging in...' : 'Login'}
                   </Button>
 
