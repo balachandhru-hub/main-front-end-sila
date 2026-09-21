@@ -21,7 +21,10 @@ import { IconClose, IconMessageSquare } from "../../../../remote-buyer/src/compo
 import { startRfqChatHub, stopRfqChatHub } from "../../../../remote-buyer/src/signalr/rfqChatHub";
 
 const HISTORY_PAGE_LIMIT = 20;
-
+// How often the open chat re-checks the history as a safety net for live
+// delivery (see the polling effect below).
+const LIVE_POLL_INTERVAL_MS = 5000;
+ 
 interface ExternalSupplierChatProps {
   onClose: () => void;
   rfqId: string;
@@ -148,7 +151,14 @@ const ExternalSupplierChat: React.FC<ExternalSupplierChatProps> = ({
   useEffect(() => {
     threadIdRef.current = thread?.threadId || null;
   }, [thread]);
-
+ 
+  // Read by the polling effect so it can tell which fetched messages are new
+  // without being re-created on every message.
+  const messagesRef = useRef<ExternalChatMessageDto[]>([]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+ 
   // Routes a live SignalR message into the conversation. The connection is
   // scoped to this rfqId via the session token header (see below), so every
   // message it delivers already belongs to this thread with the buyer.
@@ -190,12 +200,13 @@ const ExternalSupplierChat: React.FC<ExternalSupplierChatProps> = ({
     // No supplierId to scope the connection with (see the props comment
     // above) — and none is needed: per spec this chat always connects to
     // /buyermessageHub (the same hub the Buyer Admin chat uses), which
-    // rfqChatHub.ts selects whenever supplierId is omitted. The session
-    // token is sent the same way the REST calls above send it (as a
-    // header); browsers cannot attach custom headers to the WebSocket/SSE
-    // upgrade itself once negotiated (see rfqChatHub.ts).
+    // rfqChatHub.ts selects whenever supplierId is omitted. The hub only
+    // reads the session token from the query string (session_token +
+    // external_rfq_id) - browsers cannot attach custom headers to the
+    // WebSocket upgrade - so it is passed as externalSessionToken. The
+    // header is kept for the negotiate call.
     startRfqChatHub(
-      { rfqId, headers: { "X-Session-Token": sessionToken } },
+      { rfqId, externalSessionToken: sessionToken, headers: { "X-Session-Token": sessionToken } },
       handleIncomingMessages as (messages: any) => void
     ).catch((err) => {
       console.error("[ExternalSupplierChat] SignalR connection failed:", err);
@@ -206,7 +217,81 @@ const ExternalSupplierChat: React.FC<ExternalSupplierChatProps> = ({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rfqId, sessionToken]);
-
+ 
+  // Live-chat safety net. SignalR is the primary path, but a broadcast only
+  // reaches connections held by the SAME backend process that handled the
+  // send (hub groups are in-memory). When the buyer's send and this tab are
+  // served by different backends - e.g. a bid link on the deployed site while
+  // the buyer works against another API instance, both sharing one database -
+  // the message is saved but never pushed here, and only shows after the chat
+  // is reopened. So while the chat is open (and the tab visible), also pull
+  // the newest page of history and merge in anything not shown yet. Ids are
+  // deduped, so it is harmless when SignalR did deliver the message.
+  useEffect(() => {
+    let stopped = false;
+    let inFlight = false;
+ 
+    const poll = async () => {
+      if (stopped || inFlight || document.hidden) return;
+      inFlight = true;
+      try {
+        let threadId = threadIdRef.current;
+        if (!threadId) {
+          // No conversation yet when the chat opened - the buyer's first
+          // message creates the thread, so look for it.
+          const threads = await fetchExternalSupplierMessageThreads(rfqId, sessionToken);
+          if (stopped || isErrorResponse(threads) || threads.length === 0) return;
+          threadId = threads[0].threadId;
+          threadIdRef.current = threadId;
+          setThread(threads[0]);
+        }
+ 
+        const data = await fetchExternalSupplierMessageHistory(threadId, rfqId, sessionToken, 0, HISTORY_PAGE_LIMIT);
+        if (stopped || isErrorResponse(data)) return;
+ 
+        const knownIds = new Set(messagesRef.current.map((m) => m.id));
+        const fresh = data
+          .filter((m) => !knownIds.has(m.id))
+          .sort((a, b) => new Date(a.dateCreated).getTime() - new Date(b.dateCreated).getTime());
+        if (fresh.length === 0) return;
+ 
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const toAdd = fresh.filter((m) => !existingIds.has(m.id));
+          return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
+        });
+        setScrollTick((t) => t + 1);
+ 
+        const latest = fresh[fresh.length - 1];
+        setThread((prev) =>
+          prev
+            ? {
+                ...prev,
+                lastMessageBody: latest.body || (latest.attachments?.length > 0 ? "Sent an attachment" : ""),
+                lastMessageAt: latest.dateCreated,
+                unreadCount: 0,
+              }
+            : prev
+        );
+ 
+        // The chat is open, so a message from the buyer is being read now.
+        if (fresh.some((m) => m.senderOrganizationType?.toLowerCase() === "buyer")) {
+          await markExternalSupplierThreadAsRead(threadId, rfqId, sessionToken);
+        }
+      } catch {
+        // Transient network error - the next tick retries.
+      } finally {
+        inFlight = false;
+      }
+    };
+ 
+    const timer = window.setInterval(poll, LIVE_POLL_INTERVAL_MS);
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+    };
+  }, [rfqId, sessionToken]);
+ 
   const handleSelectThread = () => setMobileView("conversation");
   const handleBackToList = () => setMobileView("list");
 
@@ -378,6 +463,7 @@ const ExternalSupplierChat: React.FC<ExternalSupplierChatProps> = ({
           ) : (
             <ExternalChatConversation
               counterpartyName={counterpartyName}
+              externalSupplierName={externalSupplierName}
               hasThread={!!thread}
               messages={messages}
               isLoadingMessages={loadingMessages}

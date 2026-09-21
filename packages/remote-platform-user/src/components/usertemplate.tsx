@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   FaEye as Eye,
   FaEdit as Edit2,
@@ -19,6 +19,7 @@ import {
   QuestionList,
   QuestionItem,
   QuestionOptions,
+  Dropdown,
 } from '@vosox/shared-ui';
 import './usertemplate.css';
 import {
@@ -204,6 +205,11 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
 
   const getQuestionTypeLabel = (key: string) =>
     questionTypes.find((qt) => qt.key === key)?.description || key;
+
+  const questionTypeDropdownOptions = useMemo(
+    () => questionTypes.map((qt) => ({ name: qt.description, value: qt.key })),
+    [questionTypes]
+  );
 
   const isOptionsType = (key: string) => key === 'RADIO_BUTTON' || key === 'CHECK_BOX';
 
@@ -753,29 +759,16 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
                 <div className="ut-inline-field-form">
                   <div className="ut-inline-form-container">
                     <div className="ut-form-group sila-field">
-                      <label htmlFor="ut-create-field-type" className="sila-label">
-                        Field Type <span className="sila-required" aria-hidden="true">*</span>
-                      </label>
-                      <select
-                        id="ut-create-field-type"
-                        className="sila-select"
-                        value={fieldForm.type}
-                        onChange={(e) => setFieldForm({ ...fieldForm, type: e.target.value })}
-                        disabled={loadingQuestionTypes}
-                        aria-required="true"
-                        aria-invalid={questionTypesError ? true : undefined}
-                        aria-describedby={questionTypesError ? 'ut-create-field-type-error' : undefined}
-                      >
-                        <option value="" disabled>
-                          {loadingQuestionTypes ? 'Loading...' : 'Select a field type'}
-                        </option>
-                        {questionTypes.map((qt) => (
-                          <option key={qt.id} value={qt.key}>{qt.description}</option>
-                        ))}
-                      </select>
-                      {questionTypesError && (
-                        <div id="ut-create-field-type-error" className="ut-error-message sila-error-text">{questionTypesError}</div>
-                      )}
+                      <Dropdown
+                        label="Field Type"
+                        isRequired
+                        placeholder={loadingQuestionTypes ? 'Loading...' : 'Select a field type'}
+                        options={questionTypeDropdownOptions}
+                        value={fieldForm.type ? { name: getQuestionTypeLabel(fieldForm.type), value: fieldForm.type } : null}
+                        onChange={(val) => setFieldForm((prev) => ({ ...prev, type: val?.value || '' }))}
+                        isDisable={loadingQuestionTypes}
+                        error={questionTypesError || undefined}
+                      />
                     </div>
 
                     <div className="ut-form-group sila-field">
@@ -962,29 +955,16 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
             <div className="ut-inline-field-form">
               <div className="ut-inline-form-container">
                 <div className="ut-form-group sila-field">
-                  <label htmlFor="ut-edit-field-type" className="sila-label">
-                    Field Type <span className="sila-required" aria-hidden="true">*</span>
-                  </label>
-                  <select
-                    id="ut-edit-field-type"
-                    className="sila-select"
-                    value={editFieldForm.type}
-                    onChange={(e) => setEditFieldForm({ ...editFieldForm, type: e.target.value })}
-                    disabled={loadingQuestionTypes}
-                    aria-required="true"
-                    aria-invalid={questionTypesError ? true : undefined}
-                    aria-describedby={questionTypesError ? 'ut-edit-field-type-error' : undefined}
-                  >
-                    <option value="" disabled>
-                      {loadingQuestionTypes ? 'Loading...' : 'Select a field type'}
-                    </option>
-                    {questionTypes.map((qt) => (
-                      <option key={qt.id} value={qt.key}>{qt.description}</option>
-                    ))}
-                  </select>
-                  {questionTypesError && (
-                    <div id="ut-edit-field-type-error" className="ut-error-message sila-error-text">{questionTypesError}</div>
-                  )}
+                  <Dropdown
+                    label="Field Type"
+                    isRequired
+                    placeholder={loadingQuestionTypes ? 'Loading...' : 'Select a field type'}
+                    options={questionTypeDropdownOptions}
+                    value={editFieldForm.type ? { name: getQuestionTypeLabel(editFieldForm.type), value: editFieldForm.type } : null}
+                    onChange={(val) => setEditFieldForm((prev) => ({ ...prev, type: val?.value || '' }))}
+                    isDisable={loadingQuestionTypes}
+                    error={questionTypesError || undefined}
+                  />
                 </div>
 
                 <div className="ut-form-group sila-field">

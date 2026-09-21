@@ -727,7 +727,7 @@ if (Array.isArray(data)) {
     };
 
     const selectedSuppliers = suppliers.filter((s) => selectedSupplierIds.includes(s.supplierId));
-    console.log(suppliers);
+
     const verifiedSelectedCount = selectedSuppliers.filter((s) => s.isVerified).length;
     const unverifiedSelectedCount = selectedSuppliers.length - verifiedSelectedCount;
     const hasUnverifiedSelected = unverifiedSelectedCount > 0;
@@ -1384,8 +1384,8 @@ if (Array.isArray(data)) {
                                 />
                             </div>
                             <div className="bd-item-add-field">
+                                <span className="bd-label-sm">UoM</span>
                                 <Dropdown
-                                    label="UoM"
                                     placeholder="Select UOM"
                                     isAsync
                                     loadOptions={loadUomOptions}
