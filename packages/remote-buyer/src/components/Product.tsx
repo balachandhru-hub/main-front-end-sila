@@ -90,11 +90,11 @@ const Product: React.FC = () => {
     limit: 20,
   });
 
-  // ---- Classification Options ----
-  const [segmentOptions, setSegmentOptions] = useState<Array<{ segment: number; title: string }>>([]);
-  const [familyOptions, setFamilyOptions] = useState<Array<{ family: number; title: string }>>([]);
-  const [classOptions, setClassOptions] = useState<Array<{ class: number; classTitle: string }>>([]);
-  const [commodityOptions, setCommodityOptions] = useState<Array<{ commodity: number; commodityTitle: string }>>([]);
+  // ---- Selected Classification Values (kept as-is from Dropdown's onChange so the label never goes stale) ----
+  const [selectedSegment, setSelectedSegment] = useState<DropdownValue | null>(null);
+  const [selectedFamily, setSelectedFamily] = useState<DropdownValue | null>(null);
+  const [selectedClass, setSelectedClass] = useState<DropdownValue | null>(null);
+  const [selectedCommodity, setSelectedCommodity] = useState<DropdownValue | null>(null);
 
   // ---- Loading States ----
   const [loadingResults, setLoadingResults] = useState(false);
@@ -144,18 +144,16 @@ const Product: React.FC = () => {
     page,
     search,
   }: DropdownLoadParams): Promise<DropdownLoadResult> => {
-    const pageIndex = page + SEGMENT_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
+    const pageIndex = page * SEGMENT_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
     const segments = await fetchSegments(pageIndex, SEGMENT_PAGE_SIZE, search || undefined);
 
     if (!Array.isArray(segments)) {
       return { options: [], hasMore: false };
     }
 
-    setSegmentOptions((prev) => (page === 0 ? segments : [...prev, ...segments]));
-
     return {
       options: segments.map((seg) => ({
-        name: `${seg.segment} - ${seg.title}`,
+        name: seg.title,
         value: String(seg.segment),
       })),
       hasMore: segments.length === SEGMENT_PAGE_SIZE,
@@ -173,20 +171,18 @@ const Product: React.FC = () => {
       return { options: [], hasMore: false };
     }
 
-    const pageIndex = page + FAMILY_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
+    const pageIndex = page * FAMILY_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
     const families = await fetchFamilies(filters.segment, { pageIndex, pageSize: FAMILY_PAGE_SIZE });
 
     if (!Array.isArray(families)) {
       return { options: [], hasMore: false };
     }
 
-    setFamilyOptions((prev) => (page === 0 ? families : [...prev, ...families]));
-
     const searchTerm = search.trim().toLowerCase();
     const options = families
-      .filter((fam) => !searchTerm || `${fam.family} - ${fam.title}`.toLowerCase().includes(searchTerm))
+      .filter((fam) => !searchTerm || fam.title.toLowerCase().includes(searchTerm))
       .map((fam) => ({
-        name: `${fam.family} - ${fam.title}`,
+        name: fam.title,
         value: String(fam.family),
       }));
 
@@ -207,20 +203,18 @@ const Product: React.FC = () => {
       return { options: [], hasMore: false };
     }
 
-    const pageIndex = page + CLASS_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
+    const pageIndex = page * CLASS_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
     const classes = await fetchClassifications(filters.family, { pageIndex, pageSize: CLASS_PAGE_SIZE });
 
     if (!Array.isArray(classes)) {
       return { options: [], hasMore: false };
     }
 
-    setClassOptions((prev) => (page === 0 ? classes : [...prev, ...classes]));
-
     const searchTerm = search.trim().toLowerCase();
     const options = classes
-      .filter((cls) => !searchTerm || `${cls.class} - ${cls.classTitle}`.toLowerCase().includes(searchTerm))
+      .filter((cls) => !searchTerm || cls.classTitle.toLowerCase().includes(searchTerm))
       .map((cls) => ({
-        name: `${cls.class} - ${cls.classTitle}`,
+        name: cls.classTitle,
         value: String(cls.class),
       }));
 
@@ -241,20 +235,18 @@ const Product: React.FC = () => {
       return { options: [], hasMore: false };
     }
 
-    const pageIndex = page + COMMODITY_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
+    const pageIndex = page * COMMODITY_PAGE_SIZE; // Dropdown pages are 0-based; the API is 1-based
     const commodities = await fetchCommodities(filters.class, { pageIndex, pageSize: COMMODITY_PAGE_SIZE });
 
     if (!Array.isArray(commodities)) {
       return { options: [], hasMore: false };
     }
 
-    setCommodityOptions((prev) => (page === 0 ? commodities : [...prev, ...commodities]));
-
     const searchTerm = search.trim().toLowerCase();
     const options = commodities
-      .filter((com) => !searchTerm || `${com.commodity} - ${com.commodityTitle}`.toLowerCase().includes(searchTerm))
+      .filter((com) => !searchTerm || com.commodityTitle.toLowerCase().includes(searchTerm))
       .map((com) => ({
-        name: `${com.commodity} - ${com.commodityTitle}`,
+        name: com.commodityTitle,
         value: String(com.commodity),
       }));
 
@@ -265,57 +257,55 @@ const Product: React.FC = () => {
   };
 
   // ---- Handle Segment Selection ----
-  const handleSegmentChange = async (segmentValue: string) => {
-    const segmentNum = Number(segmentValue);
-
+  const handleSegmentChange = (val: DropdownValue | null) => {
     setFilters((prev) => ({
       ...prev,
-      segment: segmentNum,
+      segment: val ? Number(val.value) : "",
       family: "",
       class: "",
       commodity: "",
     }));
 
-    setFamilyOptions([]);
-    setClassOptions([]);
-    setCommodityOptions([]);
+    setSelectedSegment(val);
+    setSelectedFamily(null);
+    setSelectedClass(null);
+    setSelectedCommodity(null);
   };
 
   // ---- Handle Family Selection ----
-  const handleFamilyChange = async (familyValue: string) => {
-    const familyNum = Number(familyValue);
-
+  const handleFamilyChange = (val: DropdownValue | null) => {
     setFilters((prev) => ({
       ...prev,
-      family: familyNum,
+      family: val ? Number(val.value) : "",
       class: "",
       commodity: "",
     }));
 
-    setClassOptions([]);
-    setCommodityOptions([]);
+    setSelectedFamily(val);
+    setSelectedClass(null);
+    setSelectedCommodity(null);
   };
 
   // ---- Handle Class Selection ----
-  const handleClassChange = async (classValue: string) => {
-    const classNum = Number(classValue);
-
+  const handleClassChange = (val: DropdownValue | null) => {
     setFilters((prev) => ({
       ...prev,
-      class: classNum,
+      class: val ? Number(val.value) : "",
       commodity: "",
     }));
 
-    setCommodityOptions([]);
+    setSelectedClass(val);
+    setSelectedCommodity(null);
   };
 
   // ---- Handle Commodity Selection ----
-  const handleCommodityChange = (commodityValue: string) => {
-    const commodityNum = Number(commodityValue);
+  const handleCommodityChange = (val: DropdownValue | null) => {
     setFilters((prev) => ({
       ...prev,
-      commodity: commodityNum,
+      commodity: val ? Number(val.value) : "",
     }));
+
+    setSelectedCommodity(val);
   };
 
   // ---- Handle Search Input ----
@@ -702,17 +692,8 @@ const Product: React.FC = () => {
                 placeholder="Select Segment"
                 isAsync
                 loadOptions={loadSegmentOptions}
-                value={
-                  filters.segment
-                    ? {
-                        name: `${filters.segment} - ${
-                          segmentOptions.find((seg) => seg.segment === filters.segment)?.title ?? ""
-                        }`,
-                        value: String(filters.segment),
-                      }
-                    : null
-                }
-                onChange={(val: DropdownValue | null) => handleSegmentChange(val?.value ?? "")}
+                value={selectedSegment}
+                onChange={handleSegmentChange}
               />
             </div>
 
@@ -725,17 +706,8 @@ const Product: React.FC = () => {
                 isAsync
                 loadOptions={loadFamilyOptions}
                 cacheUniques={[filters.segment]}
-                value={
-                  filters.family
-                    ? {
-                        name: `${filters.family} - ${
-                          familyOptions.find((fam) => fam.family === filters.family)?.title ?? ""
-                        }`,
-                        value: String(filters.family),
-                      }
-                    : null
-                }
-                onChange={(val: DropdownValue | null) => handleFamilyChange(val?.value ?? "")}
+                value={selectedFamily}
+                onChange={handleFamilyChange}
               />
             </div>
 
@@ -748,17 +720,8 @@ const Product: React.FC = () => {
                 isAsync
                 loadOptions={loadClassOptions}
                 cacheUniques={[filters.family]}
-                value={
-                  filters.class
-                    ? {
-                        name: `${filters.class} - ${
-                          classOptions.find((cls) => cls.class === filters.class)?.classTitle ?? ""
-                        }`,
-                        value: String(filters.class),
-                      }
-                    : null
-                }
-                onChange={(val: DropdownValue | null) => handleClassChange(val?.value ?? "")}
+                value={selectedClass}
+                onChange={handleClassChange}
               />
             </div>
 
@@ -771,17 +734,8 @@ const Product: React.FC = () => {
                 isAsync
                 loadOptions={loadCommodityOptions}
                 cacheUniques={[filters.class]}
-                value={
-                  filters.commodity
-                    ? {
-                        name: `${filters.commodity} - ${
-                          commodityOptions.find((com) => com.commodity === filters.commodity)?.commodityTitle ?? ""
-                        }`,
-                        value: String(filters.commodity),
-                      }
-                    : null
-                }
-                onChange={(val: DropdownValue | null) => handleCommodityChange(val?.value ?? "")}
+                value={selectedCommodity}
+                onChange={handleCommodityChange}
               />
             </div>
           </div>
