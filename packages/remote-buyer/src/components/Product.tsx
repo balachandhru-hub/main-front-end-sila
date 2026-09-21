@@ -310,10 +310,20 @@ const Product: React.FC = () => {
 
   // ---- Handle Search Input ----
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters((prev) => ({
-      ...prev,
-      search: e.target.value,
-    }));
+  const value = e.target.value;
+
+  setFilters((prev) => ({
+    ...prev,
+    search: value,
+  }));
+
+  if (value.trim() === "") {
+    fetchProducts({
+      ...filters,
+      search: "",
+      index: 0,
+    });
+  }
   };
 
   const fetchProducts = async (filterState: FilterState) => {

@@ -13,13 +13,12 @@ import {
   verifyOtp,
   uploadSupplierTermsAndCondition,
   uploadSupplierEsign,
-  fetchInternalRfqTermsCondition,
   updateBuyerTermsConditionStatus,
-  fetchInternalRfqEsign,
   type RFQDetailResponse,
   type SubmitQuotationPayload,
   type RfqDocumentAssetDto,
   type SupplierQuotationByIdItem,
+  type PersonDetailDto,
   fetchBuyerAsset,
 } from "../api/supplierApi";
 import { Button, EmptyState, Loader, PageHeader, StatusBadge, isErrorResponse } from "@vosox/shared-ui";
@@ -118,6 +117,8 @@ interface SupplierRfqQuotationSummaryProps {
   setSelectedRfq: React.Dispatch<React.SetStateAction<RFQDetailResponse | null>>;
   setOwnQuotation: React.Dispatch<React.SetStateAction<SupplierQuotationByIdItem | null>>;
   onRfqsRefresh: () => void;
+  /** Passed by hosts whose logged-in profile isn't in the supplier auth store (Supplier Admin). */
+  personDetail?: PersonDetailDto | null;
 }
 
 const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = ({
@@ -132,6 +133,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
   setSelectedRfq,
   setOwnQuotation,
   onRfqsRefresh,
+  personDetail,
 }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -861,8 +863,6 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
         supplierName={ownQuotation?.supplierName || undefined}
         onUploadSupplierTerms={uploadSupplierTermsAndCondition}
         onUploadSupplierEsign={uploadSupplierEsign}
-        fetchTermsConditions={fetchInternalRfqTermsCondition}
-        fetchESigns={fetchInternalRfqEsign}
         onAcceptBuyerTerms={updateBuyerTermsConditionStatus}
         onBack={() => setShowContractView(false)}
       />
@@ -1883,6 +1883,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
           supplierId={supplierId}
           buyerId={selectedRfq?.buyerId}
           buyerName={selectedRfq?.buyerName}
+          personDetail={personDetail}
         />
       )}
     </>
