@@ -310,6 +310,31 @@
   padding-left: var(--sila-space-2);
 }
 
+/* Shared Dropdown used inside a table cell — match the density of .sqs-cell-select. */
+.sqs-line-table .sqs-cell-dropdown {
+  width: 7.75rem;
+}
+
+.sqs-line-table .sqs-cell-dropdown .sila-dropdown__field {
+  min-height: var(--sila-control-height-sm);
+  padding: 0 var(--sila-space-2);
+}
+
+.sqs-line-table .sqs-cell-dropdown .sila-dropdown__input {
+  height: calc(var(--sila-control-height-sm) - 0.125rem);
+  font-size: var(--sila-text-sm);
+}
+
+/* Shared Dropdown used for the lot-level Delivery/Discount/Tax Type fields. */
+.sqs-field-dropdown .sila-dropdown__field {
+  min-height: var(--sila-control-height);
+}
+
+.sqs-field-dropdown .sila-dropdown__input {
+  height: calc(var(--sila-control-height) - 0.125rem);
+  font-size: var(--sila-text-md);
+}
+
 .sqs-form .sqs-num-input {
   text-align: right;
   font-variant-numeric: tabular-nums;

@@ -82,12 +82,12 @@ const IconClose = () => (
 const formatDateTime = (value?: string | null) =>
   value
     ? new Date(value).toLocaleString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
     : '—';
 
 const TYPE_OPTIONS = [
@@ -483,32 +483,32 @@ const ExternalSupplierBid: React.FC = () => {
         temporaryVerificationToken: null,
         items: rfq.addLotOption
           ? rfq.items.map((item, idx) => {
-              const key = item.id || item.buyerRFQItemId || `item-${idx}`;
-              const existingItemQuote = rfq.supplierQuotationItems?.[idx];
-              return {
-                supplierRFQItemId:
-                  validId(item.supplierRFQItemId) ||
-                  validId(existingItemQuote?.supplierRFQItemId) ||
-                  null,
-                buyerRFQItemId: item.id || item.buyerRFQItemId || '',
-                quotedPrice: Number(itemPrices[key] ?? 0),
-              };
-            })
+            const key = item.id || item.buyerRFQItemId || `item-${idx}`;
+            const existingItemQuote = rfq.supplierQuotationItems?.[idx];
+            return {
+              supplierRFQItemId:
+                validId(item.supplierRFQItemId) ||
+                validId(existingItemQuote?.supplierRFQItemId) ||
+                null,
+              buyerRFQItemId: item.id || item.buyerRFQItemId || '',
+              quotedPrice: Number(itemPrices[key] ?? 0),
+            };
+          })
           : rfq.items.map((item) => {
-              const itemKey = item.supplierRFQItemId;
-              const line = itemKey ? lineItems[itemKey] : undefined;
-              return {
-                supplierRFQItemId: itemKey || null,
-                buyerRFQItemId: item.id || item.buyerRFQItemId || '',
-                quotedPrice: Number(line?.quotedPrice ?? 0),
-                deliveryCharge: Number(line?.deliveryCharge ?? 0),
-                deliveryType: line?.deliveryType || 'PERCENTAGE',
-                discount: Number(line?.discount ?? 0),
-                discountType: line?.discountType || 'PERCENTAGE',
-                tax: Number(line?.tax ?? 0),
-                taxType: line?.taxType || 'PERCENTAGE',
-              };
-            }),
+            const itemKey = item.supplierRFQItemId;
+            const line = itemKey ? lineItems[itemKey] : undefined;
+            return {
+              supplierRFQItemId: itemKey || null,
+              buyerRFQItemId: item.id || item.buyerRFQItemId || '',
+              quotedPrice: Number(line?.quotedPrice ?? 0),
+              deliveryCharge: Number(line?.deliveryCharge ?? 0),
+              deliveryType: line?.deliveryType || 'PERCENTAGE',
+              discount: Number(line?.discount ?? 0),
+              discountType: line?.discountType || 'PERCENTAGE',
+              tax: Number(line?.tax ?? 0),
+              taxType: line?.taxType || 'PERCENTAGE',
+            };
+          }),
       };
 
       const result = await submitExternalQuotation(rfqId, sessionToken, payload);
@@ -651,6 +651,8 @@ const ExternalSupplierBid: React.FC = () => {
         ))}
       </>
     );
+    const isBidFrozen = rfq?.status === "Freezing" || rfq?.status === "Frozen";
+    const isRfqAwarded = rfq?.status === "AWARDED";
 
     content = (
       <div className="sqs-page">
@@ -661,6 +663,13 @@ const ExternalSupplierBid: React.FC = () => {
           actions={
             canChat ? (
               <div className="sqs-header-actions">
+
+                <StatusBadge
+                  status={isRfqAwarded ? "Awarded" : isBidFrozen ? "Frozen" : "Active"}
+                  label={isRfqAwarded ? "RFQ Awarded" : isBidFrozen ? "Bid Frozen" : "Bidding Active"}
+                  dot
+                  className={`bca-status-badge ${isRfqAwarded ? "bca-status-awarded" : isBidFrozen ? "bca-status-frozen" : "bca-status-active"}`}
+                />
                 <Button
                   variant="primary"
                   type="button"
@@ -1066,25 +1075,25 @@ const ExternalSupplierBid: React.FC = () => {
 
             {((rfq.technicalSpecificationDocuments?.length ?? 0) > 0 ||
               (rfq.termsConditionDocuments?.length ?? 0) > 0) && (
-              <section className="sila-card">
-                <div className="sila-card-header">
-                  <div>
-                    <h2 className="sila-card-title">Reference Documents</h2>
-                    <p className="sila-card-subtitle">
-                      Technical specifications, requirements, and Terms &amp; Conditions
-                      documents attached to this RFQ.
-                    </p>
+                <section className="sila-card">
+                  <div className="sila-card-header">
+                    <div>
+                      <h2 className="sila-card-title">Reference Documents</h2>
+                      <p className="sila-card-subtitle">
+                        Technical specifications, requirements, and Terms &amp; Conditions
+                        documents attached to this RFQ.
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="sila-card-body sqs-docs-body">
-                  {rfq.technicalSpecificationDocuments?.length > 0 &&
-                    renderDocumentGroup(rfq.technicalSpecificationDocuments, 'Technical Requirements', 'Tech Spec', 'primary')}
+                  <div className="sila-card-body sqs-docs-body">
+                    {rfq.technicalSpecificationDocuments?.length > 0 &&
+                      renderDocumentGroup(rfq.technicalSpecificationDocuments, 'Technical Requirements', 'Tech Spec', 'primary')}
 
-                  {rfq.termsConditionDocuments?.length > 0 &&
-                    renderDocumentGroup(rfq.termsConditionDocuments, 'Terms & Conditions', 'Terms & Conditions', 'neutral')}
-                </div>
-              </section>
-            )}
+                    {rfq.termsConditionDocuments?.length > 0 &&
+                      renderDocumentGroup(rfq.termsConditionDocuments, 'Terms & Conditions', 'Terms & Conditions', 'neutral')}
+                  </div>
+                </section>
+              )}
 
             {/* [buyer-questions]
             {sortedQuestions.length > 0 && (
@@ -1205,7 +1214,7 @@ const ExternalSupplierBid: React.FC = () => {
               <button
                 type="submit"
                 className="sila-btn sila-btn--primary"
-                disabled={submitting || !canSubmit}
+                disabled={submitting || !canSubmit || isRfqAwarded || frozen || closed}
                 aria-busy={submitting || undefined}
                 title={
                   notYetOpen
@@ -1218,15 +1227,7 @@ const ExternalSupplierBid: React.FC = () => {
                 }
               >
                 {submitting && <span className="sila-spinner" aria-hidden="true" />}
-                {submitting
-                  ? 'Submitting...'
-                  : notYetOpen
-                    ? 'Not Yet Open'
-                    : frozen
-                      ? 'Bid Frozen'
-                      : closed
-                        ? 'Submission Closed'
-                        : 'Submit Quotation'}
+                {submitting ? 'Submitting...' : notYetOpen ? 'Not Yet Open' : frozen ? 'Bid Frozen' : closed ? 'Submission Closed': isRfqAwarded? 'Quotation Closed': 'Submit Quotation'}
               </button>
             </div>
           </div>
