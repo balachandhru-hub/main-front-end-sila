@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Loader, isErrorResponse, Button } from '@vosox/shared-ui';
+import { Loader, isErrorResponse, Button, PageHeader, StatusBadge, Dropdown } from '@vosox/shared-ui';
 import { FaCheckCircle, FaExclamationCircle, FaUserPlus } from 'react-icons/fa';
 import {
   fetchExternalRfqDetails,
@@ -11,11 +11,13 @@ import type {
   ExternalRFQDetailResponse,
   ExternalSubmitQuotationPayload,
 } from '../dto/externalSupplierDto';
-import type { RFQQuestion } from '../dto/supplierDto';
+// Additional Questions from Buyer: disabled for now. Uncomment every block marked [buyer-questions] to bring it back.
+// [buyer-questions] import type { RFQQuestion } from '../dto/supplierDto';
 import ExternalSupplierChat from '../components/ExternalSupplierChat/ExternalSupplierChat';
 import { IconMessageSquare } from '../../../remote-buyer/src/components/BuyerRFQChat/ChatIcons';
 import SilaLogo from '../assets/SILA_Logo.png';
 import '../components/SupplierDashboard.css';
+import '../components/SupplierRfqQuotationSummary.css';
 import './ExternalSupplierBid.css';
 
 const parseAsUtcMs = (dateStr?: string | null): number | null => {
@@ -47,20 +49,6 @@ const IconFile = () => (
   </svg>
 );
 
-const IconCalendar = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="4" width="18" height="18" rx="2" />
-    <path d="M16 2v4M8 2v4M3 10h18" />
-  </svg>
-);
-
-const IconPin = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-    <circle cx="12" cy="10" r="3" />
-  </svg>
-);
-
 const IconEye = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
@@ -76,37 +64,38 @@ const IconDownload = () => (
   </svg>
 );
 
-const IconSparkles = () => (
+const IconAlertCircle = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-    <path d="M5 3v4M3 5h4M19 3v4M17 5h4M5 19v4M3 21h4M19 19v4M17 21h4" />
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
   </svg>
 );
 
-const getInitials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase() || '')
-    .join('') || '?';
+const IconClose = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
 
-const QUESTION_TYPE_LABELS: Record<string, string> = {
-  text: 'Text',
-  textarea: 'Long text',
-  checkbox: 'Checkbox',
-  radio: 'Single choice',
-  select: 'Dropdown',
-  file: 'File',
-  number: 'Number',
-  date: 'Date',
-};
+const formatDateTime = (value?: string | null) =>
+  value
+    ? new Date(value).toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '—';
 
-const formatQuestionType = (type?: string) => {
-  if (!type) return '';
-  const normalized = type.toLowerCase();
-  return QUESTION_TYPE_LABELS[normalized] || normalized.charAt(0).toUpperCase() + normalized.slice(1);
-};
+const TYPE_OPTIONS = [
+  { name: 'Percentage', value: 'PERCENTAGE' },
+  { name: 'Amount', value: 'AMOUNT' },
+];
+
+const getTypeOption = (type: string) => TYPE_OPTIONS.find((option) => option.value === type) ?? null;
 
 const validId = (id?: string | null): string | null =>
   id && id !== '00000000-0000-0000-0000-000000000000' ? id : null;
@@ -127,12 +116,14 @@ const LOAD_ERROR_TITLES: Record<LoadErrorKind, string> = {
   generic: 'Something went wrong',
 };
 
+/* [buyer-questions]
 interface QuestionAnswerState {
   answer: string;
   questionOptionId: string | null;
   questionOptionIds: string[];
   fileName?: string;
 }
+*/
 
 interface QuoteLineItem {
   deliveryCharge: number;
@@ -146,6 +137,7 @@ interface QuoteLineItem {
   quotedAmount: number;
 }
 
+/* [buyer-questions]
 const isQuestionAnswered = (q: RFQQuestion, a?: QuestionAnswerState) => {
   if (!a) return false;
   if (q.questionType === 'Text') return !!a.answer?.trim();
@@ -153,6 +145,7 @@ const isQuestionAnswered = (q: RFQQuestion, a?: QuestionAnswerState) => {
   if (q.questionType === 'FILE' || q.questionType === 'File') return !!a.fileName;
   return (a.questionOptionIds?.length ?? 0) > 0;
 };
+*/
 
 const EMPTY_LINE_ITEM: QuoteLineItem = {
   deliveryCharge: 0,
@@ -187,7 +180,7 @@ const ExternalSupplierBid: React.FC = () => {
   const [quotationId, setQuotationId] = useState<string | null>(null);
   const [hasExistingQuote, setHasExistingQuote] = useState(false);
 
-  const [answers, setAnswers] = useState<{ [questionId: string]: QuestionAnswerState }>({});
+  // [buyer-questions] const [answers, setAnswers] = useState<{ [questionId: string]: QuestionAnswerState }>({});
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -276,11 +269,13 @@ const ExternalSupplierBid: React.FC = () => {
         setLineItems({});
       }
 
+      /* [buyer-questions]
       const initialAnswers: typeof answers = {};
       data.questions?.forEach((q) => {
         initialAnswers[q.questionId] = { answer: '', questionOptionId: null, questionOptionIds: [] };
       });
       setAnswers(initialAnswers);
+      */
 
       setLoading(false);
     };
@@ -318,6 +313,44 @@ const ExternalSupplierBid: React.FC = () => {
     });
   };
 
+  const [bulkValue, setBulkValue] = useState('');
+  const [bulkValueType, setBulkValueType] = useState<'PERCENTAGE' | 'AMOUNT'>('PERCENTAGE');
+  const [bulkFields, setBulkFields] = useState({
+    deliveryCharge: false,
+    discount: false,
+    tax: false,
+    quotedPrice: false,
+  });
+
+  const bulkTypeFieldMap: Partial<Record<keyof typeof bulkFields, keyof QuoteLineItem>> = {
+    deliveryCharge: 'deliveryType',
+    discount: 'discountType',
+    tax: 'taxType',
+  };
+
+  const handleBulkFieldToggle = (field: keyof typeof bulkFields, checked: boolean) => {
+    setBulkFields((prev) => ({ ...prev, [field]: checked }));
+  };
+
+  const handleBulkApply = () => {
+    if (bulkValue === '' || !rfq?.items) return;
+
+    const fieldKeys = (Object.keys(bulkFields) as (keyof typeof bulkFields)[]).filter((key) => bulkFields[key]);
+    if (fieldKeys.length === 0) return;
+
+    rfq.items.forEach((item, idx) => {
+      const itemKey = item.supplierRFQItemId || `item-${idx}`;
+      fieldKeys.forEach((field) => {
+        handleLineItemFieldChange(itemKey, field, bulkValue);
+        const typeField = bulkTypeFieldMap[field];
+        if (typeField) {
+          handleLineItemFieldChange(itemKey, typeField, bulkValueType);
+        }
+      });
+    });
+  };
+
+  /* [buyer-questions]
   const handleTextAnswerChange = (questionId: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: { ...prev[questionId], answer: value } }));
   };
@@ -340,6 +373,7 @@ const ExternalSupplierBid: React.FC = () => {
   const handleFileAnswerChange = (questionId: string, file: File | null) => {
     setAnswers((prev) => ({ ...prev, [questionId]: { ...prev[questionId], fileName: file?.name || '' } }));
   };
+  */
 
   const handleDocumentAction = async (doc: { id?: string; fileName?: string; fileType?: string }, action: 'preview' | 'download') => {
     const assetId = doc.id;
@@ -394,8 +428,10 @@ const ExternalSupplierBid: React.FC = () => {
     }
   };
 
+  /* [buyer-questions]
   const findUnansweredRequiredQuestion = () =>
     (rfq?.questions || []).find((q) => q.isRequired && !isQuestionAnswered(q, answers[q.questionId]));
+  */
 
   const handleSubmitClick = (e: React.FormEvent) => {
     e.preventDefault();
@@ -412,11 +448,13 @@ const ExternalSupplierBid: React.FC = () => {
       return;
     }
 
+    /* [buyer-questions]
     const unanswered = findUnansweredRequiredQuestion();
     if (unanswered) {
       setSubmitError(`Please answer the required question: "${unanswered.question}"`);
       return;
     }
+    */
 
     setShowConfirm(true);
   };
@@ -531,562 +569,666 @@ const ExternalSupplierBid: React.FC = () => {
     const headerRank = formatRank(rfq.supplierQuotation?.[0]?.rank);
     const showRankColumn = !rfq.addLotOption;
 
-    const labelStyle: React.CSSProperties = { display: 'block', fontSize: '12px', color: '#475569', fontWeight: 600, marginBottom: '6px' };
-    const formInputStyle: React.CSSProperties = { width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem' };
-    const formSelectStyle: React.CSSProperties = { ...formInputStyle, background: '#ffffff' };
-    const cellInputStyle: React.CSSProperties = { width: '100px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px' };
-    const cellSelectStyle: React.CSSProperties = { width: '110px', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', background: '#ffffff' };
-    const docIconBtnStyle = (color: string): React.CSSProperties => ({ background: 'none', border: 'none', cursor: 'pointer', color, padding: '4px', display: 'inline-flex', borderRadius: '4px' });
+    /* [buyer-questions]
+    const sortedQuestions = [...(rfq.questions || [])].sort((a, b) => a.displayOrder - b.displayOrder);
+    const answeredCount = sortedQuestions.filter((q) => isQuestionAnswered(q, answers[q.questionId])).length;
+    */
 
-    const typeOptions = (
-      <>
-        <option value="PERCENTAGE">PERCENTAGE</option>
-        <option value="AMOUNT">AMOUNT</option>
-      </>
+    const windowMessage = notYetOpen
+      ? "This RFQ hasn't opened for bidding yet — check back after the start date."
+      : frozen
+        ? "The buyer has frozen this RFQ's bid. You can no longer submit a quotation."
+        : "This RFQ's submission window has closed. You can no longer submit a quotation.";
+
+    // Enter inside the dropdown's search box would otherwise submit the surrounding form.
+    const renderTypeDropdown = (value: string, onChange: (next: string) => void, className: string) => (
+      <div
+        className={className}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.preventDefault();
+        }}
+      >
+        <Dropdown
+          options={TYPE_OPTIONS}
+          value={getTypeOption(value)}
+          onChange={(next) => {
+            if (next) onChange(next.value);
+          }}
+        />
+      </div>
     );
 
-    const renderDocCard = (
-      doc: { id: string; fileName: string; fileType: string },
+    const renderDocumentGroup = (
+      docs: ExternalRFQDetailResponse['technicalSpecificationDocuments'],
+      title: string,
       typeLabel: string,
-      iconStyle?: React.CSSProperties
+      tone: 'primary' | 'neutral'
     ) => (
-      <div key={doc.id} className="pud-rfq-doc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1 }}>
-          <span className="pud-rfq-doc-icon" style={iconStyle}><IconFile /></span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="pud-rfq-doc-name" title={doc.fileName}>{doc.fileName}</div>
-            <div className="pud-rfq-doc-type">{typeLabel} • {doc.fileType?.toUpperCase()}</div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
-          <button type="button" title="Preview document" onClick={() => handleDocumentAction(doc, 'preview')} style={docIconBtnStyle('#2563eb')}>
-            <IconEye />
-          </button>
-          <button type="button" title="Download document" onClick={() => handleDocumentAction(doc, 'download')} style={docIconBtnStyle('#475569')}>
-            <IconDownload />
-          </button>
-        </div>
+      <div className="sqs-doc-group">
+        <h3 className="sqs-doc-group-title">{title}</h3>
+        <ul className="sila-file-list sqs-doc-list">
+          {docs.map((doc) => (
+            <li key={doc.id} className="sila-file">
+              <span className={`sila-file-icon${tone === 'neutral' ? ' sqs-file-icon--neutral' : ''}`} aria-hidden="true">
+                <IconFile />
+              </span>
+              <div className="sqs-doc-text">
+                <div className="sila-file-name" title={doc.fileName}>{doc.fileName}</div>
+                <div className="sila-file-meta">{typeLabel} · {doc.fileType?.toUpperCase()}</div>
+              </div>
+              <div className="sqs-doc-actions">
+                <button
+                  type="button"
+                  className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm"
+                  title="Preview document"
+                  aria-label={`Preview ${doc.fileName}`}
+                  onClick={() => handleDocumentAction(doc, 'preview')}
+                >
+                  <IconEye />
+                </button>
+                <button
+                  type="button"
+                  className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm"
+                  title="Download document"
+                  aria-label={`Download ${doc.fileName}`}
+                  onClick={() => handleDocumentAction(doc, 'download')}
+                >
+                  <IconDownload />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
     );
 
     const renderMaterialInfo = (item: ExternalRFQDetailResponse['items'][number]) => (
       <>
-        <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.description}</div>
-        {item.costCenter && (
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-            Cost Center: {item.costCenterName}
-          </div>
-        )}
+        <div className="sila-cell-strong">{item.description}</div>
+        {item.costCenter && <div className="sqs-uom">Cost Center: {item.costCenterName}</div>}
         {item.attachments?.map((att) => (
-          <div key={att.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f1f5f9', color: '#475569', fontSize: '11px', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', marginRight: '4px' }}>
-            <IconFile /> {att.fileName}
-          </div>
+          <div key={att.id} className="sqs-uom">Attachment: {att.fileName}</div>
         ))}
       </>
     );
 
     content = (
-      <div className="pud-rfq-fullpage">
-        <div className="pud-modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
-            <span className="pud-modal-badge">
-              <IconFile /> RFQ Specification
-            </span>
-          </div>
-          <h2 className="pud-modal-name">{rfq.title}</h2>
-          <div className="pud-modal-meta">
-            <span><IconCalendar /> Closes: {new Date(rfq.endDate).toLocaleDateString()}</span>
-            <span><IconPin /> Delivery: {rfq.deliveryLocation}</span>
-            {canChat && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+      <div className="sqs-page">
+        <PageHeader
+          className="sqs-header"
+          title="RFQ Specification"
+          description="Request supplier quotations and manage your procurement requirements."
+          actions={
+            canChat ? (
+              <div className="sqs-header-actions">
                 <Button
+                  variant="primary"
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  className="ebid-chat-btn"
-                  style={{ ['--primary-color' as string]: '#2f6feb' } as React.CSSProperties}
+                  className="pud-btn pud-btn-outline pud-btn-chat"
                   onClick={() => setIsChatOpen(true)}
                   title="Chat with the buyer"
                 >
                   <IconMessageSquare /> Chat
                 </Button>
               </div>
+            ) : undefined
+          }
+        />
+
+        <form onSubmit={handleSubmitClick} className="sqs-form">
+          <div className="sqs-body">
+            {!canSubmit && (
+              <div className="sila-alert sila-alert--warning sqs-window-alert" role="status">
+                <span className="sqs-alert-icon" aria-hidden="true"><IconAlertCircle /></span>
+                <span>{windowMessage}</span>
+              </div>
             )}
-          </div>
-        </div>
 
-        <form onSubmit={handleSubmitClick}>
-          <div className="pud-modal-body">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div>
-                <div className="pud-modal-section-title">Description</div>
-                <p className="pud-modal-desc" style={{ whiteSpace: 'pre-wrap' }}>
-                  {rfq.description || 'No description provided.'}
-                </p>
+            {hasExistingQuote && (
+              <div className="sila-alert sqs-alert" role="status">
+                <span>You already have a submitted quotation on file for this RFQ. Submitting again will update it.</span>
+              </div>
+            )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '12px' }}>
-                  <div>
-                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Start Date</div>
-                    <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                      {new Date(rfq.startDate).toLocaleDateString()}
-                    </div>
+            <section className="sila-card">
+              <div className="sila-card-header">
+                <h2 className="sila-card-title">RFQ Details</h2>
+              </div>
+              <div className="sila-card-body">
+                <dl className="sila-meta-grid sqs-details-grid">
+                  <div className="sila-meta-item sqs-details-wide">
+                    <dt className="sila-meta-label">RFQ title</dt>
+                    <dd className="sila-meta-value">{rfq.title || '—'}</dd>
                   </div>
-                  <div>
-                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>End Date</div>
-                    <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                      {new Date(rfq.endDate).toLocaleDateString()}
-                    </div>
+                  <div className="sila-meta-item">
+                    <dt className="sila-meta-label">Start date &amp; time</dt>
+                    <dd className="sila-meta-value sqs-tabular">{formatDateTime(rfq.startDate)}</dd>
                   </div>
-                  <div>
-                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Add Lot Option</div>
-                    <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: 600, marginTop: '2px' }}>
-                      {rfq.addLotOption ? 'Allowed' : 'Not Allowed'}
-                    </div>
+                  <div className="sila-meta-item">
+                    <dt className="sila-meta-label">Close date &amp; time</dt>
+                    <dd className="sila-meta-value sqs-tabular">{formatDateTime(rfq.endDate)}</dd>
                   </div>
+                  <div className="sila-meta-item">
+                    <dt className="sila-meta-label">Delivery location</dt>
+                    <dd className="sila-meta-value">{rfq.deliveryLocation || '—'}</dd>
+                  </div>
+                  <div className="sila-meta-item">
+                    <dt className="sila-meta-label">Lot</dt>
+                    <dd className="sila-meta-value">
+                      {rfq.addLotOption ? (
+                        <StatusBadge status="Allowed" tone="success" label="Allowed" />
+                      ) : (
+                        <StatusBadge status="Not allowed" tone="neutral" label="Not Allowed" />
+                      )}
+                    </dd>
+                  </div>
+                  <div className="sila-meta-item">
+                    <dt className="sila-meta-label">Sourcing items</dt>
+                    <dd className="sila-meta-value sqs-tabular">{rfq.items?.length || 0}</dd>
+                  </div>
+                  <div className="sila-meta-item sqs-details-full">
+                    <dt className="sila-meta-label">Description</dt>
+                    <dd className="sila-meta-value sqs-description">{rfq.description || '—'}</dd>
+                  </div>
+                </dl>
+              </div>
+            </section>
+
+            <section className="sila-card quotation-summary-table">
+              <div className="sila-card-header">
+                <div>
+                  <h2 className="sila-card-title">Quotation Summary</h2>
+                  <p className="sila-card-subtitle quotation-summary-subtitle">
+                    Review item pricing and enter applicable delivery charges, discounts, taxes, and quoted amounts.
+                  </p>
                 </div>
-
-                {hasExistingQuote && (
-                  <div style={{ background: '#eff6ff', border: '1px solid #dbeafe', color: '#1d4ed8', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 500, marginTop: '12px' }}>
-                    You already have a submitted quotation on file for this RFQ. Submitting again will update it.
-                  </div>
+                {rfq.addLotOption && quotationStatus === 'SUBMITTED' && headerRank !== '' && (
+                  <StatusBadge status="Rank" tone="info" label={<>Rank: {headerRank}</>} />
                 )}
               </div>
 
-              {((rfq.technicalSpecificationDocuments?.length ?? 0) > 0 ||
-                (rfq.termsConditionDocuments?.length ?? 0) > 0) && (
-                <div>
-                  <div className="pud-modal-section-title">Reference Documents</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginTop: '8px' }}>
-                    {rfq.technicalSpecificationDocuments?.map((doc) => renderDocCard(doc, 'Tech Spec'))}
-                    {rfq.termsConditionDocuments?.map((doc) =>
-                      renderDocCard(doc, 'Terms & Conditions', { background: '#fef3c7', color: '#d97706' })
-                    )}
+              {!rfq.addLotOption && (
+                <div className="sqs-bulk" role="group" aria-labelledby="sqs-bulk-title">
+                  <div className="sqs-bulk-head">
+                    <div className="sqs-bulk-title" id="sqs-bulk-title">Bulk Apply</div>
+                    <p className="sqs-bulk-subtitle">
+                      Enter a value, then toggle the columns you want it applied to.
+                    </p>
+                  </div>
+
+                  <div className="sqs-bulk-controls">
+                    <input
+                      id="sqs-bulk-value-input"
+                      className="sila-input sqs-bulk-input"
+                      type="number"
+                      value={bulkValue}
+                      onChange={(e) => setBulkValue(e.target.value)}
+                      placeholder="Enter value"
+                      aria-label="Bulk value"
+                    />
+
+                    <div className="sqs-segmented" role="group" aria-label="Bulk value type">
+                      <button
+                        type="button"
+                        className={bulkValueType === 'PERCENTAGE' ? 'active' : ''}
+                        aria-pressed={bulkValueType === 'PERCENTAGE'}
+                        onClick={() => setBulkValueType('PERCENTAGE')}
+                      >
+                        Percentage
+                      </button>
+                      <button
+                        type="button"
+                        className={bulkValueType === 'AMOUNT' ? 'active' : ''}
+                        aria-pressed={bulkValueType === 'AMOUNT'}
+                        onClick={() => setBulkValueType('AMOUNT')}
+                      >
+                        Amount
+                      </button>
+                    </div>
+
+                    <div className="sqs-bulk-fields">
+                      {([
+                        ['deliveryCharge', 'Delivery Charge'],
+                        ['discount', 'Discount'],
+                        ['tax', 'Tax'],
+                        ['quotedPrice', 'Quoted Price'],
+                      ] as [keyof typeof bulkFields, string][]).map(([field, label]) => (
+                        <label className="pud-bulk-toggle" key={field}>
+                          <span className="pud-switch">
+                            <input
+                              type="checkbox"
+                              checked={bulkFields[field]}
+                              onChange={(e) => handleBulkFieldToggle(field, e.target.checked)}
+                            />
+                            <span className="pud-slider" aria-hidden="true"></span>
+                          </span>
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      type="button"
+                      className="sqs-bulk-apply"
+                      onClick={handleBulkApply}
+                    >
+                      Apply
+                    </Button>
                   </div>
                 </div>
               )}
 
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div className="pud-modal-section-title" style={{ marginBottom: '12px' }}>Quotation Summary</div>
-                  <div className="pud-modal-section-title" style={{ marginBottom: '12px' }}>
-                    {rfq.addLotOption && quotationStatus === 'SUBMITTED' && headerRank !== '' && (
-                      <span style={{ fontWeight: 600, fontSize: '15px', color: '#2060c6', background: '#ffffff', borderRadius: '6px' }}>
-                        Rank: {headerRank}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {rfq.addLotOption ? (
-                  <div className="pud-rfq-table-container">
-                    <table className="pud-rfq-items-table">
+              {rfq.addLotOption ? (
+                <>
+                  <div className="sila-table-wrap">
+                    <table className="sila-table sqs-items-table">
                       <thead>
                         <tr>
-                          <th>Material Info</th>
-                          <th>Code</th>
-                          <th style={{ textAlign: 'left' }}>Qty Required</th>
+                          <th scope="col">Material Info</th>
+                          <th scope="col">Code</th>
+                          <th scope="col" className="sila-num">Qty Required</th>
                         </tr>
                       </thead>
                       <tbody>
                         {rfq.items?.map((item, idx) => (
                           <tr key={item.id || item.buyerRFQItemId || `item-${idx}`}>
-                            <td>{renderMaterialInfo(item)}</td>
-                            <td><div>{item.materialCode || 'N/A'}</div></td>
-                            <td>{item.quantity} <span>{item.uom}</span></td>
+                            <td className="sqs-material">{renderMaterialInfo(item)}</td>
+                            <td><span className="sila-ref">{item.materialCode || 'N/A'}</span></td>
+                            <td className="sila-num">
+                              <span className="sila-cell-strong">{item.quantity}</span>{' '}
+                              <span className="sqs-uom">{item.uom}</span>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                ) : (
-                  <>
-                    <div className="pud-rfq-table-container">
-                      <table className="pud-rfq-items-table">
-                        <thead>
-                          <tr>
-                            <th>Material Info</th>
-                            <th>Code</th>
-                            <th style={{ textAlign: 'left' }}>Qty</th>
-                            <th style={{ textAlign: 'left' }}>Delivery Charge</th>
-                            <th style={{ textAlign: 'left' }}>Delivery Type</th>
-                            <th style={{ textAlign: 'left' }}>Discount</th>
-                            <th style={{ textAlign: 'left' }}>Discount Type</th>
-                            <th style={{ textAlign: 'left' }}>Tax</th>
-                            <th style={{ textAlign: 'left' }}>Tax Type</th>
-                            <th style={{ textAlign: 'left', width: '110px' }}>Quoted Price</th>
-                            {showRankColumn && <th style={{ textAlign: 'left' }}>Rank</th>}
-                            <th style={{ textAlign: 'left', width: '110px' }}>Sub Total</th>
-                            <th style={{ textAlign: 'left', width: '110px' }}>Quoted Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {rfq.items?.map((item, idx) => {
-                            const itemKey = item.supplierRFQItemId || `item-${idx}`;
-                            const itemId = item.id || item.buyerRFQItemId;
-                            const line = lineItems[itemKey] || EMPTY_LINE_ITEM;
-                            const matchedItem =
-                              rfq.supplierQuotationItems?.find(
-                                (qi) =>
-                                  (qi.supplierRFQItemId && (qi.supplierRFQItemId === itemKey || qi.supplierRFQItemId === itemId)) ||
-                                  (qi.buyerRFQItemId && (qi.buyerRFQItemId === itemKey || qi.buyerRFQItemId === itemId))
-                              ) || rfq.supplierQuotationItems?.[idx];
-                            const itemRank = formatRank(matchedItem?.rank) || '--';
-                            return (
-                              <tr key={itemKey}>
-                                <td>{renderMaterialInfo(item)}</td>
-                                <td>
-                                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                    {item.materialCode || 'N/A'}
-                                  </div>
-                                </td>
-                                <td style={{ textAlign: 'left', fontWeight: 600, color: '#0f172a' }}>
-                                  {item.quantity} <span style={{ fontSize: '12px', fontWeight: 400, color: '#64748b' }}>{item.uom}</span>
-                                </td>
-                                <td>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    className="pud-rfq-item-input"
-                                    value={line.deliveryCharge || ''}
-                                    onChange={(e) => handleLineItemFieldChange(itemKey, 'deliveryCharge', e.target.value)}
-                                    placeholder="0.00"
-                                    style={cellInputStyle}
-                                  />
-                                </td>
-                                <td>
-                                  <select
-                                    value={line.deliveryType}
-                                    onChange={(e) => handleLineItemFieldChange(itemKey, 'deliveryType', e.target.value)}
-                                    style={cellSelectStyle}
-                                  >
-                                    {typeOptions}
-                                  </select>
-                                </td>
-                                <td>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    className="pud-rfq-item-input"
-                                    value={line.discount || ''}
-                                    onChange={(e) => handleLineItemFieldChange(itemKey, 'discount', e.target.value)}
-                                    placeholder="0.00"
-                                    style={cellInputStyle}
-                                  />
-                                </td>
-                                <td>
-                                  <select
-                                    value={line.discountType}
-                                    onChange={(e) => handleLineItemFieldChange(itemKey, 'discountType', e.target.value)}
-                                    style={cellSelectStyle}
-                                  >
-                                    {typeOptions}
-                                  </select>
-                                </td>
-                                <td>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    className="pud-rfq-item-input"
-                                    value={line.tax || ''}
-                                    onChange={(e) => handleLineItemFieldChange(itemKey, 'tax', e.target.value)}
-                                    placeholder="0.00"
-                                    style={cellInputStyle}
-                                  />
-                                </td>
-                                <td>
-                                  <select
-                                    value={line.taxType}
-                                    onChange={(e) => handleLineItemFieldChange(itemKey, 'taxType', e.target.value)}
-                                    style={cellSelectStyle}
-                                  >
-                                    {typeOptions}
-                                  </select>
-                                </td>
-                                <td>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    className="pud-rfq-item-input"
-                                    value={line.quotedPrice || ''}
-                                    onChange={(e) => handleLineItemFieldChange(itemKey, 'quotedPrice', e.target.value)}
-                                    placeholder="0.00"
-                                    style={{ ...cellInputStyle, width: '110px', fontWeight: 600, color: '#0f172a' }}
-                                    required
-                                  />
-                                </td>
-                                {showRankColumn && (
-                                  <td style={{ textAlign: 'left', fontWeight: 600, color: '#0f172a' }}>
-                                    {quotationStatus === 'SUBMITTED' ? itemRank : '-'}
-                                  </td>
-                                )}
-                                <td style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px' }}>
-                                  {line.subTotal.toFixed(2)}
-                                </td>
-                                <td style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px' }}>
-                                  {line.quotedAmount.toFixed(2)}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+
+                  <div className="sqs-pricing">
+                    <div className="sqs-pricing-head">
+                      <h3 className="sqs-subsection-title">Pricing</h3>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '16px 20px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '16px' }}>
-                      <span style={{ fontSize: '13px', color: '#1e293b', fontWeight: 700 }}>Total Price Quote</span>
-                      <span style={{ fontSize: '16px', fontWeight: 700, color: '#16a34a' }}>
-                        {Number(totalPrice).toFixed(2)}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {(rfq.questions?.length ?? 0) > 0 && (() => {
-                const sortedQuestions = [...rfq.questions].sort((a, b) => a.displayOrder - b.displayOrder);
-                const answeredCount = sortedQuestions.filter((q) => isQuestionAnswered(q, answers[q.questionId])).length;
-                const supplierName = rfq.invitedUsers?.[0]?.name || rfq.invitedUsers?.[0]?.userName || 'Your Responses';
-
-                return (
-                  <div className="ebid-qa-section">
-                    <div className="ebid-qa-section-header">
-                      <h3 className="ebid-qa-section-title">Evaluation Questions &amp; Answers</h3>
-                      <p className="ebid-qa-section-sub">Please answer the questions below from the buyer for this RFQ.</p>
-                    </div>
-
-                    <div className="ebid-qa-supplier-card">
-                      <div className="ebid-qa-supplier-header">
-                        <div className="ebid-qa-supplier-left">
-                          <span className="ebid-qa-supplier-avatar">{getInitials(supplierName)}</span>
-                          <span className="ebid-qa-supplier-name">{supplierName}</span>
-                        </div>
-                        <span className={`ebid-qa-supplier-badge${answeredCount === sortedQuestions.length ? ' is-complete' : ''}`}>
-                          {answeredCount}/{sortedQuestions.length} answered
-                        </span>
+                    <div className="sila-form-grid sqs-pricing-grid">
+                      <div className="sila-field">
+                        <label className="sila-label" htmlFor="sqs-lot-delivery-charge">Delivery Charge</label>
+                        <input
+                          id="sqs-lot-delivery-charge"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="sila-input sqs-num-input pud-rfq-form-input"
+                          value={deliveryCharge || ''}
+                          onChange={(e) => setDeliveryCharge(Number(e.target.value) || 0)}
+                          placeholder="0.00"
+                        />
                       </div>
 
-                      <div className="ebid-qa-list">
-                        {sortedQuestions.map((q, index) => {
-                          const current = answers[q.questionId];
-                          const isFile = q.questionType === 'FILE' || q.questionType === 'File';
-                          const sortedOptions = [...(q.options || [])].sort((a, b) => a.displayOrder - b.displayOrder);
+                      <div className="sila-field">
+                        <span className="sila-label">Delivery Type</span>
+                        {renderTypeDropdown(deliveryType, setDeliveryType, 'ebid-field-dropdown')}
+                      </div>
 
-                          return (
-                            <div className="ebid-qa-item" key={q.questionId}>
-                              <div className="ebid-qa-question-row">
-                                <div className="ebid-qa-question-left">
-                                  <span className="ebid-qa-index">Q{index + 1}</span>
-                                  <span className="ebid-qa-question-text">{q.question}</span>
-                                </div>
-                                <div className="ebid-qa-tags">
-                                  {q.isRequired && <span className="ebid-qa-req-badge">Required</span>}
-                                  <span className="ebid-qa-type-badge">{formatQuestionType(q.questionType)}</span>
-                                </div>
-                              </div>
+                      <div className="sila-field">
+                        <label className="sila-label" htmlFor="sqs-lot-discount">Discount</label>
+                        <input
+                          id="sqs-lot-discount"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="sila-input sqs-num-input pud-rfq-form-input"
+                          value={discount || ''}
+                          onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+                          placeholder="0.00"
+                        />
+                      </div>
 
-                              <div className="ebid-qa-answer-box">
-                                {q.questionType === 'Text' && (
-                                  <input
-                                    type="text"
-                                    className="ebid-qa-input"
-                                    value={current?.answer || ''}
-                                    onChange={(e) => handleTextAnswerChange(q.questionId, e.target.value)}
-                                    placeholder="Type your answer..."
-                                  />
-                                )}
+                      <div className="sila-field">
+                        <span className="sila-label">Discount Type</span>
+                        {renderTypeDropdown(discountType, setDiscountType, 'ebid-field-dropdown')}
+                      </div>
 
-                                {q.questionType === 'Radio' && (
-                                  <div className="ebid-qa-options">
-                                    {sortedOptions.map((opt) => (
-                                      <label key={opt.optionId} className="ebid-qa-option">
-                                        <input
-                                          type="radio"
-                                          name={`ebid-question-${q.questionId}`}
-                                          checked={current?.questionOptionId === opt.optionId}
-                                          onChange={() => handleRadioAnswerChange(q.questionId, opt.optionId)}
-                                        />
-                                        {opt.optionText}
-                                      </label>
-                                    ))}
-                                  </div>
-                                )}
+                      <div className="sila-field">
+                        <label className="sila-label" htmlFor="sqs-lot-tax">Tax</label>
+                        <input
+                          id="sqs-lot-tax"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="sila-input sqs-num-input pud-rfq-form-input"
+                          value={tax || ''}
+                          onChange={(e) => setTax(Number(e.target.value) || 0)}
+                          placeholder="0.00"
+                        />
+                      </div>
 
-                                {isFile && (
-                                  <>
-                                    <span className="ebid-qa-file-name">
-                                      <IconFile /> {current?.fileName || 'No file chosen'}
-                                    </span>
-                                    <label className="ebid-qa-file-btn">
-                                      {current?.fileName ? 'Change file' : 'Choose file'}
-                                      <input
-                                        type="file"
-                                        hidden
-                                        onChange={(e) => handleFileAnswerChange(q.questionId, e.target.files?.[0] || null)}
-                                      />
-                                    </label>
-                                  </>
-                                )}
-
-                                {q.questionType !== 'Text' && q.questionType !== 'Radio' && !isFile && sortedOptions.length > 0 && (
-                                  <div className="ebid-qa-options">
-                                    {sortedOptions.map((opt) => (
-                                      <label key={opt.optionId} className="ebid-qa-option">
-                                        <input
-                                          type="checkbox"
-                                          checked={current?.questionOptionIds?.includes(opt.optionId) || false}
-                                          onChange={(e) =>
-                                            handleCheckboxAnswerChange(q.questionId, opt.optionId, e.target.checked)
-                                          }
-                                        />
-                                        {opt.optionText}
-                                      </label>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
+                      <div className="sila-field">
+                        <span className="sila-label">Tax Type</span>
+                        {renderTypeDropdown(taxType, setTaxType, 'ebid-field-dropdown')}
                       </div>
                     </div>
-                  </div>
-                );
-              })()}
 
-              {rfq.addLotOption && (
-                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-                  <div className="pud-modal-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                    <IconSparkles /> Commercial Proposal / Quotation Details
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', background: '#f8fafc', padding: '20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                    <div>
-                      <label style={labelStyle}>Delivery Charge</label>
+                    <div className="sqs-total">
+                      <label className="sqs-total-label" htmlFor="sqs-lot-total">
+                        Total Price Quote<span className="sila-required" aria-hidden="true">*</span>
+                      </label>
                       <input
+                        id="sqs-lot-total"
                         type="number"
                         step="0.01"
-                        min="0"
-                        className="pud-rfq-form-input"
-                        value={deliveryCharge || ''}
-                        onChange={(e) => setDeliveryCharge(Number(e.target.value) || 0)}
-                        placeholder="0.00"
-                        style={formInputStyle}
-                      />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Delivery Type</label>
-                      <select className="pud-rfq-form-input" value={deliveryType} onChange={(e) => setDeliveryType(e.target.value)} style={formSelectStyle}>
-                        {typeOptions}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Discount</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        className="pud-rfq-form-input"
-                        value={discount || ''}
-                        onChange={(e) => setDiscount(Number(e.target.value) || 0)}
-                        placeholder="0.00"
-                        style={formInputStyle}
-                      />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Discount Type</label>
-                      <select className="pud-rfq-form-input" value={discountType} onChange={(e) => setDiscountType(e.target.value)} style={formSelectStyle}>
-                        {typeOptions}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Tax</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        className="pud-rfq-form-input"
-                        value={tax || ''}
-                        onChange={(e) => setTax(Number(e.target.value) || 0)}
-                        placeholder="0.00"
-                        style={formInputStyle}
-                      />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Tax Type</label>
-                      <select className="pud-rfq-form-input" value={taxType} onChange={(e) => setTaxType(e.target.value)} style={formSelectStyle}>
-                        {typeOptions}
-                      </select>
-                    </div>
-
-                    <div style={{ gridColumn: '1 / -1', borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '13px', color: '#1e293b', fontWeight: 700 }}>Total Price Quote</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        className="pud-rfq-form-input"
+                        className="sila-input sqs-num-input sqs-total-input pud-rfq-form-input"
                         value={totalPrice}
                         onChange={(e) => setTotalPrice(Number(e.target.value) || 0)}
                         placeholder="0.00"
-                        style={{ width: '180px', maxWidth: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '16px', fontWeight: 700, color: '#16a34a', textAlign: 'right' }}
                         required
                       />
                     </div>
                   </div>
-                </div>
+                </>
+              ) : (
+                <>
+                  <div className="sila-table-wrap">
+                    <table className="sila-table sqs-items-table sqs-line-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Material Info</th>
+                          <th scope="col">Code</th>
+                          <th scope="col" className="sila-num">Qty</th>
+                          <th scope="col">Delivery Charge</th>
+                          <th scope="col">Delivery Charge Type</th>
+                          <th scope="col">Discount</th>
+                          <th scope="col">Discount Type</th>
+                          <th scope="col">Tax</th>
+                          <th scope="col">Tax Type</th>
+                          <th scope="col">
+                            Quoted Price<span className="sila-required" aria-hidden="true">*</span>
+                          </th>
+                          {showRankColumn && <th scope="col" className="sila-num">Rank</th>}
+                          <th scope="col" className="sila-num">Sub Total</th>
+                          <th scope="col" className="sila-num">Quoted Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rfq.items?.map((item, idx) => {
+                          const itemKey = item.supplierRFQItemId || `item-${idx}`;
+                          const itemId = item.id || item.buyerRFQItemId;
+                          const line = lineItems[itemKey] || EMPTY_LINE_ITEM;
+                          const matchedItem =
+                            rfq.supplierQuotationItems?.find(
+                              (qi) =>
+                                (qi.supplierRFQItemId && (qi.supplierRFQItemId === itemKey || qi.supplierRFQItemId === itemId)) ||
+                                (qi.buyerRFQItemId && (qi.buyerRFQItemId === itemKey || qi.buyerRFQItemId === itemId))
+                            ) || rfq.supplierQuotationItems?.[idx];
+                          const itemRank = formatRank(matchedItem?.rank) || '--';
+                          const itemLabel = item.description || `item ${idx + 1}`;
+
+                          return (
+                            <tr key={itemKey}>
+                              <td className="sqs-material">{renderMaterialInfo(item)}</td>
+                              <td><span className="sila-ref">{item.materialCode || 'N/A'}</span></td>
+                              <td className="sila-num">
+                                <span className="sila-cell-strong">{item.quantity}</span>{' '}
+                                <span className="sqs-uom">{item.uom}</span>
+                              </td>
+                              <td>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  className="sila-input sqs-cell-input sqs-num-input pud-rfq-item-input"
+                                  value={line.deliveryCharge || ''}
+                                  onChange={(e) => handleLineItemFieldChange(itemKey, 'deliveryCharge', e.target.value)}
+                                  placeholder="0.00"
+                                  aria-label={`Delivery charge for ${itemLabel}`}
+                                />
+                              </td>
+                              <td>
+                                {renderTypeDropdown(
+                                  line.deliveryType,
+                                  (next) => handleLineItemFieldChange(itemKey, 'deliveryType', next),
+                                  'ebid-cell-dropdown'
+                                )}
+                              </td>
+                              <td>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  className="sila-input sqs-cell-input sqs-num-input pud-rfq-item-input"
+                                  value={line.discount || ''}
+                                  onChange={(e) => handleLineItemFieldChange(itemKey, 'discount', e.target.value)}
+                                  placeholder="0.00"
+                                  aria-label={`Discount for ${itemLabel}`}
+                                />
+                              </td>
+                              <td>
+                                {renderTypeDropdown(
+                                  line.discountType,
+                                  (next) => handleLineItemFieldChange(itemKey, 'discountType', next),
+                                  'ebid-cell-dropdown'
+                                )}
+                              </td>
+                              <td>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  className="sila-input sqs-cell-input sqs-num-input pud-rfq-item-input"
+                                  value={line.tax || ''}
+                                  onChange={(e) => handleLineItemFieldChange(itemKey, 'tax', e.target.value)}
+                                  placeholder="0.00"
+                                  aria-label={`Tax for ${itemLabel}`}
+                                />
+                              </td>
+                              <td>
+                                {renderTypeDropdown(
+                                  line.taxType,
+                                  (next) => handleLineItemFieldChange(itemKey, 'taxType', next),
+                                  'ebid-cell-dropdown'
+                                )}
+                              </td>
+                              <td>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  className="sila-input sqs-cell-input sqs-num-input sqs-price-input pud-rfq-item-input"
+                                  value={line.quotedPrice || ''}
+                                  onChange={(e) => handleLineItemFieldChange(itemKey, 'quotedPrice', e.target.value)}
+                                  placeholder="0.00"
+                                  aria-label={`Quoted price for ${itemLabel}`}
+                                  required
+                                />
+                              </td>
+                              {showRankColumn && (
+                                <td className="sila-num sila-cell-strong">
+                                  {quotationStatus === 'SUBMITTED' ? itemRank : '-'}
+                                </td>
+                              )}
+                              <td className="sila-num">{line.subTotal.toFixed(2)}</td>
+                              <td className="sila-num sila-cell-strong">{line.quotedAmount.toFixed(2)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="sqs-total sqs-total--readonly">
+                    <span className="sqs-total-label">Total Price Quote</span>
+                    <span className="sqs-total-value">{Number(totalPrice).toFixed(2)}</span>
+                  </div>
+                </>
               )}
-            </div>
+            </section>
+
+            {((rfq.technicalSpecificationDocuments?.length ?? 0) > 0 ||
+              (rfq.termsConditionDocuments?.length ?? 0) > 0) && (
+              <section className="sila-card">
+                <div className="sila-card-header">
+                  <div>
+                    <h2 className="sila-card-title">Reference Documents</h2>
+                    <p className="sila-card-subtitle">
+                      Technical specifications, requirements, and Terms &amp; Conditions
+                      documents attached to this RFQ.
+                    </p>
+                  </div>
+                </div>
+                <div className="sila-card-body sqs-docs-body">
+                  {rfq.technicalSpecificationDocuments?.length > 0 &&
+                    renderDocumentGroup(rfq.technicalSpecificationDocuments, 'Technical Requirements', 'Tech Spec', 'primary')}
+
+                  {rfq.termsConditionDocuments?.length > 0 &&
+                    renderDocumentGroup(rfq.termsConditionDocuments, 'Terms & Conditions', 'Terms & Conditions', 'neutral')}
+                </div>
+              </section>
+            )}
+
+            {/* [buyer-questions]
+            {sortedQuestions.length > 0 && (
+              <section className="sila-card">
+                <div className="sila-card-header">
+                  <h2 className="sila-card-title sqs-title-with-icon">
+                    <IconMessageSquare /> Additional Questions from Buyer
+                  </h2>
+                  <StatusBadge
+                    status="Answered"
+                    tone={answeredCount === sortedQuestions.length ? 'success' : 'neutral'}
+                    label={`${answeredCount}/${sortedQuestions.length} answered`}
+                  />
+                </div>
+
+                <div className="sila-card-body sqs-questions">
+                  {sortedQuestions.map((q, index) => {
+                    const current = answers[q.questionId];
+                    const inputId = `sqs-question-${q.questionId}`;
+                    const isFile = q.questionType === 'FILE' || q.questionType === 'File';
+                    const isChoice = q.questionType !== 'Text' && !isFile;
+                    const sortedOptions = [...(q.options || [])].sort((a, b) => a.displayOrder - b.displayOrder);
+                    const questionLabel = (
+                      <>
+                        <span className="sqs-question-index">Q{index + 1}.</span> {q.question}
+                        {q.isRequired && <span className="sila-required" aria-hidden="true">*</span>}
+                      </>
+                    );
+
+                    return (
+                      <div key={q.questionId} className="sqs-question">
+                        {isChoice ? (
+                          <div className="sqs-question-label" id={`${inputId}-label`}>{questionLabel}</div>
+                        ) : (
+                          <label className="sqs-question-label" htmlFor={inputId}>{questionLabel}</label>
+                        )}
+
+                        {q.questionType === 'Text' && (
+                          <input
+                            id={inputId}
+                            type="text"
+                            className="sila-input pud-rfq-item-input"
+                            value={current?.answer || ''}
+                            onChange={(e) => handleTextAnswerChange(q.questionId, e.target.value)}
+                            placeholder="Type your answer..."
+                          />
+                        )}
+
+                        {q.questionType === 'Radio' && (
+                          <div className="sqs-options" role="radiogroup" aria-labelledby={`${inputId}-label`}>
+                            {sortedOptions.map((opt) => (
+                              <label key={opt.optionId} className="sqs-option">
+                                <input
+                                  type="radio"
+                                  name={`ebid-question-${q.questionId}`}
+                                  checked={current?.questionOptionId === opt.optionId}
+                                  onChange={() => handleRadioAnswerChange(q.questionId, opt.optionId)}
+                                />
+                                {opt.optionText}
+                              </label>
+                            ))}
+                          </div>
+                        )}
+
+                        {isFile && (
+                          <input
+                            id={inputId}
+                            type="file"
+                            className="sila-input sqs-file-input pud-rfq-item-input"
+                            onChange={(e) => handleFileAnswerChange(q.questionId, e.target.files?.[0] || null)}
+                          />
+                        )}
+
+                        {q.questionType !== 'Text' && q.questionType !== 'Radio' && !isFile && sortedOptions.length > 0 && (
+                          <div className="sqs-options" role="group" aria-labelledby={`${inputId}-label`}>
+                            {sortedOptions.map((opt) => (
+                              <label key={opt.optionId} className="sqs-option">
+                                <input
+                                  type="checkbox"
+                                  checked={current?.questionOptionIds?.includes(opt.optionId) || false}
+                                  onChange={(e) =>
+                                    handleCheckboxAnswerChange(q.questionId, opt.optionId, e.target.checked)
+                                  }
+                                />
+                                {opt.optionText}
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+            */}
+
+            {submitError && (
+              <div className="sila-alert sila-alert--danger sqs-alert" role="alert">
+                <span className="sqs-alert-icon sqs-alert-icon--danger" aria-hidden="true"><IconAlertCircle /></span>
+                <span>{submitError}</span>
+              </div>
+            )}
           </div>
 
-          {!canSubmit && (
-            <div style={{
-              background: '#fef3c7', border: '1px solid #fde68a', color: '#92400e',
-              padding: '10px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 500,
-              margin: '16px 1.75rem 0', textAlign: 'center'
-            }}>
-              {notYetOpen
-                ? "This RFQ hasn't opened for bidding yet — check back after the start date."
-                : frozen
-                  ? "The buyer has frozen this RFQ's bid. You can no longer submit a quotation."
-                  : "This RFQ's submission window has closed. You can no longer submit a quotation."}
+          {/* Sticky action bar */}
+          <div className="sqs-footer">
+            <div className="sqs-footer-status">
+              {!canSubmit && (
+                <StatusBadge
+                  status={frozen ? 'Frozen' : notYetOpen ? 'Pending' : 'Closed'}
+                  label={notYetOpen ? 'Not yet open' : frozen ? 'Bid frozen' : 'Submission closed'}
+                  dot
+                />
+              )}
             </div>
-          )}
-
-          {submitError && (
-            <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 500, margin: '16px 1.75rem 0' }}>
-              {submitError}
+            <div className="sqs-footer-actions">
+              <button
+                type="submit"
+                className="sila-btn sila-btn--primary"
+                disabled={submitting || !canSubmit}
+                aria-busy={submitting || undefined}
+                title={
+                  notYetOpen
+                    ? "This RFQ hasn't opened for bidding yet."
+                    : frozen
+                      ? "The buyer has frozen this RFQ's bid."
+                      : closed
+                        ? "This RFQ's submission window has closed."
+                        : undefined
+                }
+              >
+                {submitting && <span className="sila-spinner" aria-hidden="true" />}
+                {submitting
+                  ? 'Submitting...'
+                  : notYetOpen
+                    ? 'Not Yet Open'
+                    : frozen
+                      ? 'Bid Frozen'
+                      : closed
+                        ? 'Submission Closed'
+                        : 'Submit Quotation'}
+              </button>
             </div>
-          )}
-
-          <div className="pud-modal-footer">
-            <button
-              type="submit"
-              className="pud-btn pud-btn-message"
-              disabled={submitting || !canSubmit}
-              style={{ background: '#2563eb', color: '#ffffff' }}
-              title={
-                notYetOpen
-                  ? "This RFQ hasn't opened for bidding yet."
-                  : frozen
-                    ? "The buyer has frozen this RFQ's bid."
-                    : closed
-                      ? "This RFQ's submission window has closed."
-                      : undefined
-              }
-            >
-              {submitting
-                ? 'Submitting...'
-                : notYetOpen
-                  ? 'Not Yet Open'
-                  : frozen
-                    ? 'Bid Frozen'
-                    : closed
-                      ? 'Submission Closed'
-                      : 'Submit Quotation'}
-            </button>
           </div>
         </form>
       </div>
@@ -1119,16 +1261,46 @@ const ExternalSupplierBid: React.FC = () => {
       )}
 
       {showConfirm && (
-        <div className="ebid-modal-overlay" onClick={() => setShowConfirm(false)}>
-          <div className="ebid-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Submit Quotation?</h2>
-            <p>Once submitted, your quotation will be sent to the buyer and cannot be easily modified.</p>
-            <div className="ebid-modal-actions">
-              <button type="button" className="ebid-btn-outline" onClick={() => setShowConfirm(false)}>
+        <div className="sila-overlay sqs-overlay" onClick={() => setShowConfirm(false)}>
+          <div
+            className="sila-modal sqs-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="sqs-confirm-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sila-modal-header">
+              <div className="sqs-modal-heading-group">
+                <StatusBadge
+                  status="Pending"
+                  tone="warning"
+                  size="sm"
+                  label={<><IconAlertCircle /> Confirmation Required</>}
+                />
+                <h2 className="sila-modal-title" id="sqs-confirm-title">Submit Quotation?</h2>
+              </div>
+              <button
+                type="button"
+                className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm"
+                onClick={() => setShowConfirm(false)}
+                aria-label="Close"
+              >
+                <IconClose />
+              </button>
+            </div>
+
+            <div className="sila-modal-body">
+              <p className="sila-modal-text">
+                Once submitted, your quotation will be sent to the buyer and cannot be easily modified.
+              </p>
+            </div>
+
+            <div className="sila-modal-footer">
+              <button type="button" className="sila-btn sila-btn--secondary" onClick={() => setShowConfirm(false)}>
                 Cancel
               </button>
-              <button type="button" className="ebid-submit-btn" onClick={handleConfirmSubmit}>
-                Yes, Submit
+              <button type="button" className="sila-btn sila-btn--primary" onClick={handleConfirmSubmit} disabled={submitting}>
+                {submitting ? 'Submitting...' : 'Yes, Submit'}
               </button>
             </div>
           </div>
