@@ -1,12 +1,15 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ChangeEvent,
   type FC,
   type MouseEvent as ReactMouseEvent,
 } from "react";
+
+import { createPortal } from "react-dom";
  
 import {
   FaChevronDown,
@@ -24,6 +27,16 @@ import type {
  
 import "./DropDown.css";
  
+/*
+ * Menu placement.
+ * The menu is portalled to <body> and positioned against the field, so a scrolling or
+ * overflow-hidden ancestor (a table wrapper, a card, a modal body) can never clip it.
+ */
+const MENU_MAX_HEIGHT = 300;
+const MENU_MIN_HEIGHT = 120;
+const MENU_GAP = 6;
+const VIEWPORT_MARGIN = 8;
+
 interface CachedPage {
   options: DropdownOption[];
   hasMore: boolean;
@@ -56,6 +69,15 @@ const Dropdown: FC<DropdownProps> = (props) => {
   const isMulti = props.isMulti === true;
  
   const dropdownRef =
+    useRef<HTMLDivElement>(null);
+
+  const fieldWrapperRef =
+    useRef<HTMLDivElement>(null);
+
+  const menuRef =
+    useRef<HTMLDivElement>(null);
+
+  const optionsRef =
     useRef<HTMLDivElement>(null);
  
   const inputRef =
@@ -717,10 +739,16 @@ const Dropdown: FC<DropdownProps> = (props) => {
     const handleOutsideClick = (
       event: globalThis.MouseEvent
     ) => {
+      const target =
+        event.target as Node;
+
       if (
         dropdownRef.current &&
         !dropdownRef.current.contains(
-          event.target as Node
+          target
+        ) &&
+        !menuRef.current?.contains(
+          target
         )
       ) {
         closeDropdown();
@@ -740,6 +768,138 @@ const Dropdown: FC<DropdownProps> = (props) => {
     };
   }, []);
  
+  /**
+   * Position the portalled menu against the field.
+   *
+   * Opens below the field, or above it
+   * when there is more room there.
+   */
+  const positionMenu = useCallback(() => {
+    const menu = menuRef.current;
+    const options = optionsRef.current;
+    const anchor = fieldWrapperRef.current;
+
+    if (!menu || !options || !anchor) {
+      return;
+    }
+
+    const rect =
+      anchor.getBoundingClientRect();
+
+    const chromeHeight =
+      menu.offsetHeight -
+      options.clientHeight;
+
+    const naturalHeight = Math.min(
+      options.scrollHeight +
+        chromeHeight,
+      MENU_MAX_HEIGHT
+    );
+
+    const spaceBelow =
+      window.innerHeight -
+      rect.bottom -
+      MENU_GAP -
+      VIEWPORT_MARGIN;
+
+    const spaceAbove =
+      rect.top -
+      MENU_GAP -
+      VIEWPORT_MARGIN;
+
+    const openAbove =
+      naturalHeight > spaceBelow &&
+      spaceAbove > spaceBelow;
+
+    const space = Math.max(
+      openAbove
+        ? spaceAbove
+        : spaceBelow,
+      MENU_MIN_HEIGHT
+    );
+
+    menu.style.left = `${rect.left}px`;
+    menu.style.width = `${rect.width}px`;
+    menu.style.top = openAbove
+      ? "auto"
+      : `${rect.bottom + MENU_GAP}px`;
+    menu.style.bottom = openAbove
+      ? `${
+          window.innerHeight -
+          rect.top +
+          MENU_GAP
+        }px`
+      : "auto";
+    menu.style.setProperty(
+      "--sila-dropdown-menu-max-height",
+      `${Math.min(
+        MENU_MAX_HEIGHT,
+        space
+      )}px`
+    );
+  }, []);
+
+  /**
+   * Re-measure after every render while open:
+   * options load, and multi-select tags
+   * change the field's height.
+   */
+  useLayoutEffect(() => {
+    if (isOpen) {
+      positionMenu();
+    }
+  });
+
+  /**
+   * Keep the menu attached to the field
+   * while the page or any ancestor scrolls.
+   */
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const reposition = (
+      event: Event
+    ) => {
+      // Scrolling the options list itself must not move the menu.
+      if (
+        event.target instanceof Node &&
+        menuRef.current?.contains(
+          event.target
+        )
+      ) {
+        return;
+      }
+
+      positionMenu();
+    };
+
+    window.addEventListener(
+      "resize",
+      reposition
+    );
+
+    window.addEventListener(
+      "scroll",
+      reposition,
+      true
+    );
+
+    return () => {
+      window.removeEventListener(
+        "resize",
+        reposition
+      );
+
+      window.removeEventListener(
+        "scroll",
+        reposition,
+        true
+      );
+    };
+  }, [isOpen, positionMenu]);
+
   /**
    * Open dropdown.
    */
@@ -1068,7 +1228,10 @@ const Dropdown: FC<DropdownProps> = (props) => {
           </label>
      )}
 
-      <div className="sila-dropdown__field-wrapper">
+      <div
+        ref={fieldWrapperRef}
+        className="sila-dropdown__field-wrapper"
+      >
  
         <div
           className="sila-dropdown__field"
@@ -1223,80 +1386,86 @@ const Dropdown: FC<DropdownProps> = (props) => {
         </div>
       </div>
  
-      {isOpen && (
-        <div className="sila-dropdown__menu">
+      {isOpen &&
+        createPortal(
           <div
-            className="sila-dropdown__options"
-            role="listbox"
-            aria-multiselectable={
-              isMulti
-            }
-            onScroll={
-              handleOptionsScroll
-            }
+            ref={menuRef}
+            className="sila-dropdown__menu"
           >
-            {loading &&
-            visibleOptions.length ===
-              0 ? (
-              <div className="sila-dropdown__loading">
-                <FaSpinner className="sila-dropdown__spinner" />
+            <div
+              ref={optionsRef}
+              className="sila-dropdown__options"
+              role="listbox"
+              aria-multiselectable={
+                isMulti
+              }
+              onScroll={
+                handleOptionsScroll
+              }
+            >
+              {loading &&
+              visibleOptions.length ===
+                0 ? (
+                <div className="sila-dropdown__loading">
+                  <FaSpinner className="sila-dropdown__spinner" />
  
-                <span>
-                  Loading...
-                </span>
-              </div>
-            ) : visibleOptions.length ===
-              0 && !loading ? (
-              <div className="sila-dropdown__empty">
-                No options found
-              </div>
-            ) : (
-              <>
-                {visibleOptions.map(
-                  (option) => (
-                    <button
-                      key={String(
-                        option.value ??
-                          option.name
-                      )}
-                      type="button"
-                      className={`sila-dropdown__option${
-                        isOptionSelected(option)
-                          ? " selected"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        handleSelect(
-                          option
-                        )
-                      }
-                      role="option"
-                      aria-selected={
-                        isOptionSelected(
-                          option
-                        )
-                      }
-                    >
-                      {option.name}
-                    </button>
-                  )
-                )}
- 
-                {isAsync &&
-                  loading && (
-                    <div className="sila-dropdown__loading sila-dropdown__loading--bottom">
-                      <FaSpinner className="sila-dropdown__spinner" />
- 
-                      <span>
-                        Loading...
-                      </span>
-                    </div>
+                  <span>
+                    Loading...
+                  </span>
+                </div>
+              ) : visibleOptions.length ===
+                0 && !loading ? (
+                <div className="sila-dropdown__empty">
+                  No options found
+                </div>
+              ) : (
+                <>
+                  {visibleOptions.map(
+                    (option) => (
+                      <button
+                        key={String(
+                          option.value ??
+                            option.name
+                        )}
+                        type="button"
+                        className={`sila-dropdown__option${
+                          isOptionSelected(option)
+                            ? " selected"
+                            : ""
+                        }`}
+                        onClick={() =>
+                          handleSelect(
+                            option
+                          )
+                        }
+                        role="option"
+                        aria-selected={
+                          isOptionSelected(
+                            option
+                          )
+                        }
+                      >
+                        {option.name}
+                      </button>
+                    )
                   )}
-              </>
-            )}
-          </div>
-        </div>
-      )}
+ 
+                  {isAsync &&
+                    loading && (
+                      <div className="sila-dropdown__loading sila-dropdown__loading--bottom">
+                        <FaSpinner className="sila-dropdown__spinner" />
+ 
+                        <span>
+                          Loading...
+                        </span>
+                      </div>
+                    )}
+                </>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
  
       {error ? (
         <div
