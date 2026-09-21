@@ -8,7 +8,6 @@ import {
   getBidComparisonData,
   isBidComparisonError,
   awardRfq,
-  fetchSupplierTermsConditionStatus,
   updateSupplierTermsConditionStatus,
   fetchBuyerRfqEsign,
   uploadBuyerRfqEsign,
@@ -692,7 +691,6 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           distinctSelected={distinctSelected}
           getQuoteItemForRfqItem={getQuoteItemForRfqItem}
           onBack={() => setScreen("award")}
-          fetchTermsConditions={fetchSupplierTermsConditionStatus}
           fetchESigns={fetchBuyerRfqEsign}
           onAcceptSupplierTerms={updateSupplierTermsConditionStatus}
           onUploadBuyerEsign={uploadBuyerRfqEsign}
