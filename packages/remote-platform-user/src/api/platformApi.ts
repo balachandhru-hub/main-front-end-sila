@@ -754,7 +754,7 @@ export const inviteSupplierForContract = async (
   payload: InviteForContractPayload
 ): Promise<StatusUpdateResponseDto | AssetErrorDto> => {
   try {
-    const response = await platformInstance.post('/api/v1/buyer/rfq/invite-for-contract', payload);
+    const response = await platformInstance.put('/api/v1/buyer/rfq/invite-for-contract', payload);
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 401) {
@@ -1021,4 +1021,4 @@ export const updateBuyerTermsConditionStatus = async (
       description: '',
     };
   }
-};
+};
