@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const baseURL = import.meta.env.VITE_AUTH_API_BASE;
-const apiKey = 'N8qX2LmP7vRa5HdK9sWy4JcTf1AzNgEuXm6BpLr3YvCi0FoMsZaDhUk8QtGeXwPnV';
+const apiKey = import.meta.env.VITE_API_KEY;
 
 const platformInstance = axios.create({
   baseURL,
