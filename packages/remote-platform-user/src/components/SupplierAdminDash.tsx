@@ -1014,7 +1014,7 @@ const SupplierAdminDash: React.FC = () => {
           </div>
         )}
 
-      <EAuctionWidget />
+      <EAuctionWidget supplierId={supplierId} />
     </Header>
   );
 };

@@ -40,7 +40,9 @@ interface QuoteLineItem {
   quotedAmount: number;
 }
 
-const DEFAULT_SUPPLIER_ID = "60fb0677-bd04-4caf-8467-8b5bdcdd0b8b";
+interface EAuctionWidgetProps {
+  supplierId: string | null;
+}
 
 const formatEndDateStr = (dateStr?: string) => {
   if (!dateStr) return "N/A";
@@ -110,7 +112,7 @@ const PAGE_SIZE = 6;
 // resolved with one wide fetch when the board opens.
 const TOTAL_COUNT_FETCH_LIMIT = 1000;
 
-export const EAuctionWidget: React.FC = () => {
+export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [auctions, setAuctions] = useState<LiveAuctionItem[]>([]);
@@ -170,13 +172,18 @@ export const EAuctionWidget: React.FC = () => {
   const [bidSubmittedMessage, setBidSubmittedMessage] = useState<string | null>(null);
 
   const fetchLiveBidsData = async (page: number = currentPage) => {
+    if (!supplierId) {
+      setAuctions([]);
+      setSelectedLot(null);
+      return;
+    }
     setLoadingApi(true);
     const startIndex = (page - 1) * PAGE_SIZE;
     try {
       const res = await fetchRFQMasterData({
         index: startIndex,
         limit: PAGE_SIZE,
-        supplierId: DEFAULT_SUPPLIER_ID,
+        supplierId,
         status: "LIVE",
       });
 
@@ -246,11 +253,12 @@ export const EAuctionWidget: React.FC = () => {
 
   // Resolve the true total tender count (the list endpoint does not report one)
   const fetchLiveBidsTotal = async () => {
+    if (!supplierId) return;
     try {
       const res = await fetchRFQMasterData({
         index: 0,
         limit: TOTAL_COUNT_FETCH_LIMIT,
-        supplierId: DEFAULT_SUPPLIER_ID,
+        supplierId,
         status: "LIVE",
       });
 
@@ -276,12 +284,12 @@ export const EAuctionWidget: React.FC = () => {
 
   useEffect(() => {
     fetchLiveBidsData(currentPage);
-  }, [isModalOpen, currentPage]);
+  }, [isModalOpen, currentPage, supplierId]);
 
   useEffect(() => {
     knownTotalRef.current = 0;
     fetchLiveBidsTotal();
-  }, [isModalOpen]);
+  }, [isModalOpen, supplierId]);
 
   // Load RFQ details and supplier quotation when selectedLot changes
   useEffect(() => {
@@ -376,7 +384,7 @@ export const EAuctionWidget: React.FC = () => {
         }
 
         if (quoteRes && !('statusCode' in quoteRes) && 'suppliers' in quoteRes && Array.isArray(quoteRes.suppliers)) {
-          const mine = quoteRes.suppliers.find((s) => s.supplierId === DEFAULT_SUPPLIER_ID) || quoteRes.suppliers[0] || null;
+          const mine = quoteRes.suppliers.find((s) => s.supplierId === supplierId) || quoteRes.suppliers[0] || null;
           if (mine) {
             setOwnQuotation(mine);
             if (mine.totalPrice) setTotalPriceQuote(String(mine.totalPrice));
@@ -746,7 +754,7 @@ export const EAuctionWidget: React.FC = () => {
           <span className="eauction-pulse-dot" aria-hidden="true" />
           <FaBolt aria-hidden="true" className="eauction-trigger-icon" />
           <span>Live e-Auction</span>
-          <span className="eauction-badge-count">{auctions.length} Live</span>
+          <span className="eauction-badge-count">{totalAuctions} Live</span>
         </button>
       </div>
 
