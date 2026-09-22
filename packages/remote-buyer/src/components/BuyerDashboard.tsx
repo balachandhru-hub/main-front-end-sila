@@ -968,6 +968,7 @@ const BuyersDashboard: React.FC = () => {
               selectedContract ? (
                 <ContractDetail
                   contract={selectedContract}
+                  currentUserId={currentUserId}
                   onBack={() => setSelectedContract(null)}
                 />
               ) : (
