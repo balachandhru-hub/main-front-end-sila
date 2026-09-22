@@ -684,6 +684,16 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     ? eSigns.find((e) => String(e.supplierId) === resolveSupplierId(activeContract.supplierId))
     : undefined;
 
+  // Buyer/Supplier Signature status row (Action Step: Signing), sourced directly from rfq-by-id.
+  // Buyer role: eSignDocuments is the buyer's own signature; supplierESigns[].attachments (activeEsignEntry) is
+  // the active supplier's. Supplier role: eSignDocuments is the supplier's own; buyerESignDocuments is the buyer's.
+  const rfqBuyerSigned = isSupplier
+    ? ((rfq as any)?.buyerESignDocuments?.length ?? 0) > 0
+    : ((rfq as any)?.eSignDocuments?.length ?? 0) > 0;
+  const rfqSupplierSigned = isSupplier
+    ? ((rfq as any)?.eSignDocuments?.length ?? 0) > 0
+    : (activeEsignEntry?.attachments?.length ?? 0) > 0;
+
   // The buyer's own Terms & Conditions documents attached to the RFQ.
   const buyerTermsDocs: RfqAssetAttachment[] =
     (rfq as any)?.termsConditionDocuments || (rfq as any)?.termsConditionDocument || [];
@@ -2440,11 +2450,11 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   tab (activeSupplierId). Supplier role: rfq-by-id returns these as flat booleans for the single
                   buyer-supplier context, used directly. See activeBuyerTermsAccepted / activeSupplierTermsAccepted. */}
               <div className="contract-accept-summary">
-                <span className={`contract-accept-status${activeBuyerTermsAccepted ? " contract-accept-status--done" : ""}`}>
-                  Buyer — {activeBuyerTermsAccepted ? "Accepted ✓" : "Awaiting Acceptance"}
-                </span>
                 <span className={`contract-accept-status${activeSupplierTermsAccepted ? " contract-accept-status--done" : ""}`}>
-                  Supplier — {activeSupplierTermsAccepted ? "Accepted ✓" : "Awaiting Acceptance"}
+                  Buyer — {activeSupplierTermsAccepted ? "Accepted ✓" : "Awaiting Acceptance"}
+                </span>
+                <span className={`contract-accept-status${activeBuyerTermsAccepted ? " contract-accept-status--done" : ""}`}>
+                  Supplier — {activeBuyerTermsAccepted ? "Accepted ✓" : "Awaiting Acceptance"}
                 </span>
               </div>
 
@@ -2495,10 +2505,10 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   <div className="contract-sign-label">
                     Buyer Signature
                   </div>
-                  <div className={`contract-sign-status${activeContract.buyerSigned ? " contract-sign-status--done" : ""}`}>
-                    {activeContract.buyerSigned ? "Signed ✓" : "Awaiting Signature"}
+                  <div className={`contract-sign-status${rfqBuyerSigned ? " contract-sign-status--done" : ""}`}>
+                    {rfqBuyerSigned ? "Signed ✓" : "Awaiting Signature"}
                   </div>
-                  {activeContract.buyerSigned && activeContract.buyerSignDetails && (
+                  {rfqBuyerSigned && activeContract.buyerSignDetails && (
                     <div className="contract-sign-by">
                       By {activeContract.buyerSignDetails.signerName} ({activeContract.buyerSignDetails.signerDesignation})
                     </div>
@@ -2509,10 +2519,10 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   <div className="contract-sign-label">
                     Supplier Signature
                   </div>
-                  <div className={`contract-sign-status${activeContract.supplierSigned ? " contract-sign-status--done" : ""}`}>
-                    {activeContract.supplierSigned ? "Signed ✓" : "Awaiting Signature"}
+                  <div className={`contract-sign-status${rfqSupplierSigned ? " contract-sign-status--done" : ""}`}>
+                    {rfqSupplierSigned ? "Signed ✓" : "Awaiting Signature"}
                   </div>
-                  {activeContract.supplierSigned && activeContract.supplierSignDetails && (
+                  {rfqSupplierSigned && activeContract.supplierSignDetails && (
                     <div className="contract-sign-by">
                       By {activeContract.supplierSignDetails.signerName} ({activeContract.supplierSignDetails.signerDesignation})
                     </div>
