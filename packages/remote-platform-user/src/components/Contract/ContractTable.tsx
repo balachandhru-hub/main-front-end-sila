@@ -1,42 +1,44 @@
 import React, { useMemo, useState } from 'react';
-import { FaSearch } from 'react-icons/fa';
-import { EmptyState, KpiCard, StatusBadge, Dropdown } from '@vosox/shared-ui';
-import type { DropdownValue } from '@vosox/shared-ui';
+import { FaSearch, FaPaperclip } from 'react-icons/fa';
+import { EmptyState, KpiCard, Pagination } from '@vosox/shared-ui';
 import type { ContractRecord } from './contractApi';
+import { formatContractAmount, formatContractDate } from './contractApi';
 import './ContractTable.css';
 
 interface ContractTableProps {
   records: ContractRecord[];
   loading: boolean;
   error: string | null;
+  onRowClick: (record: ContractRecord) => void;
+  page: number;
+  onPreviousPage: () => void;
+  onNextPage: () => void;
+  hasNextPage: boolean;
 }
 
-const statusLabel: Record<ContractRecord['status'], string> = {
-  PENDING: 'Pending',
-  APPROVED: 'Approved',
-  REJECTED: 'Rejected',
-};
+const IconChevronRight = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+);
 
-const STATUS_FILTERS: { label: string; value: '' | ContractRecord['status'] }[] = [
-  { label: 'All Status', value: '' },
-  { label: statusLabel.PENDING, value: 'PENDING' },
-  { label: statusLabel.APPROVED, value: 'APPROVED' },
-  { label: statusLabel.REJECTED, value: 'REJECTED' },
-];
-
-const STATUS_FILTER_OPTIONS = STATUS_FILTERS.map((opt) => ({ name: opt.label, value: opt.value }));
-
-const ContractTable: React.FC<ContractTableProps> = ({ records, loading, error }) => {
+const ContractTable: React.FC<ContractTableProps> = ({
+  records,
+  loading,
+  error,
+  onRowClick,
+  page,
+  onPreviousPage,
+  onNextPage,
+  hasNextPage,
+}) => {
   const [search, setSearch] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<DropdownValue | null>(STATUS_FILTER_OPTIONS[0]);
-  const statusFilter = (selectedStatus?.value || '') as '' | ContractRecord['status'];
 
   const counts = useMemo(
     () => ({
       total: records.length,
-      pending: records.filter((r) => r.status === 'PENDING').length,
-      approved: records.filter((r) => r.status === 'APPROVED').length,
-      rejected: records.filter((r) => r.status === 'REJECTED').length,
+      totalValue: records.reduce((sum, r) => sum + (r.amount || 0), 0),
+      withAttachments: records.filter((r) => (r.attachments?.length || 0) > 0).length,
     }),
     [records]
   );
@@ -44,11 +46,11 @@ const ContractTable: React.FC<ContractTableProps> = ({ records, loading, error }
   const query = search.trim().toLowerCase();
   const visible = records.filter(
     (r) =>
-      (!statusFilter || r.status === statusFilter) &&
-      (!query ||
-        r.referenceNumber.toLowerCase().includes(query) ||
-        r.title.toLowerCase().includes(query) ||
-        r.requestedBy.toLowerCase().includes(query))
+      !query ||
+      r.contractNumber?.toLowerCase().includes(query) ||
+      r.contractName?.toLowerCase().includes(query) ||
+      r.rfqNumber?.toLowerCase().includes(query) ||
+      r.rfqTitle?.toLowerCase().includes(query)
   );
 
   return (
@@ -56,9 +58,9 @@ const ContractTable: React.FC<ContractTableProps> = ({ records, loading, error }
       <div className="ctr-stack">
         <div className="ctr-header">
           <div>
-            <h1 className="bad-title ctr-title">Contract Approvals</h1>
+            <h1 className="bad-title ctr-title">Contracts</h1>
             <div className="bad-subtitle ctr-subtitle">
-              Contract requests raised across your organization.
+              Contracts your organization has issued to suppliers.
             </div>
           </div>
         </div>
@@ -66,10 +68,9 @@ const ContractTable: React.FC<ContractTableProps> = ({ records, loading, error }
         {!loading && !(error && records.length === 0) && records.length > 0 && (
           <>
             <div className="ctr-kpi-grid">
-              <KpiCard label="Total" value={counts.total} />
-              <KpiCard label="Pending" value={counts.pending} tone={counts.pending > 0 ? 'warning' : 'neutral'} />
-              <KpiCard label="Approved" value={counts.approved} />
-              <KpiCard label="Rejected" value={counts.rejected} />
+              <KpiCard label="Contracts on this page" value={counts.total} />
+              <KpiCard label="Total value on this page" value={formatContractAmount(counts.totalValue)} />
+              <KpiCard label="With attachments" value={counts.withAttachments} />
             </div>
 
             <div className="ctr-toolbar" role="search">
@@ -78,19 +79,12 @@ const ContractTable: React.FC<ContractTableProps> = ({ records, loading, error }
                 <input
                   type="search"
                   className="sila-input"
-                  placeholder="Search by reference, title or requester"
+                  placeholder="Search by contract no., name or RFQ"
                   aria-label="Search contracts"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <Dropdown
-                placeholder="All Status"
-                options={STATUS_FILTER_OPTIONS}
-                value={selectedStatus}
-                onChange={setSelectedStatus}
-                className="ctr-status-select"
-              />
             </div>
           </>
         )}
@@ -98,45 +92,73 @@ const ContractTable: React.FC<ContractTableProps> = ({ records, loading, error }
         {loading ? (
           <div className="ctr-state">
             <div className="bad-spinner sila-spinner sila-spinner--md" />
-            <span>Loading contract approvals...</span>
+            <span>Loading contracts...</span>
           </div>
         ) : error && records.length === 0 ? (
           <EmptyState variant="error" title={error} />
         ) : records.length === 0 ? (
-          <EmptyState title="No contract approvals found." />
+          <EmptyState title="No contracts found." />
         ) : visible.length === 0 ? (
-          <EmptyState title="No contract approvals match your filters." />
+          <EmptyState title="No contracts match your search." />
         ) : (
-          <div className="bad-rfq-table-container sila-table-wrap ctr-table-wrap">
-            <table className="bad-rfq-items-table sila-table ctr-table">
-              <thead>
-                <tr>
-                  <th className="ctr-col-sno sila-num">S.No</th>
-                  <th>Reference No.</th>
-                  <th>Title</th>
-                  <th>Requested By</th>
-                  <th>Raised Date</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((record, idx) => (
-                  <tr key={record.id}>
-                    <td className="ctr-sno sila-num">{idx + 1}</td>
-                    <td><span className="bad-code-badge sila-ref">{record.referenceNumber}</span></td>
-                    <td className="ctr-title-cell">{record.title}</td>
-                    <td>{record.requestedBy}</td>
-                    <td className="ctr-date">
-                      {new Date(record.raisedDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </td>
-                    <td>
-                      <StatusBadge status={record.status} label={statusLabel[record.status]} />
-                    </td>
+          <>
+            <div className="bad-rfq-table-container sila-table-wrap ctr-table-wrap">
+              <table className="bad-rfq-items-table sila-table ctr-table">
+                <thead>
+                  <tr>
+                    <th className="ctr-col-sno sila-num">S.No</th>
+                    <th>Contract No.</th>
+                    <th>Contract Name</th>
+                    <th>RFQ</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th className="sila-num">Amount</th>
+                    <th className="sila-num">Attachments</th>
+                    <th><span className="sila-visually-hidden">Open</span></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {visible.map((record, idx) => (
+                    <tr
+                      key={record.id}
+                      className="sila-row-clickable"
+                      tabIndex={0}
+                      onClick={() => onRowClick(record)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') onRowClick(record); }}
+                    >
+                      <td className="ctr-sno sila-num">{idx + 1}</td>
+                      <td><span className="bad-code-badge sila-ref">{record.contractNumber}</span></td>
+                      <td className="ctr-title-cell">{record.contractName}</td>
+                      <td className="ctr-rfq-cell">
+                        <span className="bad-code-badge sila-ref">{record.rfqNumber}</span>
+                        <span className="ctr-rfq-title">{record.rfqTitle}</span>
+                      </td>
+                      <td className="ctr-date">{formatContractDate(record.startDate)}</td>
+                      <td className="ctr-date">{formatContractDate(record.endDate)}</td>
+                      <td className="ctr-amount sila-num">{formatContractAmount(record.amount)}</td>
+                      <td className="ctr-attachments sila-num">
+                        {record.attachments?.length ? (
+                          <span className="ctr-attachment-count">
+                            <FaPaperclip aria-hidden="true" /> {record.attachments.length}
+                          </span>
+                        ) : '—'}
+                      </td>
+                      <td className="ctr-cell-chevron"><IconChevronRight /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <Pagination
+              page={page}
+              onPrevious={onPreviousPage}
+              onNext={onNextPage}
+              hasNext={hasNextPage}
+              disabled={loading}
+              summary={`Page ${page}`}
+            />
+          </>
         )}
       </div>
     </div>
