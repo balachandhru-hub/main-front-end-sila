@@ -964,7 +964,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       (activeContract?.step === "sign" && !(activeContract.buyerSigned && activeContract.supplierSigned)));
 
   // Supplier Accept / Reject of the buyer's Terms & Conditions, shown in the "Contract Terms & Conditions" card.
-  // Visibility is driven only by the backend's supplierTermsAndConditionAccepted (activeSupplierTermsAccepted),
+  // Visibility is driven only by the backend's buyerTermsAndConditionAccepted (activeBuyerTermsAccepted),
   // plus the two cases where accepting/rejecting the buyer's terms doesn't apply: the supplier has their own T&C
   // instead (activeTcEntry) or has chosen to submit one (hasSupplierTcChoice). showTermsAcceptanceCard is not
   // repeated here since this JSX already sits inside that same condition.
@@ -972,7 +972,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     isSupplier &&
     activeTcEntry?.termsAndCondition !== true &&
     hasSupplierTcChoice === "no" &&
-    !activeSupplierTermsAccepted;
+    !activeBuyerTermsAccepted;
 
   // Helper calculation for contract value per supplier
   const getContractValue = (id: string) => {
@@ -1196,7 +1196,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       await refreshTermsConditions();
       updateContract(id, { supplierFinalAccepted: true, supplierFinalRejected: false });
       if (isSupplier) {
-        setSupplierScreenAcceptance((prev) => ({ ...prev, supplierTermsAndConditionAccepted: true }));
+        setSupplierScreenAcceptance((prev) => ({ ...prev, buyerTermsAndConditionAccepted: true }));
       }
     } catch (err: any) {
       console.error("Failed to accept buyer terms & conditions:", err);
@@ -1664,6 +1664,139 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     });
   }, [activeContract, lineItems, effectiveQuotations, getQuoteItemForRfqItem, resolveQuoteItem, rfq]);
 
+  // Downloads the executed contract (items, merged Terms & Conditions, both signatures) as a PDF via the
+  // browser's print dialog, since no PDF-generation dependency or backend endpoint exists for this yet.
+  const handleDownloadContract = () => {
+    if (!activeContract || !activeContract.buyerSigned || !activeContract.supplierSigned) return;
+
+    const escapeHtml = (value: string) =>
+      value.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch] as string));
+
+    const buildTcSection = (label: string, docs: RfqAssetAttachment[], text?: string) => {
+      const body = docs.length > 0
+        ? `<ul class="tc-doc-list">${docs.map((d) => `<li>${escapeHtml(d.fileName || d.assetName || "Terms & Conditions document")}</li>`).join("")}</ul>`
+        : `<p class="tc-text">${escapeHtml(text || "").replace(/\n/g, "<br/>")}</p>`;
+      return `<div class="tc-section"><h3>${escapeHtml(label)}</h3>${body}</div>`;
+    };
+
+    const buildSignature = (label: string, details?: SignDetails | null) => {
+      if (!details) {
+        return `<div class="sign-box"><div class="sign-label">${escapeHtml(label)}</div><div class="sign-mark sign-mark--empty">Not signed</div></div>`;
+      }
+      const mark = details.drawnSignatureUrl
+        ? `<img src="${details.drawnSignatureUrl}" alt="Signature" class="sign-image" />`
+        : `<div class="sign-mark">/s/ ${escapeHtml(details.signerName)}</div>`;
+      return `
+        <div class="sign-box">
+          <div class="sign-label">${escapeHtml(label)}</div>
+          ${mark}
+          <div class="sign-caption">${escapeHtml(details.signerName)} (${escapeHtml(details.signerDesignation)})</div>
+          <div class="sign-caption sign-caption--muted">${escapeHtml(details.signedAt)}</div>
+        </div>`;
+    };
+
+    const contractNumber = activeContract.contractNumber || activeCreated?.contractNumber || "—";
+    const contractName = activeCreated?.contractName || contractNumber;
+    const supplierName = getSupplierName(activeContract.supplierId);
+    const rfqTitle = rfq?.title || rfq?.rfqNo || rfq?.name || "—";
+
+    const itemsRowsHtml = activeLineItemRows.map((row) => `
+      <tr>
+        <td>${row.idx}</td>
+        <td>${escapeHtml(row.material)}</td>
+        <td>${escapeHtml(row.costCenterCode)}</td>
+        <td class="num">${row.qty}</td>
+        <td class="num">${escapeHtml(row.uom)}</td>
+        <td class="num">${fmtINR(row.unitPrice)}</td>
+        <td class="num">${escapeHtml(row.breakdownStr)}</td>
+        <td class="num">${fmtINR(row.subtotal)}</td>
+      </tr>`).join("");
+
+    // Merge both parties' Terms & Conditions when each has their own; otherwise use whichever one exists.
+    const tcSectionsHtml = [
+      buildTcSection("Buyer Terms & Conditions", buyerTermsDocs, activeContract.tcContent),
+      supplierOwnTcDocs.length > 0 ? buildTcSection("Supplier Terms & Conditions", supplierOwnTcDocs) : "",
+    ].join("");
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Contract ${escapeHtml(contractNumber)}</title>
+<style>
+  @page { margin: 20mm 16mm; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; padding: 24px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .subtitle { font-size: 13px; color: #555; margin: 0 0 20px; }
+  .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 24px; margin-bottom: 20px; }
+  .meta-label { font-size: 10px; text-transform: uppercase; color: #777; letter-spacing: 0.04em; }
+  .meta-value { font-size: 13px; font-weight: 600; }
+  h2 { font-size: 15px; margin: 24px 0 8px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+  th { background: #f3f4f6; font-size: 11px; text-transform: uppercase; }
+  td.num, th.num { text-align: right; }
+  .total-row { text-align: right; font-size: 13px; font-weight: 700; margin-top: 8px; }
+  .tc-section { margin-bottom: 16px; }
+  .tc-section h3 { font-size: 13px; margin: 0 0 6px; }
+  .tc-text, .tc-doc-list { font-size: 12px; color: #333; }
+  .tc-doc-list { margin: 0; padding-left: 18px; }
+  .sign-row { display: flex; gap: 24px; margin-top: 24px; }
+  .sign-box { flex: 1; border: 1px solid #ccc; border-radius: 6px; padding: 12px; text-align: center; }
+  .sign-label { font-size: 11px; text-transform: uppercase; color: #777; margin-bottom: 8px; }
+  .sign-image { max-height: 70px; max-width: 100%; }
+  .sign-mark { font-family: cursive; font-size: 20px; }
+  .sign-mark--empty { color: #999; font-family: Arial, sans-serif; font-size: 13px; }
+  .sign-caption { font-size: 11px; color: #555; margin-top: 6px; }
+  .sign-caption--muted { color: #999; }
+</style>
+</head>
+<body>
+  <h1>${escapeHtml(contractName)}</h1>
+  <div class="subtitle">Contract No. ${escapeHtml(contractNumber)}</div>
+  <div class="meta-grid">
+    <div><div class="meta-label">RFQ Title</div><div class="meta-value">${escapeHtml(rfqTitle)}</div></div>
+    <div><div class="meta-label">Supplier</div><div class="meta-value">${escapeHtml(supplierName)}</div></div>
+    <div><div class="meta-label">Contract Value</div><div class="meta-value">${fmtINR(getContractValue(activeContractId))}</div></div>
+    <div><div class="meta-label">Start Date</div><div class="meta-value">${escapeHtml(activeContract.startDate)}</div></div>
+    <div><div class="meta-label">End Date</div><div class="meta-value">${escapeHtml(activeContract.endDate)}</div></div>
+  </div>
+
+  <h2>Selected Line Items</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th><th>Material</th><th>Cost Center / Code</th><th class="num">Qty</th>
+        <th class="num">UOM</th><th class="num">Unit Price</th><th class="num">Tax / Disc. / Del.</th><th class="num">Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>${itemsRowsHtml}</tbody>
+  </table>
+  <div class="total-row">Total Contract Value: ${fmtINR(getContractValue(activeContractId))}</div>
+
+  <h2>Terms &amp; Conditions</h2>
+  ${tcSectionsHtml}
+
+  <h2>Signatures</h2>
+  <div class="sign-row">
+    ${buildSignature("Buyer", activeContract.buyerSignDetails)}
+    ${buildSignature(`Supplier (${supplierName})`, activeContract.supplierSignDetails)}
+  </div>
+
+  <script>window.onload = function () { window.print(); };</script>
+</body>
+</html>`;
+
+    const printWindow = window.open("", "_blank", "width=900,height=1100");
+    if (!printWindow) {
+      alert("Please allow pop-ups for this site to download the contract.");
+      return;
+    }
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   return (
     <div className="bca-contract-workspace">
       {/* Top Back Navigation */}
@@ -1930,7 +2063,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
           <div className="contract-tc-card">
             <div>
               <div className="contract-tc-name">
-                Contract Terms &amp; Conditions
+                {isSupplier ? "Buyer Terms & Conditions" : "Contract Terms & Conditions"}
               </div>
               {buyerTermsDocs.length > 0 ? renderTermsDocs(buyerTermsDocs) : (
                 <div className="contract-tc-file">
@@ -1983,12 +2116,12 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleSupplierAcceptFinal(activeContractId)}
-                    disabled={uploadingSupplierTc || activeSupplierTermsAccepted}
-                    className={`contract-btn contract-btn--md ${activeSupplierTermsAccepted ? "contract-btn--accepted" : "contract-btn--accept"}`}
+                    disabled={uploadingSupplierTc || activeBuyerTermsAccepted}
+                    className={`contract-btn contract-btn--md ${activeBuyerTermsAccepted ? "contract-btn--accepted" : "contract-btn--accept"}`}
                   >
-                    {uploadingSupplierTc && !activeSupplierTermsAccepted
+                    {uploadingSupplierTc && !activeBuyerTermsAccepted
                       ? "Submitting..."
-                      : activeSupplierTermsAccepted
+                      : activeBuyerTermsAccepted
                         ? "✓ Supplier Accepted"
                         : "Accept"}
                   </button>
@@ -2153,7 +2286,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
             <div className="contract-step-card">
               {isSupplier && (<>
               <div className="contract-subsection-title contract-subsection-title--tight">
-                Contract Terms Review &amp; Acceptance
+                Buyer Terms Review &amp; Acceptance
               </div>
               <div className="contract-terms-actions">
                 {isSupplier ? (
@@ -2170,6 +2303,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                           name={`hasSupplierTcRadio_${activeContractId}`}
                           value="yes"
                           checked={hasSupplierTcChoice === "yes"}
+                          disabled={!activeBuyerTermsAccepted}
                           onChange={() => {
                             setHasSupplierTcChoice("yes");
                             setSupplierTcStatusMsg(null);
@@ -2183,6 +2317,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                           name={`hasSupplierTcRadio_${activeContractId}`}
                           value="no"
                           checked={hasSupplierTcChoice === "no"}
+                          disabled={!activeBuyerTermsAccepted}
                           onChange={() => {
                             setHasSupplierTcChoice("no");
                             setSupplierTcStatusMsg(null);
@@ -2191,6 +2326,11 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                         No (Proceed with Buyer Terms &amp; Conditions)
                       </label>
                     </div>
+                    {!activeBuyerTermsAccepted && (
+                      <div className="contract-upload-help">
+                        Accept the buyer's Terms &amp; Conditions above to make this choice.
+                      </div>
+                    )}
 
                     {/* IF NO: No supplier terms - Accept / Reject of the buyer's terms is in the "Contract Terms & Conditions" card above */}
                     {hasSupplierTcChoice === "no" && (
@@ -2529,7 +2669,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => alert(`Downloading final executed contract ${activeContract.contractNumber}.pdf...`)}
+                  onClick={handleDownloadContract}
                   className="contract-btn contract-btn--success contract-btn--xl"
                 >
                   Download Contract
