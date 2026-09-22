@@ -737,6 +737,7 @@ if (Array.isArray(data)) {
 
     const handleAddCustomField = () => {
         if (!newFieldLabel.trim()) return;
+        if (newFieldType === "CHECK_BOX" && checkboxOptions.length < 2) return;
 
         let options: string[] = [];
         if (newFieldType === "RADIO_BUTTON") {
@@ -1443,7 +1444,17 @@ if (Array.isArray(data)) {
                                     )}
                                 </div>
 
-                                <button className="bd-btn-add" onClick={handleAddCustomField} type="button">
+                                <button
+                                    className="bd-btn-add"
+                                    onClick={handleAddCustomField}
+                                    type="button"
+                                    disabled={!newFieldLabel.trim() || (newFieldType === "CHECK_BOX" && checkboxOptions.length < 2)}
+                                    title={
+                                        newFieldType === "CHECK_BOX" && checkboxOptions.length < 2
+                                            ? "Add at least 2 options for a checkbox field"
+                                            : undefined
+                                    }
+                                >
                                     <IconPlus /> Add
                                 </button>
                             </div>
