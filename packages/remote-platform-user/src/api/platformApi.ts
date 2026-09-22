@@ -637,6 +637,24 @@ export interface BuyerRfqContractRefDto {
   supplierId: string;
 }
 
+export interface BuyerContractApprovalFlowDto {
+  id: string;
+  approvalCode: string;
+  approvalName: string;
+  contractId: string;
+  type: string;
+  totalAmount: number;
+  currency: string;
+}
+
+/** Shape returned for each entry of a contract's `attachments` (GET /api/v1/buyer/contract[/{id}]). */
+export interface BuyerContractAttachmentDto {
+  id: string;
+  assetId: string;
+  type: string;
+  fileName: string;
+}
+
 export interface BuyerContractDto {
   id: string;
   contractNumber: string;
@@ -648,16 +666,8 @@ export interface BuyerContractDto {
   endDate: string;
   amount: number;
   dateCreated: string;
-  attachments: RfqAssetAttachmentDto[];
-  approvalFlows: {
-    id: string;
-    approvalCode: string;
-    approvalName: string;
-    contractId: string;
-    type: string;
-    totalAmount: number;
-    currency: string;
-  }[];
+  attachments: BuyerContractAttachmentDto[];
+  approvalFlows: BuyerContractApprovalFlowDto[];
 }
 
 export interface CreateBuyerContractPayload {
@@ -739,6 +749,41 @@ export const fetchBuyerRfqContractStatus = async (
     return {
       statusCode: 500,
       message: error?.message || 'Failed to load the RFQ contract details.',
+      description: '',
+    };
+  }
+};
+
+/**
+ * Paginated list of contracts the buyer has created.
+ */
+export const fetchBuyerContracts = async (
+  index = 0,
+  limit = 10
+): Promise<BuyerContractDto[] | AssetErrorDto> => {
+  try {
+    const response = await platformInstance.get('/api/v1/buyer/contract', { params: { index, limit } });
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to load contracts.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Failed to load contracts.',
       description: '',
     };
   }

@@ -33,6 +33,7 @@ import MaterialApprovalDetail from "./Material/MaterialApprovalDetail";
 import type { ContractRecord } from "./Contract/contractApi";
 import { fetchContracts } from "./Contract/contractApi";
 import ContractTable from "./Contract/ContractTable";
+import ContractDetail from "./Contract/ContractDetail";
 import BidComparisonAwardView from "./BidComparisonAwardView";
 
 interface MatchCard {
@@ -564,22 +565,31 @@ const BuyerAdminDash: React.FC = () => {
     loadMaterialKpi();
   };
 
+  const CONTRACT_PAGE_SIZE = 10;
   const [contractRecords, setContractRecords] = useState<ContractRecord[]>([]);
   const [loadingContract, setLoadingContract] = useState(false);
   const [contractError, setContractError] = useState<string | null>(null);
+  const [contractPage, setContractPage] = useState(1);
+  const [selectedContract, setSelectedContract] = useState<ContractRecord | null>(null);
+
+  useEffect(() => {
+    if (activeNav !== "contract") return;
+    setSelectedContract(null);
+    setContractPage(1);
+  }, [activeNav]);
 
   useEffect(() => {
     if (activeNav !== "contract") return;
     setLoadingContract(true);
     setContractError(null);
-    fetchContracts()
+    fetchContracts((contractPage - 1) * CONTRACT_PAGE_SIZE, CONTRACT_PAGE_SIZE)
       .then(setContractRecords)
       .catch((err: any) => {
-        setContractError(err.message || "Failed to load contract approvals.");
+        setContractError(err.message || "Failed to load contracts.");
         setContractRecords([]);
       })
       .finally(() => setLoadingContract(false));
-  }, [activeNav]);
+  }, [activeNav, contractPage]);
 
   const [rfqPageView, setRfqPageView] = useState<"dashboard" | "allRfqs" | "rfqDetail" | "qsAns" | "quotationComparison">("dashboard");
   const [previousRfqPageView, setPreviousRfqPageView] = useState<"dashboard" | "allRfqs">("dashboard");
@@ -939,11 +949,23 @@ const BuyerAdminDash: React.FC = () => {
                 />
               )
             ) : activeNav === "contract" ? (
-              <ContractTable
-                records={contractRecords}
-                loading={loadingContract}
-                error={contractError}
-              />
+              selectedContract ? (
+                <ContractDetail
+                  contract={selectedContract}
+                  onBack={() => setSelectedContract(null)}
+                />
+              ) : (
+                <ContractTable
+                  records={contractRecords}
+                  loading={loadingContract}
+                  error={contractError}
+                  onRowClick={setSelectedContract}
+                  page={contractPage}
+                  onPreviousPage={() => setContractPage((p) => Math.max(1, p - 1))}
+                  onNextPage={() => setContractPage((p) => p + 1)}
+                  hasNextPage={contractRecords.length === CONTRACT_PAGE_SIZE}
+                />
+              )
             ) : activeNav === "materialService" ? (
               <ItemMasterCatalog buyerId={buyerId || ""} />
             ) : activeNav === "createRFQ" ? (

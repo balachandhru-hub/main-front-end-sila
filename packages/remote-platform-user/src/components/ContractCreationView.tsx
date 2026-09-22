@@ -41,7 +41,7 @@ export interface EsignStatusEntry {
 
 function fmtINR(val: number) {
   if (!val && val !== 0) return "—";
-  return "₹" + Math.round(val).toLocaleString("en-IN");
+  return Math.round(val).toLocaleString("en-IN");
 }
 
 function nowLabel() {

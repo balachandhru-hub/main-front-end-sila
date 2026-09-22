@@ -20,6 +20,7 @@ import MaterialApprovalDetail from "../../../remote-platform-user/src/components
 import type { ContractRecord } from "../../../remote-platform-user/src/components/Contract/contractApi";
 import { fetchContracts } from "../../../remote-platform-user/src/components/Contract/contractApi";
 import ContractTable from "../../../remote-platform-user/src/components/Contract/ContractTable";
+import ContractDetail from "../../../remote-platform-user/src/components/Contract/ContractDetail";
 import { BuyerAnalytics, CompanyProfile, EmptyState, Loader, StatusBadge, toastService, useAsyncData, useRouteNav, type RouteNavPaths } from '@vosox/shared-ui';
 import { useAuth } from '../../../host-app/src/AuthContext.tsx';
 import ApprovalManagement from "../../../remote-platform-user/src/components/ApprovalManagement/ApprovalManagement.tsx";
@@ -268,9 +269,9 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog" },
   { key: "models", icon: <NavIconModels />, label: "Models" },
-  { 
-    key: "configuration", 
-    icon: <NavIconTemplate />, 
+  {
+    key: "configuration",
+    icon: <NavIconTemplate />,
     label: "Configuration",
     subItems: [
       { key: "template", label: "Templates" },
@@ -642,22 +643,31 @@ const BuyersDashboard: React.FC = () => {
     loadMaterialKpi();
   };
 
+  const CONTRACT_PAGE_SIZE = 10;
   const [contractRecords, setContractRecords] = useState<ContractRecord[]>([]);
   const [loadingContract, setLoadingContract] = useState(false);
   const [contractError, setContractError] = useState<string | null>(null);
+  const [contractPage, setContractPage] = useState(1);
+  const [selectedContract, setSelectedContract] = useState<ContractRecord | null>(null);
+
+  useEffect(() => {
+    if (activeNav !== "contract") return;
+    setSelectedContract(null);
+    setContractPage(1);
+  }, [activeNav]);
 
   useEffect(() => {
     if (activeNav !== "contract") return;
     setLoadingContract(true);
     setContractError(null);
-    fetchContracts()
+    fetchContracts((contractPage - 1) * CONTRACT_PAGE_SIZE, CONTRACT_PAGE_SIZE)
       .then(setContractRecords)
       .catch((err: any) => {
-        setContractError(err.message || "Failed to load contract approvals.");
+        setContractError(err.message || "Failed to load contracts.");
         setContractRecords([]);
       })
       .finally(() => setLoadingContract(false));
-  }, [activeNav]);
+  }, [activeNav, contractPage]);
 
   // The RFQ list has its own URL (/rfqs). When the URL changes by itself (Back/Forward,
   // reload, a shared link), bring the RFQ view in line with it.
@@ -917,11 +927,23 @@ const BuyersDashboard: React.FC = () => {
                 />
               )
             ) : activeNav === "contract" ? (
-              <ContractTable
-                records={contractRecords}
-                loading={loadingContract}
-                error={contractError}
-              />
+              selectedContract ? (
+                <ContractDetail
+                  contract={selectedContract}
+                  onBack={() => setSelectedContract(null)}
+                />
+              ) : (
+                <ContractTable
+                  records={contractRecords}
+                  loading={loadingContract}
+                  error={contractError}
+                  onRowClick={setSelectedContract}
+                  page={contractPage}
+                  onPreviousPage={() => setContractPage((p) => Math.max(1, p - 1))}
+                  onNextPage={() => setContractPage((p) => p + 1)}
+                  hasNextPage={contractRecords.length === CONTRACT_PAGE_SIZE}
+                />
+              )
             ) : activeNav === "approvalManagement" ? (
               <ApprovalManagement canCreate={false}/>
             ) : rfqPageView === "allRfqs" ? (
