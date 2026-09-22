@@ -123,8 +123,8 @@ export interface ContractCreationViewProps {
     isSingletonAsset?: boolean;
     id?: string;
   }) => Promise<any>;
-  /** Buyer sets a status (e.g. "ACCEPTED") on the supplier's terms & conditions. Buyer role only. */
-  onAcceptSupplierTerms?: (rfqId: string, status: string) => Promise<any>;
+  /** Buyer sets a status (e.g. "APPROVE") on a supplier's terms & conditions. Buyer role only. */
+  onAcceptSupplierTerms?: (rfqId: string, supplierId: string, status: string) => Promise<any>;
   /** Supplier sets a status (e.g. "ACCEPTED") on the buyer's terms & conditions. Supplier role only. */
   onAcceptBuyerTerms?: (rfqId: string, status: string) => Promise<any>;
   /** Fetches the latest per-supplier terms & conditions status/attachments for this RFQ. */
@@ -703,10 +703,13 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const [supplierContract, setSupplierContract] = useState<ContractDetails | null>(null);
   const openedContractSupplierRef = useRef(false);
   const [buyerTermsError, setBuyerTermsError] = useState<string | null>(null);
-  // Whether the buyer has already accepted the supplier's terms & conditions, from the buyer's rfq-by-id.
-  const [supplierTermsAccepted, setSupplierTermsAccepted] = useState(
-    (rfq as any)?.supplierTermsAndConditionAccepted === true
-  );
+  // Whether the buyer has already accepted each supplier's terms & conditions, from the buyer's rfq-by-id.
+  const [termsAcceptedStatuses, setTermsAcceptedStatuses] = useState<
+    { supplierId: string; supplierName: string; supplierTermsAndConditionAccepted: boolean }[]
+  >((rfq as any)?.supplierTermsAndConditionAccepted || []);
+  const activeTermsAcceptedEntry = activeContract
+    ? termsAcceptedStatuses.find((e) => String(e.supplierId) === resolveSupplierId(activeContract.supplierId))
+    : undefined;
   const [showContractNameModal, setShowContractNameModal] = useState(!isSupplier && contractRefs.length === 0);
   const [contractNameError, setContractNameError] = useState<string | null>(null);
   const [sendingContract, setSendingContract] = useState(false);
@@ -721,41 +724,40 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   // e-signature and buyer-acceptance status are shown, not the data loaded earlier on the award screen.
   const [latestLoading, setLatestLoading] = useState(false);
   const [latestError, setLatestError] = useState<string | null>(null);
-  useEffect(() => {
+  // Loads each supplier's latest terms & conditions, e-signature and buyer-acceptance status from the buyer's
+  // rfq-by-id. Used on open, and again after the buyer accepts a supplier's terms.
+  const loadLatestContractStatus = async () => {
     if (isSupplier || !rfqId) return;
-    let cancelled = false;
     setLatestLoading(true);
     setLatestError(null);
-    fetchBuyerRfqContractStatus(rfqId)
-      .then((latest) => {
-        if (cancelled) return;
-        if ("statusCode" in latest) {
-          setLatestError(latest.message || "Failed to load the latest contract details.");
-          return;
-        }
-        setTermsConditions(latest.supplierTermsConditions || []);
-        setESigns(latest.supplierESigns || []);
-        setContractRefs(latest.contracts || []);
-        setSupplierTermsAccepted(latest.supplierTermsAndConditionAccepted === true);
-        const acceptedSupplierIds = (latest.buyerTermsAndConditionStatuses || [])
-          .filter((s) => s.buyerTermsAndConditionAccepted)
-          .map((s) => String(s.supplierId));
-        setContracts((prev) => {
-          const next = { ...prev };
-          Object.keys(next).forEach((sid) => {
-            if (acceptedSupplierIds.includes(resolveSupplierId(sid))) {
-              next[sid] = { ...next[sid], buyerFinalAccepted: true };
-            }
-          });
-          return next;
+    try {
+      const latest = await fetchBuyerRfqContractStatus(rfqId);
+      if ("statusCode" in latest) {
+        setLatestError(latest.message || "Failed to load the latest contract details.");
+        return;
+      }
+      setTermsConditions(latest.supplierTermsConditions || []);
+      setESigns(latest.supplierESigns || []);
+      setContractRefs(latest.contracts || []);
+      setTermsAcceptedStatuses(latest.supplierTermsAndConditionAccepted || []);
+      const acceptedSupplierIds = (latest.buyerTermsAndConditionStatuses || [])
+        .filter((s) => s.buyerTermsAndConditionAccepted)
+        .map((s) => String(s.supplierId));
+      setContracts((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((sid) => {
+          if (acceptedSupplierIds.includes(resolveSupplierId(sid))) {
+            next[sid] = { ...next[sid], buyerFinalAccepted: true };
+          }
         });
-      })
-      .finally(() => {
-        if (!cancelled) setLatestLoading(false);
+        return next;
       });
-    return () => {
-      cancelled = true;
-    };
+    } finally {
+      setLatestLoading(false);
+    }
+  };
+  useEffect(() => {
+    loadLatestContractStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rfqId]);
 
@@ -890,9 +892,8 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   // accepted and Proceed to Signing is available. This applies once the contract exists in the API; right after
   // "Send to Supplier" in this session the supplier cannot have answered yet, so both sides stay awaiting.
   // true = the supplier's own T&C is submitted, so the supplier side is accepted. If the buyer has already accepted
-  // them (supplierTermsAndConditionAccepted) there is nothing left to approve; otherwise the buyer still has to Accept.
-  // That flag is one value for the whole RFQ, so it is only trusted when one supplier has own terms.
-  const ownTermsSupplierCount = termsConditions.filter((e) => e.termsAndCondition === true).length;
+  // them (this supplier's entry in supplierTermsAndConditionAccepted) there is nothing left to approve; otherwise
+  // the buyer still has to Accept.
   useEffect(() => {
     if (isSupplier || !activeContract || activeContract.step !== "terms") return;
     if (activeTcEntry?.termsAndCondition === false) {
@@ -902,7 +903,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       return;
     }
     if (activeTcEntry?.termsAndCondition !== true) return;
-    const buyerAlreadyAccepted = supplierTermsAccepted && ownTermsSupplierCount === 1;
+    const buyerAlreadyAccepted = activeTermsAcceptedEntry?.supplierTermsAndConditionAccepted === true;
     if (!activeContract.supplierFinalAccepted || (buyerAlreadyAccepted && !activeContract.buyerFinalAccepted)) {
       updateContract(activeContract.supplierId, {
         supplierFinalAccepted: true,
@@ -913,8 +914,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   }, [
     activeTcEntry?.termsAndCondition,
     activeContractRef?.contractId,
-    supplierTermsAccepted,
-    ownTermsSupplierCount,
+    activeTermsAcceptedEntry?.supplierTermsAndConditionAccepted,
     activeContract?.step,
     activeContract?.supplierId,
   ]);
@@ -1133,12 +1133,12 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     setBuyerTermsError(null);
     if (onAcceptSupplierTerms && targetRfqId) {
       try {
-        const res = await onAcceptSupplierTerms(targetRfqId, "APPROVE");
+        const res = await onAcceptSupplierTerms(targetRfqId, resolveSupplierId(id), "APPROVE");
         if (res && "statusCode" in res && res.statusCode >= 400) {
           setBuyerTermsError(res.message || "Failed to accept the supplier's terms & conditions.");
           return;
         }
-        await refreshTermsConditions();
+        await loadLatestContractStatus();
       } catch (err: any) {
         console.error("Failed to update supplier terms & conditions status:", err);
         setBuyerTermsError(err?.message || "Failed to accept the supplier's terms & conditions.");
@@ -2231,6 +2231,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               {!isSupplier && activeTcEntry?.termsAndCondition !== false && (() => {
                 const termsReceived = activeTcEntry?.termsAndCondition === true;
                 const receivedDocs = termsReceived ? activeTcEntry?.attachments || [] : [];
+                const termsAccepted = activeTermsAcceptedEntry?.supplierTermsAndConditionAccepted === true;
                 return (
                   <div className="contract-tc-card">
                     <div>
@@ -2250,18 +2251,16 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                       )}
                       {buyerTermsError && <div className="contract-status-msg">{buyerTermsError}</div>}
                     </div>
-                    {!activeContract.buyerFinalAccepted && (
-                      <div className="contract-actions">
-                        <button
-                          type="button"
-                          onClick={() => handleBuyerAcceptFinal(activeContractId)}
-                          disabled={!termsReceived}
-                          className="contract-btn contract-btn--md contract-btn--accept"
-                        >
-                          Accept
-                        </button>
-                      </div>
-                    )}
+                    <div className="contract-actions">
+                      <button
+                        type="button"
+                        onClick={() => handleBuyerAcceptFinal(activeContractId)}
+                        disabled={!termsReceived || termsAccepted}
+                        className={`contract-btn contract-btn--md ${termsAccepted ? "contract-btn--accepted" : "contract-btn--accept"}`}
+                      >
+                        {termsAccepted ? "Accepted" : "Accept"}
+                      </button>
+                    </div>
                   </div>
                 );
               })()}
