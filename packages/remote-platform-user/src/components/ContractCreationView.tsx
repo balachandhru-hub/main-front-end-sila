@@ -313,8 +313,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const supplierHasOwnTc = isSupplier && (rfq as any)?.supplierTermsAndCondition === true;
   const supplierOwnTcDocs: RfqAssetAttachment[] = isSupplier ? (rfq as any)?.supplierTermsConditionDocuments || [] : [];
   const supplierHasSigned = isSupplier && ((rfq as any)?.eSignDocuments?.length ?? 0) > 0;
-  // The "Buyer — Accepted" status shown to the supplier.
-  const buyerTermsAccepted = isSupplier && (rfq as any)?.buyerTermsAndConditionAccepted === true;
 
   // Real terms-condition / e-sign status per supplier, sourced from the RFQ payload
   // (buyer's rfq-by-id already includes it) and refreshed via the dedicated status endpoints.
@@ -706,10 +704,22 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   // Whether the buyer has already accepted each supplier's terms & conditions, from the buyer's rfq-by-id.
   const [termsAcceptedStatuses, setTermsAcceptedStatuses] = useState<
     { supplierId: string; supplierName: string; supplierTermsAndConditionAccepted: boolean }[]
-  >((rfq as any)?.supplierTermsAndConditionAccepted || []);
+  >(Array.isArray((rfq as any)?.supplierTermsAndConditionAccepted) ? (rfq as any).supplierTermsAndConditionAccepted : []);
   const activeTermsAcceptedEntry = activeContract
     ? termsAcceptedStatuses.find((e) => String(e.supplierId) === resolveSupplierId(activeContract.supplierId))
     : undefined;
+  // contract-accept-summary (buyer role): per-supplier whether that supplier has accepted the buyer's terms,
+  // from the buyer's rfq-by-id. Refreshed alongside termsAcceptedStatuses in loadLatestContractStatus.
+  const [buyerAcceptedStatuses, setBuyerAcceptedStatuses] = useState<
+    { supplierId: string; supplierName: string; buyerTermsAndConditionAccepted: boolean }[]
+  >(Array.isArray((rfq as any)?.buyerTermsAndConditionStatuses) ? (rfq as any).buyerTermsAndConditionStatuses : []);
+  // Supplier role: the flat buyerTermsAndConditionAccepted / supplierTermsAndConditionAccepted booleans from the
+  // RFQ (there is only one buyer-supplier context, so no per-supplier array). Updated locally right after the
+  // supplier accepts/rejects the buyer's terms, since there is no rfq-by-id refetch wired up for the supplier role.
+  const [supplierScreenAcceptance, setSupplierScreenAcceptance] = useState({
+    buyerTermsAndConditionAccepted: (rfq as any)?.buyerTermsAndConditionAccepted === true,
+    supplierTermsAndConditionAccepted: (rfq as any)?.supplierTermsAndConditionAccepted === true,
+  });
   const [showContractNameModal, setShowContractNameModal] = useState(!isSupplier && contractRefs.length === 0);
   const [contractNameError, setContractNameError] = useState<string | null>(null);
   const [sendingContract, setSendingContract] = useState(false);
@@ -740,6 +750,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       setESigns(latest.supplierESigns || []);
       setContractRefs(latest.contracts || []);
       setTermsAcceptedStatuses(latest.supplierTermsAndConditionAccepted || []);
+      setBuyerAcceptedStatuses(latest.buyerTermsAndConditionStatuses || []);
       const acceptedSupplierIds = (latest.buyerTermsAndConditionStatuses || [])
         .filter((s) => s.buyerTermsAndConditionAccepted)
         .map((s) => String(s.supplierId));
@@ -814,6 +825,22 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   }, [contractRefs]);
 
   const activeSupplierId = activeContract ? resolveSupplierId(activeContract.supplierId) : "";
+  // Terms-acceptance status for the "contract-accept-summary" and the supplier's Accept/Reject actions on the
+  // buyer's terms. Buyer role: per-supplier arrays matched against the active supplier tab. Supplier role: the
+  // flat RFQ booleans, kept current via supplierScreenAcceptance.
+  const activeBuyerTermsAccepted = isSupplier
+    ? supplierScreenAcceptance.buyerTermsAndConditionAccepted
+    : buyerAcceptedStatuses.find((entry) => String(entry.supplierId) === String(activeSupplierId))
+        ?.buyerTermsAndConditionAccepted === true;
+  const activeSupplierTermsAccepted = isSupplier
+    ? supplierScreenAcceptance.supplierTermsAndConditionAccepted
+    : termsAcceptedStatuses.find((entry) => String(entry.supplierId) === String(activeSupplierId))
+        ?.supplierTermsAndConditionAccepted === true;
+  // Buyer role: "Proceed to Signing" is only enabled once both the active supplier's acceptance statuses are
+  // true. Supplier role keeps its existing activeContract.buyerFinalAccepted/supplierFinalAccepted behavior.
+  const canProceedToSigning = isSupplier
+    ? activeContract?.buyerFinalAccepted && activeContract?.supplierFinalAccepted
+    : activeBuyerTermsAccepted && activeSupplierTermsAccepted;
   const activeContractRef = contractRefs.find((ref) => String(ref.supplierId) === activeSupplierId);
   const activeCreated: ContractDetails | undefined = isSupplier
     ? supplierContract ?? undefined
@@ -937,11 +964,15 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       (activeContract?.step === "sign" && !(activeContract.buyerSigned && activeContract.supplierSigned)));
 
   // Supplier Accept / Reject of the buyer's Terms & Conditions, shown in the "Contract Terms & Conditions" card.
+  // Visibility is driven only by the backend's supplierTermsAndConditionAccepted (activeSupplierTermsAccepted),
+  // plus the two cases where accepting/rejecting the buyer's terms doesn't apply: the supplier has their own T&C
+  // instead (activeTcEntry) or has chosen to submit one (hasSupplierTcChoice). showTermsAcceptanceCard is not
+  // repeated here since this JSX already sits inside that same condition.
   const showBuyerTermsDecision =
     isSupplier &&
-    showTermsAcceptanceCard &&
     activeTcEntry?.termsAndCondition !== true &&
-    hasSupplierTcChoice === "no";
+    hasSupplierTcChoice === "no" &&
+    !activeSupplierTermsAccepted;
 
   // Helper calculation for contract value per supplier
   const getContractValue = (id: string) => {
@@ -1164,6 +1195,9 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       setSupplierTcStatusMsg("Success! Buyer terms & conditions accepted.");
       await refreshTermsConditions();
       updateContract(id, { supplierFinalAccepted: true, supplierFinalRejected: false });
+      if (isSupplier) {
+        setSupplierScreenAcceptance((prev) => ({ ...prev, supplierTermsAndConditionAccepted: true }));
+      }
     } catch (err: any) {
       console.error("Failed to accept buyer terms & conditions:", err);
       setSupplierTcStatusMsg(err?.message || "Failed to accept terms.");
@@ -1946,34 +1980,30 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               )}
               {showBuyerTermsDecision && (
                 <>
-                  {!activeContract.supplierFinalRejected && (
-                    <button
-                      type="button"
-                      onClick={() => handleSupplierAcceptFinal(activeContractId)}
-                      disabled={uploadingSupplierTc || activeContract.supplierFinalAccepted}
-                      className={`contract-btn contract-btn--md ${activeContract.supplierFinalAccepted ? "contract-btn--accepted" : "contract-btn--accept"}`}
-                    >
-                      {uploadingSupplierTc && !activeContract.supplierFinalAccepted
-                        ? "Submitting..."
-                        : activeContract.supplierFinalAccepted
-                          ? "✓ Supplier Accepted"
-                          : "Accept"}
-                    </button>
-                  )}
-                  {!activeContract.supplierFinalAccepted && (
-                    <button
-                      type="button"
-                      onClick={() => handleSupplierRejectFinal(activeContractId)}
-                      disabled={uploadingSupplierTc || activeContract.supplierFinalRejected}
-                      className={`contract-btn contract-btn--md ${activeContract.supplierFinalRejected ? "contract-btn--rejected" : "contract-btn--danger"}`}
-                    >
-                      {uploadingSupplierTc && !activeContract.supplierFinalRejected
-                        ? "Submitting..."
-                        : activeContract.supplierFinalRejected
-                          ? "✕ Supplier Rejected"
-                          : "Reject"}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleSupplierAcceptFinal(activeContractId)}
+                    disabled={uploadingSupplierTc || activeSupplierTermsAccepted}
+                    className={`contract-btn contract-btn--md ${activeSupplierTermsAccepted ? "contract-btn--accepted" : "contract-btn--accept"}`}
+                  >
+                    {uploadingSupplierTc && !activeSupplierTermsAccepted
+                      ? "Submitting..."
+                      : activeSupplierTermsAccepted
+                        ? "✓ Supplier Accepted"
+                        : "Accept"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSupplierRejectFinal(activeContractId)}
+                    disabled={uploadingSupplierTc || activeContract.supplierFinalRejected}
+                    className={`contract-btn contract-btn--md ${activeContract.supplierFinalRejected ? "contract-btn--rejected" : "contract-btn--danger"}`}
+                  >
+                    {uploadingSupplierTc && !activeContract.supplierFinalRejected
+                      ? "Submitting..."
+                      : activeContract.supplierFinalRejected
+                        ? "✕ Supplier Rejected"
+                        : "Reject"}
+                  </button>
                 </>
               )}
             </div>
@@ -2265,17 +2295,16 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 );
               })()}
 
-              {/* Final Terms Acceptance Gate */}
+              {/* Final Terms Acceptance Gate. Buyer role: rfq-by-id returns buyerTermsAndConditionStatuses /
+                  supplierTermsAndConditionAccepted as per-supplier arrays, matched against the active supplier
+                  tab (activeSupplierId). Supplier role: rfq-by-id returns these as flat booleans for the single
+                  buyer-supplier context, used directly. See activeBuyerTermsAccepted / activeSupplierTermsAccepted. */}
               <div className="contract-accept-summary">
-                <span
-                  className={`contract-accept-status${(isSupplier ? buyerTermsAccepted : activeContract.buyerFinalAccepted) ? " contract-accept-status--done" : ""}`}
-                >
-                  Buyer — {(isSupplier ? buyerTermsAccepted : activeContract.buyerFinalAccepted) ? "Accepted ✓" : isSupplier ? "Awaiting Acceptance" : "Awaiting Buyer"}
+                <span className={`contract-accept-status${activeBuyerTermsAccepted ? " contract-accept-status--done" : ""}`}>
+                  Buyer — {activeBuyerTermsAccepted ? "Accepted ✓" : "Awaiting Acceptance"}
                 </span>
-                <span
-                  className={`contract-accept-status${activeContract.supplierFinalAccepted ? " contract-accept-status--done" : activeContract.supplierFinalRejected ? " contract-accept-status--rejected" : ""}`}
-                >
-                  Supplier — {activeContract.supplierFinalAccepted ? "Accepted ✓" : activeContract.supplierFinalRejected ? "Rejected ✕" : isSupplier ? "Awaiting Acceptance" : "Awaiting Supplier"}
+                <span className={`contract-accept-status${activeSupplierTermsAccepted ? " contract-accept-status--done" : ""}`}>
+                  Supplier — {activeSupplierTermsAccepted ? "Accepted ✓" : "Awaiting Acceptance"}
                 </span>
               </div>
 
@@ -2283,7 +2312,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleProceedToSigning(activeContractId)}
-                  disabled={!(activeContract.buyerFinalAccepted && activeContract.supplierFinalAccepted)}
+                  disabled={!canProceedToSigning}
                   className="contract-btn contract-btn--primary contract-btn--cta"
                 >
                   Proceed to Signing
@@ -2299,9 +2328,9 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 Contract Signing
               </div>
 
-              {/* Terms & conditions didn't require negotiation for this supplier, so surface the
-                  implicit acceptance here since the "Contract Terms Review & Acceptance" card was skipped. */}
-              {(isSupplier ? tcDeclined : supplierEsignUploaded) && (
+              {/* Supplier's T&C acceptance, from the backend's supplierTermsAndConditionAccepted — never from
+                  document/e-sign upload state (uploading a signed contract does not imply T&C acceptance). */}
+              {activeSupplierTermsAccepted && (
                 <div className="contract-implicit-accept">
                   Supplier — Accepted ✓
                 </div>
