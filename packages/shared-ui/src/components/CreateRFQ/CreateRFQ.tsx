@@ -555,6 +555,27 @@ if (Array.isArray(data)) {
     const [registrationTemplateId, setRegistrationTemplateId] = useState("");
     // const supplierRegistrationLink = "https://supplier.company.com/register";
 
+    const DEFAULT_REGISTRATION_TEMPLATE_NAME = "Default Supplier Registration";
+
+    // ---- Preselect the "Default Supplier Registration" template so the field isn't left empty ----
+    useEffect(() => {
+        const loadDefaultTemplate = async () => {
+            try {
+                const data = await api.fetchBuyerVerificationTemplates(0, DROPDOWN_PAGE_SIZE);
+                if (!Array.isArray(data)) return;
+                const defaultTemplate = data.find(
+                    (t) => t.templateName.trim().toLowerCase() === DEFAULT_REGISTRATION_TEMPLATE_NAME.toLowerCase()
+                );
+                if (defaultTemplate) {
+                    setRegistrationTemplateId(defaultTemplate.templateId);
+                    setRegistrationTemplate(defaultTemplate.templateName);
+                }
+            } catch (err) {
+            }
+        };
+        loadDefaultTemplate();
+    }, []);
+
     // ---- Async paginated loader for the Registration Template Dropdown (server has no search param, so filter client-side) ----
     const loadTemplateOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
         const data = await api.fetchBuyerVerificationTemplates(page * DROPDOWN_PAGE_SIZE, DROPDOWN_PAGE_SIZE);
@@ -817,6 +838,17 @@ if (Array.isArray(data)) {
 
     const handleSubmitRFQ = async () => {
         if (selectedSupplierIds.length === 0 && externalSuppliers.length === 0) return;
+
+        const suppliersMissingUsers = selectedSuppliers.filter(
+            (s) => (supplierSelectedUserIds[s.supplierId] || []).length === 0
+        );
+        if (suppliersMissingUsers.length > 0) {
+            const message = suppliersMissingUsers.length === 1
+                ? `Please select at least one user for ${suppliersMissingUsers[0].supplierName}.`
+                : "Please select at least one user for each selected supplier.";
+            toastService.error(message);
+            return;
+        }
 
         setSubmitError(null);
         setIsSubmittingRFQ(true);

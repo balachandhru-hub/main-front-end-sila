@@ -92,6 +92,33 @@
   color: var(--sila-danger);
 }
 
+.supplier-users-list-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sila-space-3);
+  padding-bottom: var(--sila-space-3);
+  margin-bottom: var(--sila-space-3);
+  border-bottom: 0.0625rem solid var(--sila-border-subtle);
+}
+
+.supplier-users-list-count {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sila-space-2);
+  font-size: var(--sila-text-xs);
+  font-weight: var(--sila-weight-medium);
+  color: var(--sila-text-muted);
+  cursor: pointer;
+}
+
+.supplier-users-list-count input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: var(--sila-primary);
+}
+
 .supplier-users-list {
   list-style: none;
   margin: 0;
