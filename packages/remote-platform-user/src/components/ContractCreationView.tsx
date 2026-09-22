@@ -4,11 +4,17 @@ import {
   fetchBuyerRfqContractStatus,
   fetchBuyerContractById,
   createBuyerContract,
+  inviteSupplierForContract,
   type BuyerRfqContractRefDto,
 } from "../api/platformApi";
 import { fetchReferenceList } from "../api/masterdataApi";
 import { Button } from "@vosox/shared-ui";
+import jsPDF from "jspdf";
+import silaLogo from "../../../shared-ui/src/assets/sila-logo.png";
 import "./ContractCreationView.css";
+
+// The SILA brand blue (packages/shared-ui/src/styles/tokens.css: --sila-primary), as RGB for jsPDF's color setters.
+const SILA_PRIMARY_RGB: [number, number, number] = [31, 92, 196];
 
 /** The parts of a created contract this screen shows, as returned by the buyer and supplier contract APIs. */
 export interface ContractDetails {
@@ -87,6 +93,28 @@ function readFileAsBase64(file: File): Promise<string> {
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
+  });
+}
+
+// Loads a same-origin image URL (e.g. a bundled asset) as a PNG data URL, for jsPDF's addImage which needs a
+// data URI rather than a plain URL.
+function loadImageAsDataUrl(src: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Canvas not supported"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+    img.src = src;
   });
 }
 
@@ -307,6 +335,23 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 }) => {
   const isSupplier = role === "supplier";
   const rfqId: string | undefined = rfq?.rfqId || rfq?.id || (rfq as any)?._id;
+
+  // Preloaded once as a data URL so the executed-contract PDF can embed the SILA logo (jsPDF's addImage needs a
+  // data URI, not a plain asset URL).
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    loadImageAsDataUrl(silaLogo)
+      .then((dataUrl) => {
+        if (!cancelled) setLogoDataUrl(dataUrl);
+      })
+      .catch(() => {
+        // Non-fatal: the PDF is still generated without the logo.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Supplier role: the supplier's own Terms & Conditions and e-signature state, as returned by the supplier's rfq-by-id.
   // Read once so the accepted status, T&C documents and e-signature survive leaving and reopening the contract.
@@ -734,6 +779,9 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const [contractNameError, setContractNameError] = useState<string | null>(null);
   const [sendingContract, setSendingContract] = useState(false);
   const [sendContractError, setSendContractError] = useState<string | null>(null);
+  // Buyer: creates the contract, once both parties have signed, via the "Create Contract" button.
+  const [creatingContract, setCreatingContract] = useState(false);
+  const [createContractError, setCreateContractError] = useState<string | null>(null);
   // Buyer: the file picked in the "Proposed Edits" dialog, kept per contract only once saved.
   const [pendingBuyerTcFile, setPendingBuyerTcFile] = useState<File | null>(null);
   // Buyer: which suppliers' contracts "Send" applies to when several suppliers were awarded.
@@ -1297,7 +1345,8 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     return attachments;
   };
 
-  // Buyer: create and send one contract per supplier, each with that supplier's id, dates and value.
+  // Buyer: invite one supplier per contract to review and negotiate Terms & Conditions. This no longer creates
+  // the contract itself - that happens once both parties have signed (see handleCreateContract).
   // Stops at the first failure; contracts already sent stay sent. Returns an error message, or null on success.
   const sendContract = async (ids: string[]): Promise<string | null> => {
     if (ids.length === 0 || !rfqId) return "Contract not found.";
@@ -1305,14 +1354,9 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       const c = contracts[id];
       if (!c) return "Contract not found.";
       try {
-        const res = await createBuyerContract({
-          contractName: contractName.trim(),
+        const res = await inviteSupplierForContract({
           rfqId,
           supplierId: resolveSupplierId(c.supplierId),
-          startDate: `${c.startDate}T00:00:00.000Z`,
-          endDate: `${c.endDate}T00:00:00.000Z`,
-          amount: getContractValue(id),
-          attachments: await buildContractAttachments([id]),
         });
         if ("statusCode" in res && res.statusCode >= 400) {
           return [res.message || "Failed to send the contract.", res.description].filter(Boolean).join(" - ");
@@ -1705,7 +1749,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         </div>`;
     };
 
-    const contractNumber = activeContract.contractNumber || activeCreated?.contractNumber || "—";
+    const contractNumber = activeCreated?.contractNumber || activeContract.contractNumber || "—";
     const contractName = activeCreated?.contractName || contractNumber;
     const supplierName = getSupplierName(activeContract.supplierId);
     const rfqTitle = rfq?.title || rfq?.rfqNo || rfq?.name || "—";
@@ -1805,6 +1849,257 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     printWindow.document.open();
     printWindow.document.write(html);
     printWindow.document.close();
+  };
+
+  // Draws the same executed-contract content as handleDownloadContract, but with jsPDF directly so we get real
+  // PDF bytes to attach to the create-contract API call (the print dialog above can't hand back file bytes).
+  const buildContractPdfBase64 = (id: string, contract: ContractState): string => {
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginX = 40;
+    let y = 48;
+
+    const ensureSpace = (needed: number) => {
+      if (y + needed > pageHeight - 40) {
+        doc.addPage();
+        y = 48;
+      }
+    };
+
+    const supplierName = getSupplierName(contract.supplierId);
+    const rfqTitle = rfq?.title || rfq?.rfqNo || rfq?.name || "—";
+
+    // Header: SILA logo on the left, contract name/number to its right, with a brand-colored rule beneath.
+    const logoWidth = 90;
+    const logoHeight = logoWidth * (101 / 420);
+    let headerTextX = marginX;
+    if (logoDataUrl) {
+      try {
+        doc.addImage(logoDataUrl, "PNG", marginX, y - 20, logoWidth, logoHeight);
+        headerTextX = marginX + logoWidth + 16;
+      } catch {
+        // Non-fatal: the header still renders without the logo.
+      }
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(...SILA_PRIMARY_RGB);
+    doc.text(contractName.trim() || contract.contractNumber, headerTextX, y);
+    y += 18;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(85);
+    doc.text(`Contract No. ${contract.contractNumber}`, headerTextX, y);
+    y = Math.max(y, 4 + logoHeight) + 14;
+    doc.setDrawColor(...SILA_PRIMARY_RGB);
+    doc.setLineWidth(1.2);
+    doc.line(marginX, y, pageWidth - marginX, y);
+    doc.setLineWidth(0.75);
+    y += 20;
+
+    doc.setTextColor(30);
+    [
+      `RFQ Title: ${rfqTitle}`,
+      `Supplier: ${supplierName}`,
+      `Contract Value: ${fmtINR(getContractValue(id))}`,
+      `Start Date: ${contract.startDate}`,
+      `End Date: ${contract.endDate}`,
+    ].forEach((line) => {
+      doc.text(line, marginX, y);
+      y += 14;
+    });
+    y += 10;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(...SILA_PRIMARY_RGB);
+    doc.text("Selected Line Items", marginX, y);
+    doc.setTextColor(30);
+    y += 16;
+
+    const columns: { label: string; width: number; align: "left" | "right" }[] = [
+      { label: "#", width: 20, align: "left" },
+      { label: "Material", width: 110, align: "left" },
+      { label: "Cost Center / Code", width: 100, align: "left" },
+      { label: "Qty", width: 30, align: "right" },
+      { label: "UOM", width: 35, align: "right" },
+      { label: "Unit Price", width: 60, align: "right" },
+      { label: "Tax/Disc/Del", width: 70, align: "right" },
+      { label: "Subtotal", width: 65, align: "right" },
+    ];
+    const tableWidth = columns.reduce((sum, c) => sum + c.width, 0);
+
+    const drawRow = (cells: string[], isHeader: boolean) => {
+      if (isHeader) {
+        doc.setFillColor(238, 244, 253); // --sila-primary-soft
+        doc.rect(marginX, y - 9, tableWidth, 13, "F");
+      }
+      doc.setFont("helvetica", isHeader ? "bold" : "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...(isHeader ? SILA_PRIMARY_RGB : ([30, 30, 30] as [number, number, number])));
+      let x = marginX;
+      cells.forEach((cell, i) => {
+        const col = columns[i];
+        const textX = col.align === "right" ? x + col.width - 2 : x + 2;
+        doc.text(cell, textX, y, { align: col.align });
+        x += col.width;
+      });
+      doc.setDrawColor(220);
+      doc.line(marginX, y + 4, marginX + tableWidth, y + 4);
+      y += 14;
+    };
+
+    ensureSpace(20);
+    drawRow(columns.map((c) => c.label), true);
+    doc.setTextColor(30);
+    activeLineItemRows.forEach((row) => {
+      ensureSpace(16);
+      drawRow(
+        [
+          String(row.idx),
+          row.material,
+          row.costCenterCode,
+          String(row.qty),
+          row.uom,
+          fmtINR(row.unitPrice),
+          row.breakdownStr,
+          fmtINR(row.subtotal),
+        ],
+        false
+      );
+    });
+    y += 6;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...SILA_PRIMARY_RGB);
+    doc.text(`Total Contract Value: ${fmtINR(getContractValue(id))}`, pageWidth - marginX, y, { align: "right" });
+    doc.setTextColor(30);
+    y += 26;
+
+    // Merge both parties' Terms & Conditions when each has their own; otherwise use whichever one exists.
+    const writeTcSection = (label: string, docs: RfqAssetAttachment[], text?: string) => {
+      ensureSpace(30);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(...SILA_PRIMARY_RGB);
+      doc.text(label, marginX, y);
+      doc.setTextColor(30);
+      y += 16;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(50);
+      const lines: string[] = docs.length > 0
+        ? docs.map((d) => `- ${d.fileName || d.assetName || "Terms & Conditions document"}`)
+        : doc.splitTextToSize(text || "", pageWidth - marginX * 2);
+      lines.forEach((line) => {
+        ensureSpace(14);
+        doc.text(line, marginX, y);
+        y += 13;
+      });
+      doc.setTextColor(30);
+      y += 8;
+    };
+
+    writeTcSection("Buyer Terms & Conditions", buyerTermsDocs, contract.tcContent);
+    if (supplierOwnTcDocs.length > 0) {
+      writeTcSection("Supplier Terms & Conditions", supplierOwnTcDocs);
+    }
+
+    ensureSpace(120);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(...SILA_PRIMARY_RGB);
+    doc.text("Signatures", marginX, y);
+    doc.setTextColor(30);
+    y += 16;
+
+    const signBoxWidth = (pageWidth - marginX * 2 - 20) / 2;
+    const writeSignature = (label: string, details: SignDetails | null | undefined, x: number) => {
+      const boxTop = y;
+      doc.setDrawColor(...SILA_PRIMARY_RGB);
+      doc.setLineWidth(1);
+      doc.rect(x, boxTop, signBoxWidth, 90);
+      doc.setLineWidth(0.75);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...SILA_PRIMARY_RGB);
+      doc.text(label, x + 8, boxTop + 14);
+      doc.setTextColor(30);
+      if (!details) {
+        doc.text("Not signed", x + 8, boxTop + 40);
+        return;
+      }
+      if (details.drawnSignatureUrl) {
+        try {
+          doc.addImage(details.drawnSignatureUrl, "PNG", x + 8, boxTop + 18, 100, 36);
+        } catch {
+          doc.setFont("helvetica", "italic");
+          doc.setFontSize(13);
+          doc.text(`/s/ ${details.signerName}`, x + 8, boxTop + 40);
+        }
+      } else {
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(13);
+        doc.text(`/s/ ${details.signerName}`, x + 8, boxTop + 40);
+      }
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(`${details.signerName} (${details.signerDesignation})`, x + 8, boxTop + 66);
+      doc.setTextColor(140);
+      doc.text(details.signedAt, x + 8, boxTop + 80);
+      doc.setTextColor(30);
+    };
+
+    writeSignature("Buyer", contract.buyerSignDetails, marginX);
+    writeSignature(`Supplier (${supplierName})`, contract.supplierSignDetails, marginX + signBoxWidth + 20);
+
+    return doc.output("datauristring").split(",")[1] || "";
+  };
+
+  // Buyer: once both parties have signed, create the contract in the backend - with the buyer's Terms &
+  // Conditions and the executed contract PDF (items, merged T&C, both signatures) attached.
+  const handleCreateContract = async (id: string) => {
+    const contract = contracts[id];
+    if (!contract || !contract.buyerSigned || !contract.supplierSigned || !rfqId || createdContracts[id]) return;
+    setCreatingContract(true);
+    setCreateContractError(null);
+    try {
+      const { entityId, entityType } = await getEntityTypeByKey("BUYER");
+      const termsAttachments = await buildContractAttachments([id]);
+      const pdfAttachment = {
+        entityId,
+        entityType,
+        assetType: "CONTRACT_ATTACHMENT",
+        fileName: `${contract.contractNumber || "Contract"}.pdf`,
+        contentType: "application/pdf",
+        isSingletonAsset: false,
+        fileBytes: buildContractPdfBase64(id, contract),
+      };
+      const res = await createBuyerContract({
+        contractName: contractName.trim(),
+        rfqId,
+        supplierId: resolveSupplierId(contract.supplierId),
+        startDate: `${contract.startDate}T00:00:00.000Z`,
+        endDate: `${contract.endDate}T00:00:00.000Z`,
+        amount: getContractValue(id),
+        attachments: [...termsAttachments, pdfAttachment],
+      });
+      if (res.statusCode >= 400) {
+        setCreateContractError([res.message || "Failed to create the contract.", "description" in res ? res.description : ""].filter(Boolean).join(" - "));
+        return;
+      }
+      if ("id" in res && res.id) {
+        const created = await fetchBuyerContractById(res.id);
+        if (!("statusCode" in created)) {
+          setCreatedContracts((prev) => ({ ...prev, [id]: created }));
+        }
+      }
+    } catch (err: any) {
+      setCreateContractError(err?.message || "Failed to create the contract.");
+    } finally {
+      setCreatingContract(false);
+    }
   };
 
   return (
@@ -2650,7 +2945,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               <div className="contract-completed-summary">
                 <div>
                   <div className="contract-completed-label">Contract Number</div>
-                  <div className="contract-completed-value">{activeContract.contractNumber}</div>
+                  <div className="contract-completed-value">{activeCreated?.contractNumber || activeContract.contractNumber}</div>
                 </div>
                 <div>
                   <div className="contract-completed-label">Supplier</div>
@@ -2670,9 +2965,23 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 </div>
               </div>
               <div className="contract-completed-actions">
+                {!isSupplier && (
+                  <button
+                    type="button"
+                    onClick={() => handleCreateContract(activeContractId)}
+                    disabled={creatingContract || Boolean(activeCreated)}
+                    className={`contract-btn contract-btn--xl ${activeCreated ? "contract-btn--accepted" : "contract-btn--accept"}`}
+                  >
+                    {creatingContract
+                      ? "Creating..."
+                      : activeCreated
+                        ? "✓ Contract Created"
+                        : "Create Contract"}
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => alert(`Contract ${activeContract.contractNumber} Details:\nSupplier: ${getSupplierName(activeContract.supplierId)}\nValue: ${fmtINR(getContractValue(activeContractId))}`)}
+                  onClick={() => alert(`Contract ${activeCreated?.contractNumber || activeContract.contractNumber} Details:\nSupplier: ${getSupplierName(activeContract.supplierId)}\nValue: ${fmtINR(getContractValue(activeContractId))}`)}
                   className="contract-btn contract-btn--success-outline contract-btn--xl"
                 >
                   View Contract
@@ -2685,6 +2994,9 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   Download Contract
                 </button>
               </div>
+              {!isSupplier && createContractError && (
+                <div className="contract-field-error">{createContractError}</div>
+              )}
             </div>
           )}
         </div>
