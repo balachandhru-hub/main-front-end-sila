@@ -1,13 +1,32 @@
 import React, { useState, useEffect, useMemo } from "react";
 import "./BuyerDashBoard.css";
-import CreateRFQ from "./Create_RFQ.tsx";
 import Product from "./Product.tsx";
 import Models from "./Models.tsx";
 import ItemMasterCatalog from "./ItemMasterCatalog.tsx";
 import Header from "./Header";
 import QsAns from "./Qsans.tsx";
 // import QuotationSummaryTable from "./QuotationSummaryTable.tsx";
-import { logoutBuyer, getBuyerProfile, fetchBuyerRFQs, fetchBuyerRFQById, updateRfqStatus, fetchBuyerDashboardAnalytics } from "../api/Buyerapi";
+import {
+  logoutBuyer,
+  getBuyerProfile,
+  fetchBuyerRFQs,
+  fetchBuyerRFQById,
+  updateRfqStatus,
+  fetchBuyerDashboardAnalytics,
+  getAllDepartments,
+  getAllCostCenters,
+  getAllItemMasters,
+  createRFQ,
+  getVerifiedSuppliers,
+  getUnspscSegments,
+  getUnspscFamilies,
+  fetchBuyerVerificationTemplates,
+  fetchBuyerVerificationTemplateById,
+  createItemMaster,
+  getMasterApprovalFlows,
+} from "../api/Buyerapi";
+import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../api/masterdataApi";
+import { getOrganizationUsersForRfq } from "../../../remote-platform-user/src/api/networkAdminApi";
 import { useBuyerAuthStore } from "../store/useBuyerAuthStore";
 import BuyerRFQChat from "./BuyerRFQChat/BuyerRFQChat";
 import UserTemplate from "../../../remote-platform-user/src/components/UserTemplate.tsx";
@@ -20,8 +39,8 @@ import MaterialApprovalDetail from "../../../remote-platform-user/src/components
 import type { ContractRecord } from "../../../remote-platform-user/src/components/Contract/contractApi";
 import { fetchContracts } from "../../../remote-platform-user/src/components/Contract/contractApi";
 import ContractTable from "../../../remote-platform-user/src/components/Contract/ContractTable";
+import { BuyerAnalytics, CompanyProfile, CreateRFQ, EmptyState, Loader, StatusBadge, toastService, useAsyncData, useRouteNav, type CreateRFQApi, type RouteNavPaths } from '@vosox/shared-ui';
 import ContractDetail from "../../../remote-platform-user/src/components/Contract/ContractDetail";
-import { BuyerAnalytics, CompanyProfile, EmptyState, Loader, StatusBadge, toastService, useAsyncData, useRouteNav, type RouteNavPaths } from '@vosox/shared-ui';
 import { useAuth } from '../../../host-app/src/AuthContext.tsx';
 import ApprovalManagement from "../../../remote-platform-user/src/components/ApprovalManagement/ApprovalManagement.tsx";
 
@@ -889,12 +908,31 @@ const BuyersDashboard: React.FC = () => {
     return items;
   }, [rfqPageView, fullPageRfq]);
 
+  const createRfqApi: CreateRFQApi = {
+    getBuyerProfile,
+    getAllDepartments,
+    getAllCostCenters,
+    getAllItemMasters,
+    createRFQ,
+    getVerifiedSuppliers,
+    getUnspscSegments,
+    getUnspscFamilies,
+    fetchBuyerVerificationTemplates,
+    fetchBuyerVerificationTemplateById,
+    getCountries,
+    getUnits,
+    getCurrencies,
+    fetchReferenceList,
+    itemMaster: { createItemMaster, getMasterApprovalFlows },
+    supplierUsers: { getOrganizationUsersForRfq },
+  };
+
   return (
     <Header navItems={headerNavItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout}>
         <div className="pud-main">
           <div className="pud-content">
             {activeNav === "createRFQ" ? (
-              <CreateRFQ onNavClick={handleNavClick} onRfqCreated={refreshRfqs} />
+              <CreateRFQ onNavClick={handleNavClick} onRfqCreated={refreshRfqs} api={createRfqApi} />
             ) : activeNav === "product" ? (
               <Product />
             ) : activeNav === "models" ? (
