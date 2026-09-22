@@ -979,7 +979,7 @@ const SupplierDashboard: React.FC = () => {
           </div>
         )}
 
-      <EAuctionWidget />
+      <EAuctionWidget supplierId={supplierId} />
     </Header>
   );
 };
