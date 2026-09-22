@@ -1778,26 +1778,30 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 <meta charset="utf-8" />
 <title>Contract ${escapeHtml(contractNumber)}</title>
 <style>
+  :root { --brand: #1f5cc4; --brand-soft: #eef4fd; }
   @page { margin: 20mm 16mm; }
   body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; padding: 24px; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  .subtitle { font-size: 13px; color: #555; margin: 0 0 20px; }
+  .header { display: flex; align-items: center; gap: 16px; }
+  .header-logo { height: 42px; }
+  h1 { font-size: 20px; margin: 0 0 4px; color: var(--brand); }
+  .subtitle { font-size: 13px; color: #555; margin: 0; }
+  .header-rule { border: none; border-top: 2px solid var(--brand); margin: 14px 0 20px; }
   .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 24px; margin-bottom: 20px; }
   .meta-label { font-size: 10px; text-transform: uppercase; color: #777; letter-spacing: 0.04em; }
   .meta-value { font-size: 13px; font-weight: 600; }
-  h2 { font-size: 15px; margin: 24px 0 8px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  h2 { font-size: 15px; margin: 24px 0 8px; color: var(--brand); border-bottom: 1px solid var(--brand); padding-bottom: 4px; }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
-  th { background: #f3f4f6; font-size: 11px; text-transform: uppercase; }
+  th { background: var(--brand-soft); color: var(--brand); font-size: 11px; text-transform: uppercase; }
   td.num, th.num { text-align: right; }
-  .total-row { text-align: right; font-size: 13px; font-weight: 700; margin-top: 8px; }
+  .total-row { text-align: right; font-size: 13px; font-weight: 700; color: var(--brand); margin-top: 8px; }
   .tc-section { margin-bottom: 16px; }
-  .tc-section h3 { font-size: 13px; margin: 0 0 6px; }
+  .tc-section h3 { font-size: 13px; margin: 0 0 6px; color: var(--brand); }
   .tc-text, .tc-doc-list { font-size: 12px; color: #333; }
   .tc-doc-list { margin: 0; padding-left: 18px; }
   .sign-row { display: flex; gap: 24px; margin-top: 24px; }
-  .sign-box { flex: 1; border: 1px solid #ccc; border-radius: 6px; padding: 12px; text-align: center; }
-  .sign-label { font-size: 11px; text-transform: uppercase; color: #777; margin-bottom: 8px; }
+  .sign-box { flex: 1; border: 1px solid var(--brand); border-radius: 6px; padding: 12px; text-align: center; }
+  .sign-label { font-size: 11px; text-transform: uppercase; color: var(--brand); margin-bottom: 8px; }
   .sign-image { max-height: 70px; max-width: 100%; }
   .sign-mark { font-family: cursive; font-size: 20px; }
   .sign-mark--empty { color: #999; font-family: Arial, sans-serif; font-size: 13px; }
@@ -1806,8 +1810,14 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 </style>
 </head>
 <body>
-  <h1>${escapeHtml(contractName)}</h1>
-  <div class="subtitle">Contract No. ${escapeHtml(contractNumber)}</div>
+  <div class="header">
+    <img src="${silaLogo}" alt="SILA" class="header-logo" />
+    <div>
+      <h1>${escapeHtml(contractName)}</h1>
+      <div class="subtitle">Contract No. ${escapeHtml(contractNumber)}</div>
+    </div>
+  </div>
+  <hr class="header-rule" />
   <div class="meta-grid">
     <div><div class="meta-label">RFQ Title</div><div class="meta-value">${escapeHtml(rfqTitle)}</div></div>
     <div><div class="meta-label">Supplier</div><div class="meta-value">${escapeHtml(supplierName)}</div></div>
