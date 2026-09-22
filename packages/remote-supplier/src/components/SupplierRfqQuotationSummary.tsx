@@ -898,6 +898,10 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
         onUploadSupplierEsign={uploadSupplierEsign}
         onAcceptBuyerTerms={updateBuyerTermsConditionStatus}
         fetchContract={fetchSupplierContractById}
+        refetchRfq={async (id) => {
+          const latest = await fetchRFQById(id);
+          if (!isErrorResponse(latest)) setSelectedRfq(latest);
+        }}
         onBack={() => setShowContractView(false)}
       />
     );
