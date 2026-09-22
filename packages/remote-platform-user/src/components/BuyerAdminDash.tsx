@@ -11,13 +11,23 @@ import {
   fetchBuyerRFQs,
   fetchBuyerRFQById,
   fetchBuyerVerificationTemplates,
+  fetchBuyerVerificationTemplateById,
   updateRfqStatus,
   type VerificationTemplate,
   fetchBuyerDashboardAnalytics,
+  getAllDepartments,
+  getAllCostCenters,
+  getAllItemMasters,
+  createRFQ,
+  getVerifiedSuppliers,
+  getUnspscSegments,
+  getUnspscFamilies,
 } from "../../../remote-buyer/src/api/Buyerapi";
-import CreateRFQ from "./UserListTable/CreateRFQ";
+import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../../../remote-buyer/src/api/masterdataApi";
+import { createItemMaster, getMasterApprovalFlows } from "../api/itemmasterapi";
+import { getOrganizationUsersForRfq } from "../api/networkAdminApi";
 import { logoutPlatformUser } from "../api/platformApi";
-import { BuyerAnalytics, StatusBadge, toastService, useAsyncData, useRouteNav, type RouteNavPaths } from "@vosox/shared-ui";
+import { BuyerAnalytics, CreateRFQ, StatusBadge, toastService, useAsyncData, useRouteNav, type CreateRFQApi, type RouteNavPaths } from "@vosox/shared-ui";
 import UserTemplate from "./UserTemplate";
 import ApprovalManagement from "./ApprovalManagement/ApprovalManagement";
 import { ToastContainer } from "@vosox/shared-ui";
@@ -884,6 +894,25 @@ const BuyerAdminDash: React.FC = () => {
   //   </>
   // );
 
+  const createRfqApi: CreateRFQApi = {
+    getBuyerProfile,
+    getAllDepartments,
+    getAllCostCenters,
+    getAllItemMasters,
+    createRFQ,
+    getVerifiedSuppliers,
+    getUnspscSegments,
+    getUnspscFamilies,
+    fetchBuyerVerificationTemplates,
+    fetchBuyerVerificationTemplateById,
+    getCountries,
+    getUnits,
+    getCurrencies,
+    fetchReferenceList,
+    itemMaster: { createItemMaster, getMasterApprovalFlows },
+    supplierUsers: { getOrganizationUsersForRfq },
+  };
+
   return (
     <Header navItems={navItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout}>
         <ToastContainer />
@@ -947,7 +976,7 @@ const BuyerAdminDash: React.FC = () => {
             ) : activeNav === "materialService" ? (
               <ItemMasterCatalog buyerId={buyerId || ""} />
             ) : activeNav === "createRFQ" ? (
-              <CreateRFQ onNavClick={handleNavClick} onRfqCreated={refreshRfqs} />
+              <CreateRFQ onNavClick={handleNavClick} onRfqCreated={refreshRfqs} api={createRfqApi} />
             ) : activeNav === "product" ? (
               <Product />
             ) : rfqPageView === "allRfqs" ? (

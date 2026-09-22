@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { FaTimes } from "react-icons/fa";
-import { toastService } from "@vosox/shared-ui";
-import { getOrganizationUsersForRfq } from "../../api/networkAdminApi";
-import type { User } from "../../types";
+import { toastService } from "../../services/toastservice";
+import type { SupplierRfqUserDto, SupplierUsersModalApi } from "./types";
 import "./SupplierUsersModal.css";
 
 interface SupplierUsersModalProps {
@@ -10,6 +9,7 @@ interface SupplierUsersModalProps {
     supplierName: string;
     organizationId?: string;
     initialSelectedUserIds: string[];
+    api: SupplierUsersModalApi;
     onClose: () => void;
     onSave: (userIds: string[]) => void;
 }
@@ -19,10 +19,11 @@ const SupplierUsersModal: React.FC<SupplierUsersModalProps> = ({
     supplierName,
     organizationId,
     initialSelectedUserIds,
+    api,
     onClose,
     onSave,
 }) => {
-    const [users, setUsers] = useState<User[]>([]);
+    const [users, setUsers] = useState<SupplierRfqUserDto[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -42,7 +43,7 @@ const SupplierUsersModal: React.FC<SupplierUsersModalProps> = ({
         setLoading(true);
         setError(null);
 
-        getOrganizationUsersForRfq(organizationId)
+        api.getOrganizationUsersForRfq(organizationId)
             .then((data) => {
                 if (cancelled) return;
                 setUsers(data);
