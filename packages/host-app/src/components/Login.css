@@ -255,6 +255,11 @@
     padding-right: 2.625rem;
 }
 
+.vx-input--password.sila-input::-ms-reveal,
+.vx-input--password.sila-input::-ms-clear {
+    display: none;
+}
+
 .vx-pw-toggle {
     position: absolute;
     right: 0.25rem;
