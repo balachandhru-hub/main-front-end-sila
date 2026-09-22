@@ -93,8 +93,9 @@ const Dropdown: FC<DropdownProps> = (props) => {
  
   const requestIdRef = useRef(0);
  
+  /** Holds the previously seen cacheUniques key, or `false` before the first run. */
   const cacheInitializedRef =
-    useRef(false);
+    useRef<string | false>(false);
  
   const loadingPagesRef =
     useRef<Set<string>>(new Set());
@@ -674,17 +675,31 @@ const Dropdown: FC<DropdownProps> = (props) => {
   /**
    * Reset entire cache when
    * cacheUniques changes.
+   *
+   * Compares against the previous key (not a "have we run
+   * yet" flag) so this doesn't misfire under React Strict
+   * Mode's dev-only double-invocation of mount effects,
+   * which would otherwise wipe an initial default value.
    */
   useEffect(() => {
+    const currentCacheUniquesKey =
+      JSON.stringify(cacheUniques);
+
+    const previousCacheUniquesKey =
+      cacheInitializedRef.current;
+
+    cacheInitializedRef.current =
+      currentCacheUniquesKey;
+
     if (
-      !cacheInitializedRef.current
+      previousCacheUniquesKey ===
+        false ||
+      previousCacheUniquesKey ===
+        currentCacheUniquesKey
     ) {
-      cacheInitializedRef.current =
-        true;
- 
       return;
     }
- 
+
     requestIdRef.current += 1;
  
     loadingPagesRef.current.clear();

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FaTimes } from "react-icons/fa";
-import { toastService } from "@vosox/shared-ui";
-import { getOrganizationUsersForRfq } from "../../api/networkAdminApi";
-import type { User } from "../../types";
+import { toastService } from "../../services/toastservice";
+import { Button } from "../Button";
+import type { SupplierRfqUserDto, SupplierUsersModalApi } from "./types";
 import "./SupplierUsersModal.css";
 
 interface SupplierUsersModalProps {
@@ -10,6 +10,7 @@ interface SupplierUsersModalProps {
     supplierName: string;
     organizationId?: string;
     initialSelectedUserIds: string[];
+    api: SupplierUsersModalApi;
     onClose: () => void;
     onSave: (userIds: string[]) => void;
 }
@@ -19,13 +20,21 @@ const SupplierUsersModal: React.FC<SupplierUsersModalProps> = ({
     supplierName,
     organizationId,
     initialSelectedUserIds,
+    api,
     onClose,
     onSave,
 }) => {
-    const [users, setUsers] = useState<User[]>([]);
+    const [users, setUsers] = useState<SupplierRfqUserDto[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const allSelectRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (allSelectRef.current) {
+            allSelectRef.current.indeterminate = selectedIds.size > 0 && selectedIds.size < users.length;
+        }
+    }, [selectedIds, users.length]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -42,7 +51,7 @@ const SupplierUsersModal: React.FC<SupplierUsersModalProps> = ({
         setLoading(true);
         setError(null);
 
-        getOrganizationUsersForRfq(organizationId)
+        api.getOrganizationUsersForRfq(organizationId)
             .then((data) => {
                 if (cancelled) return;
                 setUsers(data);
@@ -79,6 +88,22 @@ const SupplierUsersModal: React.FC<SupplierUsersModalProps> = ({
             }
             return next;
         });
+    };
+
+    const handleSelectAll = () => {
+        setSelectedIds(new Set(users.map((user) => user.id)));
+    };
+
+    const handleDeselectAll = () => {
+        setSelectedIds(new Set());
+    };
+
+    const handleToggleAllCheckbox = () => {
+        if (selectedIds.size === users.length) {
+            handleDeselectAll();
+        } else {
+            handleSelectAll();
+        }
     };
 
     const handleSave = () => {
@@ -139,27 +164,62 @@ const SupplierUsersModal: React.FC<SupplierUsersModalProps> = ({
                     )}
 
                     {!loading && !error && users.length > 0 && (
-                        <ul className="supplier-users-list">
-                            {users.map((user) => (
-                                <li
-                                    key={user.id}
-                                    className={`supplier-users-list-item${selectedIds.has(user.id) ? " supplier-users-list-item-selected" : ""}`}
-                                >
-                                    <label>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedIds.has(user.id)}
-                                            onChange={() => toggleUser(user.id)}
-                                        />
-                                        <span className="supplier-users-list-name">{user.name}</span>
-                                        <span className="supplier-users-list-email">{user.email}</span>
-                                        {user.userRole && (
-                                            <span className="supplier-users-list-role">{user.userRole}</span>
-                                        )}
-                                    </label>
-                                </li>
-                            ))}
-                        </ul>
+                        <>
+                            <div className="supplier-users-list-actions">
+                                <label className="supplier-users-list-count">
+                                    <input
+                                        ref={allSelectRef}
+                                        type="checkbox"
+                                        checked={users.length > 0 && selectedIds.size === users.length}
+                                        onChange={handleToggleAllCheckbox}
+                                        aria-label="Select all users"
+                                    />
+                                    {selectedIds.size} of {users.length} selected
+                                </label>
+                                <div className="sila-btn-group">
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="primary"
+                                        onClick={handleSelectAll}
+                                        disabled={selectedIds.size === users.length}
+                                    >
+                                        Select All
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={handleDeselectAll}
+                                        disabled={selectedIds.size === 0}
+                                    >
+                                        Remove All
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <ul className="supplier-users-list">
+                                {users.map((user) => (
+                                    <li
+                                        key={user.id}
+                                        className={`supplier-users-list-item${selectedIds.has(user.id) ? " supplier-users-list-item-selected" : ""}`}
+                                    >
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.has(user.id)}
+                                                onChange={() => toggleUser(user.id)}
+                                            />
+                                            <span className="supplier-users-list-name">{user.name}</span>
+                                            <span className="supplier-users-list-email">{user.email}</span>
+                                            {user.userRole && (
+                                                <span className="supplier-users-list-role">{user.userRole}</span>
+                                            )}
+                                        </label>
+                                    </li>
+                                ))}
+                            </ul>
+                        </>
                     )}
                 </div>
 

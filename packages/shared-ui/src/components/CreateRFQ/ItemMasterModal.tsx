@@ -1,13 +1,10 @@
 import React, { useState } from "react";
-import {
-    createItemMaster,
-    getMasterApprovalFlows,
-    type MasterApprovalFlowDto,
-} from "../../api/itemmasterapi";
-import { toastService, Dropdown } from "@vosox/shared-ui";
-import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from "@vosox/shared-ui";
+import { toastService } from "../../services/toastservice";
+import Dropdown from "../DropDown/DropDown";
+import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from "../DropDown/DropDown.types";
 import { FaTimes } from "react-icons/fa";
 import "./ItemMasterModal.css";
+import type { ItemMasterModalApi, MasterApprovalFlowDto } from "./types";
 
 // Page size used by the async (paginated) Approval Flow Dropdown
 const APPROVAL_FLOW_PAGE_SIZE = 40;
@@ -16,6 +13,7 @@ interface ItemMasterModalProps {
     isOpen: boolean;
     onClose: () => void;
     buyerId: string;
+    api: ItemMasterModalApi;
     onSuccess?: () => void;
 }
 
@@ -35,6 +33,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
     isOpen,
     onClose,
     buyerId,
+    api,
     onSuccess,
 }) => {
     const [description, setDescription] = useState("");
@@ -80,7 +79,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                 let index = 0;
                 let flows: MasterApprovalFlowDto[];
                 do {
-                    flows = await getMasterApprovalFlows(buyerId, index, APPROVAL_FLOW_PAGE_SIZE);
+                    flows = await api.getMasterApprovalFlows(buyerId, index, APPROVAL_FLOW_PAGE_SIZE);
                     matches.push(...flows.filter((flow) => toOption(flow).name.toLowerCase().includes(searchTerm)));
                     index += flows.length;
                 } while (flows.length === APPROVAL_FLOW_PAGE_SIZE);
@@ -88,7 +87,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                 return { options: matches.map(toOption), hasMore: false };
             }
 
-            const flows = await getMasterApprovalFlows(
+            const flows = await api.getMasterApprovalFlows(
                 buyerId,
                 page * APPROVAL_FLOW_PAGE_SIZE,
                 APPROVAL_FLOW_PAGE_SIZE
@@ -166,7 +165,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
         setIsSubmitting(true);
 
         try {
-            await createItemMaster({
+            await api.createItemMaster({
                 buyerId,
                 description: description.trim(),
                 materialCode: materialCode.trim(),
@@ -236,11 +235,10 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     onSubmit={handleSubmit}
                 >
                     <div className="item-master-modal-body">
-                    <h3 className="item-master-section-title">Material Details</h3>
                     {/* Material Code */}
                     <div className="item-master-field">
                         <label htmlFor="item-master-material-code">
-                            Material Code <span aria-hidden="true">*</span>
+                            Material code <span className="sila-required" aria-hidden="true">*</span>
                         </label>
 
                         <input
@@ -248,14 +246,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             type="text"
                             placeholder="Enter material code"
                             value={materialCode}
-                            className={
-                                errors.materialCode
-                                    ? "item-master-input-error"
-                                    : ""
-                            }
-                            aria-required="true"
-                            aria-invalid={!!errors.materialCode}
-                            aria-describedby={errors.materialCode ? "item-master-materialCode-error" : undefined}
+                            aria-invalid={errors.materialCode ? true : undefined}
+                            aria-describedby={errors.materialCode ? "item-master-error-materialCode" : undefined}
+                            className={errors.materialCode ? "item-master-input-error" : ""}
                             onChange={(e) => {
                                 setMaterialCode(e.target.value);
                                 clearFieldError(setErrors, "materialCode");
@@ -263,7 +256,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                         />
 
                         {errors.materialCode && (
-                            <div className="item-master-error" id="item-master-materialCode-error">
+                            <div className="item-master-error" id="item-master-error-materialCode">
                                 {errors.materialCode}
                             </div>
                         )}
@@ -273,7 +266,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     <div className="item-master-fields-row">
                         <div className="item-master-field">
                             <label htmlFor="item-master-material-group">
-                                Material Group <span aria-hidden="true">*</span>
+                                Material group <span className="sila-required" aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -281,14 +274,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                 type="text"
                                 placeholder="Enter material group"
                                 value={materialGroup}
-                                className={
-                                    errors.materialGroup
-                                        ? "item-master-input-error"
-                                        : ""
-                                }
-                                aria-required="true"
-                                aria-invalid={!!errors.materialGroup}
-                                aria-describedby={errors.materialGroup ? "item-master-materialGroup-error" : undefined}
+                                aria-invalid={errors.materialGroup ? true : undefined}
+                                aria-describedby={errors.materialGroup ? "item-master-error-materialGroup" : undefined}
+                                className={errors.materialGroup ? "item-master-input-error" : ""}
                                 onChange={(e) => {
                                     setMaterialGroup(e.target.value);
                                     clearFieldError(setErrors, "materialGroup");
@@ -296,7 +284,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             />
 
                             {errors.materialGroup && (
-                                <div className="item-master-error" id="item-master-materialGroup-error">
+                                <div className="item-master-error" id="item-master-error-materialGroup">
                                     {errors.materialGroup}
                                 </div>
                             )}
@@ -304,7 +292,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
 
                         <div className="item-master-field">
                             <label htmlFor="item-master-product-type">
-                                Product Type <span aria-hidden="true">*</span>
+                                Product type <span className="sila-required" aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -312,14 +300,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                 type="text"
                                 placeholder="Enter product type"
                                 value={productType}
-                                className={
-                                    errors.productType
-                                        ? "item-master-input-error"
-                                        : ""
-                                }
-                                aria-required="true"
-                                aria-invalid={!!errors.productType}
-                                aria-describedby={errors.productType ? "item-master-productType-error" : undefined}
+                                aria-invalid={errors.productType ? true : undefined}
+                                aria-describedby={errors.productType ? "item-master-error-productType" : undefined}
+                                className={errors.productType ? "item-master-input-error" : ""}
                                 onChange={(e) => {
                                     setProductType(e.target.value);
                                     clearFieldError(setErrors, "productType");
@@ -327,7 +310,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             />
 
                             {errors.productType && (
-                                <div className="item-master-error" id="item-master-productType-error">
+                                <div className="item-master-error" id="item-master-error-productType">
                                     {errors.productType}
                                 </div>
                             )}
@@ -337,7 +320,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     {/* Description */}
                     <div className="item-master-field">
                         <label htmlFor="item-master-description">
-                            Description <span aria-hidden="true">*</span>
+                            Description <span className="sila-required" aria-hidden="true">*</span>
                         </label>
 
                         <input
@@ -345,14 +328,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             type="text"
                             placeholder="Enter description"
                             value={description}
-                            className={
-                                errors.description
-                                    ? "item-master-input-error"
-                                    : ""
-                            }
-                            aria-required="true"
-                            aria-invalid={!!errors.description}
-                            aria-describedby={errors.description ? "item-master-description-error" : undefined}
+                            aria-invalid={errors.description ? true : undefined}
+                            aria-describedby={errors.description ? "item-master-error-description" : undefined}
+                            className={errors.description ? "item-master-input-error" : ""}
                             onChange={(e) => {
                                 setDescription(e.target.value);
                                 clearFieldError(setErrors, "description");
@@ -360,20 +338,19 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                         />
 
                         {errors.description && (
-                            <div className="item-master-error" id="item-master-description-error">
+                            <div className="item-master-error" id="item-master-error-description">
                                 {errors.description}
                             </div>
                         )}
                     </div>
 
                     <hr className="item-master-section-divider" />
-                    <h3 className="item-master-section-title">Units of Measure</h3>
 
                     {/* Base UOM, Order UOM */}
                     <div className="item-master-fields-row">
                         <div className="item-master-field">
                             <label htmlFor="item-master-base-uom">
-                                Base Unit of Measure <span aria-hidden="true">*</span>
+                                Base unit of measure <span className="sila-required" aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -381,14 +358,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                 type="text"
                                 placeholder="e.g., KG, L, M"
                                 value={baseUnitOfMeasure}
-                                className={
-                                    errors.baseUnitOfMeasure
-                                        ? "item-master-input-error"
-                                        : ""
-                                }
-                                aria-required="true"
-                                aria-invalid={!!errors.baseUnitOfMeasure}
-                                aria-describedby={errors.baseUnitOfMeasure ? "item-master-baseUnitOfMeasure-error" : undefined}
+                                aria-invalid={errors.baseUnitOfMeasure ? true : undefined}
+                                aria-describedby={errors.baseUnitOfMeasure ? "item-master-error-baseUnitOfMeasure" : undefined}
+                                className={errors.baseUnitOfMeasure ? "item-master-input-error" : ""}
                                 onChange={(e) => {
                                     setBaseUnitOfMeasure(e.target.value);
                                     clearFieldError(setErrors, "baseUnitOfMeasure");
@@ -396,7 +368,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             />
 
                             {errors.baseUnitOfMeasure && (
-                                <div className="item-master-error" id="item-master-baseUnitOfMeasure-error">
+                                <div className="item-master-error" id="item-master-error-baseUnitOfMeasure">
                                     {errors.baseUnitOfMeasure}
                                 </div>
                             )}
@@ -404,7 +376,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
 
                         <div className="item-master-field">
                             <label htmlFor="item-master-order-uom">
-                                Order Unit of Measure <span aria-hidden="true">*</span>
+                                Order unit of measure <span className="sila-required" aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -412,14 +384,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                 type="text"
                                 placeholder="e.g., BOX, CASE, PACK"
                                 value={orderUnitOfMeasure}
-                                className={
-                                    errors.orderUnitOfMeasure
-                                        ? "item-master-input-error"
-                                        : ""
-                                }
-                                aria-required="true"
-                                aria-invalid={!!errors.orderUnitOfMeasure}
-                                aria-describedby={errors.orderUnitOfMeasure ? "item-master-orderUnitOfMeasure-error" : undefined}
+                                aria-invalid={errors.orderUnitOfMeasure ? true : undefined}
+                                aria-describedby={errors.orderUnitOfMeasure ? "item-master-error-orderUnitOfMeasure" : undefined}
+                                className={errors.orderUnitOfMeasure ? "item-master-input-error" : ""}
                                 onChange={(e) => {
                                     setOrderUnitOfMeasure(e.target.value);
                                     clearFieldError(setErrors, "orderUnitOfMeasure");
@@ -427,7 +394,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             />
 
                             {errors.orderUnitOfMeasure && (
-                                <div className="item-master-error" id="item-master-orderUnitOfMeasure-error">
+                                <div className="item-master-error" id="item-master-error-orderUnitOfMeasure">
                                     {errors.orderUnitOfMeasure}
                                 </div>
                             )}
@@ -438,7 +405,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     <div className="item-master-fields-row">
                         <div className="item-master-field">
                             <label htmlFor="item-master-alternate-uom">
-                                Alternate Unit of Measure <span aria-hidden="true">*</span>
+                                Alternate unit of measure <span className="sila-required" aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -446,14 +413,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                 type="text"
                                 placeholder="e.g., PCS"
                                 value={alternateUnitOfMeasure}
-                                className={
-                                    errors.alternateUnitOfMeasure
-                                        ? "item-master-input-error"
-                                        : ""
-                                }
-                                aria-required="true"
-                                aria-invalid={!!errors.alternateUnitOfMeasure}
-                                aria-describedby={errors.alternateUnitOfMeasure ? "item-master-alternateUnitOfMeasure-error" : undefined}
+                                aria-invalid={errors.alternateUnitOfMeasure ? true : undefined}
+                                aria-describedby={errors.alternateUnitOfMeasure ? "item-master-error-alternateUnitOfMeasure" : undefined}
+                                className={errors.alternateUnitOfMeasure ? "item-master-input-error" : ""}
                                 onChange={(e) => {
                                     setAlternateUnitOfMeasure(e.target.value);
                                     clearFieldError(setErrors, "alternateUnitOfMeasure");
@@ -461,7 +423,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             />
 
                             {errors.alternateUnitOfMeasure && (
-                                <div className="item-master-error" id="item-master-alternateUnitOfMeasure-error">
+                                <div className="item-master-error" id="item-master-error-alternateUnitOfMeasure">
                                     {errors.alternateUnitOfMeasure}
                                 </div>
                             )}
@@ -469,7 +431,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
 
                         <div className="item-master-field">
                             <label htmlFor="item-master-valuation-class">
-                                Valuation Class <span aria-hidden="true">*</span>
+                                Valuation class <span className="sila-required" aria-hidden="true">*</span>
                             </label>
 
                             <input
@@ -477,14 +439,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                 type="text"
                                 placeholder="Enter valuation class"
                                 value={valuationClass}
-                                className={
-                                    errors.valuationClass
-                                        ? "item-master-input-error"
-                                        : ""
-                                }
-                                aria-required="true"
-                                aria-invalid={!!errors.valuationClass}
-                                aria-describedby={errors.valuationClass ? "item-master-valuationClass-error" : undefined}
+                                aria-invalid={errors.valuationClass ? true : undefined}
+                                aria-describedby={errors.valuationClass ? "item-master-error-valuationClass" : undefined}
+                                className={errors.valuationClass ? "item-master-input-error" : ""}
                                 onChange={(e) => {
                                     setValuationClass(e.target.value);
                                     clearFieldError(setErrors, "valuationClass");
@@ -492,7 +449,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             />
 
                             {errors.valuationClass && (
-                                <div className="item-master-error" id="item-master-valuationClass-error">
+                                <div className="item-master-error" id="item-master-error-valuationClass">
                                     {errors.valuationClass}
                                 </div>
                             )}
@@ -502,7 +459,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     {/* Unit of Measure Mapping */}
                     <div className="item-master-field">
                         <label htmlFor="item-master-uom-mapping">
-                            Unit of Measure Mapping <span aria-hidden="true">*</span>
+                            Unit of measure mapping <span className="sila-required" aria-hidden="true">*</span>
                         </label>
 
                         <input
@@ -510,14 +467,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             type="text"
                             placeholder="e.g., 1 BOX = 400PCS"
                             value={unitOfMeasureMapping}
-                            className={
-                                errors.unitOfMeasureMapping
-                                    ? "item-master-input-error"
-                                    : ""
-                            }
-                            aria-required="true"
-                            aria-invalid={!!errors.unitOfMeasureMapping}
-                            aria-describedby={errors.unitOfMeasureMapping ? "item-master-unitOfMeasureMapping-error" : undefined}
+                            aria-invalid={errors.unitOfMeasureMapping ? true : undefined}
+                            aria-describedby={errors.unitOfMeasureMapping ? "item-master-error-unitOfMeasureMapping" : undefined}
+                            className={errors.unitOfMeasureMapping ? "item-master-input-error" : ""}
                             onChange={(e) => {
                                 setUnitOfMeasureMapping(e.target.value);
                                 clearFieldError(setErrors, "unitOfMeasureMapping");
@@ -525,7 +477,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                         />
 
                         {errors.unitOfMeasureMapping && (
-                            <div className="item-master-error" id="item-master-unitOfMeasureMapping-error">
+                            <div className="item-master-error" id="item-master-error-unitOfMeasureMapping">
                                 {errors.unitOfMeasureMapping}
                             </div>
                         )}
@@ -535,7 +487,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     <div className="item-master-fields-row">
                         <div className="item-master-field">
                             <label htmlFor="item-master-sub-unit">
-                                Sub Unit
+                                Sub unit
                             </label>
 
                             <input
@@ -549,7 +501,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
 
                         <div className="item-master-field">
                             <label htmlFor="item-master-micro-unit">
-                                Micro Unit
+                                Micro unit
                             </label>
 
                             <input
@@ -563,12 +515,11 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     </div>
 
                     <hr className="item-master-section-divider" />
-                    <h3 className="item-master-section-title">Approval</h3>
 
                     {/* Approval Flow */}
                     <div className="item-master-field">
                         <Dropdown
-                            label="Approval Flow"
+                            label="Approval flow"
                             isRequired
                             placeholder="Select an approval flow"
                             isAsync
@@ -583,7 +534,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                         />
 
                         {approvalFlowError && (
-                            <div className="item-master-field-hint item-master-field-hint-error" role="alert">
+                            <div className="item-master-field-hint item-master-field-hint-error">
                                 {approvalFlowError}
                             </div>
                         )}
@@ -592,7 +543,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     {/* Comment */}
                     <div className="item-master-field">
                         <label htmlFor="item-master-comment">
-                            Comment <span aria-hidden="true">*</span>
+                            Comment <span className="sila-required" aria-hidden="true">*</span>
                         </label>
 
                         <textarea
@@ -600,14 +551,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             rows={3}
                             placeholder="Add comments or notes"
                             value={comment}
-                            className={
-                                errors.comment
-                                    ? "item-master-input-error"
-                                    : ""
-                            }
-                            aria-required="true"
-                            aria-invalid={!!errors.comment}
-                            aria-describedby={errors.comment ? "item-master-comment-error" : undefined}
+                            aria-invalid={errors.comment ? true : undefined}
+                            aria-describedby={errors.comment ? "item-master-error-comment" : undefined}
+                            className={errors.comment ? "item-master-input-error" : ""}
                             onChange={(e) => {
                                 setComment(e.target.value);
                                 clearFieldError(setErrors, "comment");
@@ -615,7 +561,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                         />
 
                         {errors.comment && (
-                            <div className="item-master-error" id="item-master-comment-error">
+                            <div className="item-master-error" id="item-master-error-comment">
                                 {errors.comment}
                             </div>
                         )}
@@ -626,7 +572,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                     <div className="item-master-modal-footer">
                         <button
                             type="button"
-                            className="item-master-cancel-btn sila-btn sila-btn--secondary"
+                            className="item-master-cancel-btn"
                             onClick={handleClose}
                             disabled={isSubmitting}
                         >
@@ -635,7 +581,7 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
 
                         <button
                             type="submit"
-                            className="item-master-create-btn sila-btn sila-btn--primary"
+                            className="item-master-create-btn"
                             disabled={isSubmitting}
                         >
                             {isSubmitting

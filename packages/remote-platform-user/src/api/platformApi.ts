@@ -576,11 +576,14 @@ export interface StatusUpdateResponseDto {
  */
 export const updateSupplierTermsConditionStatus = async (
   rfqId: string,
+  supplierId: string,
   status: string
 ): Promise<StatusUpdateResponseDto | AssetErrorDto> => {
   try {
-    const response = await platformInstance.put('/api/v1/buyer/supplier-terms-condition-status', null, {
-      params: { rfqId, status },
+    const response = await platformInstance.put('/api/v1/buyer/supplier-terms-condition-status', {
+      rfqId,
+      supplierId,
+      status,
     });
     return response.data;
   } catch (error: any) {
@@ -625,8 +628,12 @@ export interface BuyerRfqContractStatusDto {
     supplierName: string;
     buyerTermsAndConditionAccepted: boolean;
   }[];
-  /** Whether the buyer has already accepted the supplier's terms & conditions. */
-  supplierTermsAndConditionAccepted?: boolean;
+  /** Whether the buyer has already accepted each supplier's terms & conditions. */
+  supplierTermsAndConditionAccepted?: {
+    supplierId: string;
+    supplierName: string;
+    supplierTermsAndConditionAccepted: boolean;
+  }[];
   /** Contracts already created for this RFQ, one per supplier. Only present once a contract has been created. */
   contracts?: BuyerRfqContractRefDto[];
 }
@@ -635,6 +642,24 @@ export interface BuyerRfqContractRefDto {
   contractId: string;
   contractNumber: string;
   supplierId: string;
+}
+
+export interface BuyerContractApprovalFlowDto {
+  id: string;
+  approvalCode: string;
+  approvalName: string;
+  contractId: string;
+  type: string;
+  totalAmount: number;
+  currency: string;
+}
+
+/** Shape returned for each entry of a contract's `attachments` (GET /api/v1/buyer/contract[/{id}]). */
+export interface BuyerContractAttachmentDto {
+  id: string;
+  assetId: string;
+  type: string;
+  fileName: string;
 }
 
 export interface BuyerContractDto {
@@ -648,16 +673,8 @@ export interface BuyerContractDto {
   endDate: string;
   amount: number;
   dateCreated: string;
-  attachments: RfqAssetAttachmentDto[];
-  approvalFlows: {
-    id: string;
-    approvalCode: string;
-    approvalName: string;
-    contractId: string;
-    type: string;
-    totalAmount: number;
-    currency: string;
-  }[];
+  attachments: BuyerContractAttachmentDto[];
+  approvalFlows: BuyerContractApprovalFlowDto[];
 }
 
 export interface CreateBuyerContractPayload {
@@ -739,6 +756,41 @@ export const fetchBuyerRfqContractStatus = async (
     return {
       statusCode: 500,
       message: error?.message || 'Failed to load the RFQ contract details.',
+      description: '',
+    };
+  }
+};
+
+/**
+ * Paginated list of contracts the buyer has created.
+ */
+export const fetchBuyerContracts = async (
+  index = 0,
+  limit = 10
+): Promise<BuyerContractDto[] | AssetErrorDto> => {
+  try {
+    const response = await platformInstance.get('/api/v1/buyer/contract', { params: { index, limit } });
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to load contracts.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Failed to load contracts.',
       description: '',
     };
   }

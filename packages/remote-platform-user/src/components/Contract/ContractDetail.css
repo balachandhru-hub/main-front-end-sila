@@ -1,0 +1,242 @@
+/* Contract detail view. Carries its own card/section styles (ctrd-*), mirroring the
+   ctr-* list styles, so it renders correctly whether or not the host app's own CSS is loaded. */
+
+.ctrd-detail {
+  display: flex;
+  flex-direction: column;
+  background: var(--sila-surface);
+  border: 0.0625rem solid var(--sila-border);
+  border-radius: var(--sila-radius-md);
+  box-shadow: var(--sila-shadow-xs);
+}
+
+.ctrd-detail-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sila-space-4);
+  padding: var(--sila-space-5) var(--sila-space-6);
+  border-bottom: 0.0625rem solid var(--sila-border-subtle);
+}
+
+.ctrd-detail-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sila-space-1);
+  min-width: 0;
+}
+
+.ctrd-detail-ref-badge {
+  align-self: flex-start;
+  padding: 0.125rem var(--sila-space-2);
+  border: 0.0625rem solid var(--sila-primary-border);
+  border-radius: var(--sila-radius-sm);
+  background: var(--sila-primary-soft);
+  color: var(--sila-primary);
+  font-size: var(--sila-text-xs);
+}
+
+.ctrd-detail-title {
+  margin: 0;
+  font-size: var(--sila-text-2xl);
+  font-weight: var(--sila-weight-semibold);
+  letter-spacing: -0.015em;
+  color: var(--sila-text);
+}
+
+.ctrd-detail-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sila-space-2);
+  font-size: var(--sila-text-sm);
+  color: var(--sila-text-muted);
+}
+.ctrd-detail-dot { color: var(--sila-border-strong); }
+
+.ctrd-detail-body { padding: var(--sila-space-5) var(--sila-space-6) var(--sila-space-6); }
+
+.ctrd-detail-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sila-space-6);
+}
+
+.ctrd-section-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sila-space-2);
+  padding: 0 0 var(--sila-space-3);
+  font-size: var(--sila-text-md);
+  font-weight: var(--sila-weight-semibold);
+  color: var(--sila-text);
+}
+
+.ctrd-section-count {
+  padding: 0.0625rem var(--sila-space-2);
+  border-radius: var(--sila-radius-full);
+  background: var(--sila-surface-sunken);
+  font-size: var(--sila-text-xs);
+  font-weight: var(--sila-weight-semibold);
+  color: var(--sila-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Contract info: compact field list in one panel */
+.ctrd-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--sila-space-4) var(--sila-space-6);
+  margin: 0;
+  padding: var(--sila-space-4) var(--sila-space-5);
+  border: 0.0625rem solid var(--sila-border);
+  border-radius: var(--sila-radius-md);
+  background: var(--sila-surface);
+}
+
+.ctrd-info-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  padding-left: var(--sila-space-3);
+  border-left: 0.125rem solid var(--sila-border-subtle);
+}
+
+.ctrd-info-label {
+  font-size: var(--sila-text-xs);
+  font-weight: var(--sila-weight-medium);
+  color: var(--sila-text-muted);
+}
+
+.ctrd-info-value {
+  margin: 0;
+  font-size: var(--sila-text-sm);
+  font-weight: var(--sila-weight-medium);
+  line-height: 1.5;
+  color: var(--sila-text);
+  overflow-wrap: anywhere;
+}
+
+/* Attachments */
+.ctrd-attachment-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sila-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ctrd-attachment-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sila-space-3);
+  padding: var(--sila-space-3) var(--sila-space-4);
+  border: 0.0625rem solid var(--sila-border);
+  border-radius: var(--sila-radius-md);
+  background: var(--sila-surface);
+}
+
+.ctrd-attachment-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: var(--sila-radius);
+  background: var(--sila-surface-subtle);
+  color: var(--sila-text-muted);
+}
+
+.ctrd-attachment-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--sila-text-sm);
+  font-weight: var(--sila-weight-medium);
+  color: var(--sila-text);
+}
+
+.ctrd-attachment-download {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sila-space-2);
+  flex-shrink: 0;
+}
+
+/* Approval flows */
+.ctrd-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--sila-space-3);
+}
+
+.ctrd-flow-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sila-space-2);
+  padding: var(--sila-space-4);
+  border: 0.0625rem solid var(--sila-border);
+  border-top: 0.1875rem solid var(--sila-primary);
+  border-radius: var(--sila-radius-md);
+  background: var(--sila-surface);
+  box-shadow: var(--sila-shadow-xs);
+}
+
+.ctrd-flow-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sila-space-2);
+}
+
+.ctrd-flow-code {
+  font-family: var(--sila-font-mono);
+  font-size: var(--sila-text-xs);
+  font-weight: var(--sila-weight-semibold);
+  color: var(--sila-text-secondary);
+}
+
+.ctrd-flow-type {
+  padding: 0.0625rem var(--sila-space-2);
+  border-radius: var(--sila-radius-full);
+  background: var(--sila-surface-sunken);
+  font-size: var(--sila-text-2xs);
+  font-weight: var(--sila-weight-semibold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--sila-text-secondary);
+}
+
+.ctrd-flow-name {
+  font-size: var(--sila-text-md);
+  font-weight: var(--sila-weight-semibold);
+  color: var(--sila-text);
+}
+
+.ctrd-flow-amount {
+  font-size: var(--sila-text-sm);
+  font-weight: var(--sila-weight-medium);
+  color: var(--sila-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.ctrd-detail-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--sila-space-3) var(--sila-space-6);
+  border-top: 0.0625rem solid var(--sila-border-subtle);
+  background: var(--sila-surface-subtle);
+  border-radius: 0 0 var(--sila-radius-md) var(--sila-radius-md);
+}
+
+@media (max-width: 47.9375rem) {
+  .ctrd-detail-header,
+  .ctrd-detail-body {
+    padding-left: var(--sila-space-4);
+    padding-right: var(--sila-space-4);
+  }
+}
