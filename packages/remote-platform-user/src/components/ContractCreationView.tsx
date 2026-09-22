@@ -161,6 +161,8 @@ export interface ContractCreationViewProps {
   fetchESigns?: (rfqId: string) => Promise<EsignStatusEntry[] | { statusCode: number }>;
   /** Supplier: loads the contract the buyer created (its id is the RFQ's contractId). */
   fetchContract?: (contractId: string) => Promise<ContractDetails | { statusCode: number; message?: string }>;
+  /** Supplier: re-fetches this RFQ so eSignDocuments (and other rfq-by-id fields) reflect a just-uploaded e-sign. */
+  refetchRfq?: (rfqId: string) => Promise<void>;
 }
 
 export interface SignDetails {
@@ -332,6 +334,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   fetchTermsConditions,
   fetchESigns,
   fetchContract,
+  refetchRfq,
 }) => {
   const isSupplier = role === "supplier";
   const rfqId: string | undefined = rfq?.rfqId || rfq?.id || (rfq as any)?._id;
@@ -1472,6 +1475,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
           };
           await onUploadSupplierEsign(targetRfqId, payload);
           await refreshESigns();
+          await refetchRfq?.(rfqId || targetRfqId);
         } catch (err) {
           console.error("Failed to upload supplier esign:", err);
         }
@@ -1568,6 +1572,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
             };
             await onUploadSupplierEsign(targetRfqId, payload);
             await refreshESigns();
+            await refetchRfq?.(rfqId || targetRfqId);
           } catch (err) {
             console.error("Failed to upload supplier esign file:", err);
           }
