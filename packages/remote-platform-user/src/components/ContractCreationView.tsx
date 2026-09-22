@@ -84,17 +84,17 @@ function resolveMimeType(contentType: string | undefined, fileName: string): str
   return MIME_BY_EXTENSION[extension] || MIME_BY_EXTENSION[fileName.split(".").pop()?.toLowerCase() || ""] || "application/octet-stream";
 }
 
-function readFileAsBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.includes(",") ? result.split(",")[1] : result);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+// function readFileAsBase64(file: File): Promise<string> {
+//   return new Promise((resolve, reject) => {
+//     const reader = new FileReader();
+//     reader.onload = () => {
+//       const result = reader.result as string;
+//       resolve(result.includes(",") ? result.split(",")[1] : result);
+//     };
+//     reader.onerror = reject;
+//     reader.readAsDataURL(file);
+//   });
+// }
 
 // Loads a same-origin image URL (e.g. a bundled asset) as a PNG data URL, for jsPDF's addImage which needs a
 // data URI rather than a plain URL.
@@ -741,6 +741,9 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const rfqSupplierSigned = isSupplier
     ? ((rfq as any)?.eSignDocuments?.length ?? 0) > 0
     : (activeEsignEntry?.attachments?.length ?? 0) > 0;
+  // Buyer role: once both sides have actually signed (per rfq-by-id), the contract is ready to download —
+  // "Proceed to Signing" no longer applies and the "Download Contract" section shows regardless of the local step.
+  const buyerBothSigned = !isSupplier && rfqBuyerSigned && rfqSupplierSigned;
 
   // The buyer's own Terms & Conditions documents attached to the RFQ.
   const buyerTermsDocs: RfqAssetAttachment[] =
@@ -778,7 +781,8 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     buyerTermsAndConditionAccepted: (rfq as any)?.buyerTermsAndConditionAccepted === true,
     supplierTermsAndConditionAccepted: (rfq as any)?.supplierTermsAndConditionAccepted === true,
   });
-  const [showContractNameModal, setShowContractNameModal] = useState(!isSupplier && contractRefs.length === 0);
+  // Asked for when "Create Contract" is clicked (once both parties have signed), not when the screen opens.
+  const [showContractNameModal, setShowContractNameModal] = useState(false);
   const [contractNameError, setContractNameError] = useState<string | null>(null);
   const [sendingContract, setSendingContract] = useState(false);
   const [sendContractError, setSendContractError] = useState<string | null>(null);
@@ -1311,42 +1315,42 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
   // Buyer: the Terms & Conditions sent with the contract. The document added through "Proposed Edits" if there
   // is one, otherwise the buyer's own Terms & Conditions attached to the RFQ.
-  const buildContractAttachments = async (ids: string[]) => {
-    const { entityId, entityType } = await getEntityTypeByKey("BUYER");
-    const uploaded = ids.map((id) => contracts[id]?.buyerTcFile).find((file) => file);
-    if (uploaded) {
-      return [
-        {
-          entityId,
-          entityType,
-          assetType: "TERMS_CONDITION",
-          fileName: uploaded.name,
-          contentType: uploaded.type || resolveMimeType(undefined, uploaded.name),
-          isSingletonAsset: false,
-          fileBytes: await readFileAsBase64(uploaded),
-        },
-      ];
-    }
-    const attachments = [];
-    for (const doc of buyerTermsDocs) {
-      if (!doc.id) continue;
-      const asset = await fetchBuyerAsset(doc.id);
-      if (!("fileBytes" in asset) || !asset.fileBytes) {
-        throw new Error(`Could not load ${doc.fileName || doc.assetName || "the Terms & Conditions document"}.`);
-      }
-      const fileName = asset.fileName || doc.fileName || doc.assetName || "Terms_and_Conditions";
-      attachments.push({
-        entityId,
-        entityType,
-        assetType: "TERMS_CONDITION",
-        fileName,
-        contentType: resolveMimeType(asset.contentType || asset.fileType, fileName),
-        isSingletonAsset: false,
-        fileBytes: asset.fileBytes.replace(/^data:.*?;base64,/, ""),
-      });
-    }
-    return attachments;
-  };
+  // const buildContractAttachments = async (ids: string[]) => {
+  //   const { entityId, entityType } = await getEntityTypeByKey("BUYER");
+  //   const uploaded = ids.map((id) => contracts[id]?.buyerTcFile).find((file) => file);
+  //   if (uploaded) {
+  //     return [
+  //       {
+  //         entityId,
+  //         entityType,
+  //         assetType: "TERMS_CONDITION",
+  //         fileName: uploaded.name,
+  //         contentType: uploaded.type || resolveMimeType(undefined, uploaded.name),
+  //         isSingletonAsset: false,
+  //         fileBytes: await readFileAsBase64(uploaded),
+  //       },
+  //     ];
+  //   }
+  //   const attachments = [];
+  //   for (const doc of buyerTermsDocs) {
+  //     if (!doc.id) continue;
+  //     const asset = await fetchBuyerAsset(doc.id);
+  //     if (!("fileBytes" in asset) || !asset.fileBytes) {
+  //       throw new Error(`Could not load ${doc.fileName || doc.assetName || "the Terms & Conditions document"}.`);
+  //     }
+  //     const fileName = asset.fileName || doc.fileName || doc.assetName || "Terms_and_Conditions";
+  //     attachments.push({
+  //       entityId,
+  //       entityType,
+  //       assetType: "TERMS_CONDITION",
+  //       fileName,
+  //       contentType: resolveMimeType(asset.contentType || asset.fileType, fileName),
+  //       isSingletonAsset: false,
+  //       fileBytes: asset.fileBytes.replace(/^data:.*?;base64,/, ""),
+  //     });
+  //   }
+  //   return attachments;
+  // };
 
   // Buyer: invite one supplier per contract to review and negotiate Terms & Conditions. This no longer creates
   // the contract itself - that happens once both parties have signed (see handleCreateContract).
@@ -1372,7 +1376,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     return null;
   };
 
-  // The contract name is normally asked for when the screen opens; ask for it here if it is still missing.
+  // The contract name is asked for when "Create Contract" is clicked, not before; ask for it here if missing.
   const hasContractName = (): boolean => {
     if (contractName.trim()) return true;
     setContractNameDraft("");
@@ -1382,7 +1386,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   };
 
   const handleSendToSupplier = async (id: string) => {
-    if (!hasContractName()) return;
     setSendingContract(true);
     setSendContractError(null);
     const error = await sendContract([id]);
@@ -1405,7 +1408,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const sendBarIsBulk = sendBarIds.length > 1;
 
   const handleBulkSend = async () => {
-    if (!hasContractName()) return;
     setSendingContract(true);
     setSendContractError(null);
     const error = await sendContract(selectedPendingIds);
@@ -1726,7 +1728,8 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   // Downloads the executed contract (items, merged Terms & Conditions, both signatures) as a PDF via the
   // browser's print dialog, since no PDF-generation dependency or backend endpoint exists for this yet.
   const handleDownloadContract = () => {
-    if (!activeContract || !activeContract.buyerSigned || !activeContract.supplierSigned) return;
+    const bothSigned = buyerBothSigned || (activeContract?.buyerSigned && activeContract?.supplierSigned);
+    if (!activeContract || !bothSigned) return;
 
     const escapeHtml = (value: string) =>
       value.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch] as string));
@@ -2076,12 +2079,13 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   // Conditions and the executed contract PDF (items, merged T&C, both signatures) attached.
   const handleCreateContract = async (id: string) => {
     const contract = contracts[id];
-    if (!contract || !contract.buyerSigned || !contract.supplierSigned || !rfqId || createdContracts[id]) return;
+    const bothSigned = buyerBothSigned || (contract?.buyerSigned && contract?.supplierSigned);
+    if (!contract || !bothSigned || !rfqId || createdContracts[id]) return;
+    if (!hasContractName()) return;
     setCreatingContract(true);
     setCreateContractError(null);
     try {
       const { entityId, entityType } = await getEntityTypeByKey("BUYER");
-      const termsAttachments = await buildContractAttachments([id]);
       const pdfAttachment = {
         entityId,
         entityType,
@@ -2098,7 +2102,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         startDate: `${contract.startDate}T00:00:00.000Z`,
         endDate: `${contract.endDate}T00:00:00.000Z`,
         amount: getContractValue(id),
-        attachments: [...termsAttachments, pdfAttachment],
+        attachments: [pdfAttachment],
       });
       if (res.statusCode >= 400) {
         setCreateContractError([res.message || "Failed to create the contract.", "description" in res ? res.description : ""].filter(Boolean).join(" - "));
@@ -2474,8 +2478,10 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
             </div>
           )}
 
-          {/* Buyer: send the contract to the supplier (POST /api/v1/buyer/contract) */}
-          {!isSupplier && activeContract.step === "details" && (
+          {/* Buyer: send the contract to the supplier (POST /api/v1/buyer/contract). Hidden once this supplier
+              has already accepted the buyer's terms (buyerTermsAndConditionStatuses[].buyerTermsAndConditionAccepted
+              for the active supplier, i.e. activeBuyerTermsAccepted) — nothing left to send. */}
+          {!isSupplier && activeContract.step === "details" && !activeBuyerTermsAccepted && (
             <div>
               <div className="contract-info-bar contract-info-bar--send">
                 <div className="contract-send-summary">
@@ -2768,7 +2774,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 </span>
               </div>
 
-              {activeContract.step === "terms" && (
+              {activeContract.step === "terms" && !buyerBothSigned && (
                 <button
                   type="button"
                   onClick={() => handleProceedToSigning(activeContractId)}
@@ -2951,8 +2957,9 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
             </div>
           )}
 
-          {/* Action Step: Completed */}
-          {activeContract.step === "completed" && (
+          {/* Action Step: Completed. Buyer role: also shown once both sides have actually signed per rfq-by-id
+              (buyerBothSigned), even if the local step hasn't caught up to "completed". */}
+          {(activeContract.step === "completed" || buyerBothSigned) && (
             <div className="contract-completed-card">
               <div className="contract-completed-title">
                 Contract Executed Successfully
@@ -3017,7 +3024,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         </div>
       )}
 
-      {/* Buyer: contract name, asked for when the contract screen opens */}
+      {/* Buyer: contract name, asked for when "Create Contract" is clicked (both parties signed) */}
       {!isSupplier && showContractNameModal && !activeContractRef && (
         <div className="contract-modal-overlay">
           <div className="contract-modal contract-modal--terms" role="dialog" aria-modal="true" aria-labelledby="contract-name-title">
@@ -3050,7 +3057,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
             <div className="contract-modal-actions">
               <button
                 type="button"
-                onClick={contractName || contractRefs.length > 0 ? () => setShowContractNameModal(false) : onBack}
+                onClick={() => setShowContractNameModal(false)}
                 className="contract-btn contract-btn--outline contract-btn--modal"
               >
                 Cancel
