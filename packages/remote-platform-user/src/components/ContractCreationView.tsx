@@ -775,7 +775,8 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     buyerTermsAndConditionAccepted: (rfq as any)?.buyerTermsAndConditionAccepted === true,
     supplierTermsAndConditionAccepted: (rfq as any)?.supplierTermsAndConditionAccepted === true,
   });
-  const [showContractNameModal, setShowContractNameModal] = useState(!isSupplier && contractRefs.length === 0);
+  // Asked for when "Create Contract" is clicked (once both parties have signed), not when the screen opens.
+  const [showContractNameModal, setShowContractNameModal] = useState(false);
   const [contractNameError, setContractNameError] = useState<string | null>(null);
   const [sendingContract, setSendingContract] = useState(false);
   const [sendContractError, setSendContractError] = useState<string | null>(null);
@@ -1369,7 +1370,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     return null;
   };
 
-  // The contract name is normally asked for when the screen opens; ask for it here if it is still missing.
+  // The contract name is asked for when "Create Contract" is clicked, not before; ask for it here if missing.
   const hasContractName = (): boolean => {
     if (contractName.trim()) return true;
     setContractNameDraft("");
@@ -1379,7 +1380,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   };
 
   const handleSendToSupplier = async (id: string) => {
-    if (!hasContractName()) return;
     setSendingContract(true);
     setSendContractError(null);
     const error = await sendContract([id]);
@@ -1402,7 +1402,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const sendBarIsBulk = sendBarIds.length > 1;
 
   const handleBulkSend = async () => {
-    if (!hasContractName()) return;
     setSendingContract(true);
     setSendContractError(null);
     const error = await sendContract(selectedPendingIds);
@@ -2072,6 +2071,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const handleCreateContract = async (id: string) => {
     const contract = contracts[id];
     if (!contract || !contract.buyerSigned || !contract.supplierSigned || !rfqId || createdContracts[id]) return;
+    if (!hasContractName()) return;
     setCreatingContract(true);
     setCreateContractError(null);
     try {
@@ -3012,7 +3012,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         </div>
       )}
 
-      {/* Buyer: contract name, asked for when the contract screen opens */}
+      {/* Buyer: contract name, asked for when "Create Contract" is clicked (both parties signed) */}
       {!isSupplier && showContractNameModal && !activeContractRef && (
         <div className="contract-modal-overlay">
           <div className="contract-modal contract-modal--terms" role="dialog" aria-modal="true" aria-labelledby="contract-name-title">
@@ -3045,7 +3045,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
             <div className="contract-modal-actions">
               <button
                 type="button"
-                onClick={contractName || contractRefs.length > 0 ? () => setShowContractNameModal(false) : onBack}
+                onClick={() => setShowContractNameModal(false)}
                 className="contract-btn contract-btn--outline contract-btn--modal"
               >
                 Cancel
