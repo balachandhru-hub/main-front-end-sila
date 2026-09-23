@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import "./BidComparisonAward.css";
 import { Button, QuestionAnswer, QuestionItem, QuestionList, QuestionProgress, StatusBadge } from "@vosox/shared-ui";
 import { FaArrowDown, FaArrowUp, FaCheck, FaChevronDown, FaChevronRight, FaFlag, FaListUl, FaUsers } from "react-icons/fa";
@@ -8,13 +8,17 @@ import {
   getBidComparisonData,
   isBidComparisonError,
   awardRfq,
+  unawardRfq,
   updateSupplierTermsConditionStatus,
   fetchBuyerRfqEsign,
   uploadBuyerRfqEsign,
 } from "../api/platformApi";
 import type { BidComparisonResponseDto } from "../api/platformApi";
 import { ContractCreationView } from "./ContractCreationView";
-import { fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
+import { fetchBuyerRFQById, createBuyerChatApi, type PersonDetailDto } from "../../../remote-buyer/src/api/Buyerapi";
+import { useNetworkAdminAuthStore } from "../store/useAuthStore";
+import { startRfqChatHub, stopRfqChatHub } from "@vosox/shared-ui";
+import type { QuotationSubmittedEvent } from "@vosox/shared-ui";
 
 
 const IconMessageSquare = () => (
@@ -88,22 +92,23 @@ interface BidComparisonAwardViewProps {
   onBack: () => void;
   onQsAns: () => void;
   onChatClick: () => void;
-}
-
-function fmtINR(val: number) {
-  if (!val && val !== 0) return "—";
-  return "₹" + val.toLocaleString("en-IN");
+  /** Passed through to the Contract Workspace's own chat trigger — see ContractCreationView. */
+  buyerProfile?: PersonDetailDto | null;
+  isLoadingBuyerProfile?: boolean;
 }
 
 const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
-  rfq: rfqProp, rfqId, loading, error, freezingBid, onFreeze, onBack, onChatClick
+  rfq: rfqProp, rfqId, loading, error, freezingBid, onFreeze, onBack, onChatClick, buyerProfile = null, isLoadingBuyerProfile = false
 }) => {
   const [refreshedRfq, setRefreshedRfq] = useState<any | null>(null);
   const rfq = refreshedRfq ?? rfqProp;
 
+  const personDetail = useNetworkAdminAuthStore((state) => state.personDetail);
+
   const [viewMode, setViewMode] = useState<"summary" | "comparison" | "by-supplier" | "bid-history">("summary");
   const [showFreezeModal, setShowFreezeModal] = useState(false);
   const [showAwardModal, setShowAwardModal] = useState(false);
+  const [showUnawardModal, setShowUnawardModal] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState("all");
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [autoSelected, setAutoSelected] = useState(false);
@@ -119,6 +124,9 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   const [awardingRfq, setAwardingRfq] = useState(false);
   const [awardSuccess, setAwardSuccess] = useState(false);
   const [awardError, setAwardError] = useState<string | null>(null);
+
+  const [unawardingRfq, setUnawardingRfq] = useState(false);
+  const [unawardError, setUnawardError] = useState<string | null>(null);
 
   const [contractCreated, setContractCreated] = useState(false);
   const [screen, setScreen] = useState<"award" | "contract">("award");
@@ -428,6 +436,46 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     setRefreshedRfq(null);
   }, [rfqId, rfqProp?.rfqId]);
 
+  // Live-refreshes the moment a supplier (registered or external) submits or
+  // updates a quotation on this RFQ, so a buyer sitting on this screen sees
+  // the new bid without reloading. Buyers are already auto-joined on the
+  // hub connection to every (RFQId, SupplierId) group for their org (see
+  // MessageHub.GetEntitledGroups on the backend), so no supplierId is
+  // needed here — same connection the RFQ chat drawer opens on top of this
+  // screen already uses, just a second event on it (see rfqChatHub.ts).
+  const effectiveRfqIdForHub = rfqId || rfqProp?.rfqId || rfqProp?.id || rfqProp?._id;
+  const quotationRefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!effectiveRfqIdForHub) return;
+
+    const handleQuotationSubmitted = (payload: QuotationSubmittedEvent) => {
+      if (payload?.RFQId && payload.RFQId !== effectiveRfqIdForHub) return;
+
+      // Coalesce a burst of near-simultaneous events (e.g. several suppliers
+      // submitting close together) into a single re-fetch instead of one
+      // per event.
+      if (quotationRefetchTimerRef.current) clearTimeout(quotationRefetchTimerRef.current);
+      quotationRefetchTimerRef.current = setTimeout(() => {
+        fetchBuyerRFQById(effectiveRfqIdForHub)
+          .then((updated) => setRefreshedRfq({ ...updated, rfqId: effectiveRfqIdForHub }))
+          .catch(() => {
+            // A missed live refresh isn't fatal - the next manual action
+            // (freeze, award, tab switch) will fetch fresh data anyway.
+          });
+      }, 500);
+    };
+
+    startRfqChatHub({ rfqId: effectiveRfqIdForHub }, () => {}, undefined, handleQuotationSubmitted).catch((err) => {
+      console.error("[BidComparisonAwardView] SignalR connection failed:", err);
+    });
+
+    return () => {
+      if (quotationRefetchTimerRef.current) clearTimeout(quotationRefetchTimerRef.current);
+      stopRfqChatHub();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveRfqIdForHub]);
+
   useEffect(() => {
     if (!autoSelected && lineItems.length > 0 && effectiveQuotations.length > 0) {
       autoSelectLowest();
@@ -537,6 +585,34 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     }
   };
 
+  const handleUnaward = async () => {
+    const effectiveRfqId = rfqId || rfq?.rfqId || rfq?.id || rfq?._id;
+    if (!effectiveRfqId) return;
+
+    setUnawardingRfq(true);
+    setUnawardError(null);
+
+    try {
+      const res = await unawardRfq(effectiveRfqId);
+
+      if ('statusCode' in res && res.statusCode && res.statusCode >= 400) {
+        setUnawardError(res.message || res.description || "Failed to unaward RFQ.");
+      } else {
+        setShowUnawardModal(false);
+        try {
+          const updated = await fetchBuyerRFQById(effectiveRfqId);
+          setRefreshedRfq({ ...updated, rfqId: effectiveRfqId });
+        } catch {
+          // Unaward already succeeded; a failed refresh shouldn't surface as an error.
+        }
+      }
+    } catch (err: any) {
+      setUnawardError(err?.message || "An error occurred while unawarding the RFQ.");
+    } finally {
+      setUnawardingRfq(false);
+    }
+  };
+
   const bidHistoryData = useMemo(() => {
     if (!bidHistoryApiData) return [];
     return (bidHistoryApiData.suppliers || []).map((supplier) => {
@@ -590,8 +666,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
       const itemPrices: Record<string, {
         firstBid: number;
         currentBid: number;
-        firstBreakdown: { discount: number; tax: number; delivery: number };
-        currentBreakdown: { discount: number; tax: number; delivery: number };
+        firstBreakdown: { discount: number; discountType: string; tax: number; taxType: string; delivery: number; deliveryType: string };
+        currentBreakdown: { discount: number; discountType: string; tax: number; taxType: string; delivery: number; deliveryType: string };
       }> = {};
 
       resolvedItems.forEach((rfqItem: any) => {
@@ -608,13 +684,19 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           currentBid: latestQi?.quotedAmount ?? latestQi?.quotedPrice ?? effQi?.quotedAmount ?? effQi?.quotedPrice ?? 0,
           firstBreakdown: {
             discount: firstQi?.discount ?? (firstQi as any)?.discountPercentage ?? effQi?.discount ?? effQi?.discountPercentage ?? 0,
+            discountType: (firstQi as any)?.discountType || (effQi as any)?.discountType || 'PERCENTAGE',
             tax: firstQi?.tax ?? (firstQi as any)?.taxPercentage ?? (firstQi as any)?.gst ?? effQi?.tax ?? effQi?.taxPercentage ?? effQi?.gst ?? 0,
+            taxType: (firstQi as any)?.taxType || (effQi as any)?.taxType || 'PERCENTAGE',
             delivery: firstQi?.deliveryCharge ?? (firstQi as any)?.deliveryAmount ?? effQi?.deliveryCharge ?? effQi?.deliveryAmount ?? 0,
+            deliveryType: (firstQi as any)?.deliveryType || (effQi as any)?.deliveryType || 'AMOUNT',
           },
           currentBreakdown: {
             discount: latestQi?.discount ?? (latestQi as any)?.discountPercentage ?? effQi?.discount ?? effQi?.discountPercentage ?? 0,
+            discountType: (latestQi as any)?.discountType || (effQi as any)?.discountType || 'PERCENTAGE',
             tax: latestQi?.tax ?? (latestQi as any)?.taxPercentage ?? (latestQi as any)?.gst ?? effQi?.tax ?? effQi?.taxPercentage ?? effQi?.gst ?? 0,
+            taxType: (latestQi as any)?.taxType || (effQi as any)?.taxType || 'PERCENTAGE',
             delivery: latestQi?.deliveryCharge ?? (latestQi as any)?.deliveryAmount ?? effQi?.deliveryCharge ?? effQi?.deliveryAmount ?? 0,
+            deliveryType: (latestQi as any)?.deliveryType || (effQi as any)?.deliveryType || 'AMOUNT',
           },
         };
       });
@@ -661,6 +743,44 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   }
   if (!rfq) return null;
 
+  // The RFQ's own currency (e.g. "INR", "USD"), as returned by rfq-by-id —
+  // every money value below is formatted in this currency rather than a
+  // hardcoded symbol. Left blank (not defaulted to "INR") when the API
+  // doesn't return one, since guessing a currency could mislead the buyer.
+  const currency = rfq?.currency || "";
+  const fmtINR = (val: number) => {
+    if (!val && val !== 0) return "—";
+    try {
+      const formattedNumber = new Intl.NumberFormat("en-IN", {
+        maximumFractionDigits: 2,
+      }).format(val);
+      return currency ? `${formattedNumber} ${currency}` : formattedNumber;
+    } catch {
+      return `${val.toLocaleString("en-IN")}${currency ? ` ${currency}` : ""}`;
+    }
+  };
+
+  // Resolves a discount/tax/delivery-charge field to its actual currency
+  // amount regardless of which representation the API sent: an AMOUNT-type
+  // field already is one, a PERCENTAGE-type field is converted against
+  // `basis` (e.g. the unit price the percentage applies to).
+  const resolveBreakdownAmount = (raw: number, type: string, basis: number) =>
+    type === "AMOUNT" ? raw : (basis > 0 ? Math.round(basis * (raw / 100)) : 0);
+
+  // Renders a discount/tax/delivery-charge breakdown value with BOTH
+  // representations, in whichever order matches what the API actually sent
+  // (discountType/taxType/deliveryType) — "X% → Y <currency>" when the API
+  // sent a percentage, "Y <currency> → X%" when it sent a flat amount —
+  // rather than only ever showing one side.
+  const fmtBreakdownPair = (raw: number, type: string, basis: number, sign: string = "") => {
+    if (type === "AMOUNT") {
+      const pct = basis > 0 ? Math.round((raw / basis) * 100) : 0;
+      return `${sign}${fmtINR(raw)} → ${sign}${pct}%`;
+    }
+    const amt = basis > 0 ? Math.round(basis * (raw / 100)) : 0;
+    return `${raw}% → ${sign}${fmtINR(amt)}`;
+  };
+
   const kpis: { label: string; value: React.ReactNode; icon: React.ReactNode }[] = [
     { label: "Suppliers Participated", value: displaySuppliers.length, icon: <FaUsers /> },
     { label: "Line Items", value: lineItems.length, icon: <FaListUl /> },
@@ -681,6 +801,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   const barButtonDisabled = !isBidFrozen || selectedItemCount === 0;
   const barButtonLabel = !isBidFrozen ? "Freeze Bid to Continue" : selectedItemCount === 0 ? "Select Supplier(s)" : "Award Selected";
 
+  const chatRfqId = rfqId || rfq?.rfqId || rfq?.id || rfq?._id;
+
   return (
     <div className="bca-page">
       {screen === "contract" ? (
@@ -696,6 +818,12 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           fetchESigns={fetchBuyerRfqEsign}
           onAcceptSupplierTerms={updateSupplierTermsConditionStatus}
           onUploadBuyerEsign={uploadBuyerRfqEsign}
+          chatApi={chatRfqId ? createBuyerChatApi(chatRfqId) : undefined}
+          chatHubParams={chatRfqId ? { rfqId: chatRfqId } : undefined}
+          currentUserProfile={buyerProfile}
+          isLoadingCurrentUserProfile={isLoadingBuyerProfile}
+          buyerName={personDetail?.name}
+          buyerDesignation={personDetail?.roleName}
         />
       ) : (
         <>
@@ -719,18 +847,29 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
             className={`bca-status-badge ${isRfqAwarded ? "bca-status-awarded" : isBidFrozen ? "bca-status-frozen" : "bca-status-active"}`}
           />
           {isRfqAwarded ? (
-            <Button
-              variant="primary"
-              type="button"
-              className="bca-btn-icon-gap"
-              disabled
-            >
-              <span className="bca-icon-lock bca-icon-lock-muted" aria-hidden="true">
-                <span className="bca-icon-lock-shackle"></span>
-                <span className="bca-icon-lock-body"></span>
-              </span>
-              <span>Bid Close</span>
-            </Button>
+            <>
+              <Button
+                variant="primary"
+                type="button"
+                className="bca-btn-icon-gap"
+                disabled
+              >
+                <span className="bca-icon-lock bca-icon-lock-muted" aria-hidden="true">
+                  <span className="bca-icon-lock-shackle"></span>
+                  <span className="bca-icon-lock-body"></span>
+                </span>
+                <span>Bid Close</span>
+              </Button>
+              <Button
+                variant="outline"
+                type="button"
+                className="bca-btn-icon-gap"
+                onClick={() => setShowUnawardModal(true)}
+                disabled={unawardingRfq}
+              >
+                <span>{unawardingRfq ? "Unawarding..." : "Unaward RFQ"}</span>
+              </Button>
+            </>
           ) : isBidFrozen ? (
             <Button
               variant="primary"
@@ -868,9 +1007,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
               {chartData?.map((item: any, idx: number) => {
                 const maxVal = Math.max(...(chartData?.map((d: any) => d?.price || 0) || []), 1);
                 const percentage = item?.price > 0 ? Math.max((item.price / maxVal) * 100, 3) : 0;
-                const formattedPrice = item?.price > 0
-                  ? `₹${item.price.toLocaleString('en-IN')}`
-                  : 'No Quote';
+                const formattedPrice = item?.price > 0 ? fmtINR(item.price) : 'No Quote';
 
                 return (
                   <div key={item?.id || idx} className={`bca-bar-row${item?.isLowest ? " bca-bar-row-lowest" : ""}`}>
@@ -1117,7 +1254,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           const cmpItems = lineItems.map((item: any) => {
             const prices: Record<string, number> = {};
             const ranks: Record<string, string> = {};
-            const breakdown: Record<string, { discount: number; tax: number; delivery: number }> = {};
+            const breakdown: Record<string, { discount: number; discountType: string; tax: number; taxType: string; delivery: number; deliveryType: string }> = {};
             const awarded: Record<string, boolean> = {};
             effectiveQuotations.forEach((q: any) => {
               const suppId = q.quotationId || q.supplierId || q._id || 'unknown';
@@ -1126,8 +1263,11 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
               ranks[suppId] = (qi?.rank ?? qi?.ranking ?? '').toString().toUpperCase().trim();
               breakdown[suppId] = {
                 discount: qi?.discount ?? qi?.discountPercentage ?? 0,
+                discountType: qi?.discountType || 'PERCENTAGE',
                 tax: qi?.tax ?? qi?.taxPercentage ?? qi?.gst ?? 0,
+                taxType: qi?.taxType || 'PERCENTAGE',
                 delivery: qi?.deliveryCharge ?? qi?.deliveryAmount ?? 0,
+                deliveryType: qi?.deliveryType || 'AMOUNT',
               };
               awarded[suppId] = qi?.isAwarded === true;
             });
@@ -1184,7 +1324,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                         <td className="bca-cmp-td-fixed bca-cmp-td-muted bca-cmp-td-center">{item.uom}</td>
                         {cmpSuppliers.map(s => {
                           const price = (item.prices as Record<string, number>)[s.id] ?? 0;
-                          const bd = (item.breakdown as Record<string, any>)[s.id] ?? { discount: 0, tax: 0, delivery: 0 };
+                          const bd = (item.breakdown as Record<string, any>)[s.id] ?? { discount: 0, discountType: 'PERCENTAGE', tax: 0, taxType: 'PERCENTAGE', delivery: 0, deliveryType: 'AMOUNT' };
                           const rankLabel = (item.ranks as Record<string, string>)?.[s.id] ?? '';
                           const hasRankData = Object.values((item.ranks as Record<string, string>) ?? {}).some(r => r !== '');
                           const isLowest = hasRankData ? (rankLabel === 'L1') : (price > 0 && price === minPrice);
@@ -1193,8 +1333,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                             ? selections[item.id] === s.id
                             : isLowest;
                           const isAwardedItem = (item.awarded as Record<string, boolean>)?.[s.id] === true;
-                          const discAmt = bd.discount > 0 ? Math.round(price * bd.discount / 100) : 0;
-                          const taxAmt  = bd.tax > 0 ? Math.round((price - discAmt) * bd.tax / 100) : 0;
+                          const discAmtResolved = resolveBreakdownAmount(bd.discount, bd.discountType, price);
+                          const taxBasis = price - discAmtResolved;
                           const rank = rankLabel || (price > 0 ? String([...Object.values(item.prices as Record<string, number>)].filter(p => p > 0).sort((a, b) => a - b).indexOf(price) + 1) : '');
                           const isCellHighlighted = isRfqAwarded ? isAwardedItem : isSelected;
 
@@ -1226,9 +1366,24 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                               <div className="bca-cmp-breakdown">
                                 <div className="bca-cmp-breakdown-title">Breakdown</div>
                                 <div className="bca-cmp-breakdown-row"><span>Unit Price</span><span>{price > 0 ? fmtINR(price) : '—'}</span></div>
-                                {bd.discount > 0 && <div className="bca-cmp-breakdown-row bca-cmp-disc"><span>Discount</span><span>{bd.discount}% — <span className="bca-discount">-{fmtINR(discAmt)}</span></span></div>}
-                                {bd.tax > 0 && <div className="bca-cmp-breakdown-row"><span>Tax</span><span>{bd.tax}% → {fmtINR(taxAmt)}</span></div>}
-                                {bd.delivery > 0 && <div className="bca-cmp-breakdown-row"><span>Delivery Charge</span><span>{fmtINR(bd.delivery)}</span></div>}
+                                {bd.discount > 0 && (
+                                  <div className="bca-cmp-breakdown-row bca-cmp-disc">
+                                    <span>Discount</span>
+                                    <span className="bca-discount">{fmtBreakdownPair(bd.discount, bd.discountType, price, "-")}</span>
+                                  </div>
+                                )}
+                                {bd.tax > 0 && (
+                                  <div className="bca-cmp-breakdown-row">
+                                    <span>Tax</span>
+                                    <span>{fmtBreakdownPair(bd.tax, bd.taxType, taxBasis)}</span>
+                                  </div>
+                                )}
+                                {bd.delivery > 0 && (
+                                  <div className="bca-cmp-breakdown-row">
+                                    <span>Delivery Charge</span>
+                                    <span>{fmtBreakdownPair(bd.delivery, bd.deliveryType, price)}</span>
+                                  </div>
+                                )}
                                 {rank && <div className={`bca-cmp-breakdown-rank${rank === 'L1' ? ' bca-cmp-rank-l1' : ''}`}>
                                   Rank {rank} of {cmpSuppliers.length}
                                 </div>}
@@ -1342,22 +1497,23 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                             );
                           }
 
+                          const emptyBreakdown = { discount: 0, discountType: 'PERCENTAGE', tax: 0, taxType: 'PERCENTAGE', delivery: 0, deliveryType: 'AMOUNT' };
                           const itemData = s.itemPrices[item.id] || {
                             firstBid: 0,
                             currentBid: 0,
-                            firstBreakdown: { discount: 0, tax: 0, delivery: 0 },
-                            currentBreakdown: { discount: 0, tax: 0, delivery: 0 },
+                            firstBreakdown: emptyBreakdown,
+                            currentBreakdown: emptyBreakdown,
                           };
                           const firstPrice = itemData.firstBid;
                           const currentPrice = itemData.currentBid;
-                          const firstBd = itemData.firstBreakdown || { discount: 0, tax: 0, delivery: 0 };
-                          const currentBd = itemData.currentBreakdown || { discount: 0, tax: 0, delivery: 0 };
+                          const firstBd = itemData.firstBreakdown || emptyBreakdown;
+                          const currentBd = itemData.currentBreakdown || emptyBreakdown;
 
-                          const firstDiscAmt = firstBd.discount > 0 ? Math.round(firstPrice * firstBd.discount / 100) : 0;
-                          const firstTaxAmt  = firstBd.tax > 0 ? Math.round((firstPrice - firstDiscAmt) * firstBd.tax / 100) : 0;
+                          const firstDiscAmtResolved = resolveBreakdownAmount(firstBd.discount, firstBd.discountType, firstPrice);
+                          const firstTaxBasis = firstPrice - firstDiscAmtResolved;
 
-                          const currentDiscAmt = currentBd.discount > 0 ? Math.round(currentPrice * currentBd.discount / 100) : 0;
-                          const currentTaxAmt  = currentBd.tax > 0 ? Math.round((currentPrice - currentDiscAmt) * currentBd.tax / 100) : 0;
+                          const currentDiscAmtResolved = resolveBreakdownAmount(currentBd.discount, currentBd.discountType, currentPrice);
+                          const currentTaxBasis = currentPrice - currentDiscAmtResolved;
 
                           const decreased = firstPrice > 0 && currentPrice > 0 && currentPrice < firstPrice;
                           const increased = firstPrice > 0 && currentPrice > 0 && currentPrice > firstPrice;
@@ -1372,9 +1528,24 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                                 <div className="bca-cmp-breakdown bca-cmp-breakdown-tight">
                                   <div className="bca-cmp-breakdown-title">Breakdown</div>
                                   <div className="bca-cmp-breakdown-row"><span>Unit Price</span><span>{firstPrice > 0 ? fmtINR(firstPrice) : '—'}</span></div>
-                                  {firstBd.discount > 0 && <div className="bca-cmp-breakdown-row bca-cmp-disc"><span>Discount</span><span>{firstBd.discount}% — <span className="bca-discount">-{fmtINR(firstDiscAmt)}</span></span></div>}
-                                  {firstBd.tax > 0 && <div className="bca-cmp-breakdown-row"><span>Tax</span><span>{firstBd.tax}% → {fmtINR(firstTaxAmt)}</span></div>}
-                                  {firstBd.delivery > 0 && <div className="bca-cmp-breakdown-row"><span>Delivery</span><span>{fmtINR(firstBd.delivery)}</span></div>}
+                                  {firstBd.discount > 0 && (
+                                    <div className="bca-cmp-breakdown-row bca-cmp-disc">
+                                      <span>Discount</span>
+                                      <span className="bca-discount">{fmtBreakdownPair(firstBd.discount, firstBd.discountType, firstPrice, "-")}</span>
+                                    </div>
+                                  )}
+                                  {firstBd.tax > 0 && (
+                                    <div className="bca-cmp-breakdown-row">
+                                      <span>Tax</span>
+                                      <span>{fmtBreakdownPair(firstBd.tax, firstBd.taxType, firstTaxBasis)}</span>
+                                    </div>
+                                  )}
+                                  {firstBd.delivery > 0 && (
+                                    <div className="bca-cmp-breakdown-row">
+                                      <span>Delivery</span>
+                                      <span>{fmtBreakdownPair(firstBd.delivery, firstBd.deliveryType, firstPrice)}</span>
+                                    </div>
+                                  )}
                                 </div>
                               </td>
                               <td className="bca-hist-td bca-hist-current-td">
@@ -1389,9 +1560,24 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                                 <div className="bca-cmp-breakdown bca-cmp-breakdown-tight">
                                   <div className="bca-cmp-breakdown-title">Breakdown</div>
                                   <div className="bca-cmp-breakdown-row"><span>Unit Price</span><span>{currentPrice > 0 ? fmtINR(currentPrice) : '—'}</span></div>
-                                  {currentBd.discount > 0 && <div className="bca-cmp-breakdown-row bca-cmp-disc"><span>Discount</span><span>{currentBd.discount}% — <span className="bca-discount">-{fmtINR(currentDiscAmt)}</span></span></div>}
-                                  {currentBd.tax > 0 && <div className="bca-cmp-breakdown-row"><span>Tax</span><span>{currentBd.tax}% → {fmtINR(currentTaxAmt)}</span></div>}
-                                  {currentBd.delivery > 0 && <div className="bca-cmp-breakdown-row"><span>Delivery</span><span>{fmtINR(currentBd.delivery)}</span></div>}
+                                  {currentBd.discount > 0 && (
+                                    <div className="bca-cmp-breakdown-row bca-cmp-disc">
+                                      <span>Discount</span>
+                                      <span className="bca-discount">{fmtBreakdownPair(currentBd.discount, currentBd.discountType, currentPrice, "-")}</span>
+                                    </div>
+                                  )}
+                                  {currentBd.tax > 0 && (
+                                    <div className="bca-cmp-breakdown-row">
+                                      <span>Tax</span>
+                                      <span>{fmtBreakdownPair(currentBd.tax, currentBd.taxType, currentTaxBasis)}</span>
+                                    </div>
+                                  )}
+                                  {currentBd.delivery > 0 && (
+                                    <div className="bca-cmp-breakdown-row">
+                                      <span>Delivery</span>
+                                      <span>{fmtBreakdownPair(currentBd.delivery, currentBd.deliveryType, currentPrice)}</span>
+                                    </div>
+                                  )}
                                 </div>
                               </td>
                             </React.Fragment>
@@ -1408,6 +1594,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                       const isLowest = s.currentTotal > 0 && s.currentTotal === minCurrentTotal;
                       const fLot = s.firstLotBreakdown || { discount: 0, tax: 0, delivery: 0 };
                       const cLot = s.currentLotBreakdown || { discount: 0, tax: 0, delivery: 0 };
+                      const fLotTaxBasis = s.firstTotal - resolveBreakdownAmount((fLot as any).discount, (fLot as any).discountType, s.firstTotal);
+                      const cLotTaxBasis = s.currentTotal - resolveBreakdownAmount((cLot as any).discount, (cLot as any).discountType, s.currentTotal);
 
                       return (
                         <React.Fragment key={s.id}>
@@ -1419,19 +1607,19 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                                 {fLot.discount > 0 && (
                                   <div className="bca-cmp-breakdown-row bca-cmp-disc">
                                     <span>Discount</span>
-                                    <span>{fLot.discountType === 'PERCENTAGE' ? `${fLot.discount}%` : fmtINR(fLot.discount)}</span>
+                                    <span className="bca-discount">{fmtBreakdownPair(fLot.discount, (fLot as any).discountType, s.firstTotal, "-")}</span>
                                   </div>
                                 )}
                                 {fLot.tax > 0 && (
                                   <div className="bca-cmp-breakdown-row">
                                     <span>Tax</span>
-                                    <span>{fLot.taxType === 'PERCENTAGE' ? `${fLot.tax}%` : fmtINR(fLot.tax)}</span>
+                                    <span>{fmtBreakdownPair(fLot.tax, (fLot as any).taxType, fLotTaxBasis)}</span>
                                   </div>
                                 )}
                                 {fLot.delivery > 0 && (
                                   <div className="bca-cmp-breakdown-row">
                                     <span>Delivery Charge</span>
-                                    <span>{fmtINR(fLot.delivery)}</span>
+                                    <span>{fmtBreakdownPair(fLot.delivery, (fLot as any).deliveryType, s.firstTotal)}</span>
                                   </div>
                                 )}
                               </div>
@@ -1446,19 +1634,19 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                                 {cLot.discount > 0 && (
                                   <div className="bca-cmp-breakdown-row bca-cmp-disc">
                                     <span>Discount</span>
-                                    <span>{cLot.discountType === 'PERCENTAGE' ? `${cLot.discount}%` : fmtINR(cLot.discount)}</span>
+                                    <span className="bca-discount">{fmtBreakdownPair(cLot.discount, (cLot as any).discountType, s.currentTotal, "-")}</span>
                                   </div>
                                 )}
                                 {cLot.tax > 0 && (
                                   <div className="bca-cmp-breakdown-row">
                                     <span>Tax</span>
-                                    <span>{cLot.taxType === 'PERCENTAGE' ? `${cLot.tax}%` : fmtINR(cLot.tax)}</span>
+                                    <span>{fmtBreakdownPair(cLot.tax, (cLot as any).taxType, cLotTaxBasis)}</span>
                                   </div>
                                 )}
                                 {cLot.delivery > 0 && (
                                   <div className="bca-cmp-breakdown-row">
                                     <span>Delivery Charge</span>
-                                    <span>{fmtINR(cLot.delivery)}</span>
+                                    <span>{fmtBreakdownPair(cLot.delivery, (cLot as any).deliveryType, s.currentTotal)}</span>
                                   </div>
                                 )}
                               </div>
@@ -1647,10 +1835,14 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                                     const discount = qi?.discount ?? qi?.discountPercentage ?? 0;
                                     const tax = qi?.tax ?? qi?.taxPercentage ?? qi?.gst ?? 0;
                                     const delivery = qi?.deliveryCharge ?? qi?.deliveryAmount ?? 0;
+                                    const discountType = (qi as any)?.discountType || 'PERCENTAGE';
+                                    const taxType = (qi as any)?.taxType || 'PERCENTAGE';
+                                    const deliveryType = (qi as any)?.deliveryType || 'AMOUNT';
                                     const rank = (qi?.rank ?? qi?.ranking ?? '').toString().toUpperCase().trim();
 
-                                    const discAmt = (price * qty) * (discount / 100);
-                                    const taxAmt = (price * qty) * (tax / 100);
+                                    const extendedPrice = price * qty;
+                                    const discAmtResolved = resolveBreakdownAmount(discount, discountType, extendedPrice);
+                                    const taxBasis = extendedPrice - discAmtResolved;
 
                                     return (
                                       <tr key={item.id || idx}>
@@ -1664,9 +1856,15 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                                         <td className="bca-td-price bca-td-subtotal">{subtotal > 0 ? fmtINR(subtotal) : '—'}</td>
                                         <td>
                                           <div className="bca-expanded-breakdown">
-                                            {discount > 0 && <span>Discount: {discount}% (-{fmtINR(discAmt)})</span>}
-                                            {tax > 0 && <span>Tax: {tax}% (+{fmtINR(taxAmt)})</span>}
-                                            {delivery > 0 && <span>Delivery: {fmtINR(delivery)}</span>}
+                                            {discount > 0 && (
+                                              <span>Discount: {fmtBreakdownPair(discount, discountType, extendedPrice, "-")}</span>
+                                            )}
+                                            {tax > 0 && (
+                                              <span>Tax: {fmtBreakdownPair(tax, taxType, taxBasis)}</span>
+                                            )}
+                                            {delivery > 0 && (
+                                              <span>Delivery: {fmtBreakdownPair(delivery, deliveryType, extendedPrice)}</span>
+                                            )}
                                             {rank && (
                                               <span className={`bca-cmp-breakdown-rank${rank === 'L1' ? ' bca-cmp-rank-l1' : ''} bca-rank-fit`}>
                                                 Rank {rank}
@@ -2033,6 +2231,41 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
             <div className="bca-modal-actions">
               <button type="button" className="bca-btn bca-btn-ghost bca-modal-cancel" onClick={() => setShowFreezeModal(false)}>Cancel</button>
               <button type="button" className="bca-btn bca-btn-primary bca-modal-confirm" onClick={() => { setShowFreezeModal(false); onFreeze(); }}>Freeze Bid</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUnawardModal && (
+        <div className="bca-modal-overlay">
+          <div className="bca-modal-content" role="alertdialog" aria-modal="true" aria-labelledby="bca-unaward-title">
+            <h2 className="bca-modal-title" id="bca-unaward-title">Unaward RFQ?</h2>
+            <p className="bca-modal-text">
+              This will revert the RFQ's status back to bid freezing so you can select and award a
+              different supplier. The current award will no longer apply.
+            </p>
+            {unawardError && (
+              <div className="bca-award-error" role="alert">
+                {unawardError}
+              </div>
+            )}
+            <div className="bca-modal-actions">
+              <button
+                type="button"
+                className="bca-btn bca-btn-ghost bca-modal-cancel"
+                onClick={() => { setShowUnawardModal(false); setUnawardError(null); }}
+                disabled={unawardingRfq}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`bca-btn ${unawardingRfq ? 'bca-btn-disabled' : 'bca-btn-primary'} bca-modal-confirm`}
+                onClick={handleUnaward}
+                disabled={unawardingRfq}
+              >
+                {unawardingRfq ? 'Unawarding...' : 'Unaward RFQ'}
+              </button>
             </div>
           </div>
         </div>
