@@ -309,14 +309,15 @@ export const startRfqChatHub = async (
 // startRfqChatHub's "switching to a different key" path (a forced teardown
 // that isn't a caller releasing its own stop obligation).
 const forceStopConnection = async () => {
-  if (connection) {
+  const stoppingConnection = connection;
+  if (stoppingConnection) {
     try {
-      for (const eventName of RECEIVE_MESSAGE_EVENTS) connection.off(eventName);
-      connection.off(QUOTATION_SUBMITTED_EVENT);
+      for (const eventName of RECEIVE_MESSAGE_EVENTS) stoppingConnection.off(eventName);
+      stoppingConnection.off(QUOTATION_SUBMITTED_EVENT);
 
-      if (stopping.state !== signalR.HubConnectionState.Disconnected) {
+      if (stoppingConnection.state !== signalR.HubConnectionState.Disconnected) {
         console.log("[SignalR] Stopping connection", currentConnectionKey);
-        await stopping.stop();
+        await stoppingConnection.stop();
       }
     } catch (err) {
       console.warn("[SignalR] Error while stopping connection:", err);
@@ -324,7 +325,7 @@ const forceStopConnection = async () => {
       // stop() is async: by the time it resolves, a newer connect attempt
       // (e.g. StrictMode's remount) may already own the shared state. Only
       // clear it if it is still the connection we were asked to stop.
-      if (connection === stopping) {
+      if (connection === stoppingConnection) {
         connection = null;
         currentConnectionKey = null;
         isConnecting = false;
