@@ -12,6 +12,7 @@ import {
   updateSupplierTermsConditionStatus,
   fetchBuyerRfqEsign,
   uploadBuyerRfqEsign,
+  updateBuyerRfqTermsCondition,
 } from "../api/platformApi";
 import type { BidComparisonResponseDto } from "../api/platformApi";
 import { ContractCreationView } from "./ContractCreationView";
@@ -104,6 +105,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   const rfq = refreshedRfq ?? rfqProp;
 
   const personDetail = useNetworkAdminAuthStore((state) => state.personDetail);
+  const buyerId = useNetworkAdminAuthStore((state) => state.claims?.buyerId);
 
   const [viewMode, setViewMode] = useState<"summary" | "comparison" | "by-supplier" | "bid-history">("summary");
   const [showFreezeModal, setShowFreezeModal] = useState(false);
@@ -818,6 +820,13 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           fetchESigns={fetchBuyerRfqEsign}
           onAcceptSupplierTerms={updateSupplierTermsConditionStatus}
           onUploadBuyerEsign={uploadBuyerRfqEsign}
+          onUploadBuyerTerms={(rfqIdForUpload, document) =>
+            updateBuyerRfqTermsCondition({ rfqId: rfqIdForUpload, buyerId: buyerId || "", isSingletonAsset: true, document })
+          }
+          refetchRfq={async (id) => {
+            const updated = await fetchBuyerRFQById(id);
+            if (!(updated && "statusCode" in updated)) setRefreshedRfq({ ...updated, rfqId: id });
+          }}
           chatApi={chatRfqId ? createBuyerChatApi(chatRfqId) : undefined}
           chatHubParams={chatRfqId ? { rfqId: chatRfqId } : undefined}
           currentUserProfile={buyerProfile}

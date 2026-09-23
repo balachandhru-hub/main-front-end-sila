@@ -215,10 +215,10 @@ export interface BuyerRFQDetailResponse {
   buyerTermsAndConditionStatuses?: {
     supplierId: string;
     supplierName: string;
-    buyerTermsAndConditionAccepted: boolean;
+    buyerTermsAndConditionAccepted: 'ACCEPTED' | 'REJECTED' | 'PENDING';
   }[];
   /** Whether the buyer has already accepted the supplier's terms & conditions. */
-  supplierTermsAndConditionAccepted?: boolean;
+  supplierTermsAndConditionAccepted?: 'ACCEPTED' | 'REJECTED' | 'PENDING';
   /** Contracts already created for this RFQ, one per supplier. */
   contracts?: {
     contractId: string;

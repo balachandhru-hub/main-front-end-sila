@@ -663,13 +663,13 @@ export interface BuyerRfqContractStatusDto {
   buyerTermsAndConditionStatuses?: {
     supplierId: string;
     supplierName: string;
-    buyerTermsAndConditionAccepted: boolean;
+    buyerTermsAndConditionAccepted: 'ACCEPTED' | 'REJECTED' | 'PENDING';
   }[];
   /** Whether the buyer has already accepted each supplier's terms & conditions. */
   supplierTermsAndConditionAccepted?: {
     supplierId: string;
     supplierName: string;
-    supplierTermsAndConditionAccepted: boolean;
+    supplierTermsAndConditionAccepted: 'ACCEPTED' | 'REJECTED' | 'PENDING';
   }[];
   /** Contracts already created for this RFQ, one per supplier. Only present once a contract has been created. */
   contracts?: BuyerRfqContractRefDto[];
@@ -1055,6 +1055,56 @@ export const updateBuyerTermsConditionStatus = async (
     return {
       statusCode: 500,
       message: error?.message || 'Failed to update buyer terms & conditions status.',
+      description: '',
+    };
+  }
+};
+
+export interface UpdateBuyerRfqTermsConditionPayload {
+  rfqId: string;
+  buyerId: string;
+  isSingletonAsset?: boolean;
+  document: {
+    entityType?: string;
+    entityId?: string;
+    assetType?: string;
+    fileBytes?: string;
+    fileName?: string;
+    contentType?: string;
+    isSingletonAsset?: boolean;
+    id?: string;
+  };
+}
+
+/**
+ * Re-uploads the buyer's Terms & Conditions document, e.g. after the supplier rejects it via "Proposed Edits".
+ */
+export const updateBuyerRfqTermsCondition = async (
+  payload: UpdateBuyerRfqTermsConditionPayload
+): Promise<StatusUpdateResponseDto | AssetErrorDto> => {
+  try {
+    const response = await platformInstance.put('/api/v1/buyer/rfq-terms-condition', payload);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to upload the Terms & Conditions document.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Failed to upload the Terms & Conditions document.',
       description: '',
     };
   }

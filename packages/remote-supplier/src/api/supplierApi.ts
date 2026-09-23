@@ -1718,10 +1718,11 @@ export const uploadSupplierTermsAndCondition = async (payload: {
     const rfqId = typeof payload === 'object' && payload.rfqId ? payload.rfqId : payload;
     const termsAndCondition = typeof payload === 'object' && payload.termsAndCondition !== undefined ? payload.termsAndCondition : true;
     // rfqId/termsAndCondition are already in the query string above; the body is only for the document, when
-    // there is one (the "Yes, upload supplier terms" path) - otherwise it stays empty (the "No" path).
+    // there is one (the "Yes, upload supplier terms" path) - the "No" (Proceed with Buyer T&C) path sends no
+    // body at all, not an empty object.
     const assetData = (payload && typeof payload === 'object')
-      ? (payload.assetUpload || (Array.isArray(payload.documents) ? payload.documents[0] : payload.documents) || {})
-      : {};
+      ? (payload.assetUpload || (Array.isArray(payload.documents) ? payload.documents[0] : payload.documents) || undefined)
+      : undefined;
 
     const url = `/api/v1/supplier/supplier-terms-condition?rfqId=${encodeURIComponent(rfqId)}&termsAndCondition=${Boolean(termsAndCondition)}`;
     let response;
