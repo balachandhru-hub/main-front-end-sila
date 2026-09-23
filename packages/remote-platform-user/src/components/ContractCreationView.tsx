@@ -12,7 +12,7 @@ import { Button, ChatPanel, IconChatBubble, type ChatApiAdapter, type ChatPartic
 import silaLogo from "../../../shared-ui/src/assets/sila-logo.png";
 import { DetailField } from "./ContractCreation/DetailField";
 import { SignaturePad } from "./ContractCreation/SignaturePad";
-import { fmtINR, nowLabel, resolveMimeType, loadImageAsDataUrl, uint8ArrayToBase64 } from "./ContractCreation/contractFormatters";
+import { fmtINR as fmtAmount, nowLabel, resolveMimeType, loadImageAsDataUrl, uint8ArrayToBase64 } from "./ContractCreation/contractFormatters";
 import { buildMergedContractPdfBytes, resolveEffectiveSignDetails, type ContractPdfInput } from "./ContractCreation/contractPdf";
 import "./ContractCreationView.css";
 
@@ -172,6 +172,15 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 }) => {
   const isSupplier = role === "supplier";
   const rfqId: string | undefined = rfq?.rfqId || rfq?.id || (rfq as any)?._id;
+
+  // The RFQ's own currency (e.g. "INR", "USD"), as returned by rfq-by-id —
+  // left blank (not defaulted to "INR") when the API doesn't return one,
+  // since guessing a currency could mislead the buyer/supplier.
+  const currency = rfq?.currency || "";
+  const fmtINR = (val: number) => {
+    const formatted = fmtAmount(val);
+    return currency && formatted !== "—" ? `${formatted} ${currency}` : formatted;
+  };
 
   // Preloaded once as a data URL so the executed-contract PDF can embed the SILA logo (jsPDF's addImage needs a
   // data URI, not a plain asset URL).
@@ -1552,15 +1561,21 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         const discount = qi.discount ?? (qi as any)?.discountPercentage ?? 0;
         const tax = qi.tax ?? (qi as any)?.taxPercentage ?? (qi as any)?.gst ?? 0;
         const delivery = qi.deliveryCharge ?? (qi as any)?.deliveryAmount ?? 0;
+        const discountType = (qi as any)?.discountType || "PERCENTAGE";
+        const taxType = (qi as any)?.taxType || "PERCENTAGE";
+        const deliveryType = (qi as any)?.deliveryType || "PERCENTAGE";
 
         const discAmt = discount > 0 ? Math.round((unitPrice * qty) * (discount / 100)) : 0;
         const taxAmt = tax > 0 ? Math.round((unitPrice * qty - discAmt) * (tax / 100)) : 0;
         const subtotal = qi.subTotal ?? (unitPrice * qty - discAmt + taxAmt + delivery);
 
+        // Each of these is either a flat AMOUNT (show in the RFQ's currency)
+        // or a PERCENTAGE (show the raw value with a "%" suffix) depending
+        // on its own *Type field - never both.
         const parts = [];
-        if (tax > 0) parts.push(fmtINR(taxAmt));
-        if (discount > 0) parts.push(`-${fmtINR(discAmt)}`);
-        if (delivery > 0) parts.push(fmtINR(delivery));
+        if (tax > 0) parts.push(taxType === "AMOUNT" ? fmtINR(tax) : `${tax}%`);
+        if (discount > 0) parts.push(discountType === "AMOUNT" ? `-${fmtINR(discount)}` : `-${discount}%`);
+        if (delivery > 0) parts.push(deliveryType === "AMOUNT" ? fmtINR(delivery) : `${delivery}%`);
         const breakdownStr = parts.length > 0 ? parts.join(" / ") : "—";
 
         const cc = item.costCenter || item.costCenterCode || "—";
