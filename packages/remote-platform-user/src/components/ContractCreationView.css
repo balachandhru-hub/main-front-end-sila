@@ -234,6 +234,41 @@
   color: #ffffff;
 }
 
+/* Floating chat launcher, pinned to the corner of the viewport for the duration of the workspace. */
+.contract-chat-fab {
+  position: fixed;
+  right: 1.75rem;
+  bottom: 1.75rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 0.5rem 1.25rem -0.25rem rgba(37, 99, 235, 0.5);
+  z-index: 57;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.contract-chat-fab svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.contract-chat-fab:hover {
+  background: #1d4ed8;
+  transform: translateY(-0.0625rem);
+}
+
+.contract-chat-fab:focus-visible {
+  outline: 0.125rem solid #93c5fd;
+  outline-offset: 0.125rem;
+}
+
 .contract-btn--primary:disabled {
   background: #cbd5e1;
   cursor: not-allowed;
