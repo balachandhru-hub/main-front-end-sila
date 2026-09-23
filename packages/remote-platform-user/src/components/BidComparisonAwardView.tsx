@@ -14,7 +14,7 @@ import {
 } from "../api/platformApi";
 import type { BidComparisonResponseDto } from "../api/platformApi";
 import { ContractCreationView } from "./ContractCreationView";
-import { fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
+import { fetchBuyerRFQById, createBuyerChatApi, type PersonDetailDto } from "../../../remote-buyer/src/api/Buyerapi";
 
 
 const IconMessageSquare = () => (
@@ -88,6 +88,9 @@ interface BidComparisonAwardViewProps {
   onBack: () => void;
   onQsAns: () => void;
   onChatClick: () => void;
+  /** Passed through to the Contract Workspace's own chat trigger — see ContractCreationView. */
+  buyerProfile?: PersonDetailDto | null;
+  isLoadingBuyerProfile?: boolean;
 }
 
 function fmtINR(val: number) {
@@ -96,7 +99,7 @@ function fmtINR(val: number) {
 }
 
 const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
-  rfq: rfqProp, rfqId, loading, error, freezingBid, onFreeze, onBack, onChatClick
+  rfq: rfqProp, rfqId, loading, error, freezingBid, onFreeze, onBack, onChatClick, buyerProfile = null, isLoadingBuyerProfile = false
 }) => {
   const [refreshedRfq, setRefreshedRfq] = useState<any | null>(null);
   const rfq = refreshedRfq ?? rfqProp;
@@ -681,6 +684,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   const barButtonDisabled = !isBidFrozen || selectedItemCount === 0;
   const barButtonLabel = !isBidFrozen ? "Freeze Bid to Continue" : selectedItemCount === 0 ? "Select Supplier(s)" : "Award Selected";
 
+  const chatRfqId = rfqId || rfq?.rfqId || rfq?.id || rfq?._id;
+
   return (
     <div className="bca-page">
       {screen === "contract" ? (
@@ -696,6 +701,10 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           fetchESigns={fetchBuyerRfqEsign}
           onAcceptSupplierTerms={updateSupplierTermsConditionStatus}
           onUploadBuyerEsign={uploadBuyerRfqEsign}
+          chatApi={chatRfqId ? createBuyerChatApi(chatRfqId) : undefined}
+          chatHubParams={chatRfqId ? { rfqId: chatRfqId } : undefined}
+          currentUserProfile={buyerProfile}
+          isLoadingCurrentUserProfile={isLoadingBuyerProfile}
         />
       ) : (
         <>
