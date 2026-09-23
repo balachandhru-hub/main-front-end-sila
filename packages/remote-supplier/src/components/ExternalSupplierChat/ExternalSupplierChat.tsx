@@ -1,6 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
-import "../../../../remote-buyer/src/components/BuyerRFQChat/BuyerRFQChat.css";
-import { isErrorResponse, toastService } from "@vosox/shared-ui";
+import "../../../../shared-ui/src/components/Chat/ChatPanel.css";
+import {
+  isErrorResponse,
+  toastService,
+  downloadBase64File,
+  fileToBase64,
+  formatThreadTime,
+  getInitials,
+  IconClose,
+  IconMessageSquare,
+  startRfqChatHub,
+  stopRfqChatHub,
+} from "@vosox/shared-ui";
 import type { ExternalChatMessageDto, ExternalChatThreadDto } from "../../dto/externalChatDto";
 import {
   fetchExternalSupplierMessageThreads,
@@ -11,14 +22,6 @@ import {
 } from "../../api/externalSupplierApi";
 import ExternalChatConversation from "./ExternalChatConversation";
 import ExternalChatDetails from "./ExternalChatDetails";
-import {
-  downloadBase64File,
-  fileToBase64,
-  formatThreadTime,
-  getInitials,
-} from "../../../../remote-buyer/src/components/BuyerRFQChat/chatUtils";
-import { IconClose, IconMessageSquare } from "../../../../remote-buyer/src/components/BuyerRFQChat/ChatIcons";
-import { startRfqChatHub, stopRfqChatHub } from "../../../../remote-buyer/src/signalr/rfqChatHub";
 
 const HISTORY_PAGE_LIMIT = 20;
 // How often the open chat re-checks the history as a safety net for live

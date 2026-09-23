@@ -1,5 +1,5 @@
 import * as signalR from "@microsoft/signalr";
-import type { ChatMessageDto } from "../dto/chatDto";
+import type { ChatMessageDto } from "./chatTypes";
 
 // Hub routes confirmed by the backend team. The SignalR client is only ever
 // given the hub route itself (never /negotiate) — it appends that itself.
@@ -27,11 +27,10 @@ export interface QuotationSubmittedEvent {
 
 type ConnectionStatus = "connected" | "disconnected";
 
-// Shared by the Buyer Admin RFQ chat (BuyerRFQChat.tsx, connects with just
-// rfqId to receive every supplier thread under that RFQ) and the Supplier
-// Admin RFQ chat (SupplierRFQChat.tsx, also passes supplierId so it only
-// ever receives its own single thread with the buyer, never another
-// supplier's conversation on the same RFQ).
+// Shared by the Buyer Admin RFQ chat (connects with just rfqId to receive
+// every supplier thread under that RFQ) and the Supplier Admin RFQ chat
+// (also passes supplierId so it only ever receives its own single thread
+// with the buyer, never another supplier's conversation on the same RFQ).
 export interface RfqChatHubParams {
   rfqId: string;
   supplierId?: string;
@@ -71,7 +70,7 @@ export interface RfqChatHubParams {
    */
   externalSessionToken?: string;
 }
- 
+
 // SignalR's built-in console logger reports a deliberately stopped attempt
 // ("The connection was stopped during negotiation") at Error level. That is
 // expected whenever a chat effect is cleaned up mid-connect (see the
@@ -87,7 +86,7 @@ const chatHubLogger: signalR.ILogger = {
     else console.debug(text);
   },
 };
- 
+
 let connection: signalR.HubConnection | null = null;
 let currentConnectionKey: string | null = null;
 let isConnecting = false;
@@ -291,7 +290,7 @@ export const startRfqChatHub = async (
       }
       return;
     }
- 
+
     console.error("[SignalR] Connection failed:", err, "URL:", hubUrl);
     if (myAttemptId === activeAttemptId) {
       connection = null;

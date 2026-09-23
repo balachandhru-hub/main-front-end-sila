@@ -7,8 +7,6 @@ import {
   formatMessageTime,
   getInitials,
   isSameCalendarDay,
-} from "../../../../remote-buyer/src/components/BuyerRFQChat/chatUtils";
-import {
   IconMessageSquare,
   IconSend,
   IconPaperclip,
@@ -16,7 +14,7 @@ import {
   IconChevronLeft,
   IconClose,
   IconUsers,
-} from "../../../../remote-buyer/src/components/BuyerRFQChat/ChatIcons";
+} from "@vosox/shared-ui";
 
 interface ExternalChatConversationProps {
   counterpartyName: string;

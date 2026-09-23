@@ -1,6 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Loader, isErrorResponse, Button, PageHeader, StatusBadge, Dropdown } from '@vosox/shared-ui';
+import {
+  Loader,
+  isErrorResponse,
+  Button,
+  PageHeader,
+  StatusBadge,
+  Dropdown,
+  IconMessageSquare,
+  startRfqChatHub,
+  stopRfqChatHub,
+} from '@vosox/shared-ui';
+import type { QuotationSubmittedEvent } from '@vosox/shared-ui';
 import { FaCheckCircle, FaExclamationCircle, FaUserPlus } from 'react-icons/fa';
 import {
   fetchExternalRfqDetails,
@@ -14,9 +25,6 @@ import type {
 // Additional Questions from Buyer: disabled for now. Uncomment every block marked [buyer-questions] to bring it back.
 // [buyer-questions] import type { RFQQuestion } from '../dto/supplierDto';
 import ExternalSupplierChat from '../components/ExternalSupplierChat/ExternalSupplierChat';
-import { IconMessageSquare } from '../../../remote-buyer/src/components/BuyerRFQChat/ChatIcons';
-import { startRfqChatHub, stopRfqChatHub } from '../../../remote-buyer/src/signalr/rfqChatHub';
-import type { QuotationSubmittedEvent } from '../../../remote-buyer/src/signalr/rfqChatHub';
 import SilaLogo from '../assets/SILA_Logo.png';
 import '../components/SupplierDashboard.css';
 import '../components/SupplierRfqQuotationSummary.css';
