@@ -373,6 +373,12 @@ export interface MasterApprovalFlowDto {
   buyerId: string;
 }
 
+export interface ItemMasterSimilarityDto {
+  id: string;
+  materialCode: string;
+  description: string;
+}
+
 export interface ItemMasterDetailDto extends ItemMasterDto {}
 
 export const getBuyerProfile = async (): Promise<BuyerProfileResponse | null> => {
@@ -534,6 +540,27 @@ export const getMasterApprovalFlows = async (
     if (error?.response?.data) {
       const data = error.response.data;
       throw new Error(data?.message || data?.description || `Failed to fetch approval flows (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+
+export const checkItemMasterSimilarity = async (
+  buyerId: string,
+  description: string,
+  materialGroup: string
+): Promise<ItemMasterSimilarityDto[]> => {
+  try {
+    const response = await axiosInstance.get<ItemMasterSimilarityDto[]>(
+      '/api/v1/buyer/item-master/check-similarity',
+      { params: { buyerId, description, materialGroup } }
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to check item master similarity (${error.response.status}).`);
     }
     throw new Error('Could not reach the server. Please check your connection and try again.');
   }

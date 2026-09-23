@@ -25,6 +25,7 @@ import {
   createItemMaster,
   getMasterApprovalFlows,
   createBuyerChatApi,
+  checkItemMasterSimilarity,
 } from "../api/Buyerapi";
 import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../api/masterdataApi";
 import { getOrganizationUsersForRfq } from "../../../remote-platform-user/src/api/networkAdminApi";
@@ -942,7 +943,7 @@ const BuyersDashboard: React.FC = () => {
     getUnits,
     getCurrencies,
     fetchReferenceList,
-    itemMaster: { createItemMaster, getMasterApprovalFlows },
+    itemMaster: { createItemMaster, getMasterApprovalFlows, checkItemMasterSimilarity },
     supplierUsers: { getOrganizationUsersForRfq },
   };
 

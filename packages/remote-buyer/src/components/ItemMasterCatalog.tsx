@@ -2,13 +2,17 @@ import React, { useEffect, useState } from "react";
 import {
     getAllItemMasters,
     getItemMasterById,
+    createItemMaster,
+    getMasterApprovalFlows,
+    checkItemMasterSimilarity,
     type ItemMasterDto,
     type ItemMasterDetailDto,
 } from "../api/Buyerapi";
-import { EmptyState, Loader, isErrorResponse, toastService } from "@vosox/shared-ui";
+import { EmptyState, Loader, isErrorResponse, toastService, ItemMasterModal, type ItemMasterModalApi } from "@vosox/shared-ui";
 import { FaPlus } from "react-icons/fa";
-import ItemMasterModal from "./ItemMasterModal";
 import "./ItemMasterCatalog.css";
+
+const itemMasterModalApi: ItemMasterModalApi = { createItemMaster, getMasterApprovalFlows, checkItemMasterSimilarity };
 
 interface ItemMasterCatalogProps {
     buyerId: string;
@@ -228,6 +232,7 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
                 isOpen={showItemMasterModal}
                 onClose={() => setShowItemMasterModal(false)}
                 buyerId={buyerId}
+                api={itemMasterModalApi}
                 onSuccess={() => {
                     fetchItemMasters();
                     handleBackToList();
