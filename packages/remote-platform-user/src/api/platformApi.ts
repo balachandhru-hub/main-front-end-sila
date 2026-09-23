@@ -662,6 +662,15 @@ export interface BuyerContractAttachmentDto {
   fileName: string;
 }
 
+/** One approver's position and decision in the contract's approval chain. */
+export interface BuyerContractApprovalUserStatusDto {
+  userId: string;
+  userName: string;
+  email: string;
+  order: number;
+  status: string;
+}
+
 export interface BuyerContractDto {
   id: string;
   contractNumber: string;
@@ -673,8 +682,10 @@ export interface BuyerContractDto {
   endDate: string;
   amount: number;
   dateCreated: string;
+  status: string;
   attachments: BuyerContractAttachmentDto[];
   approvalFlows: BuyerContractApprovalFlowDto[];
+  approvalUsers: BuyerContractApprovalUserStatusDto[];
 }
 
 export interface CreateBuyerContractPayload {
@@ -725,6 +736,46 @@ export const createBuyerContract = async (
     return {
       statusCode: 500,
       message: error?.message || 'Failed to send the contract.',
+      description: '',
+    };
+  }
+};
+
+export interface InviteForContractPayload {
+  rfqId: string;
+  supplierId: string;
+}
+
+/**
+ * Invites a supplier to review and negotiate a contract's Terms & Conditions for an awarded RFQ.
+ * The contract itself (createBuyerContract) is created later, once both parties have signed.
+ */
+export const inviteSupplierForContract = async (
+  payload: InviteForContractPayload
+): Promise<StatusUpdateResponseDto | AssetErrorDto> => {
+  try {
+    const response = await platformInstance.put('/api/v1/buyer/rfq/invite-for-contract', payload);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to invite the supplier for contract.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Failed to invite the supplier for contract.',
       description: '',
     };
   }
@@ -822,6 +873,46 @@ export const fetchBuyerContractById = async (
     return {
       statusCode: 500,
       message: error?.message || 'Failed to load the contract.',
+      description: '',
+    };
+  }
+};
+
+export interface BuyerContractApprovalActionPayload {
+  status: string;
+  comment: string;
+}
+
+/**
+ * Submits the signed-in approver's decision for a contract's approval chain.
+ */
+export const submitBuyerContractApprovalAction = async (
+  contractId: string,
+  payload: BuyerContractApprovalActionPayload
+): Promise<StatusUpdateResponseDto | AssetErrorDto> => {
+  try {
+    const response = await platformInstance.put(`/api/v1/buyer/contract/approval/${contractId}`, payload);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to submit your decision.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Failed to submit your decision.',
       description: '',
     };
   }
@@ -930,4 +1021,4 @@ export const updateBuyerTermsConditionStatus = async (
       description: '',
     };
   }
-};
+};
