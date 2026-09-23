@@ -22,19 +22,19 @@ import {
   getVerifiedSuppliers,
   getUnspscSegments,
   getUnspscFamilies,
+  createBuyerChatApi,
 } from "../../../remote-buyer/src/api/Buyerapi";
 import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../../../remote-buyer/src/api/masterdataApi";
-import { createItemMaster, getMasterApprovalFlows } from "../api/itemmasterapi";
+import { createItemMaster, getMasterApprovalFlows, checkItemMasterSimilarity } from "../api/itemmasterapi";
 import { getOrganizationUsersForRfq } from "../api/networkAdminApi";
 import { logoutPlatformUser } from "../api/platformApi";
-import { BuyerAnalytics, CreateRFQ, StatusBadge, toastService, useAsyncData, useRouteNav, type CreateRFQApi, type RouteNavPaths } from "@vosox/shared-ui";
+import { BuyerAnalytics, ChatPanel, CreateRFQ, StatusBadge, toastService, useAsyncData, useRouteNav, type ChatCounterpartyRef, type CreateRFQApi, type RouteNavPaths } from "@vosox/shared-ui";
 import UserTemplate from "./UserTemplate";
 import ApprovalManagement from "./ApprovalManagement/ApprovalManagement";
 import { ToastContainer } from "@vosox/shared-ui";
 import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
 // import QuotationSummaryTable from "../../../remote-buyer/src/components/QuotationSummaryTable";
 import QuotationComparisonCard from "./QuotationComparisonCard";
-import BuyerRFQChat from "../../../remote-buyer/src/components/BuyerRFQChat/BuyerRFQChat";
 import ItemMasterCatalog from "../../../remote-buyer/src/components/ItemMasterCatalog";
 import type { PendingMaterialApproval, MaterialApprovalKpi } from "./Material/materialApi";
 import { fetchPendingMaterialApprovals, fetchMaterialApprovalKpi } from "./Material/materialApi";
@@ -647,6 +647,25 @@ const BuyerAdminDash: React.FC = () => {
     return map;
   }, [fullPageRfq]);
 
+  // The ONLY source of which suppliers appear in the RFQ chat and their display names.
+  const chatCounterparties = useMemo<ChatCounterpartyRef[]>(() => {
+    const internal: ChatCounterpartyRef[] = (fullPageRfq?.supplierIds || [])
+      .filter((s: any) => !!s?.supplierId)
+      .map((s: any) => ({
+        id: s.supplierId,
+        name: s.supplierName || chatSupplierNames[s.supplierId] || "Supplier",
+        isExternal: false,
+      }));
+    const external: ChatCounterpartyRef[] = (fullPageRfq?.externalSupplierIds || [])
+      .filter((s: any) => !!s?.externalSupplierId)
+      .map((s: any) => ({
+        id: s.externalSupplierId,
+        name: s.externalSupplierName || "External Supplier",
+        isExternal: true,
+      }));
+    return [...internal, ...external];
+  }, [fullPageRfq, chatSupplierNames]);
+
   const handleOpenAllRfqs = async () => {
     setActiveNav("activeRFQs");
     setRfqPageView("allRfqs");
@@ -919,7 +938,7 @@ const BuyerAdminDash: React.FC = () => {
     getUnits,
     getCurrencies,
     fetchReferenceList,
-    itemMaster: { createItemMaster, getMasterApprovalFlows },
+    itemMaster: { createItemMaster, getMasterApprovalFlows, checkItemMasterSimilarity },
     supplierUsers: { getOrganizationUsersForRfq },
   };
 
@@ -1367,6 +1386,8 @@ const BuyerAdminDash: React.FC = () => {
                 onBack={handleBackToAllRfqs}
                 onQsAns={handleOpenQsAns}
                 onChatClick={() => setIsChatOpen(true)}
+                buyerProfile={buyerProfile}
+                isLoadingBuyerProfile={isLoadingBuyerProfile}
               />
             ) : rfqPageView === "quotationComparison" ? (
               <>
@@ -1664,16 +1685,17 @@ const BuyerAdminDash: React.FC = () => {
         )}
 
         {isChatOpen && fullPageRfqId && (
-          <BuyerRFQChat
+          <ChatPanel
+            role="buyer"
             onClose={() => setIsChatOpen(false)}
             rfqId={fullPageRfqId}
             rfqNumber={fullPageRfq?.rfqNumber}
             rfqTitle={fullPageRfq?.title}
-            supplierIds={fullPageRfq?.supplierIds || []}
-            supplierNames={chatSupplierNames}
-            externalSupplierIds={fullPageRfq?.externalSupplierIds || []}
-            buyerProfile={buyerProfile}
-            isLoadingBuyerProfile={isLoadingBuyerProfile}
+            counterparties={chatCounterparties}
+            currentUserProfile={buyerProfile}
+            isLoadingCurrentUserProfile={isLoadingBuyerProfile}
+            api={createBuyerChatApi(fullPageRfqId)}
+            hubParams={{ rfqId: fullPageRfqId }}
           />
         )}
     </Header>

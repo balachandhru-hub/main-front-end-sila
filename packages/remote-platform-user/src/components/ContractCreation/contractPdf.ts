@@ -4,6 +4,22 @@ import { fetchBuyerAsset } from "../../api/platformApi";
 import { fmtINR, resolveMimeType, isPdfAttachment, base64ToUint8Array } from "./contractFormatters";
 import type { RfqAssetAttachment, SignDetails } from "../ContractCreationView";
 
+// pdfjs-dist is sizeable and only needed once someone actually builds a contract PDF, so it's loaded on first
+// use instead of at module load - keeps it out of the app's main bundle for everyone who never gets here.
+let pdfjsLibPromise: ReturnType<typeof loadPdfjsLib> | null = null;
+async function loadPdfjsLib() {
+  const [pdfjsLib, { default: pdfjsWorkerUrl }] = await Promise.all([
+    import("pdfjs-dist"),
+    import("pdfjs-dist/build/pdf.worker.mjs?url"),
+  ]);
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
+  return pdfjsLib;
+}
+function getPdfjsLib() {
+  if (!pdfjsLibPromise) pdfjsLibPromise = loadPdfjsLib();
+  return pdfjsLibPromise;
+}
+
 // The SILA brand blue (packages/shared-ui/src/styles/tokens.css: --sila-primary), as RGB for jsPDF/pdf-lib color setters.
 export const SILA_PRIMARY_RGB: [number, number, number] = [31, 92, 196];
 
@@ -35,6 +51,44 @@ export interface ContractPdfInput {
   supplierSignDetails: SignDetails | null;
   /** Preloaded SILA logo as a PNG data URL (jsPDF's addImage needs a data URI, not a plain asset URL). */
   logoDataUrl: string | null;
+  /** Plain text extracted from buyerTermsDocs' PDF attachment(s), printed in place of buyerTcContent when present. */
+  buyerTermsExtractedText?: string;
+  /** Plain text extracted from supplierTermsDocs' PDF attachment(s). */
+  supplierTermsExtractedText?: string;
+}
+
+// Pulls the plain text out of an uploaded Terms & Conditions PDF so the executed-contract cover page can print
+// the actual clauses instead of just naming the attached file.
+async function extractPdfText(bytes: Uint8Array): Promise<string> {
+  const pdfjsLib = await getPdfjsLib();
+  const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+  const pageTexts: string[] = [];
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const content = await page.getTextContent();
+    const pageText = content.items.map((item: any) => ("str" in item ? item.str : "")).join(" ");
+    pageTexts.push(pageText.trim());
+  }
+  return pageTexts.filter(Boolean).join("\n\n");
+}
+
+// Fetches and extracts the text of every PDF attachment in a Terms & Conditions doc list, concatenated (with a
+// filename heading when there's more than one). Returns "" if there are no PDF attachments, or extraction fails.
+export async function extractTermsDocsText(docs: RfqAssetAttachment[]): Promise<string> {
+  const pdfDocs = docs.filter((d) => isPdfAttachment(d) && d.id);
+  const sections: string[] = [];
+  for (const attachment of pdfDocs) {
+    try {
+      const asset = await fetchBuyerAsset(attachment.id);
+      if (!("fileBytes" in asset) || !asset.fileBytes) continue;
+      const text = await extractPdfText(base64ToUint8Array(asset.fileBytes));
+      if (!text) continue;
+      sections.push(pdfDocs.length > 1 ? `${attachment.fileName || attachment.assetName || "Document"}:\n${text}` : text);
+    } catch {
+      // Non-fatal: this document's text just won't be inlined - the cover page falls back to naming it instead.
+    }
+  }
+  return sections.join("\n\n");
 }
 
 // The signer's own browser only ever records SignDetails (name/designation/drawn image) for their own
@@ -137,16 +191,30 @@ export function buildContractCoverPdfBytes(input: ContractPdfInput): Uint8Array 
   y += 16;
 
   const columns: { label: string; width: number; align: "left" | "right" }[] = [
-    { label: "#", width: 20, align: "left" },
-    { label: "Material", width: 110, align: "left" },
-    { label: "Cost Center / Code", width: 100, align: "left" },
-    { label: "Qty", width: 30, align: "right" },
-    { label: "UOM", width: 35, align: "right" },
-    { label: "Unit Price", width: 60, align: "right" },
-    { label: "Tax/Disc/Del", width: 70, align: "right" },
-    { label: "Subtotal", width: 65, align: "right" },
+    { label: "#", width: 16, align: "left" },
+    { label: "Material", width: 100, align: "left" },
+    { label: "Cost Center / Code", width: 92, align: "left" },
+    { label: "Qty", width: 26, align: "right" },
+    { label: "UOM", width: 28, align: "right" },
+    { label: "Unit Price", width: 55, align: "right" },
+    { label: "Tax / Disc / Del", width: 100, align: "right" },
+    { label: "Subtotal", width: 60, align: "right" },
   ];
   const tableWidth = columns.reduce((sum, c) => sum + c.width, 0);
+  const baseCellFontSize = 9;
+  const minCellFontSize = 6.5;
+
+  // Shrinks a cell's font just enough to fit its column (rather than letting it overflow into the next one),
+  // so wider breakdown/description values never collide with neighboring columns.
+  const fitCellFontSize = (text: string, maxWidth: number): number => {
+    let size = baseCellFontSize;
+    doc.setFontSize(size);
+    while (size > minCellFontSize && doc.getTextWidth(text) > maxWidth) {
+      size -= 0.5;
+      doc.setFontSize(size);
+    }
+    return size;
+  };
 
   const drawRow = (cells: string[], isHeader: boolean) => {
     if (isHeader) {
@@ -154,11 +222,12 @@ export function buildContractCoverPdfBytes(input: ContractPdfInput): Uint8Array 
       doc.rect(marginX, y - 9, tableWidth, 13, "F");
     }
     doc.setFont("helvetica", isHeader ? "bold" : "normal");
-    doc.setFontSize(9);
     doc.setTextColor(...(isHeader ? SILA_PRIMARY_RGB : ([30, 30, 30] as [number, number, number])));
     let x = marginX;
     cells.forEach((cell, i) => {
       const col = columns[i];
+      const cellMaxWidth = col.width - 4;
+      fitCellFontSize(cell, cellMaxWidth);
       const textX = col.align === "right" ? x + col.width - 2 : x + 2;
       doc.text(cell, textX, y, { align: col.align });
       x += col.width;
@@ -195,8 +264,10 @@ export function buildContractCoverPdfBytes(input: ContractPdfInput): Uint8Array 
   doc.setTextColor(30);
   y += 26;
 
-  // Merge both parties' Terms & Conditions when each has their own; otherwise use whichever one exists.
-  const writeTcSection = (label: string, docs: RfqAssetAttachment[], text?: string) => {
+  // Prints each party's actual Terms & Conditions text inline: the extracted text of their attached PDF(s) when
+  // available, falling back to the buyer's own free-text draft (when there's no attachment) or, failing that, a
+  // pointer to the attached file(s) so the reader always sees something rather than a blank section.
+  const writeTcSection = (label: string, docs: RfqAssetAttachment[], extractedText?: string, text?: string) => {
     ensureSpace(30);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
@@ -209,14 +280,19 @@ export function buildContractCoverPdfBytes(input: ContractPdfInput): Uint8Array 
     doc.setTextColor(50);
     const pdfDocs = docs.filter(isPdfAttachment);
     const otherDocs = docs.filter((d) => !isPdfAttachment(d));
-    const lines: string[] = docs.length > 0
-      ? [
-          ...(pdfDocs.length > 0
-            ? [`See the attached document${pdfDocs.length > 1 ? "s" : ""} below: ${pdfDocs.map((d) => d.fileName || d.assetName || "Terms & Conditions document").join(", ")}`]
-            : []),
-          ...otherDocs.map((d) => `- ${d.fileName || d.assetName || "Terms & Conditions document"}`),
-        ]
-      : doc.splitTextToSize(text || "", pageWidth - marginX * 2);
+    let lines: string[];
+    if (extractedText && extractedText.trim()) {
+      lines = doc.splitTextToSize(extractedText.trim(), pageWidth - marginX * 2);
+    } else if (docs.length > 0) {
+      lines = [
+        ...(pdfDocs.length > 0
+          ? [`The full text is included on the following page${pdfDocs.length > 1 ? "s" : ""} of this document (${pdfDocs.map((d) => d.fileName || d.assetName || "Terms & Conditions document").join(", ")}).`]
+          : []),
+        ...otherDocs.map((d) => `- ${d.fileName || d.assetName || "Terms & Conditions document"}`),
+      ];
+    } else {
+      lines = doc.splitTextToSize(text || "", pageWidth - marginX * 2);
+    }
     lines.forEach((line) => {
       ensureSpace(14);
       doc.text(line, marginX, y);
@@ -226,9 +302,9 @@ export function buildContractCoverPdfBytes(input: ContractPdfInput): Uint8Array 
     y += 8;
   };
 
-  writeTcSection("Buyer Terms & Conditions", input.buyerTermsDocs, input.buyerTcContent);
+  writeTcSection("Buyer Terms & Conditions", input.buyerTermsDocs, input.buyerTermsExtractedText, input.buyerTcContent);
   if (input.supplierTermsDocs.length > 0) {
-    writeTcSection("Supplier Terms & Conditions", input.supplierTermsDocs);
+    writeTcSection("Supplier Terms & Conditions", input.supplierTermsDocs, input.supplierTermsExtractedText);
   }
 
   ensureSpace(120);
@@ -315,9 +391,19 @@ async function mergeTcPdfPages(target: PDFDocument, docs: RfqAssetAttachment[], 
 }
 
 export async function buildMergedContractPdfBytes(input: ContractPdfInput): Promise<Uint8Array> {
-  const coverBytes = buildContractCoverPdfBytes(input);
+  const [buyerTermsExtractedText, supplierTermsExtractedText] = await Promise.all([
+    extractTermsDocsText(input.buyerTermsDocs),
+    extractTermsDocsText(input.supplierTermsDocs),
+  ]);
+  const coverBytes = buildContractCoverPdfBytes({ ...input, buyerTermsExtractedText, supplierTermsExtractedText });
   const merged = await PDFDocument.load(coverBytes);
-  await mergeTcPdfPages(merged, input.buyerTermsDocs, "Buyer Terms & Conditions");
-  await mergeTcPdfPages(merged, input.supplierTermsDocs, "Supplier Terms & Conditions");
+  // Only merge the attachment's own raw pages in when its text couldn't be inlined on the cover page above -
+  // otherwise the same Terms & Conditions would appear twice in the executed contract.
+  if (!buyerTermsExtractedText) {
+    await mergeTcPdfPages(merged, input.buyerTermsDocs, "Buyer Terms & Conditions");
+  }
+  if (!supplierTermsExtractedText) {
+    await mergeTcPdfPages(merged, input.supplierTermsDocs, "Supplier Terms & Conditions");
+  }
   return merged.save();
 }

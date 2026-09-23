@@ -1,6 +1,17 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Loader, isErrorResponse, Button, PageHeader, StatusBadge, Dropdown } from '@vosox/shared-ui';
+import {
+  Loader,
+  isErrorResponse,
+  Button,
+  PageHeader,
+  StatusBadge,
+  Dropdown,
+  IconMessageSquare,
+  startRfqChatHub,
+  stopRfqChatHub,
+} from '@vosox/shared-ui';
+import type { QuotationSubmittedEvent } from '@vosox/shared-ui';
 import { FaCheckCircle, FaExclamationCircle, FaUserPlus } from 'react-icons/fa';
 import {
   fetchExternalRfqDetails,
@@ -14,7 +25,6 @@ import type {
 // Additional Questions from Buyer: disabled for now. Uncomment every block marked [buyer-questions] to bring it back.
 // [buyer-questions] import type { RFQQuestion } from '../dto/supplierDto';
 import ExternalSupplierChat from '../components/ExternalSupplierChat/ExternalSupplierChat';
-import { IconMessageSquare } from '../../../remote-buyer/src/components/BuyerRFQChat/ChatIcons';
 import SilaLogo from '../assets/SILA_Logo.png';
 import '../components/SupplierDashboard.css';
 import '../components/SupplierRfqQuotationSummary.css';
@@ -200,6 +210,41 @@ const ExternalSupplierBid: React.FC = () => {
   useEffect(() => {
     document.title = rfq ? `Quote: ${rfq.title}` : 'Request for Quotation';
   }, [rfq]);
+
+  // Live-refreshes rank/status (e.g. a teammate using the same bid link in
+  // another tab submits, or the buyer's side otherwise updates the
+  // quotation) without touching the price/answer fields the visitor may
+  // currently be filling in. No supplierId to scope the connection with —
+  // same as ExternalSupplierChat, it connects on rfqId + the session token
+  // header alone, and reuses that same shared connection rather than
+  // opening a second one (see rfqChatHub.ts).
+  const quotationRefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!rfqId || !sessionToken) return;
+
+    const handleQuotationSubmitted = (_payload: QuotationSubmittedEvent) => {
+      if (quotationRefetchTimerRef.current) clearTimeout(quotationRefetchTimerRef.current);
+      quotationRefetchTimerRef.current = setTimeout(async () => {
+        const data = await fetchExternalRfqDetails(rfqId, sessionToken);
+        if (!isErrorResponse(data)) setRfq(data);
+      }, 500);
+    };
+
+    startRfqChatHub(
+      { rfqId, sessionToken },
+      () => {},
+      undefined,
+      handleQuotationSubmitted
+    ).catch((err) => {
+      console.error('[ExternalSupplierBid] SignalR connection failed:', err);
+    });
+
+    return () => {
+      if (quotationRefetchTimerRef.current) clearTimeout(quotationRefetchTimerRef.current);
+      stopRfqChatHub();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rfqId, sessionToken]);
 
   useEffect(() => {
     const load = async () => {
