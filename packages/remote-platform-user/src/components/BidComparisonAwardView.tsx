@@ -8,6 +8,7 @@ import {
   getBidComparisonData,
   isBidComparisonError,
   awardRfq,
+  unawardRfq,
   updateSupplierTermsConditionStatus,
   fetchBuyerRfqEsign,
   uploadBuyerRfqEsign,
@@ -112,6 +113,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   const [viewMode, setViewMode] = useState<"summary" | "comparison" | "by-supplier" | "bid-history">("summary");
   const [showFreezeModal, setShowFreezeModal] = useState(false);
   const [showAwardModal, setShowAwardModal] = useState(false);
+  const [showUnawardModal, setShowUnawardModal] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState("all");
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [autoSelected, setAutoSelected] = useState(false);
@@ -127,6 +129,9 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   const [awardingRfq, setAwardingRfq] = useState(false);
   const [awardSuccess, setAwardSuccess] = useState(false);
   const [awardError, setAwardError] = useState<string | null>(null);
+
+  const [unawardingRfq, setUnawardingRfq] = useState(false);
+  const [unawardError, setUnawardError] = useState<string | null>(null);
 
   const [contractCreated, setContractCreated] = useState(false);
   const [screen, setScreen] = useState<"award" | "contract">("award");
@@ -585,6 +590,34 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     }
   };
 
+  const handleUnaward = async () => {
+    const effectiveRfqId = rfqId || rfq?.rfqId || rfq?.id || rfq?._id;
+    if (!effectiveRfqId) return;
+
+    setUnawardingRfq(true);
+    setUnawardError(null);
+
+    try {
+      const res = await unawardRfq(effectiveRfqId);
+
+      if ('statusCode' in res && res.statusCode && res.statusCode >= 400) {
+        setUnawardError(res.message || res.description || "Failed to unaward RFQ.");
+      } else {
+        setShowUnawardModal(false);
+        try {
+          const updated = await fetchBuyerRFQById(effectiveRfqId);
+          setRefreshedRfq({ ...updated, rfqId: effectiveRfqId });
+        } catch {
+          // Unaward already succeeded; a failed refresh shouldn't surface as an error.
+        }
+      }
+    } catch (err: any) {
+      setUnawardError(err?.message || "An error occurred while unawarding the RFQ.");
+    } finally {
+      setUnawardingRfq(false);
+    }
+  };
+
   const bidHistoryData = useMemo(() => {
     if (!bidHistoryApiData) return [];
     return (bidHistoryApiData.suppliers || []).map((supplier) => {
@@ -775,18 +808,29 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
             className={`bca-status-badge ${isRfqAwarded ? "bca-status-awarded" : isBidFrozen ? "bca-status-frozen" : "bca-status-active"}`}
           />
           {isRfqAwarded ? (
-            <Button
-              variant="primary"
-              type="button"
-              className="bca-btn-icon-gap"
-              disabled
-            >
-              <span className="bca-icon-lock bca-icon-lock-muted" aria-hidden="true">
-                <span className="bca-icon-lock-shackle"></span>
-                <span className="bca-icon-lock-body"></span>
-              </span>
-              <span>Bid Close</span>
-            </Button>
+            <>
+              <Button
+                variant="primary"
+                type="button"
+                className="bca-btn-icon-gap"
+                disabled
+              >
+                <span className="bca-icon-lock bca-icon-lock-muted" aria-hidden="true">
+                  <span className="bca-icon-lock-shackle"></span>
+                  <span className="bca-icon-lock-body"></span>
+                </span>
+                <span>Bid Close</span>
+              </Button>
+              <Button
+                variant="outline"
+                type="button"
+                className="bca-btn-icon-gap"
+                onClick={() => setShowUnawardModal(true)}
+                disabled={unawardingRfq}
+              >
+                <span>{unawardingRfq ? "Unawarding..." : "Unaward RFQ"}</span>
+              </Button>
+            </>
           ) : isBidFrozen ? (
             <Button
               variant="primary"
@@ -2089,6 +2133,41 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
             <div className="bca-modal-actions">
               <button type="button" className="bca-btn bca-btn-ghost bca-modal-cancel" onClick={() => setShowFreezeModal(false)}>Cancel</button>
               <button type="button" className="bca-btn bca-btn-primary bca-modal-confirm" onClick={() => { setShowFreezeModal(false); onFreeze(); }}>Freeze Bid</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUnawardModal && (
+        <div className="bca-modal-overlay">
+          <div className="bca-modal-content" role="alertdialog" aria-modal="true" aria-labelledby="bca-unaward-title">
+            <h2 className="bca-modal-title" id="bca-unaward-title">Unaward RFQ?</h2>
+            <p className="bca-modal-text">
+              This will revert the RFQ's status back to bid freezing so you can select and award a
+              different supplier. The current award will no longer apply.
+            </p>
+            {unawardError && (
+              <div className="bca-award-error" role="alert">
+                {unawardError}
+              </div>
+            )}
+            <div className="bca-modal-actions">
+              <button
+                type="button"
+                className="bca-btn bca-btn-ghost bca-modal-cancel"
+                onClick={() => { setShowUnawardModal(false); setUnawardError(null); }}
+                disabled={unawardingRfq}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`bca-btn ${unawardingRfq ? 'bca-btn-disabled' : 'bca-btn-primary'} bca-modal-confirm`}
+                onClick={handleUnaward}
+                disabled={unawardingRfq}
+              >
+                {unawardingRfq ? 'Unawarding...' : 'Unaward RFQ'}
+              </button>
             </div>
           </div>
         </div>
