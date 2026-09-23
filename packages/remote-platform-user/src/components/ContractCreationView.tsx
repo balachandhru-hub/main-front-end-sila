@@ -45,18 +45,6 @@ export interface EsignStatusEntry {
   attachments: RfqAssetAttachment[];
 }
 
-// function readFileAsBase64(file: File): Promise<string> {
-//   return new Promise((resolve, reject) => {
-//     const reader = new FileReader();
-//     reader.onload = () => {
-//       const result = reader.result as string;
-//       resolve(result.includes(",") ? result.split(",")[1] : result);
-//     };
-//     reader.onerror = reject;
-//     reader.readAsDataURL(file);
-//   });
-// }
-
 export interface ContractCreationViewProps {
   rfq: any;
   lineItems: any[];
@@ -69,6 +57,10 @@ export interface ContractCreationViewProps {
   role?: "buyer" | "supplier";
   supplierId?: string;
   supplierName?: string;
+  /** Logged-in buyer's display name, used as the default e-signature signer name. */
+  buyerName?: string;
+  /** Logged-in buyer's role/title, used as the default e-signature signer designation. */
+  buyerDesignation?: string;
   onUploadSupplierTerms?: (payload: { rfqId: string; termsAndCondition: boolean; documents?: any[] }) => Promise<any>;
   onUploadSupplierEsign?: (rfqId: string, payload: {
     entityType?: string;
@@ -162,6 +154,8 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   role = "buyer",
   supplierId,
   supplierName,
+  buyerName,
+  buyerDesignation,
   onUploadSupplierTerms,
   onUploadSupplierEsign,
   onUploadBuyerEsign,
@@ -201,6 +195,10 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const supplierHasOwnTc = isSupplier && (rfq as any)?.supplierTermsAndCondition === true;
   const supplierOwnTcDocs: RfqAssetAttachment[] = isSupplier ? (rfq as any)?.supplierTermsConditionDocuments || [] : [];
   const supplierHasSigned = isSupplier && ((rfq as any)?.eSignDocuments?.length ?? 0) > 0;
+  // Buyer role: eSignDocuments on the buyer's own rfq-by-id is the buyer's own signature (see rfqBuyerSigned
+  // below). Read once, same as supplierHasSigned, so an already-signed buyer doesn't see "Proceed to Signing"
+  // again after leaving and reopening the contract.
+  const buyerHasSigned = !isSupplier && ((rfq as any)?.eSignDocuments?.length ?? 0) > 0;
 
   // Real terms-condition / e-sign status per supplier, sourced from the RFQ payload
   // (buyer's rfq-by-id already includes it) and refreshed via the dedicated status endpoints.
@@ -421,8 +419,10 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         startDate: "2026-09-15",
         endDate: "2027-09-14",
         dateError: false,
-        step: isSupplier ? (supplierHasSigned || (supplierHasOwnTc && supplierOwnTcDocs.length > 0) ? "sign" : "terms") : "details",
-        sent: isSupplier ? true : false,
+        step: isSupplier
+          ? (supplierHasSigned || (supplierHasOwnTc && supplierOwnTcDocs.length > 0) ? "sign" : "terms")
+          : (buyerHasSigned ? "sign" : "details"),
+        sent: isSupplier ? true : buyerHasSigned,
         tcContent:
           "1. Payment Terms: 45 days from invoice date.\n2. Delivery: Within 30 days of purchase order issuance.\n3. Warranty: 12 months standard warranty on all items from date of delivery.\n4. Penalty: 1% of order value per week of delay, capped at maximum 10%.",
         tcEdited: false,
@@ -436,7 +436,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               (s: any) => String(s.supplierId) === resolveSupplierId(sid) && s.buyerTermsAndConditionAccepted === true
             ),
         supplierFinalAccepted: supplierHasOwnTc,
-        buyerSigned: false,
+        buyerSigned: buyerHasSigned,
         supplierSigned: supplierHasSigned,
         messages: isSupplier
           ? [
@@ -1315,10 +1315,10 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     setSignerNameInput(
       isSupplier
         ? supplierName || getSupplierName(id) || "Supplier Representative"
-        : "ABCDEFGH"
+        : buyerName || "Buyer"
     );
     setSignerDesignationInput(
-      isSupplier ? "Authorized Representative" : "Procurement Manager"
+      isSupplier ? "Authorized Representative" : buyerDesignation || "Procurement Manager"
     );
   };
 
@@ -1374,8 +1374,8 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     } else {
       const isSupplierSigned = c.supplierSigned;
       const signDetails: SignDetails = {
-        signerName: signerNameInput.trim() || "ABCDEFGH",
-        signerDesignation: signerDesignationInput.trim() || "Procurement Manager",
+        signerName: signerNameInput.trim() || buyerName || "Buyer",
+        signerDesignation: signerDesignationInput.trim() || buyerDesignation || "Procurement Manager",
         signedAt: timeStr,
         method: "e-sign",
         drawnSignatureUrl: drawnSignatureData || undefined,
@@ -1473,8 +1473,8 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     } else {
       const isSupplierSigned = c.supplierSigned;
       const signDetails: SignDetails = {
-        signerName: signerNameInput.trim() || "ABCDEFGH",
-        signerDesignation: signerDesignationInput.trim() || "Procurement Manager",
+        signerName: signerNameInput.trim() || buyerName || "Buyer",
+        signerDesignation: signerDesignationInput.trim() || buyerDesignation || "Procurement Manager",
         signedAt: timeStr,
         method: "upload",
         fileName: fileName || "Signed_Contract_Buyer.pdf",
@@ -1640,23 +1640,31 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   // Downloads the executed contract (items, merged Terms & Conditions, both signatures) as one real PDF file -
   // the same merged document (with actual T&C PDF pages) that gets attached when the buyer creates the contract.
   const [downloadingContract, setDownloadingContract] = useState(false);
-  const handleDownloadContract = async () => {
+  const [viewingContract, setViewingContract] = useState(false);
+
+  // Builds the merged executed-contract PDF (items, merged Terms & Conditions, both signatures), then either
+  // opens it in a new tab (View Contract) or downloads it (Download Contract).
+  const handleViewOrDownloadContract = async (preview: boolean) => {
     const bothSigned = buyerBothSigned || (activeContract?.buyerSigned && activeContract?.supplierSigned);
     if (!activeContract || !bothSigned) return;
 
-    setDownloadingContract(true);
+    const setBusy = preview ? setViewingContract : setDownloadingContract;
+    setBusy(true);
+    // Open the tab right away, while still inside the click, so the browser doesn't block it after the PDF is built.
+    const previewTab = preview ? window.open("", "_blank") : null;
+    if (previewTab) previewTab.opener = null;
     try {
       const [effectiveBuyerSignDetails, effectiveSupplierSignDetails] = await Promise.all([
         resolveEffectiveSignDetails(
           activeContract.buyerSignDetails,
           Boolean(activeContract.buyerSigned || rfqBuyerSigned),
-          isSupplier ? (rfq as any)?.buyerESignDocuments?.[0] : undefined,
+          isSupplier ? (rfq as any)?.buyerESignDocuments?.[0] : (rfq as any)?.eSignDocuments?.[0],
           "Buyer"
         ),
         resolveEffectiveSignDetails(
           activeContract.supplierSignDetails,
           Boolean(activeContract.supplierSigned || rfqSupplierSigned),
-          !isSupplier ? activeEsignEntry?.attachments?.[0] : undefined,
+          !isSupplier ? activeEsignEntry?.attachments?.[0] : (rfq as any)?.eSignDocuments?.[0],
           activeEsignEntry?.supplierName || getSupplierName(activeContract.supplierId)
         ),
       ]);
@@ -1667,20 +1675,33 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       const contractNumber = activeCreated?.contractNumber || activeContract.contractNumber || "Contract";
       const blob = new Blob([mergedBytes], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${contractNumber}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      if (preview) {
+        if (previewTab) {
+          previewTab.location.href = url;
+        } else {
+          window.open(url, "_blank", "noopener,noreferrer");
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } else {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${contractNumber}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
     } catch (err) {
+      previewTab?.close();
       console.error("Failed to generate the contract PDF:", err);
-      alert("Failed to generate the contract PDF. Please try again.");
+      alert(preview ? "Unable to preview the contract PDF. Please try again." : "Failed to generate the contract PDF. Please try again.");
     } finally {
-      setDownloadingContract(false);
+      setBusy(false);
     }
   };
+
+  const handleViewContract = () => handleViewOrDownloadContract(true);
+  const handleDownloadContract = () => handleViewOrDownloadContract(false);
 
   // Buyer: once both parties have signed, create the contract in the backend - with the buyer's Terms &
   // Conditions and the executed contract PDF (items, merged T&C, both signatures) attached.
@@ -1694,7 +1715,12 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     try {
       const { entityId, entityType } = await getEntityTypeByKey("BUYER");
       const [buyerSignDetails, supplierSignDetails] = await Promise.all([
-        resolveEffectiveSignDetails(contract.buyerSignDetails, Boolean(contract.buyerSigned || rfqBuyerSigned), undefined, "Buyer"),
+        resolveEffectiveSignDetails(
+          contract.buyerSignDetails,
+          Boolean(contract.buyerSigned || rfqBuyerSigned),
+          (rfq as any)?.eSignDocuments?.[0],
+          "Buyer"
+        ),
         resolveEffectiveSignDetails(
           contract.supplierSignDetails,
           Boolean(contract.supplierSigned || rfqSupplierSigned),
@@ -2010,10 +2036,31 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
           <div className="contract-subsection-title">
             Terms &amp; Conditions
           </div>
+
+          {/* Acceptance Gate, shown up front so both parties see where things stand before reading through the
+              documents below. Buyer role: rfq-by-id returns buyerTermsAndConditionStatuses /
+              supplierTermsAndConditionAccepted as per-supplier arrays, matched against the active supplier
+              tab (activeSupplierId). Supplier role: rfq-by-id returns these as flat booleans for the single
+              buyer-supplier context, used directly. See activeBuyerTermsAccepted / activeSupplierTermsAccepted. */}
+          <div className="contract-accept-summary">
+            <span className={`contract-accept-status${activeSupplierTermsAccepted ? " contract-accept-status--done" : " contract-accept-status--pending"}`}>
+              <span className="contract-accept-status-icon" aria-hidden="true">
+                {activeSupplierTermsAccepted ? "✓" : "⏳"}
+              </span>
+              Buyer — {activeSupplierTermsAccepted ? "Accepted" : "Awaiting Acceptance"}
+            </span>
+            <span className={`contract-accept-status${activeBuyerTermsAccepted ? " contract-accept-status--done" : " contract-accept-status--pending"}`}>
+              <span className="contract-accept-status-icon" aria-hidden="true">
+                {activeBuyerTermsAccepted ? "✓" : "⏳"}
+              </span>
+              Supplier — {activeBuyerTermsAccepted ? "Accepted" : "Awaiting Acceptance"}
+            </span>
+          </div>
+
           <div className="contract-tc-card">
             <div>
               <div className="contract-tc-name">
-                {isSupplier ? "Buyer Terms & Conditions" : "Contract Terms & Conditions"}
+                Buyer Terms & Conditions
               </div>
               {buyerTermsDocs.length > 0 ? renderTermsDocs(buyerTermsDocs) : (
                 <div className="contract-tc-file">
@@ -2138,15 +2185,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 <div className="contract-modal-title">
                   {isSupplier ? "Propose Edits & Upload Supplier Terms" : "Edit Terms & Conditions"}
                 </div>
-                <div className="contract-modal-subtitle">
-                  Terms_and_Conditions.pdf
-                </div>
-                <textarea
-                  rows={6}
-                  value={activeContract.tcDraft}
-                  onChange={(e) => updateContract(activeContractId, { tcDraft: e.target.value })}
-                  className="contract-tc-textarea"
-                />
                 {!isSupplier && (
                   <div className="contract-dashed-box contract-dashed-box--modal">
                     <div className="contract-upload-title">Upload Terms &amp; Conditions Document (optional)</div>
@@ -2402,28 +2440,17 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 );
               })()}
 
-              {/* Final Terms Acceptance Gate. Buyer role: rfq-by-id returns buyerTermsAndConditionStatuses /
-                  supplierTermsAndConditionAccepted as per-supplier arrays, matched against the active supplier
-                  tab (activeSupplierId). Supplier role: rfq-by-id returns these as flat booleans for the single
-                  buyer-supplier context, used directly. See activeBuyerTermsAccepted / activeSupplierTermsAccepted. */}
-              <div className="contract-accept-summary">
-                <span className={`contract-accept-status${activeSupplierTermsAccepted ? " contract-accept-status--done" : ""}`}>
-                  Buyer — {activeSupplierTermsAccepted ? "Accepted ✓" : "Awaiting Acceptance"}
-                </span>
-                <span className={`contract-accept-status${activeBuyerTermsAccepted ? " contract-accept-status--done" : ""}`}>
-                  Supplier — {activeBuyerTermsAccepted ? "Accepted ✓" : "Awaiting Acceptance"}
-                </span>
-              </div>
-
               {activeContract.step === "terms" && !buyerBothSigned && (
-                <button
-                  type="button"
-                  onClick={() => handleProceedToSigning(activeContractId)}
-                  disabled={!canProceedToSigning}
-                  className="contract-btn contract-btn--primary contract-btn--cta"
-                >
-                  Proceed to Signing
-                </button>
+                <div className="contract-step-card-footer">
+                  <button
+                    type="button"
+                    onClick={() => handleProceedToSigning(activeContractId)}
+                    disabled={!canProceedToSigning}
+                    className="contract-btn contract-btn--primary contract-btn--cta"
+                  >
+                    Proceed to Signing
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -2434,14 +2461,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               <div className="contract-subsection-title">
                 Contract Signing
               </div>
-
-              {/* Supplier's T&C acceptance, from the backend's supplierTermsAndConditionAccepted — never from
-                  document/e-sign upload state (uploading a signed contract does not imply T&C acceptance). */}
-              {activeSupplierTermsAccepted && (
-                <div className="contract-implicit-accept">
-                  Supplier — Accepted ✓
-                </div>
-              )}
 
               {/* Hidden File Input for Upload Signed Contract */}
               <input
@@ -2462,24 +2481,19 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                   <div className="contract-sign-label">
                     Buyer Signature
                   </div>
-                  <div className={`contract-sign-status${rfqBuyerSigned ? " contract-sign-status--done" : ""}`}>
-                    {rfqBuyerSigned ? "Signed ✓" : "Awaiting Signature"}
+                  <div className={`contract-sign-status${activeContract.buyerSigned || rfqBuyerSigned ? " contract-sign-status--done" : ""}`}>
+                    {activeContract.buyerSigned || rfqBuyerSigned ? "Signed ✓" : "Awaiting Signature"}
                   </div>
-                  {rfqBuyerSigned && activeContract.buyerSignDetails && (
-                    <div className="contract-sign-by">
-                      By {activeContract.buyerSignDetails.signerName} ({activeContract.buyerSignDetails.signerDesignation})
-                    </div>
-                  )}
                 </div>
 
                 <div>
                   <div className="contract-sign-label">
                     Supplier Signature
                   </div>
-                  <div className={`contract-sign-status${rfqSupplierSigned ? " contract-sign-status--done" : ""}`}>
-                    {rfqSupplierSigned ? "Signed ✓" : "Awaiting Signature"}
+                  <div className={`contract-sign-status${activeContract.supplierSigned || rfqSupplierSigned ? " contract-sign-status--done" : ""}`}>
+                    {activeContract.supplierSigned || rfqSupplierSigned ? "Signed ✓" : "Awaiting Signature"}
                   </div>
-                  {rfqSupplierSigned && activeContract.supplierSignDetails && (
+                  {(activeContract.supplierSigned || rfqSupplierSigned) && activeContract.supplierSignDetails && (
                     <div className="contract-sign-by">
                       By {activeContract.supplierSignDetails.signerName} ({activeContract.supplierSignDetails.signerDesignation})
                     </div>
@@ -2644,10 +2658,11 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 )}
                 <button
                   type="button"
-                  onClick={() => alert(`Contract ${activeCreated?.contractNumber || activeContract.contractNumber} Details:\nSupplier: ${getSupplierName(activeContract.supplierId)}\nValue: ${fmtINR(getContractValue(activeContractId))}`)}
+                  onClick={handleViewContract}
+                  disabled={viewingContract}
                   className="contract-btn contract-btn--success-outline contract-btn--xl"
                 >
-                  View Contract
+                  {viewingContract ? "Preparing PDF..." : "View Contract"}
                 </button>
                 <button
                   type="button"

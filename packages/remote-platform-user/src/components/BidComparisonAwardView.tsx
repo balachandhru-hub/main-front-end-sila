@@ -15,6 +15,7 @@ import {
 import type { BidComparisonResponseDto } from "../api/platformApi";
 import { ContractCreationView } from "./ContractCreationView";
 import { fetchBuyerRFQById, createBuyerChatApi, type PersonDetailDto } from "../../../remote-buyer/src/api/Buyerapi";
+import { useNetworkAdminAuthStore } from "../store/useAuthStore";
 
 
 const IconMessageSquare = () => (
@@ -103,6 +104,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
 }) => {
   const [refreshedRfq, setRefreshedRfq] = useState<any | null>(null);
   const rfq = refreshedRfq ?? rfqProp;
+
+  const personDetail = useNetworkAdminAuthStore((state) => state.personDetail);
 
   const [viewMode, setViewMode] = useState<"summary" | "comparison" | "by-supplier" | "bid-history">("summary");
   const [showFreezeModal, setShowFreezeModal] = useState(false);
@@ -705,6 +708,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           chatHubParams={chatRfqId ? { rfqId: chatRfqId } : undefined}
           currentUserProfile={buyerProfile}
           isLoadingCurrentUserProfile={isLoadingBuyerProfile}
+          buyerName={personDetail?.name}
+          buyerDesignation={personDetail?.roleName}
         />
       ) : (
         <>
