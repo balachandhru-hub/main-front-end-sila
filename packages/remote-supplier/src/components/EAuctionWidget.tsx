@@ -134,6 +134,13 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
   const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
   const [loadingApi, setLoadingApi] = useState<boolean>(false);
 
+  // The RFQ's own currency (e.g. "INR", "USD") — RFQDetailResponse doesn't
+  // declare this field, but the supplier's own quotation does, so fall back
+  // to that. Left blank (not defaulted to "INR") when neither returns one,
+  // since guessing a currency could mislead the supplier.
+  const currency = (selectedRfqDetails as any)?.currency || ownQuotation?.currency || "";
+  const fmtCurrency = (val: number) => `${(val || 0).toFixed(2)}${currency ? ` ${currency}` : ""}`;
+
   // Supplier's rank on the current lot (single-lot / addLotOption bidding only)
   const headerRank = React.useMemo(() => formatRank(
     ownQuotation?.rank ??
@@ -660,7 +667,7 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
         throw new Error(res.message || "Failed to submit live bid.");
       }
 
-      const formattedBid = `$${Number(totalPriceQuote).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+      const formattedBid = fmtCurrency(Number(totalPriceQuote));
       setBidSubmittedMessage(`Live Bid of ${formattedBid} successfully submitted for ${selectedLot.name}! Your bid has been recorded.`);
       await fetchLiveBidsData();
       setTimeout(() => setBidSubmittedMessage(null), 6000);
@@ -1132,8 +1139,8 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
                                   <th>Tax Type</th>
                                   <th className="eauction-col-right">Quoted Price</th>
                                   <th>Rank</th>
-                                  <th className="eauction-col-right">Sub Total</th>
-                                  <th className="eauction-col-right">Quoted Amount</th>
+                                  <th className="eauction-col-right">Sub Total{currency ? ` (${currency})` : ""}</th>
+                                  <th className="eauction-col-right">Quoted Amount{currency ? ` (${currency})` : ""}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1252,10 +1259,10 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
                                         {itemRank}
                                       </td>
                                       <td className="eauction-col-right eauction-cell-strong">
-                                        {line.subTotal.toFixed(2)}
+                                        {fmtCurrency(line.subTotal)}
                                       </td>
                                       <td className="eauction-col-right eauction-cell-strong">
-                                        {line.quotedAmount.toFixed(2)}
+                                        {fmtCurrency(line.quotedAmount)}
                                       </td>
                                     </tr>
                                   );
@@ -1404,7 +1411,7 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
                         <div className="eauction-total-quote-row">
                           <div className="eauction-total-quote-label">Total Price Quote</div>
                           <div className="eauction-total-quote-value-box">
-                            <span className="eauction-total-quote-currency">$</span>
+                            <span className="eauction-total-quote-currency">{currency}</span>
                             <input
                               type="number"
                               value={totalPriceQuote}

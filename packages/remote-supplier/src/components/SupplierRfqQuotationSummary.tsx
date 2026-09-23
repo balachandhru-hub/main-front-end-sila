@@ -165,6 +165,13 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
 
   const [isChatOpen, setIsChatOpen] = useState(false);
 
+  // The RFQ's own currency (e.g. "INR", "USD") — RFQDetailResponse doesn't
+  // declare this field, but the supplier's own quotation does, so fall back
+  // to that. Left blank (not defaulted to "INR") when neither returns one,
+  // since guessing a currency could mislead the supplier.
+  const currency = (selectedRfq as any)?.currency || ownQuotation?.currency || "";
+  const fmtCurrency = (val: number) => `${(val || 0).toFixed(2)}${currency ? ` ${currency}` : ""}`;
+
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [otpStage, setOtpStage] = useState<"none" | "send" | "verify">("none");
   const [otpCode, setOtpCode] = useState("");
@@ -1430,7 +1437,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
 
                             <div className="sqs-total">
                               <label className="sqs-total-label" htmlFor="sqs-lot-total">
-                                Total Price Quote<span className="sila-required" aria-hidden="true">*</span>
+                                Total Price Quote{currency ? ` (${currency})` : ""}<span className="sila-required" aria-hidden="true">*</span>
                               </label>
                               <input
                                 id="sqs-lot-total"
@@ -1468,8 +1475,8 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                                     <th scope="col" className="sila-num">Rank</th>
                                   )}
 
-                                  <th scope="col" className="sila-num">Sub Total</th>
-                                  <th scope="col" className="sila-num">Quoted Amount</th>
+                                  <th scope="col" className="sila-num">Sub Total{currency ? ` (${currency})` : ""}</th>
+                                  <th scope="col" className="sila-num">Quoted Amount{currency ? ` (${currency})` : ""}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1581,10 +1588,10 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                                         </td>
                                       )}
                                       <td className="sila-num">
-                                        {line.subTotal.toFixed(2)}
+                                        {fmtCurrency(line.subTotal)}
                                       </td>
                                       <td className="sila-num sila-cell-strong">
-                                        {line.quotedAmount.toFixed(2)}
+                                        {fmtCurrency(line.quotedAmount)}
                                       </td>
                                     </tr>
                                   );
@@ -1596,7 +1603,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                           <div className="sqs-total sqs-total--readonly">
                             <span className="sqs-total-label">Total Price Quote</span>
                             <span className="sqs-total-value">
-                              {Number(quoteTotalPrice).toFixed(2)}
+                              {fmtCurrency(Number(quoteTotalPrice))}
                             </span>
                           </div>
                         </>
