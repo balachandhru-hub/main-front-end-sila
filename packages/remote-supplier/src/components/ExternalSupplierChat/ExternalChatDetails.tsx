@@ -1,6 +1,5 @@
 import React from "react";
-import { getInitials } from "../../../../remote-buyer/src/components/BuyerRFQChat/chatUtils";
-import { IconChevronLeft } from "../../../../remote-buyer/src/components/BuyerRFQChat/ChatIcons";
+import { getInitials, IconChevronLeft } from "@vosox/shared-ui";
 
 interface ExternalChatDetailsProps {
   counterpartyName: string;
