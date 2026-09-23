@@ -76,7 +76,7 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
@@ -84,7 +84,7 @@
   font-size: 22px;
   font-weight: 700;
   color: #0f172a;
-  margin: 0 0 6px 0;
+  margin: 0 0 12px 0;
 }
 
 .contract-inline-group {
@@ -93,25 +93,89 @@
   align-items: center;
 }
 
-/* ---------- Step chips ---------- */
+/* ---------- Step indicator ---------- */
 
-.contract-step-chip {
-  padding: 4px 14px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 600;
-  background: #f1f5f9;
-  color: #64748b;
+.contract-stepper {
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 
-.contract-step-chip--active {
-  background: #2563eb;
+.contract-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.contract-step-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #94a3b8;
+  border: 2px solid #e2e8f0;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.contract-step-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.contract-step-connector {
+  width: 32px;
+  height: 2px;
+  margin: 0 8px;
+  background: #e2e8f0;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.contract-step-connector--done {
+  background: #059669;
+}
+
+.contract-step--done .contract-step-dot {
+  background: #059669;
+  border-color: #059669;
   color: #ffffff;
 }
 
-.contract-step-chip--past {
-  background: #ecfdf5;
+.contract-step--done .contract-step-label {
   color: #059669;
+}
+
+.contract-step--active .contract-step-dot {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+.contract-step--active .contract-step-label {
+  color: #0f172a;
+}
+
+.contract-step-indicator {
+  align-self: flex-start;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* ---------- Buttons ---------- */
@@ -1416,5 +1480,14 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
+  }
+
+  .contract-step-connector {
+    width: 18px;
+    margin: 0 4px;
+  }
+
+  .contract-step-label {
+    font-size: 12px;
   }
 }

@@ -883,7 +883,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
   );
 
   // The supplier can review the contract only once the buyer has created it.
-  const isContractCreated = selectedRfq?.status === "AWARDED" && selectedRfq?.contractStatus === "CONTRACT_CREATED";
+  const isContractCreated = selectedRfq?.status === "AWARDED" && !!selectedRfq?.isSupplierInvitedForContract;
 
   if (showContractView && selectedRfq) {
     return (
@@ -898,6 +898,10 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
         onUploadSupplierEsign={uploadSupplierEsign}
         onAcceptBuyerTerms={updateBuyerTermsConditionStatus}
         fetchContract={fetchSupplierContractById}
+        refetchRfq={async (id) => {
+          const latest = await fetchRFQById(id);
+          if (!isErrorResponse(latest)) setSelectedRfq(latest);
+        }}
         onBack={() => setShowContractView(false)}
       />
     );

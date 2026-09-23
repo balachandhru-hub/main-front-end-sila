@@ -362,6 +362,7 @@ export interface RFQDetailResponse {
   contractId?: string | null;
   buyerId?: string;
   buyerName?: string;
+  isSupplierInvitedForContract?: boolean;
 }
 
 export interface SupplierContractDto {

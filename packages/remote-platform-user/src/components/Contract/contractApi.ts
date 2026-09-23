@@ -1,18 +1,29 @@
 import {
   fetchBuyerContracts as fetchBuyerContractsApi,
   fetchBuyerContractById as fetchBuyerContractByIdApi,
+  submitBuyerContractApprovalAction as submitBuyerContractApprovalActionApi,
 } from '../../api/platformApi';
 import type {
   BuyerContractDto,
   BuyerContractApprovalFlowDto,
   BuyerContractAttachmentDto,
+  BuyerContractApprovalUserStatusDto,
+  BuyerContractApprovalActionPayload,
+  StatusUpdateResponseDto,
 } from '../../api/platformApi';
 
 export type {
   BuyerContractDto as ContractRecord,
   BuyerContractApprovalFlowDto as ContractApprovalFlow,
   BuyerContractAttachmentDto as ContractAttachment,
+  BuyerContractApprovalUserStatusDto as ContractApprovalUser,
+  BuyerContractApprovalActionPayload as ContractApprovalActionPayload,
 };
+
+export const CONTRACT_APPROVAL_STATUS = {
+  APPROVE: 'APPROVE',
+  REJECT: 'REJECT',
+} as const;
 
 interface ApiErrorDto {
   statusCode: number;
@@ -41,6 +52,21 @@ export const fetchContracts = async (index = 0, limit = 10): Promise<BuyerContra
 export const fetchContractById = async (contractId: string): Promise<BuyerContractDto> => {
   const result = await fetchBuyerContractByIdApi(contractId);
   if (isErrorDto(result)) throw toError(result, 'Failed to load the contract.');
+  return result;
+};
+
+/**
+ * Submits the signed-in approver's decision for a contract's approval chain
+ * (PUT /api/v1/buyer/contract/approval/{contractId}).
+ */
+export const submitContractApprovalAction = async (
+  contractId: string,
+  payload: BuyerContractApprovalActionPayload
+): Promise<StatusUpdateResponseDto> => {
+  const result = await submitBuyerContractApprovalActionApi(contractId, payload);
+  if (result.statusCode >= 400) {
+    throw new Error([result.message, result.description].filter(Boolean).join(' - ') || 'Failed to submit your decision.');
+  }
   return result;
 };
 

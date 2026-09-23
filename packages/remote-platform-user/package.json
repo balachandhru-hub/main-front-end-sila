@@ -12,6 +12,8 @@
   "dependencies": {
     "@originjs/vite-plugin-federation": "1.3.6",
     "@vosox/shared-ui": "1.0.0",
+    "jspdf": "^4.2.1",
+    "pdf-lib": "^1.17.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.14.2",

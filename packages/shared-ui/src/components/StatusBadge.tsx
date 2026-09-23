@@ -10,6 +10,7 @@ const STATUS_TONES: Record<string, StatusTone> = {
   LIVE: 'success',
   ACTIVE: 'success',
   // Positive outcomes
+  APPROVE: 'success',
   APPROVED: 'success',
   ACCEPTED: 'success',
   AWARDED: 'success',
@@ -21,6 +22,7 @@ const STATUS_TONES: Record<string, StatusTone> = {
   PENDING: 'warning',
   PENDING_REVIEW: 'warning',
   PENDING_VERIFICATION: 'warning',
+  IN_PROCESS: 'warning',
   // Handed over / received
   SUBMITTED: 'info',
   SENT: 'info',
@@ -29,6 +31,7 @@ const STATUS_TONES: Record<string, StatusTone> = {
   FREEZING: 'accent',
   FROZEN: 'accent',
   // Negative outcomes
+  REJECT: 'danger',
   REJECTED: 'danger',
   DECLINED: 'danger',
   CANCELLED: 'danger',
@@ -43,8 +46,17 @@ const normalise = (status: string) => status.trim().toUpperCase().replace(/[\s-]
 export const getStatusTone = (status: string | null | undefined): StatusTone =>
   status ? STATUS_TONES[normalise(status)] ?? 'neutral' : 'neutral';
 
+/* Decision codes the backend sends as the imperative ("APPROVE") rather than the
+   past-tense outcome ("APPROVED") a status badge should read as. */
+const STATUS_LABEL_OVERRIDES: Record<string, string> = {
+  APPROVE: 'Approved',
+  REJECT: 'Rejected',
+};
+
 /** "PENDING_REVIEW" → "Pending review" */
 export const formatStatusLabel = (status: string) => {
+  const normalised = normalise(status);
+  if (STATUS_LABEL_OVERRIDES[normalised]) return STATUS_LABEL_OVERRIDES[normalised];
   const words = status.trim().replace(/[_-]+/g, ' ').toLowerCase();
   return words.charAt(0).toUpperCase() + words.slice(1);
 };
