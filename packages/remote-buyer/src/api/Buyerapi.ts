@@ -9,12 +9,21 @@ import type {
 } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
 import type {
-  SendBuyerMessagePayload,
+  ChatApiAdapter,
+  ChatAttachmentInputDto,
   ChatMessageDto,
   ChatThreadDto,
   MarkThreadReadResponseDto,
   ChatAttachmentDownloadDto,
-} from "../dto/chatDto";
+} from "@vosox/shared-ui";
+
+export interface SendBuyerMessagePayload {
+  rfqId: string;
+  supplierId?: string;
+  externalSupplierId?: string;
+  body: string;
+  attachments: ChatAttachmentInputDto[];
+}
 
 export interface BuyerCatalogAssetItem {
   id: string;
@@ -364,6 +373,12 @@ export interface MasterApprovalFlowDto {
   buyerId: string;
 }
 
+export interface ItemMasterSimilarityDto {
+  id: string;
+  materialCode: string;
+  description: string;
+}
+
 export interface ItemMasterDetailDto extends ItemMasterDto {}
 
 export const getBuyerProfile = async (): Promise<BuyerProfileResponse | null> => {
@@ -525,6 +540,27 @@ export const getMasterApprovalFlows = async (
     if (error?.response?.data) {
       const data = error.response.data;
       throw new Error(data?.message || data?.description || `Failed to fetch approval flows (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+
+export const checkItemMasterSimilarity = async (
+  buyerId: string,
+  description: string,
+  materialGroup: string
+): Promise<ItemMasterSimilarityDto[]> => {
+  try {
+    const response = await axiosInstance.get<ItemMasterSimilarityDto[]>(
+      '/api/v1/buyer/item-master/check-similarity',
+      { params: { buyerId, description, materialGroup } }
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to check item master similarity (${error.response.status}).`);
     }
     throw new Error('Could not reach the server. Please check your connection and try again.');
   }
@@ -1261,6 +1297,21 @@ export const downloadBuyerMessageAttachment = async (
     throw new Error('Could not reach the server. Please check your connection and try again.');
   }
 };
+
+/** Builds the ChatPanel API adapter for the buyer side of a given RFQ — see ChatApiAdapter in @vosox/shared-ui. */
+export const createBuyerChatApi = (rfqId: string): ChatApiAdapter => ({
+  fetchThreads: () => fetchBuyerMessageThreads(rfqId),
+  fetchHistory: (threadId, index, limit) => fetchBuyerMessageHistory(threadId, index, limit),
+  markThreadRead: (threadId) => markBuyerThreadAsRead(threadId).then(() => undefined),
+  sendMessage: (target, body, attachments) =>
+    sendBuyerMessage({
+      rfqId,
+      ...(target.isExternal ? { externalSupplierId: target.id } : { supplierId: target.id }),
+      body,
+      attachments,
+    }),
+  downloadAttachment: (attachmentId) => downloadBuyerMessageAttachment(attachmentId),
+});
 
 export const createItemMaster = async (
   payload: CreateItemMasterRequestDto

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import { EmptyState, Loader } from "@vosox/shared-ui";
-import type { ChatMessageDto } from "../../dto/chatDto";
-import type { ChatSupplier, PendingAttachment } from "./types";
+import { EmptyState } from "../EmptyState";
+import { Loader } from "../Loader";
+import type { ChatMessageDto, ChatParticipantProfile } from "./chatTypes";
 import { formatDateSeparator, formatFileSize, formatMessageTime, getInitials, isSameCalendarDay } from "./chatUtils";
 import {
   IconMessageSquare,
@@ -13,8 +13,17 @@ import {
   IconUsers,
 } from "./ChatIcons";
 
+interface PendingAttachment {
+  localId: string;
+  file: File;
+}
+
 interface ChatConversationProps {
-  supplier: ChatSupplier | null;
+  role: "buyer" | "supplier";
+  /** The logged-in user's own profile — used only to tell "own" messages apart on the supplier side. */
+  currentUserProfile: ChatParticipantProfile | null;
+  counterpartyName: string | null;
+  hasCounterparty: boolean;
   messages: ChatMessageDto[];
   isLoadingMessages: boolean;
   messagesError: string | null;
@@ -30,8 +39,34 @@ interface ChatConversationProps {
   scrollTick: number;
 }
 
+/**
+ * Whether a message was sent by "us". The buyer side treats every buyer-org
+ * message as "own" (there's only ever one buyer viewing); the supplier side
+ * needs to distinguish this exact logged-in user from a teammate in the same
+ * supplier org, so it matches the sender's id+name against the current
+ * profile instead. Preserves each side's original, independently-built logic.
+ */
+const isOwnMessage = (
+  message: ChatMessageDto,
+  role: "buyer" | "supplier",
+  currentUserProfile: ChatParticipantProfile | null
+): boolean => {
+  if (role === "buyer") {
+    return message.senderOrganizationType?.toLowerCase() === "buyer";
+  }
+  return (
+    !!currentUserProfile &&
+    !!message.senderUserId &&
+    message.senderUserId === currentUserProfile.userId &&
+    message.senderName === currentUserProfile.userName
+  );
+};
+
 const ChatConversation: React.FC<ChatConversationProps> = ({
-  supplier,
+  role,
+  currentUserProfile,
+  counterpartyName,
+  hasCounterparty,
   messages,
   isLoadingMessages,
   messagesError,
@@ -54,13 +89,13 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
   useEffect(() => {
     setMessageText("");
     setPendingAttachments([]);
-  }, [supplier?.supplierId]);
+  }, [counterpartyName]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [scrollTick]);
 
-  if (!supplier) {
+  if (!counterpartyName) {
     return (
       <div className="brc-conversation">
         <div className="brc-state-wrap">
@@ -116,10 +151,10 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
           <IconChevronLeft />
         </button>
         <div className="brc-supplier-avatar" aria-hidden="true">
-          {getInitials(supplier.supplierName)}
+          {getInitials(counterpartyName)}
         </div>
         <div className="brc-conversation-header-text">
-          <h3 className="brc-conversation-name">{supplier.supplierName}</h3>
+          <h3 className="brc-conversation-name">{counterpartyName}</h3>
           <button type="button" className="brc-conversation-participants-toggle" onClick={onOpenDetails}>
             <IconUsers />
             Chat details
@@ -141,14 +176,14 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
             icon={<IconMessageSquare />}
             title="No messages yet"
             description={
-              supplier.thread
+              hasCounterparty
                 ? "No messages yet. Start the conversation by sending a message."
-                : `Start a conversation with ${supplier.supplierName}.`
+                : `Start a conversation with ${counterpartyName}.`
             }
           />
         </div>
       ) : (
-        <div className="brc-messages" role="log" aria-label={`Messages with ${supplier.supplierName}`}>
+        <div className="brc-messages" role="log" aria-label={`Messages with ${counterpartyName}`}>
           {hasMoreHistory && (
             <button
               type="button"
@@ -161,7 +196,7 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
           )}
 
           {messages.map((message, index) => {
-            const isOwn = message.senderOrganizationType?.toLowerCase() === "buyer";
+            const isOwn = isOwnMessage(message, role, currentUserProfile);
             const previousMessage = messages[index - 1];
             const showDateSeparator =
               !previousMessage || !isSameCalendarDay(previousMessage.dateCreated, message.dateCreated);
@@ -258,7 +293,7 @@ const ChatConversation: React.FC<ChatConversationProps> = ({
         <textarea
           className="brc-composer-input"
           placeholder="Type a message..."
-          aria-label={`Message ${supplier.supplierName}`}
+          aria-label={`Message ${counterpartyName}`}
           rows={1}
           value={messageText}
           onChange={(e) => setMessageText(e.target.value)}

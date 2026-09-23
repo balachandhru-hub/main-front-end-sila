@@ -1,6 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
-import "../../../../remote-buyer/src/components/BuyerRFQChat/BuyerRFQChat.css";
-import { isErrorResponse, toastService } from "@vosox/shared-ui";
+import "../../../../shared-ui/src/components/Chat/ChatPanel.css";
+import {
+  isErrorResponse,
+  toastService,
+  downloadBase64File,
+  fileToBase64,
+  formatThreadTime,
+  getInitials,
+  IconClose,
+  IconMessageSquare,
+  startRfqChatHub,
+  stopRfqChatHub,
+} from "@vosox/shared-ui";
 import type { ExternalChatMessageDto, ExternalChatThreadDto } from "../../dto/externalChatDto";
 import {
   fetchExternalSupplierMessageThreads,
@@ -11,14 +22,6 @@ import {
 } from "../../api/externalSupplierApi";
 import ExternalChatConversation from "./ExternalChatConversation";
 import ExternalChatDetails from "./ExternalChatDetails";
-import {
-  downloadBase64File,
-  fileToBase64,
-  formatThreadTime,
-  getInitials,
-} from "../../../../remote-buyer/src/components/BuyerRFQChat/chatUtils";
-import { IconClose, IconMessageSquare } from "../../../../remote-buyer/src/components/BuyerRFQChat/ChatIcons";
-import { startRfqChatHub, stopRfqChatHub } from "../../../../remote-buyer/src/signalr/rfqChatHub";
 
 const HISTORY_PAGE_LIMIT = 20;
 // How often the open chat re-checks the history as a safety net for live
@@ -200,13 +203,13 @@ const ExternalSupplierChat: React.FC<ExternalSupplierChatProps> = ({
     // No supplierId to scope the connection with (see the props comment
     // above) — and none is needed: per spec this chat always connects to
     // /buyermessageHub (the same hub the Buyer Admin chat uses), which
-    // rfqChatHub.ts selects whenever supplierId is omitted. The hub only
-    // reads the session token from the query string (session_token +
-    // external_rfq_id) - browsers cannot attach custom headers to the
-    // WebSocket upgrade - so it is passed as externalSessionToken. The
-    // header is kept for the negotiate call.
+    // rfqChatHub.ts selects whenever supplierId is omitted. The session
+    // token is sent as the session_token/external_rfq_id query params
+    // MessageHub actually reads (see rfqChatHub.ts) — not a header, which
+    // would silently never reach the backend once the connection upgrades
+    // to WebSockets.
     startRfqChatHub(
-      { rfqId, externalSessionToken: sessionToken, headers: { "X-Session-Token": sessionToken } },
+      { rfqId, sessionToken },
       handleIncomingMessages as (messages: any) => void
     ).catch((err) => {
       console.error("[ExternalSupplierChat] SignalR connection failed:", err);

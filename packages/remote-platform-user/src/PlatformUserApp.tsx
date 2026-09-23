@@ -1,18 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { EmptyState, ToastContainer } from '@vosox/shared-ui';
+import { EmptyState, Loader, ToastContainer } from '@vosox/shared-ui';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useNetworkAdminAuthStore } from './store/useAuthStore';
-import PlatformUserDashboard from './components/PlatformUserDashboard';
-import Department from './components/departmentbuyer';
-import DepartmentCostList from './components/DepartmentCostList';
-import NetworkAdminDashboard from './components/NetworkAdminDashboard/NetworkAdminDashboard';
-import NetworkAdminOnboarding from './components/NetworkAdminOnboarding/NetworkAdminOnboarding';
-import ItemMaster from './components/ItemMaster';
-import SupplierAdminDash from './components/SupplierAdminDash';
-import BuyerAdminDash from './components/BuyerAdminDash';
 import { fetchReferenceList } from './api/masterdataApi';
-import NetworkAdminProfilePage from './pages/NetworkAdminProfilePage';
-import PlatformUserTemplates from './components/PlatformUserTemplates';
 import {
   getNetworkAdminProfile,
   getNetworkAdminOnboardingDetails,
@@ -26,9 +16,19 @@ import type {
   NetworkAdminProfileResponse,
   NetworkAdminOnboardingResponse,
 } from './dto/networkAdminDto';
-import BuyerAdminProfilePage from './pages/BuyerAdminProfilePage';
-import SupplierAdminProfilePage from './pages/SupplierAdminProfilePage';
 
+const PlatformUserDashboard = React.lazy(() => import('./components/PlatformUserDashboard'));
+const Department = React.lazy(() => import('./components/departmentbuyer'));
+const DepartmentCostList = React.lazy(() => import('./components/DepartmentCostList'));
+const NetworkAdminDashboard = React.lazy(() => import('./components/NetworkAdminDashboard/NetworkAdminDashboard'));
+const NetworkAdminOnboarding = React.lazy(() => import('./components/NetworkAdminOnboarding/NetworkAdminOnboarding'));
+const ItemMaster = React.lazy(() => import('./components/ItemMaster'));
+const SupplierAdminDash = React.lazy(() => import('./components/SupplierAdminDash'));
+const BuyerAdminDash = React.lazy(() => import('./components/BuyerAdminDash'));
+const NetworkAdminProfilePage = React.lazy(() => import('./pages/NetworkAdminProfilePage'));
+const PlatformUserTemplates = React.lazy(() => import('./components/PlatformUserTemplates'));
+const BuyerAdminProfilePage = React.lazy(() => import('./pages/BuyerAdminProfilePage'));
+const SupplierAdminProfilePage = React.lazy(() => import('./pages/SupplierAdminProfilePage'));
 
 const NETWORK_ADMIN_ROLES: NetworkAdminRole[] = ['BUYER_NETWORK_ADMIN', 'SUPPLIER_NETWORK_ADMIN'];
 
@@ -351,7 +351,9 @@ const PlatformUserApp: React.FC = () => {
     checkProfile();
   }, [isLoading, isNetworkAdmin, networkAdminRole, currentUser?.organizationId]);
 
-  if (isLoading || (isNetworkAdmin && checkingProfile)) return null;
+  if (isLoading || (isNetworkAdmin && checkingProfile)) {
+    return <Loader fullScreen message="Loading your dashboard..." />;
+  }
 
   if (!currentUser) return <Navigate to="/" replace />;
 
@@ -436,9 +438,11 @@ const PlatformUserApp: React.FC = () => {
   return (
     <>
       <ToastContainer />
-      <Routes>
-        {renderRoutes()}
-      </Routes>
+      <React.Suspense fallback={<Loader fullScreen message="Loading your dashboard..." />}>
+        <Routes>
+          {renderRoutes()}
+        </Routes>
+      </React.Suspense>
     </>
   );
 };
