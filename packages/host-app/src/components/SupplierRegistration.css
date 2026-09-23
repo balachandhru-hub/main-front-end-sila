@@ -31,10 +31,21 @@
 /* ---- Title row + stepper ---- */
 .vr-intro {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: space-between;
     gap: var(--sila-space-3);
     flex-wrap: wrap;
+}
+
+.vr-intro-header {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+}
+
+.vr-back-btn {
+    margin-top: 0;
+    flex-shrink: 0;
 }
 
 .vr-title {
@@ -367,7 +378,7 @@
     transition: var(--sila-transition);
 }
 
-.vr-checkbox-input:focus-visible + .vr-checkbox-box {
+.vr-checkbox-input:focus-visible+.vr-checkbox-box {
     border-color: var(--sila-primary);
     box-shadow: var(--sila-focus-ring);
 }
