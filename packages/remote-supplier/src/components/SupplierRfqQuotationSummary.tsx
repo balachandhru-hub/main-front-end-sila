@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./SupplierRfqQuotationSummary.css";
 import SupplierRFQChat from "./SupplierRFQChat/SupplierRFQChat";
+import { startRfqChatHub, stopRfqChatHub } from "../../../remote-buyer/src/signalr/rfqChatHub";
+import type { QuotationSubmittedEvent } from "../../../remote-buyer/src/signalr/rfqChatHub";
+import { apiKey as supplierApiKey } from "../api/supplierInstance";
 import ContractCreationView from "../../../remote-platform-user/src/components/ContractCreationView";
 import {
   fetchRFQById,
@@ -215,6 +218,60 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
     const t = setInterval(() => setRfqWindowTick((n) => n + 1), 30000);
     return () => clearInterval(t);
   }, [selectedRfq]);
+
+  // Live-refreshes this supplier's own quotation/rank the moment it changes
+  // server-side - e.g. a teammate at the same supplier org submitting from
+  // another tab/session. Uses the same shared hub connection the RFQ chat
+  // drawer below opens on top of this screen (see rfqChatHub.ts) rather
+  // than a second parallel connection.
+  const quotationRefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!selectedRfqId || !supplierId) return;
+
+    const handleQuotationSubmitted = (payload: QuotationSubmittedEvent) => {
+      if (payload?.SupplierId && payload.SupplierId !== supplierId) return;
+
+      // Coalesce a burst of near-simultaneous events into a single re-fetch.
+      if (quotationRefetchTimerRef.current) clearTimeout(quotationRefetchTimerRef.current);
+      quotationRefetchTimerRef.current = setTimeout(async () => {
+        try {
+          const updatedDetails = await fetchRFQById(selectedRfqId);
+          if (!isErrorResponse(updatedDetails)) setSelectedRfq(updatedDetails);
+
+          const updatedQuotation = await fetchSupplierQuotationBySupplierId(selectedRfqId);
+          if (
+            !isErrorResponse(updatedQuotation) &&
+            updatedQuotation &&
+            "suppliers" in updatedQuotation &&
+            Array.isArray(updatedQuotation.suppliers)
+          ) {
+            const mine =
+              updatedQuotation.suppliers.find((s) => s.supplierId === supplierId) ||
+              updatedQuotation.suppliers[0] ||
+              null;
+            setOwnQuotation(mine);
+          }
+        } catch {
+          // A missed live refresh isn't fatal - reopening the RFQ re-fetches anyway.
+        }
+      }, 500);
+    };
+
+    startRfqChatHub(
+      { rfqId: selectedRfqId, supplierId, headers: { "X-API-Key": supplierApiKey } },
+      () => {},
+      undefined,
+      handleQuotationSubmitted
+    ).catch((err) => {
+      console.error("[SupplierRfqQuotationSummary] SignalR connection failed:", err);
+    });
+
+    return () => {
+      if (quotationRefetchTimerRef.current) clearTimeout(quotationRefetchTimerRef.current);
+      stopRfqChatHub();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRfqId, supplierId]);
 
   const { notYetOpen, closed, frozen, canSubmit } = useMemo(
     () => getRfqSubmissionWindowStatus(selectedRfq),

@@ -11,6 +11,19 @@ const SUPPLIER_CHAT_HUB_PATH = "/suppliermessageHub";
 // drop either — duplicate delivery is already handled by the callers'
 // id-based dedup.
 const RECEIVE_MESSAGE_EVENTS = ["NewMessage", "NewMessageNotification"] as const;
+// Broadcast by both hubs whenever a supplier (registered or external)
+// submits/updates a quotation on an RFQ — lets an already-open bid
+// comparison / "my quotation" screen refresh live instead of requiring a
+// page reload. Same connection as chat, just a second event on it.
+const QUOTATION_SUBMITTED_EVENT = "QuotationSubmitted";
+
+/** Payload broadcast on the QuotationSubmitted event (see BuyerController.NotifyQuotationSubmitted / SupplierController). */
+export interface QuotationSubmittedEvent {
+  RFQId?: string;
+  SupplierId?: string;
+  QuotationId?: string;
+  Message?: string;
+}
 
 type ConnectionStatus = "connected" | "disconnected";
 
@@ -23,13 +36,29 @@ export interface RfqChatHubParams {
   rfqId: string;
   supplierId?: string;
   /**
+   * External-supplier session token (they have no JWT/cookie session).
+   * MessageHub.OnConnectedAsync reads this — and the RFQ id it's scoped to
+   * — from query-string params (`session_token` / `external_rfq_id`, see
+   * MessageHub.ExternalSessionTokenQueryParameterName /
+   * ExternalRfqIdQueryParameterName), NOT from a header: browsers cannot
+   * attach custom headers to a WebSocket handshake, so a token sent only as
+   * a header silently never reaches the backend once this connection
+   * upgrades to WebSockets (which it's configured to allow below).
+   * `external_rfq_id` is always set to this call's `rfqId` — a session
+   * token is scoped to exactly one RFQ, so there's never a reason for the
+   * two to differ.
+   */
+  sessionToken?: string;
+  /**
    * Extra headers for the connection's HTTP requests (the negotiate call,
    * and long-polling/SSE if the browser falls back to them). Browsers
    * cannot attach custom headers to a WebSocket handshake, so this will
-   * NOT reach the backend once the connection has upgraded to WebSockets.
-   * Used to carry the same `X-API-Key` the supplier/platform REST clients
-   * already send (see supplierInstance.ts) — the Buyer Admin chat's REST
-   * client sends no such key, so it passes none here either.
+   * NOT reach the backend once the connection has upgraded to WebSockets —
+   * do not use this for anything the hub needs to authenticate/authorize
+   * the connection (see `sessionToken` above for that). Used to carry the
+   * same `X-API-Key` the supplier/platform REST clients already send (see
+   * supplierInstance.ts) — the Buyer Admin chat's REST client sends no such
+   * key, so it passes none here either.
    */
   headers?: Record<string, string>;
   /**
@@ -69,19 +98,38 @@ let connectionPromise: Promise<void> | null = null;
 // attempt's late-firing callbacks (onclose, or even a delayed success) must
 // not be allowed to touch state that a newer, still-live connection owns.
 let activeAttemptId = 0;
- 
-const buildConnectionKey = ({ rfqId, supplierId, externalSessionToken }: RfqChatHubParams) =>
-  `${rfqId}::${supplierId || ""}::${externalSessionToken ? "external" : ""}`;
- 
-const buildHubUrl = ({ rfqId, supplierId, externalSessionToken }: RfqChatHubParams) => {
+
+// Multiple independent mount points can now want the same underlying
+// connection at once — e.g. an RFQ detail/bid-comparison view listening for
+// QuotationSubmitted for as long as it's open, plus a chat drawer the user
+// opens on top of it listening for NewMessage/NewMessageNotification. Both
+// call startRfqChatHub with the same {rfqId, supplierId} key and both call
+// stopRfqChatHub on their own unmount — refCount ensures the connection is
+// only actually torn down once every caller has released it, not just the
+// first one to unmount.
+let refCount = 0;
+// The "live" handlers the open connection's event listeners dispatch to.
+// Indirected through these module-level pointers (rather than the closure
+// captured at connect time) so that a second caller reusing an
+// already-open connection (see the early-return paths below) still gets
+// its own handler wired up — the original code only ever bound the FIRST
+// caller's closures, silently dropping every other caller's handler.
+let currentOnReceiveMessages: ((messages: ChatMessageDto | ChatMessageDto[]) => void) | null = null;
+let currentOnQuotationSubmitted: ((payload: QuotationSubmittedEvent) => void) | null = null;
+
+const buildConnectionKey = ({ rfqId, supplierId, sessionToken }: RfqChatHubParams) =>
+  `${rfqId}::${supplierId || ""}::${sessionToken || ""}`;
+
+const buildHubUrl = ({ rfqId, supplierId, sessionToken }: RfqChatHubParams) => {
   const apiBaseUrl = (import.meta.env.VITE_AUTH_API_BASE as string).replace(/\/+$/, "");
   // supplierId is only ever passed by the Supplier Admin chat (SupplierRFQChat.tsx) —
-  // the Buyer Admin chat (BuyerRFQChat.tsx) always connects with just rfqId.
+  // the Buyer Admin chat (BuyerRFQChat.tsx) and the external-supplier callers
+  // (which authenticate via sessionToken instead) always connect with just rfqId.
   const hubPath = supplierId ? SUPPLIER_CHAT_HUB_PATH : BUYER_CHAT_HUB_PATH;
   const query = new URLSearchParams({ rfqId });
   if (supplierId) query.set("supplierId", supplierId);
-  if (externalSessionToken) {
-    query.set("session_token", externalSessionToken);
+  if (sessionToken) {
+    query.set("session_token", sessionToken);
     query.set("external_rfq_id", rfqId);
   }
   return `${apiBaseUrl}${hubPath}?${query.toString()}`;
@@ -90,8 +138,21 @@ const buildHubUrl = ({ rfqId, supplierId, externalSessionToken }: RfqChatHubPara
 export const startRfqChatHub = async (
   params: RfqChatHubParams,
   onReceiveMessages: (messages: ChatMessageDto | ChatMessageDto[]) => void,
-  onStatusChange?: (status: ConnectionStatus) => void
+  onStatusChange?: (status: ConnectionStatus) => void,
+  onQuotationSubmitted?: (payload: QuotationSubmittedEvent) => void
 ) => {
+  // Counted against the matching stopRfqChatHub() this caller's own cleanup
+  // will eventually make — see the refCount comment above. Incremented
+  // unconditionally (even if the connect attempt below ends up failing) so
+  // it stays balanced against that guaranteed future stop() call.
+  refCount += 1;
+  currentOnReceiveMessages = onReceiveMessages;
+  // Never overwritten with a falsy value: a chat drawer opening on top of
+  // an already-listening bid-comparison/quotation view must not clear that
+  // view's QuotationSubmitted handler just because the drawer itself has
+  // nothing to pass for it.
+  if (onQuotationSubmitted) currentOnQuotationSubmitted = onQuotationSubmitted;
+
   const key = buildConnectionKey(params);
 
   if (isConnecting && currentConnectionKey === key && connectionPromise) {
@@ -117,7 +178,11 @@ export const startRfqChatHub = async (
 
   if (connection && currentConnectionKey !== key) {
     console.log("[SignalR] Switching connection from", currentConnectionKey, "to", key, "— stopping the old one first.");
-    await stopRfqChatHub();
+    // A forced teardown, not a caller releasing its own stop obligation —
+    // goes straight to the internal helper so it doesn't consume a
+    // refCount slot that belongs to this call's own eventual stop().
+    await forceStopConnection();
+    refCount = 1;
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
@@ -150,9 +215,19 @@ export const startRfqChatHub = async (
       activeConnection.off(eventName);
       activeConnection.on(eventName, (payload: ChatMessageDto | ChatMessageDto[]) => {
         console.log(`[SignalR] ${eventName}`, payload);
-        onReceiveMessages(payload);
+        // Dispatched through the module-level pointer, not the `onReceiveMessages`
+        // closure captured here, so a later caller that reuses this same
+        // connection (see the early-return reuse paths above) still gets its
+        // handler invoked instead of silently being dropped.
+        currentOnReceiveMessages?.(payload);
       });
     }
+
+    activeConnection.off(QUOTATION_SUBMITTED_EVENT);
+    activeConnection.on(QUOTATION_SUBMITTED_EVENT, (payload: QuotationSubmittedEvent) => {
+      console.log(`[SignalR] ${QUOTATION_SUBMITTED_EVENT}`, payload);
+      currentOnQuotationSubmitted?.(payload);
+    });
 
     activeConnection.onreconnecting((err) => {
       console.warn("[SignalR] Reconnecting...", err);
@@ -190,6 +265,7 @@ export const startRfqChatHub = async (
       // stop it quietly instead of leaving two live connections around.
       console.warn("[SignalR] A newer connection attempt superseded this one after it connected — stopping the redundant one.");
       for (const eventName of RECEIVE_MESSAGE_EVENTS) activeConnection.off(eventName);
+      activeConnection.off(QUOTATION_SUBMITTED_EVENT);
       await activeConnection.stop().catch(() => {});
       return;
     }
@@ -228,11 +304,15 @@ export const startRfqChatHub = async (
   }
 };
 
-export const stopRfqChatHub = async () => {
-  const stopping = connection;
-  if (stopping) {
+// The actual connection teardown, with no refCount involvement — used both
+// by the public stopRfqChatHub() below (once refCount hits 0) and by
+// startRfqChatHub's "switching to a different key" path (a forced teardown
+// that isn't a caller releasing its own stop obligation).
+const forceStopConnection = async () => {
+  if (connection) {
     try {
-      for (const eventName of RECEIVE_MESSAGE_EVENTS) stopping.off(eventName);
+      for (const eventName of RECEIVE_MESSAGE_EVENTS) connection.off(eventName);
+      connection.off(QUOTATION_SUBMITTED_EVENT);
 
       if (stopping.state !== signalR.HubConnectionState.Disconnected) {
         console.log("[SignalR] Stopping connection", currentConnectionKey);
@@ -252,4 +332,24 @@ export const stopRfqChatHub = async () => {
       }
     }
   }
+};
+
+/**
+ * Releases this caller's own claim on the shared connection (see the
+ * refCount comment near the top of this file). Every startRfqChatHub() call
+ * must be matched by exactly one stopRfqChatHub() call (the existing
+ * mount/unmount effect pattern in every consumer already does this) — the
+ * connection itself is only actually closed once every consumer currently
+ * sharing it (e.g. a chat drawer opened on top of a bid-comparison view
+ * that's also listening for QuotationSubmitted) has released its claim.
+ */
+export const stopRfqChatHub = async () => {
+  refCount = Math.max(0, refCount - 1);
+  if (refCount > 0) {
+    console.log("[SignalR] stopRfqChatHub called but", refCount, "consumer(s) still hold the connection — not tearing it down.");
+    return;
+  }
+  currentOnReceiveMessages = null;
+  currentOnQuotationSubmitted = null;
+  await forceStopConnection();
 };

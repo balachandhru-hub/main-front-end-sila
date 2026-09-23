@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import "./BidComparisonAward.css";
 import { Button, QuestionAnswer, QuestionItem, QuestionList, QuestionProgress, StatusBadge } from "@vosox/shared-ui";
 import { FaArrowDown, FaArrowUp, FaCheck, FaChevronDown, FaChevronRight, FaFlag, FaListUl, FaUsers } from "react-icons/fa";
@@ -15,6 +15,8 @@ import {
 import type { BidComparisonResponseDto } from "../api/platformApi";
 import { ContractCreationView } from "./ContractCreationView";
 import { fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
+import { startRfqChatHub, stopRfqChatHub } from "../../../remote-buyer/src/signalr/rfqChatHub";
+import type { QuotationSubmittedEvent } from "../../../remote-buyer/src/signalr/rfqChatHub";
 
 
 const IconMessageSquare = () => (
@@ -427,6 +429,46 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   useEffect(() => {
     setRefreshedRfq(null);
   }, [rfqId, rfqProp?.rfqId]);
+
+  // Live-refreshes the moment a supplier (registered or external) submits or
+  // updates a quotation on this RFQ, so a buyer sitting on this screen sees
+  // the new bid without reloading. Buyers are already auto-joined on the
+  // hub connection to every (RFQId, SupplierId) group for their org (see
+  // MessageHub.GetEntitledGroups on the backend), so no supplierId is
+  // needed here — same connection the RFQ chat drawer opens on top of this
+  // screen already uses, just a second event on it (see rfqChatHub.ts).
+  const effectiveRfqIdForHub = rfqId || rfqProp?.rfqId || rfqProp?.id || rfqProp?._id;
+  const quotationRefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!effectiveRfqIdForHub) return;
+
+    const handleQuotationSubmitted = (payload: QuotationSubmittedEvent) => {
+      if (payload?.RFQId && payload.RFQId !== effectiveRfqIdForHub) return;
+
+      // Coalesce a burst of near-simultaneous events (e.g. several suppliers
+      // submitting close together) into a single re-fetch instead of one
+      // per event.
+      if (quotationRefetchTimerRef.current) clearTimeout(quotationRefetchTimerRef.current);
+      quotationRefetchTimerRef.current = setTimeout(() => {
+        fetchBuyerRFQById(effectiveRfqIdForHub)
+          .then((updated) => setRefreshedRfq({ ...updated, rfqId: effectiveRfqIdForHub }))
+          .catch(() => {
+            // A missed live refresh isn't fatal - the next manual action
+            // (freeze, award, tab switch) will fetch fresh data anyway.
+          });
+      }, 500);
+    };
+
+    startRfqChatHub({ rfqId: effectiveRfqIdForHub }, () => {}, undefined, handleQuotationSubmitted).catch((err) => {
+      console.error("[BidComparisonAwardView] SignalR connection failed:", err);
+    });
+
+    return () => {
+      if (quotationRefetchTimerRef.current) clearTimeout(quotationRefetchTimerRef.current);
+      stopRfqChatHub();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveRfqIdForHub]);
 
   useEffect(() => {
     if (!autoSelected && lineItems.length > 0 && effectiveQuotations.length > 0) {
