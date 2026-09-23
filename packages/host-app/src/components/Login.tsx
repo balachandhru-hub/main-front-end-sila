@@ -18,8 +18,6 @@ import './Login.css';
 type Role = 'supplier' | 'buyer' | 'platform-user';
 type View = 'role-select' | 'sign-in';
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const ROLE_IDS = {
   SUPPLIER: '937aab61-b505-4e1c-a5a3-cd63e29c6db9',
   BUYER: '5a72f81e-a2c5-4f4a-bd55-6376c3c9ed73',
@@ -98,7 +96,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
     setIsLoading(true);
     try {
       await login(username, password);
-      await delay(1000);
 
       try {
        const claims = await getTokenClaims(true);
