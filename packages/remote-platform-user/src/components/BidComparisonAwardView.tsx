@@ -947,11 +947,11 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         <div className="bca-details-grid">
           <div><div className="bca-detail-label">RFQ Title</div><div className="bca-detail-value">{rfq.title || "—"}</div></div>
           <div>
-            <div className="bca-detail-label">Start Date &amp; Time</div>
+            <div className="bca-detail-label">Start Date &amp; Time (UTC)</div>
             <div className="bca-detail-value">{rfq.startDate ? new Date(rfq.startDate).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</div>
           </div>
           <div>
-            <div className="bca-detail-label">Close Date &amp; Time</div>
+            <div className="bca-detail-label">Close Date &amp; Time (UTC)</div>
             <div className="bca-detail-value">{rfq.endDate ? new Date(rfq.endDate).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</div>
           </div>
           <div><div className="bca-detail-label">Delivery Location</div><div className="bca-detail-value">{rfq.deliveryLocation || "—"}</div></div>

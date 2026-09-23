@@ -1164,11 +1164,11 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                         <dd className="sila-meta-value">{selectedRfq.title || "—"}</dd>
                       </div>
                       <div className="sila-meta-item">
-                        <dt className="sila-meta-label">Start date &amp; time</dt>
+                        <dt className="sila-meta-label">Start date &amp; time (UTC)</dt>
                         <dd className="sila-meta-value sqs-tabular">{formatDateTime(selectedRfq.startDate)}</dd>
                       </div>
                       <div className="sila-meta-item">
-                        <dt className="sila-meta-label">Close date &amp; time</dt>
+                        <dt className="sila-meta-label">Close date &amp; time (UTC)</dt>
                         <dd className="sila-meta-value sqs-tabular">{formatDateTime(selectedRfq.endDate)}</dd>
                       </div>
                       <div className="sila-meta-item">
