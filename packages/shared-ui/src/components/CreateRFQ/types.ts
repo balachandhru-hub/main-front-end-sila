@@ -202,6 +202,12 @@ export interface MasterApprovalFlowDto {
   buyerId: string;
 }
 
+export interface ItemMasterSimilarityDto {
+  id: string;
+  materialCode: string;
+  description: string;
+}
+
 /* ---------------------------------- Supplier user DTO (for SupplierUsersModal) ---------------------------------- */
 
 export interface SupplierRfqUserDto {
@@ -220,6 +226,7 @@ export interface SupplierRfqUserDto {
 export interface ItemMasterModalApi {
   createItemMaster: (payload: CreateItemMasterRequestDto) => Promise<ItemMasterDto>;
   getMasterApprovalFlows: (buyerId: string, index?: number, limit?: number) => Promise<MasterApprovalFlowDto[]>;
+  checkItemMasterSimilarity: (buyerId: string, description: string, materialGroup: string) => Promise<ItemMasterSimilarityDto[]>;
 }
 
 export interface SupplierUsersModalApi {

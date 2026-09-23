@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import "./BidComparisonAward.css";
 import { Button, QuestionAnswer, QuestionItem, QuestionList, QuestionProgress, StatusBadge } from "@vosox/shared-ui";
 import { FaArrowDown, FaArrowUp, FaCheck, FaChevronDown, FaChevronRight, FaFlag, FaListUl, FaUsers } from "react-icons/fa";
@@ -8,13 +8,17 @@ import {
   getBidComparisonData,
   isBidComparisonError,
   awardRfq,
+  unawardRfq,
   updateSupplierTermsConditionStatus,
   fetchBuyerRfqEsign,
   uploadBuyerRfqEsign,
 } from "../api/platformApi";
 import type { BidComparisonResponseDto } from "../api/platformApi";
 import { ContractCreationView } from "./ContractCreationView";
-import { fetchBuyerRFQById } from "../../../remote-buyer/src/api/Buyerapi";
+import { fetchBuyerRFQById, createBuyerChatApi, type PersonDetailDto } from "../../../remote-buyer/src/api/Buyerapi";
+import { useNetworkAdminAuthStore } from "../store/useAuthStore";
+import { startRfqChatHub, stopRfqChatHub } from "@vosox/shared-ui";
+import type { QuotationSubmittedEvent } from "@vosox/shared-ui";
 
 
 const IconMessageSquare = () => (
@@ -88,6 +92,9 @@ interface BidComparisonAwardViewProps {
   onBack: () => void;
   onQsAns: () => void;
   onChatClick: () => void;
+  /** Passed through to the Contract Workspace's own chat trigger — see ContractCreationView. */
+  buyerProfile?: PersonDetailDto | null;
+  isLoadingBuyerProfile?: boolean;
 }
 
 function fmtINR(val: number) {
@@ -96,14 +103,17 @@ function fmtINR(val: number) {
 }
 
 const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
-  rfq: rfqProp, rfqId, loading, error, freezingBid, onFreeze, onBack, onChatClick
+  rfq: rfqProp, rfqId, loading, error, freezingBid, onFreeze, onBack, onChatClick, buyerProfile = null, isLoadingBuyerProfile = false
 }) => {
   const [refreshedRfq, setRefreshedRfq] = useState<any | null>(null);
   const rfq = refreshedRfq ?? rfqProp;
 
+  const personDetail = useNetworkAdminAuthStore((state) => state.personDetail);
+
   const [viewMode, setViewMode] = useState<"summary" | "comparison" | "by-supplier" | "bid-history">("summary");
   const [showFreezeModal, setShowFreezeModal] = useState(false);
   const [showAwardModal, setShowAwardModal] = useState(false);
+  const [showUnawardModal, setShowUnawardModal] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState("all");
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [autoSelected, setAutoSelected] = useState(false);
@@ -119,6 +129,9 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   const [awardingRfq, setAwardingRfq] = useState(false);
   const [awardSuccess, setAwardSuccess] = useState(false);
   const [awardError, setAwardError] = useState<string | null>(null);
+
+  const [unawardingRfq, setUnawardingRfq] = useState(false);
+  const [unawardError, setUnawardError] = useState<string | null>(null);
 
   const [contractCreated, setContractCreated] = useState(false);
   const [screen, setScreen] = useState<"award" | "contract">("award");
@@ -428,6 +441,46 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     setRefreshedRfq(null);
   }, [rfqId, rfqProp?.rfqId]);
 
+  // Live-refreshes the moment a supplier (registered or external) submits or
+  // updates a quotation on this RFQ, so a buyer sitting on this screen sees
+  // the new bid without reloading. Buyers are already auto-joined on the
+  // hub connection to every (RFQId, SupplierId) group for their org (see
+  // MessageHub.GetEntitledGroups on the backend), so no supplierId is
+  // needed here — same connection the RFQ chat drawer opens on top of this
+  // screen already uses, just a second event on it (see rfqChatHub.ts).
+  const effectiveRfqIdForHub = rfqId || rfqProp?.rfqId || rfqProp?.id || rfqProp?._id;
+  const quotationRefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!effectiveRfqIdForHub) return;
+
+    const handleQuotationSubmitted = (payload: QuotationSubmittedEvent) => {
+      if (payload?.RFQId && payload.RFQId !== effectiveRfqIdForHub) return;
+
+      // Coalesce a burst of near-simultaneous events (e.g. several suppliers
+      // submitting close together) into a single re-fetch instead of one
+      // per event.
+      if (quotationRefetchTimerRef.current) clearTimeout(quotationRefetchTimerRef.current);
+      quotationRefetchTimerRef.current = setTimeout(() => {
+        fetchBuyerRFQById(effectiveRfqIdForHub)
+          .then((updated) => setRefreshedRfq({ ...updated, rfqId: effectiveRfqIdForHub }))
+          .catch(() => {
+            // A missed live refresh isn't fatal - the next manual action
+            // (freeze, award, tab switch) will fetch fresh data anyway.
+          });
+      }, 500);
+    };
+
+    startRfqChatHub({ rfqId: effectiveRfqIdForHub }, () => {}, undefined, handleQuotationSubmitted).catch((err) => {
+      console.error("[BidComparisonAwardView] SignalR connection failed:", err);
+    });
+
+    return () => {
+      if (quotationRefetchTimerRef.current) clearTimeout(quotationRefetchTimerRef.current);
+      stopRfqChatHub();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveRfqIdForHub]);
+
   useEffect(() => {
     if (!autoSelected && lineItems.length > 0 && effectiveQuotations.length > 0) {
       autoSelectLowest();
@@ -534,6 +587,34 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
       setAwardError(err?.message || "An error occurred while awarding the RFQ.");
     } finally {
       setAwardingRfq(false);
+    }
+  };
+
+  const handleUnaward = async () => {
+    const effectiveRfqId = rfqId || rfq?.rfqId || rfq?.id || rfq?._id;
+    if (!effectiveRfqId) return;
+
+    setUnawardingRfq(true);
+    setUnawardError(null);
+
+    try {
+      const res = await unawardRfq(effectiveRfqId);
+
+      if ('statusCode' in res && res.statusCode && res.statusCode >= 400) {
+        setUnawardError(res.message || res.description || "Failed to unaward RFQ.");
+      } else {
+        setShowUnawardModal(false);
+        try {
+          const updated = await fetchBuyerRFQById(effectiveRfqId);
+          setRefreshedRfq({ ...updated, rfqId: effectiveRfqId });
+        } catch {
+          // Unaward already succeeded; a failed refresh shouldn't surface as an error.
+        }
+      }
+    } catch (err: any) {
+      setUnawardError(err?.message || "An error occurred while unawarding the RFQ.");
+    } finally {
+      setUnawardingRfq(false);
     }
   };
 
@@ -681,6 +762,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   const barButtonDisabled = !isBidFrozen || selectedItemCount === 0;
   const barButtonLabel = !isBidFrozen ? "Freeze Bid to Continue" : selectedItemCount === 0 ? "Select Supplier(s)" : "Award Selected";
 
+  const chatRfqId = rfqId || rfq?.rfqId || rfq?.id || rfq?._id;
+
   return (
     <div className="bca-page">
       {screen === "contract" ? (
@@ -696,6 +779,12 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           fetchESigns={fetchBuyerRfqEsign}
           onAcceptSupplierTerms={updateSupplierTermsConditionStatus}
           onUploadBuyerEsign={uploadBuyerRfqEsign}
+          chatApi={chatRfqId ? createBuyerChatApi(chatRfqId) : undefined}
+          chatHubParams={chatRfqId ? { rfqId: chatRfqId } : undefined}
+          currentUserProfile={buyerProfile}
+          isLoadingCurrentUserProfile={isLoadingBuyerProfile}
+          buyerName={personDetail?.name}
+          buyerDesignation={personDetail?.roleName}
         />
       ) : (
         <>
@@ -719,18 +808,29 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
             className={`bca-status-badge ${isRfqAwarded ? "bca-status-awarded" : isBidFrozen ? "bca-status-frozen" : "bca-status-active"}`}
           />
           {isRfqAwarded ? (
-            <Button
-              variant="primary"
-              type="button"
-              className="bca-btn-icon-gap"
-              disabled
-            >
-              <span className="bca-icon-lock bca-icon-lock-muted" aria-hidden="true">
-                <span className="bca-icon-lock-shackle"></span>
-                <span className="bca-icon-lock-body"></span>
-              </span>
-              <span>Bid Close</span>
-            </Button>
+            <>
+              <Button
+                variant="primary"
+                type="button"
+                className="bca-btn-icon-gap"
+                disabled
+              >
+                <span className="bca-icon-lock bca-icon-lock-muted" aria-hidden="true">
+                  <span className="bca-icon-lock-shackle"></span>
+                  <span className="bca-icon-lock-body"></span>
+                </span>
+                <span>Bid Close</span>
+              </Button>
+              <Button
+                variant="outline"
+                type="button"
+                className="bca-btn-icon-gap"
+                onClick={() => setShowUnawardModal(true)}
+                disabled={unawardingRfq}
+              >
+                <span>{unawardingRfq ? "Unawarding..." : "Unaward RFQ"}</span>
+              </Button>
+            </>
           ) : isBidFrozen ? (
             <Button
               variant="primary"
@@ -2033,6 +2133,41 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
             <div className="bca-modal-actions">
               <button type="button" className="bca-btn bca-btn-ghost bca-modal-cancel" onClick={() => setShowFreezeModal(false)}>Cancel</button>
               <button type="button" className="bca-btn bca-btn-primary bca-modal-confirm" onClick={() => { setShowFreezeModal(false); onFreeze(); }}>Freeze Bid</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUnawardModal && (
+        <div className="bca-modal-overlay">
+          <div className="bca-modal-content" role="alertdialog" aria-modal="true" aria-labelledby="bca-unaward-title">
+            <h2 className="bca-modal-title" id="bca-unaward-title">Unaward RFQ?</h2>
+            <p className="bca-modal-text">
+              This will revert the RFQ's status back to bid freezing so you can select and award a
+              different supplier. The current award will no longer apply.
+            </p>
+            {unawardError && (
+              <div className="bca-award-error" role="alert">
+                {unawardError}
+              </div>
+            )}
+            <div className="bca-modal-actions">
+              <button
+                type="button"
+                className="bca-btn bca-btn-ghost bca-modal-cancel"
+                onClick={() => { setShowUnawardModal(false); setUnawardError(null); }}
+                disabled={unawardingRfq}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`bca-btn ${unawardingRfq ? 'bca-btn-disabled' : 'bca-btn-primary'} bca-modal-confirm`}
+                onClick={handleUnaward}
+                disabled={unawardingRfq}
+              >
+                {unawardingRfq ? 'Unawarding...' : 'Unaward RFQ'}
+              </button>
             </div>
           </div>
         </div>

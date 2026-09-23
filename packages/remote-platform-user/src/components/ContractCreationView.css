@@ -234,8 +234,44 @@
   color: #ffffff;
 }
 
+/* Floating chat launcher, pinned to the corner of the viewport for the duration of the workspace. */
+.contract-chat-fab {
+  position: fixed;
+  right: 1.75rem;
+  bottom: 1.75rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 0.5rem 1.25rem -0.25rem rgba(37, 99, 235, 0.5);
+  z-index: 57;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.contract-chat-fab svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.contract-chat-fab:hover {
+  background: #1d4ed8;
+  transform: translateY(-0.0625rem);
+}
+
+.contract-chat-fab:focus-visible {
+  outline: 0.125rem solid #93c5fd;
+  outline-offset: 0.125rem;
+}
+
 .contract-btn--primary:disabled {
-  background: #cbd5e1;
+  background: #eef2f7;
+  color: #64748b;
   cursor: not-allowed;
 }
 
@@ -658,14 +694,18 @@
 }
 
 .contract-step-card .contract-tc-card {
-  background: #f8fafc;
-  margin-bottom: 12px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin-bottom: 0;
 }
 
 .contract-tc-name {
-  font-size: 12.5px;
-  font-weight: 600;
-  margin-bottom: 3px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 6px;
 }
 
 .contract-tc-file {
@@ -683,12 +723,12 @@
 .contract-tc-doc {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .contract-tc-meta {
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
 .contract-tc-updated {
@@ -853,6 +893,14 @@
   margin-bottom: 14px;
 }
 
+.contract-step-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
 .contract-step-card-toolbar {
   display: flex;
   align-items: center;
@@ -877,18 +925,6 @@
   background: #ecfdf5;
   border: 1px solid #a7f3d0;
   border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #059669;
-}
-
-.contract-implicit-accept {
-  display: inline-flex;
-  align-items: center;
-  margin-bottom: 14px;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  background: #ecfdf5;
   font-size: 12px;
   font-weight: 600;
   color: #059669;
@@ -1014,29 +1050,48 @@
 
 .contract-accept-summary {
   display: flex;
-  gap: 16px;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   flex-wrap: wrap;
 }
 
 .contract-accept-status {
   display: inline-flex;
   align-items: center;
-  padding: 4px 12px;
+  gap: 6px;
+  padding: 5px 14px;
   border-radius: 9999px;
   background: #f1f5f9;
-  font-size: 12px;
-  font-weight: 600;
+  border: 1px solid #e2e8f0;
+  font-size: 12.5px;
+  font-weight: 700;
   color: #64748b;
+}
+
+.contract-accept-status-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.contract-accept-status--pending {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #b45309;
 }
 
 .contract-accept-status--done {
   background: #ecfdf5;
+  border-color: #a7f3d0;
   color: #059669;
 }
 
 .contract-accept-status--rejected {
   background: #fef2f2;
+  border-color: #fecaca;
   color: #dc2626;
 }
 

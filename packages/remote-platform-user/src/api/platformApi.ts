@@ -550,6 +550,43 @@ export const awardRfq = async (
   }
 };
 
+/**
+ * Reverts an awarded RFQ's status from "AWARDED" back to "FREEZING" so the
+ * buyer can select and award a different supplier.
+ */
+export const unawardRfq = async (
+  rfqId: string
+): Promise<StatusUpdateResponseDto | RfqAwardErrorDto> => {
+  try {
+    const response = await platformInstance.put<StatusUpdateResponseDto>(
+      '/api/v1/buyer/rfq-award/unaward',
+      { rfqId }
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to perform this action.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to unaward RFQ.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Unexpected error while unawarding RFQ.',
+    };
+  }
+};
+
 export interface RfqAssetAttachmentDto {
   id: string;
   assetType?: string;
