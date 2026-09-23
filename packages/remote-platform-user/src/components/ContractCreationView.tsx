@@ -8,7 +8,7 @@ import {
   type BuyerRfqContractRefDto,
 } from "../api/platformApi";
 import { fetchReferenceList } from "../api/masterdataApi";
-import { Button, ChatPanel, IconChatBubble, type ChatApiAdapter, type ChatParticipantProfile, type RfqChatHubParams } from "@vosox/shared-ui";
+import { Button, ChatPanel, IconChatBubble, toastService, type ChatApiAdapter, type ChatParticipantProfile, type RfqChatHubParams } from "@vosox/shared-ui";
 import silaLogo from "../../../shared-ui/src/assets/sila-logo.png";
 import { DetailField } from "./ContractCreation/DetailField";
 import { SignaturePad } from "./ContractCreation/SignaturePad";
@@ -1910,6 +1910,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
           setCreatedContracts((prev) => ({ ...prev, [id]: created }));
         }
       }
+      toastService.success("Contract created successfully.");
     } catch (err: any) {
       setCreateContractError(err?.message || "Failed to create the contract.");
     } finally {
