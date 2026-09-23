@@ -8,7 +8,7 @@ import {
   type BuyerRfqContractRefDto,
 } from "../api/platformApi";
 import { fetchReferenceList } from "../api/masterdataApi";
-import { Button } from "@vosox/shared-ui";
+import { Button, ChatPanel, IconChatBubble, type ChatApiAdapter, type ChatParticipantProfile, type RfqChatHubParams } from "@vosox/shared-ui";
 import silaLogo from "../../../shared-ui/src/assets/sila-logo.png";
 import { DetailField } from "./ContractCreation/DetailField";
 import { SignaturePad } from "./ContractCreation/SignaturePad";
@@ -102,6 +102,16 @@ export interface ContractCreationViewProps {
   fetchContract?: (contractId: string) => Promise<ContractDetails | { statusCode: number; message?: string }>;
   /** Supplier: re-fetches this RFQ so eSignDocuments (and other rfq-by-id fields) reflect a just-uploaded e-sign. */
   refetchRfq?: (rfqId: string) => Promise<void>;
+  /**
+   * Chat, mirroring the RFQ Details page's chat trigger. Built by the caller (BidComparisonAwardView for
+   * buyer, SupplierRfqQuotationSummary for supplier) since it needs that host's own message API and profile
+   * store — this view never talks to either remote's API layer directly, same as the other supplier-side
+   * callbacks above. Omitted entirely when a caller doesn't wire it in (chat trigger just doesn't render).
+   */
+  chatApi?: ChatApiAdapter;
+  chatHubParams?: RfqChatHubParams;
+  currentUserProfile?: ChatParticipantProfile | null;
+  isLoadingCurrentUserProfile?: boolean;
 }
 
 export interface SignDetails {
@@ -161,6 +171,10 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   fetchESigns,
   fetchContract,
   refetchRfq,
+  chatApi,
+  chatHubParams,
+  currentUserProfile = null,
+  isLoadingCurrentUserProfile = false,
 }) => {
   const isSupplier = role === "supplier";
   const rfqId: string | undefined = rfq?.rfqId || rfq?.id || (rfq as any)?._id;
@@ -445,6 +459,8 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       : awardedSupplierIds[0] || ""
   );
 
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
 
 
   // E-Sign Modal State
@@ -602,6 +618,9 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   // Buyer role: once both sides have actually signed (per rfq-by-id), the contract is ready to download —
   // "Proceed to Signing" no longer applies and the "Download Contract" section shows regardless of the local step.
   const buyerBothSigned = !isSupplier && rfqBuyerSigned && rfqSupplierSigned;
+  // Role-agnostic version of the check above, used to gate chat visibility for either role:
+  // both sides have actually signed per rfq-by-id, regardless of the local step.
+  const bothPartiesSigned = rfqBuyerSigned && rfqSupplierSigned;
 
   // The buyer's own Terms & Conditions documents attached to the RFQ.
   const buyerTermsDocs: RfqAssetAttachment[] =
@@ -957,6 +976,17 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     const obj = displaySuppliers.find((s: any) => s.id === sid || s.id === supplierIdToMatch);
     return obj?.name || supplierName || "Supplier";
   };
+
+  // Chat is scoped to the single counterparty this contract workspace is about — the active supplier
+  // (buyer's view) or the buyer (supplier's view) — not every supplier on the RFQ.
+  const chatCounterparty = activeContract
+    ? isSupplier
+      ? { id: supplierId || activeContract.supplierId, name: (rfq as any)?.buyerName || "Buyer", isExternal: false }
+      : { id: resolveSupplierId(activeContract.supplierId), name: getSupplierName(activeContract.supplierId), isExternal: false }
+    : null;
+  // Visible through Details/Terms/Sign, hidden once both parties have signed (Completed).
+  const canShowChat =
+    !!chatApi && !!chatHubParams && !!rfqId && !!activeContract && !(activeContract.step === "completed" || bothPartiesSigned);
 
   // Date handlers
   const handleStartDateChange = (id: string, val: string) => {
@@ -2729,6 +2759,33 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {canShowChat && !isChatOpen && (
+        <button
+          type="button"
+          className="contract-chat-fab"
+          onClick={() => setIsChatOpen(true)}
+          title={isSupplier ? "Chat with the buyer" : "Chat with the supplier"}
+          aria-label={isSupplier ? "Chat with the buyer" : "Chat with the supplier"}
+        >
+          <IconChatBubble />
+        </button>
+      )}
+
+      {isChatOpen && canShowChat && chatCounterparty && chatApi && chatHubParams && (
+        <ChatPanel
+          role={role}
+          onClose={() => setIsChatOpen(false)}
+          rfqId={rfqId as string}
+          rfqNumber={(rfq as any)?.rfqNumber || (rfq as any)?.rfqNo}
+          rfqTitle={rfq?.title || (rfq as any)?.rfqNo || (rfq as any)?.name}
+          counterparties={[chatCounterparty]}
+          currentUserProfile={currentUserProfile}
+          isLoadingCurrentUserProfile={isLoadingCurrentUserProfile}
+          api={chatApi}
+          hubParams={chatHubParams}
+        />
       )}
     </div>
   );

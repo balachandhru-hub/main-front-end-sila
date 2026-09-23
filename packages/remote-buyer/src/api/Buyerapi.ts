@@ -9,12 +9,21 @@ import type {
 } from "../dto/rfqDto";
 import type { UnspscSegmentDto, UnspscFamilyDto } from "../dto/masterDataDto";
 import type {
-  SendBuyerMessagePayload,
+  ChatApiAdapter,
+  ChatAttachmentInputDto,
   ChatMessageDto,
   ChatThreadDto,
   MarkThreadReadResponseDto,
   ChatAttachmentDownloadDto,
-} from "../dto/chatDto";
+} from "@vosox/shared-ui";
+
+export interface SendBuyerMessagePayload {
+  rfqId: string;
+  supplierId?: string;
+  externalSupplierId?: string;
+  body: string;
+  attachments: ChatAttachmentInputDto[];
+}
 
 export interface BuyerCatalogAssetItem {
   id: string;
@@ -1261,6 +1270,21 @@ export const downloadBuyerMessageAttachment = async (
     throw new Error('Could not reach the server. Please check your connection and try again.');
   }
 };
+
+/** Builds the ChatPanel API adapter for the buyer side of a given RFQ — see ChatApiAdapter in @vosox/shared-ui. */
+export const createBuyerChatApi = (rfqId: string): ChatApiAdapter => ({
+  fetchThreads: () => fetchBuyerMessageThreads(rfqId),
+  fetchHistory: (threadId, index, limit) => fetchBuyerMessageHistory(threadId, index, limit),
+  markThreadRead: (threadId) => markBuyerThreadAsRead(threadId).then(() => undefined),
+  sendMessage: (target, body, attachments) =>
+    sendBuyerMessage({
+      rfqId,
+      ...(target.isExternal ? { externalSupplierId: target.id } : { supplierId: target.id }),
+      body,
+      attachments,
+    }),
+  downloadAttachment: (attachmentId) => downloadBuyerMessageAttachment(attachmentId),
+});
 
 export const createItemMaster = async (
   payload: CreateItemMasterRequestDto

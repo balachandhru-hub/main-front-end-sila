@@ -1,5 +1,5 @@
 import * as signalR from "@microsoft/signalr";
-import type { ChatMessageDto } from "../dto/chatDto";
+import type { ChatMessageDto } from "./chatTypes";
 
 // Hub routes confirmed by the backend team. The SignalR client is only ever
 // given the hub route itself (never /negotiate) — it appends that itself.
@@ -14,11 +14,10 @@ const RECEIVE_MESSAGE_EVENTS = ["NewMessage", "NewMessageNotification"] as const
 
 type ConnectionStatus = "connected" | "disconnected";
 
-// Shared by the Buyer Admin RFQ chat (BuyerRFQChat.tsx, connects with just
-// rfqId to receive every supplier thread under that RFQ) and the Supplier
-// Admin RFQ chat (SupplierRFQChat.tsx, also passes supplierId so it only
-// ever receives its own single thread with the buyer, never another
-// supplier's conversation on the same RFQ).
+// Shared by the Buyer Admin RFQ chat (connects with just rfqId to receive
+// every supplier thread under that RFQ) and the Supplier Admin RFQ chat
+// (also passes supplierId so it only ever receives its own single thread
+// with the buyer, never another supplier's conversation on the same RFQ).
 export interface RfqChatHubParams {
   rfqId: string;
   supplierId?: string;
@@ -42,7 +41,7 @@ export interface RfqChatHubParams {
    */
   externalSessionToken?: string;
 }
- 
+
 // SignalR's built-in console logger reports a deliberately stopped attempt
 // ("The connection was stopped during negotiation") at Error level. That is
 // expected whenever a chat effect is cleaned up mid-connect (see the
@@ -58,7 +57,7 @@ const chatHubLogger: signalR.ILogger = {
     else console.debug(text);
   },
 };
- 
+
 let connection: signalR.HubConnection | null = null;
 let currentConnectionKey: string | null = null;
 let isConnecting = false;
@@ -69,14 +68,14 @@ let connectionPromise: Promise<void> | null = null;
 // attempt's late-firing callbacks (onclose, or even a delayed success) must
 // not be allowed to touch state that a newer, still-live connection owns.
 let activeAttemptId = 0;
- 
+
 const buildConnectionKey = ({ rfqId, supplierId, externalSessionToken }: RfqChatHubParams) =>
   `${rfqId}::${supplierId || ""}::${externalSessionToken ? "external" : ""}`;
- 
+
 const buildHubUrl = ({ rfqId, supplierId, externalSessionToken }: RfqChatHubParams) => {
   const apiBaseUrl = (import.meta.env.VITE_AUTH_API_BASE as string).replace(/\/+$/, "");
-  // supplierId is only ever passed by the Supplier Admin chat (SupplierRFQChat.tsx) —
-  // the Buyer Admin chat (BuyerRFQChat.tsx) always connects with just rfqId.
+  // supplierId is only ever passed by the Supplier Admin chat —
+  // the Buyer Admin chat always connects with just rfqId.
   const hubPath = supplierId ? SUPPLIER_CHAT_HUB_PATH : BUYER_CHAT_HUB_PATH;
   const query = new URLSearchParams({ rfqId });
   if (supplierId) query.set("supplierId", supplierId);
@@ -215,7 +214,7 @@ export const startRfqChatHub = async (
       }
       return;
     }
- 
+
     console.error("[SignalR] Connection failed:", err, "URL:", hubUrl);
     if (myAttemptId === activeAttemptId) {
       connection = null;
