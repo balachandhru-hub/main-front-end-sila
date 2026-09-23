@@ -741,6 +741,46 @@ export const createBuyerContract = async (
   }
 };
 
+export interface InviteForContractPayload {
+  rfqId: string;
+  supplierId: string;
+}
+
+/**
+ * Invites a supplier to review and negotiate a contract's Terms & Conditions for an awarded RFQ.
+ * The contract itself (createBuyerContract) is created later, once both parties have signed.
+ */
+export const inviteSupplierForContract = async (
+  payload: InviteForContractPayload
+): Promise<StatusUpdateResponseDto | AssetErrorDto> => {
+  try {
+    const response = await platformInstance.put('/api/v1/buyer/rfq/invite-for-contract', payload);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+    if (error.response?.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to invite the supplier for contract.',
+        description: errData.description || '',
+      };
+    }
+    return {
+      statusCode: 500,
+      message: error?.message || 'Failed to invite the supplier for contract.',
+      description: '',
+    };
+  }
+};
+
 export const fetchBuyerRfqContractStatus = async (
   rfqId: string
 ): Promise<BuyerRfqContractStatusDto | AssetErrorDto> => {
@@ -981,4 +1021,4 @@ export const updateBuyerTermsConditionStatus = async (
       description: '',
     };
   }
-};
+};
