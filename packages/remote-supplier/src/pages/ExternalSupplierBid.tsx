@@ -201,6 +201,13 @@ const ExternalSupplierBid: React.FC = () => {
 
   const [windowTick, setWindowTick] = useState(0);
 
+  // The RFQ's own currency (e.g. "INR", "USD") — ExternalRFQDetailResponse
+  // doesn't declare this field. Left blank (not defaulted to "INR") when
+  // the API doesn't return one, since guessing a currency could mislead
+  // the supplier.
+  const currency = (rfq as any)?.currency || '';
+  const fmtCurrency = (val: number) => `${(val || 0).toFixed(2)}${currency ? ` ${currency}` : ''}`;
+
   useEffect(() => {
     if (!rfq) return;
     const t = setInterval(() => setWindowTick((n) => n + 1), 30000);
@@ -966,7 +973,7 @@ const ExternalSupplierBid: React.FC = () => {
 
                     <div className="sqs-total">
                       <label className="sqs-total-label" htmlFor="sqs-lot-total">
-                        Total Price Quote<span className="sila-required" aria-hidden="true">*</span>
+                        Total Price Quote{currency ? ` (${currency})` : ''}<span className="sila-required" aria-hidden="true">*</span>
                       </label>
                       <input
                         id="sqs-lot-total"
@@ -1000,8 +1007,8 @@ const ExternalSupplierBid: React.FC = () => {
                             Quoted Price<span className="sila-required" aria-hidden="true">*</span>
                           </th>
                           {showRankColumn && <th scope="col" className="sila-num">Rank</th>}
-                          <th scope="col" className="sila-num">Sub Total</th>
-                          <th scope="col" className="sila-num">Quoted Amount</th>
+                          <th scope="col" className="sila-num">Sub Total{currency ? ` (${currency})` : ''}</th>
+                          <th scope="col" className="sila-num">Quoted Amount{currency ? ` (${currency})` : ''}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1101,8 +1108,8 @@ const ExternalSupplierBid: React.FC = () => {
                                   {quotationStatus === 'SUBMITTED' ? itemRank : '-'}
                                 </td>
                               )}
-                              <td className="sila-num">{line.subTotal.toFixed(2)}</td>
-                              <td className="sila-num sila-cell-strong">{line.quotedAmount.toFixed(2)}</td>
+                              <td className="sila-num">{fmtCurrency(line.subTotal)}</td>
+                              <td className="sila-num sila-cell-strong">{fmtCurrency(line.quotedAmount)}</td>
                             </tr>
                           );
                         })}
@@ -1112,7 +1119,7 @@ const ExternalSupplierBid: React.FC = () => {
 
                   <div className="sqs-total sqs-total--readonly">
                     <span className="sqs-total-label">Total Price Quote</span>
-                    <span className="sqs-total-value">{Number(totalPrice).toFixed(2)}</span>
+                    <span className="sqs-total-value">{fmtCurrency(Number(totalPrice))}</span>
                   </div>
                 </>
               )}
