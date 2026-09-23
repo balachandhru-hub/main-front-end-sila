@@ -43,6 +43,12 @@ export interface MasterApprovalFlowDto {
   buyerId: string;
 }
 
+export interface ItemMasterSimilarityDto {
+  id: string;
+  materialCode: string;
+  description: string;
+}
+
 // ─── Get Master Approval Flows ───
 export const getMasterApprovalFlows = async (
   buyerId: string,
@@ -59,6 +65,36 @@ export const getMasterApprovalFlows = async (
     const responseData = error.response?.data;
 
     let errMsg = 'Failed to fetch approval flows.';
+    if (typeof responseData === 'string') {
+      errMsg = responseData;
+    } else if (responseData?.message) {
+      errMsg = responseData.message;
+    } else if (responseData?.description) {
+      errMsg = responseData.description;
+    } else if (error.message) {
+      errMsg = error.message;
+    }
+
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+// ─── Check Item Master Similarity ───
+export const checkItemMasterSimilarity = async (
+  buyerId: string,
+  description: string,
+  materialGroup: string
+): Promise<ItemMasterSimilarityDto[]> => {
+  try {
+    const response = await platformInstance.get('/api/v1/buyer/item-master/check-similarity', {
+      params: { buyerId, description, materialGroup },
+    });
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+
+    let errMsg = 'Failed to check item master similarity.';
     if (typeof responseData === 'string') {
       errMsg = responseData;
     } else if (responseData?.message) {
