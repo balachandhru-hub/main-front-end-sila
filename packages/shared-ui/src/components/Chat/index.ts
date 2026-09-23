@@ -2,7 +2,7 @@ export { default as ChatPanel } from './ChatPanel';
 export type { ChatPanelProps } from './ChatPanel';
 export * from './chatTypes';
 export { startRfqChatHub, stopRfqChatHub } from './rfqChatHub';
-export type { RfqChatHubParams } from './rfqChatHub';
+export type { RfqChatHubParams, QuotationSubmittedEvent } from './rfqChatHub';
 export {
   downloadBase64File,
   fileToBase64,

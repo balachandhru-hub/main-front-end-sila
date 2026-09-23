@@ -203,13 +203,13 @@ const ExternalSupplierChat: React.FC<ExternalSupplierChatProps> = ({
     // No supplierId to scope the connection with (see the props comment
     // above) — and none is needed: per spec this chat always connects to
     // /buyermessageHub (the same hub the Buyer Admin chat uses), which
-    // rfqChatHub.ts selects whenever supplierId is omitted. The hub only
-    // reads the session token from the query string (session_token +
-    // external_rfq_id) - browsers cannot attach custom headers to the
-    // WebSocket upgrade - so it is passed as externalSessionToken. The
-    // header is kept for the negotiate call.
+    // rfqChatHub.ts selects whenever supplierId is omitted. The session
+    // token is sent as the session_token/external_rfq_id query params
+    // MessageHub actually reads (see rfqChatHub.ts) — not a header, which
+    // would silently never reach the backend once the connection upgrades
+    // to WebSockets.
     startRfqChatHub(
-      { rfqId, externalSessionToken: sessionToken, headers: { "X-Session-Token": sessionToken } },
+      { rfqId, sessionToken },
       handleIncomingMessages as (messages: any) => void
     ).catch((err) => {
       console.error("[ExternalSupplierChat] SignalR connection failed:", err);
