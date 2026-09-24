@@ -705,8 +705,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         const effQi = effQuotation ? getQuoteItemForRfqItem(effQuotation, rfqItem) : null;
 
         itemPrices[rfqItem.id] = {
-          firstBid: firstQi?.quotedAmount ?? firstQi?.quotedPrice ?? effQi?.quotedAmount ?? effQi?.quotedPrice ?? 0,
-          currentBid: latestQi?.quotedAmount ?? latestQi?.quotedPrice ?? effQi?.quotedAmount ?? effQi?.quotedPrice ?? 0,
+          firstBid: firstQi?.quotedPrice ?? firstQi?.quotedAmount ?? effQi?.quotedPrice ?? effQi?.quotedAmount ?? 0,
+          currentBid: latestQi?.quotedPrice ?? latestQi?.quotedAmount ?? effQi?.quotedPrice ?? effQi?.quotedAmount ?? 0,
           firstBreakdown: {
             discount: firstQi?.discount ?? (firstQi as any)?.discountPercentage ?? effQi?.discount ?? effQi?.discountPercentage ?? 0,
             discountType: (firstQi as any)?.discountType || (effQi as any)?.discountType || 'PERCENTAGE',
@@ -1217,7 +1217,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                     const selQI = selQuotation ? getQuoteItemForRfqItem(selQuotation, item) : null;
 
                     const qty = item.quantity || item.qty || 1;
-                    const rawUnitPrice = selQI?.quotedAmount ?? selQI?.quotedPrice ?? null;
+                    const rawUnitPrice = selQI?.quotedPrice ?? selQI?.quotedAmount ?? null;
                     const rawSubtotal  = selQI?.subTotal ?? null;
                     const fallbackTotal  = selQuotation?.totalPrice ?? 0;
                     const fallbackUnit   = fallbackTotal > 0 && lineItems.length > 0
@@ -1228,7 +1228,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
 
                     const itemPrices = effectiveQuotations.map((q: any) => {
                       const qi = getQuoteItemForRfqItem(q, item);
-                      return qi?.quotedAmount ?? qi?.quotedPrice ?? 0;
+                      return qi?.quotedPrice ?? qi?.quotedAmount ?? 0;
                     }).filter(p => p > 0);
                     const onlyOneSupplier = effectiveQuotations.length === 1;
                     const lowestItemPrice = itemPrices.length > 0 ? Math.min(...itemPrices) : 0;
@@ -1295,7 +1295,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
             effectiveQuotations.forEach((q: any) => {
               const suppId = q.quotationId || q.supplierId || q._id || 'unknown';
               const qi = getQuoteItemForRfqItem(q, item);
-              prices[suppId] = qi?.quotedAmount ?? qi?.quotedPrice ?? 0;
+              prices[suppId] = qi?.quotedPrice ?? qi?.quotedAmount ?? 0;
               ranks[suppId] = (qi?.rank ?? qi?.ranking ?? '').toString().toUpperCase().trim();
               breakdown[suppId] = {
                 discount: qi?.discount ?? qi?.discountPercentage ?? 0,
@@ -1360,6 +1360,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                         <td className="bca-cmp-td-fixed bca-cmp-td-muted bca-cmp-td-center">{item.uom}</td>
                         {cmpSuppliers.map(s => {
                           const price = (item.prices as Record<string, number>)[s.id] ?? 0;
+                          const total = price * (item.qty || 1);
                           const bd = (item.breakdown as Record<string, any>)[s.id] ?? { discount: 0, discountType: 'PERCENTAGE', tax: 0, taxType: 'PERCENTAGE', delivery: 0, deliveryType: 'AMOUNT' };
                           const rankLabel = (item.ranks as Record<string, string>)?.[s.id] ?? '';
                           const hasRankData = Object.values((item.ranks as Record<string, string>) ?? {}).some(r => r !== '');
@@ -1377,10 +1378,9 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                           return (
                             <td key={s.id} className={`bca-cmp-td-supp${isCellHighlighted ? " bca-cmp-td-selected" : ""}`}>
                               <div className="bca-cmp-price-row">
-                                <span className="bca-cmp-price">{price > 0 ? fmtINR(price) : '—'}</span>
+                                <span className="bca-cmp-price">{total > 0 ? fmtINR(total) : '—'}</span>
                                 {isLowest && <span className="bca-lowest-badge">LOWEST</span>}
                               </div>
-                              <div className="bca-cmp-per-unit">per unit</div>
                               {isRfqAwarded ? (
                                 isAwardedItem ? (
                                   <button type="button" className="bca-btn bca-cmp-sel-btn bca-cmp-awarded-btn" disabled>
@@ -1545,6 +1545,9 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                           };
                           const firstPrice = itemData.firstBid;
                           const currentPrice = itemData.currentBid;
+                          const qty = item.quantity || 1;
+                          const firstLineTotal = firstPrice * qty;
+                          const currentLineTotal = currentPrice * qty;
                           const firstBd = itemData.firstBreakdown || emptyBreakdown;
                           const currentBd = itemData.currentBreakdown || emptyBreakdown;
 
@@ -1563,7 +1566,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                           return (
                             <React.Fragment key={s.id}>
                               <td className="bca-hist-td bca-hist-first-td">
-                                <span className="bca-cmp-price">{firstPrice > 0 ? fmtINR(firstPrice) : '—'}</span>
+                                <span className="bca-cmp-price">{firstLineTotal > 0 ? fmtINR(firstLineTotal) : '—'}</span>
                                 <div className="bca-cmp-breakdown bca-cmp-breakdown-tight">
                                   <div className="bca-cmp-breakdown-title">Breakdown</div>
                                   <div className="bca-cmp-breakdown-row"><span>Unit Price</span><span>{firstPrice > 0 ? fmtINR(firstPrice) : '—'}</span></div>
@@ -1589,7 +1592,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                               </td>
                               <td className="bca-hist-td bca-hist-current-td">
                                 <div className="bca-hist-current-row">
-                                  <span className="bca-cmp-price">{currentPrice > 0 ? fmtINR(currentPrice) : '—'}</span>
+                                  <span className="bca-cmp-price">{currentLineTotal > 0 ? fmtINR(currentLineTotal) : '—'}</span>
                                   {firstPrice > 0 && currentPrice > 0 && (
                                     <span className={`bca-hist-delta ${decreased ? 'bca-hist-delta-down' : increased ? 'bca-hist-delta-up' : 'bca-hist-delta-same'}`}>
                                       {decreased ? <FaArrowDown aria-hidden="true" /> : increased ? <FaArrowUp aria-hidden="true" /> : '='} {Math.abs(pctChange)}%
@@ -1868,7 +1871,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                                 <tbody>
                                   {lineItems.map((item: any, idx: number) => {
                                     const qi = q ? getQuoteItemForRfqItem(q, item) : null;
-                                    const price = qi?.quotedAmount ?? qi?.quotedPrice ?? 0;
+                                    const price = qi?.quotedPrice ?? qi?.quotedAmount ?? 0;
                                     const qty = item.quantity || item.qty || 1;
                                     const subtotal = qi?.subTotal ?? (price * qty);
                                     const discount = qi?.discount ?? qi?.discountPercentage ?? 0;
