@@ -239,6 +239,10 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   const isRfqAwarded = rfq?.status === "AWARDED";
   // A contract has already been created for this RFQ (listed in the buyer's rfq-by-id).
   const hasContract = (rfq?.contracts?.length ?? 0) > 0;
+  // A supplier has already been invited to the contract workspace (buyerTermsAndConditionStatuses[].isSupplierInvitedForContract).
+  const isSupplierInvitedForContract = !!(rfq?.buyerTermsAndConditionStatuses || []).some(
+    (s: any) => s.isSupplierInvitedForContract === true
+  );
   const isLotOption = !!rfq?.addLotOption;
   const quotations: any[] = useMemo(() => {
     if (!rfq?.supplierQuotation) return [];
@@ -1953,14 +1957,18 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
             fontSize: '14px',
             fontWeight: 600,
             borderRadius: '8px',
-            background: hasContract || contractCreated ? '#059669' : '#2563eb',
+            background: hasContract || contractCreated || isSupplierInvitedForContract ? '#059669' : '#2563eb',
             color: '#ffffff',
             border: 'none',
             cursor: 'pointer',
             boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)',
           }}
         >
-          {hasContract ? 'View Contract' : contractCreated ? '✓ Contract Workspace' : 'Create Contract'}
+          {hasContract
+            ? 'View Contract'
+            : contractCreated || isSupplierInvitedForContract
+              ? '✓ Contract Workspace'
+              : 'Create Contract'}
         </button>
       </div>}
 

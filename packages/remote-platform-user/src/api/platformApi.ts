@@ -664,6 +664,7 @@ export interface BuyerRfqContractStatusDto {
     supplierId: string;
     supplierName: string;
     buyerTermsAndConditionAccepted: 'ACCEPTED' | 'REJECTED' | 'PENDING';
+    isSupplierInvitedForContract?: boolean;
   }[];
   /** Whether the buyer has already accepted each supplier's terms & conditions. */
   supplierTermsAndConditionAccepted?: {

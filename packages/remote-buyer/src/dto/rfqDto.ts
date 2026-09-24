@@ -216,6 +216,7 @@ export interface BuyerRFQDetailResponse {
     supplierId: string;
     supplierName: string;
     buyerTermsAndConditionAccepted: 'ACCEPTED' | 'REJECTED' | 'PENDING';
+    isSupplierInvitedForContract?: boolean;
   }[];
   /** Whether the buyer has already accepted the supplier's terms & conditions. */
   supplierTermsAndConditionAccepted?: 'ACCEPTED' | 'REJECTED' | 'PENDING';

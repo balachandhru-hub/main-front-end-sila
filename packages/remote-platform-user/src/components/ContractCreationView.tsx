@@ -1272,6 +1272,26 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     updateContract(id, { buyerFinalAccepted: true });
   };
 
+  // Buyer: rejects the supplier's own Terms & Conditions. Unlike Accept, this does not set buyerFinalAccepted,
+  // so signing stays blocked (supplierSignBlockedByPendingTcApproval) until the buyer accepts instead.
+  const handleBuyerRejectFinal = async (id: string) => {
+    const targetRfqId = rfq?.rfqId || rfq?.id || (rfq as any)?._id || id;
+    setBuyerTermsError(null);
+    if (onAcceptSupplierTerms && targetRfqId) {
+      try {
+        const res = await onAcceptSupplierTerms(targetRfqId, resolveSupplierId(id), "REJECT");
+        if (res && "statusCode" in res && res.statusCode >= 400) {
+          setBuyerTermsError(res.message || "Failed to reject the supplier's terms & conditions.");
+          return;
+        }
+        await loadLatestContractStatus();
+      } catch (err: any) {
+        console.error("Failed to update supplier terms & conditions status:", err);
+        setBuyerTermsError(err?.message || "Failed to reject the supplier's terms & conditions.");
+      }
+    }
+  };
+
   const handleSupplierAcceptFinal = async (id: string) => {
     const rfqId = rfq?.rfqId || rfq?.id || (rfq as any)?._id || id;
     setUploadingSupplierTc(true);
@@ -1422,7 +1442,12 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     setSendingContract(true);
     setSendContractError(null);
     const error = await sendContract([id]);
-    if (error) setSendContractError(error);
+    if (error) {
+      setSendContractError(error);
+      toastService.error(error, 5000);
+    } else {
+      toastService.success("Contract terms sent to supplier for review.", 5000);
+    }
     setSendingContract(false);
   };
 
@@ -1444,8 +1469,13 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     setSendingContract(true);
     setSendContractError(null);
     const error = await sendContract(selectedPendingIds);
-    if (error) setSendContractError(error);
-    else setSendSelection({});
+    if (error) {
+      setSendContractError(error);
+      toastService.error(error, 5000);
+    } else {
+      toastService.success("Contract terms sent to suppliers for review.", 5000);
+      setSendSelection({});
+    }
     setSendingContract(false);
   };
 
@@ -1770,9 +1800,10 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     id: string,
     contract: ContractState,
     buyerSignDetails: SignDetails | null,
-    supplierSignDetails: SignDetails | null
+    supplierSignDetails: SignDetails | null,
+    contractNumberOverride?: string
   ): ContractPdfInput => ({
-    contractNumber: contract.contractNumber,
+    contractNumber: contractNumberOverride ?? contract.contractNumber,
     contractName: contractName.trim() || contract.contractNumber,
     supplierName: getSupplierName(contract.supplierId),
     rfqTitle: rfq?.title || rfq?.rfqNo || rfq?.name || "—",
@@ -1821,9 +1852,15 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       ]);
 
       const mergedBytes = await buildMergedContractPdfBytes(
-        buildContractPdfInput(activeContractId, activeContract, effectiveBuyerSignDetails, effectiveSupplierSignDetails)
+        buildContractPdfInput(
+          activeContractId,
+          activeContract,
+          effectiveBuyerSignDetails,
+          effectiveSupplierSignDetails,
+          activeCreated ? activeCreated.contractNumber || activeContract.contractNumber : "XXXXXXX"
+        )
       );
-      const contractNumber = activeCreated?.contractNumber || activeContract.contractNumber || "Contract";
+      const contractNumber = activeCreated ? activeCreated.contractNumber || activeContract.contractNumber || "Contract" : "XXXXXXX";
       const blob = new Blob([mergedBytes], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       if (preview) {
@@ -1901,7 +1938,9 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         attachments: [pdfAttachment],
       });
       if (res.statusCode >= 400) {
-        setCreateContractError([res.message || "Failed to create the contract.", "description" in res ? res.description : ""].filter(Boolean).join(" - "));
+        const errorMsg = [res.message || "Failed to create the contract.", "description" in res ? res.description : ""].filter(Boolean).join(" - ");
+        setCreateContractError(errorMsg);
+        toastService.error(errorMsg, 5000);
         return;
       }
       if ("id" in res && res.id) {
@@ -1910,9 +1949,11 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
           setCreatedContracts((prev) => ({ ...prev, [id]: created }));
         }
       }
-      toastService.success("Contract created successfully.");
+      toastService.success("Contract created successfully.", 5000);
     } catch (err: any) {
-      setCreateContractError(err?.message || "Failed to create the contract.");
+      const errorMsg = err?.message || "Failed to create the contract.";
+      setCreateContractError(errorMsg);
+      toastService.error(errorMsg, 5000);
     } finally {
       setCreatingContract(false);
     }
@@ -2574,6 +2615,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 const termsReceived = activeTcEntry?.termsAndCondition === true;
                 const receivedDocs = termsReceived ? activeTcEntry?.attachments || [] : [];
                 const termsAccepted = activeTermsAcceptedEntry?.supplierTermsAndConditionAccepted === "ACCEPTED";
+                const termsRejected = activeTermsAcceptedEntry?.supplierTermsAndConditionAccepted === "REJECTED";
                 return (
                   <div className="contract-tc-card">
                     <div>
@@ -2601,6 +2643,14 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                         className={`contract-btn contract-btn--md ${termsAccepted ? "contract-btn--accepted" : "contract-btn--accept"}`}
                       >
                         {termsAccepted ? "Accepted" : "Accept"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleBuyerRejectFinal(activeContractId)}
+                        disabled={!termsReceived || termsAccepted || termsRejected}
+                        className={`contract-btn contract-btn--md ${termsRejected ? "contract-btn--rejected" : "contract-btn--danger"}`}
+                      >
+                        {termsRejected ? "Rejected" : "Reject"}
                       </button>
                     </div>
                   </div>
