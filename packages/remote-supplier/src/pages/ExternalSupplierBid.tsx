@@ -148,6 +148,7 @@ interface QuoteLineItem {
   quotedPrice: number;
   subTotal: number;
   quotedAmount: number;
+  isLineitemAvailable: boolean;
 }
 
 /* [buyer-questions]
@@ -170,6 +171,7 @@ const EMPTY_LINE_ITEM: QuoteLineItem = {
   quotedPrice: 0,
   subTotal: 0,
   quotedAmount: 0,
+  isLineitemAvailable: false,
 };
 
 const ExternalSupplierBid: React.FC = () => {
@@ -268,6 +270,7 @@ const ExternalSupplierBid: React.FC = () => {
           quotedPrice: source?.quotedPrice ?? 0,
           subTotal: source?.subTotal ?? 0,
           quotedAmount: source?.quotedAmount ?? 0,
+          isLineitemAvailable: source?.isLineitemAvailable ?? false,
         };
       });
       setLineItems(nextLineItems);
@@ -383,6 +386,19 @@ const ExternalSupplierBid: React.FC = () => {
         [supplierRFQItemId]: {
           ...existing,
           [field]: isNumericField ? Number(value) || 0 : value,
+        },
+      };
+    });
+  };
+
+  const handleLineItemAvailabilityChange = (supplierRFQItemId: string, checked: boolean) => {
+    setLineItems((prev) => {
+      const existing = prev[supplierRFQItemId] || EMPTY_LINE_ITEM;
+      return {
+        ...prev,
+        [supplierRFQItemId]: {
+          ...existing,
+          isLineitemAvailable: checked,
         },
       };
     });
@@ -582,6 +598,7 @@ const ExternalSupplierBid: React.FC = () => {
               discountType: line?.discountType || 'PERCENTAGE',
               tax: Number(line?.tax ?? 0),
               taxType: line?.taxType || 'PERCENTAGE',
+              isLineitemAvailable: Boolean(line?.isLineitemAvailable),
             };
           }),
       };
@@ -1038,6 +1055,7 @@ const ExternalSupplierBid: React.FC = () => {
                           <th scope="col">
                             Quoted Price<span className="sila-required" aria-hidden="true">*</span>
                           </th>
+                          <th scope="col" className="sqs-availability-cell">Available</th>
                           {showRankColumn && <th scope="col" className="sila-num">Rank</th>}
                           <th scope="col" className="sila-num">Sub Total{currency ? ` (${currency})` : ''}</th>
                           <th scope="col" className="sila-num">Quoted Amount{currency ? ` (${currency})` : ''}</th>
@@ -1132,6 +1150,15 @@ const ExternalSupplierBid: React.FC = () => {
                                   placeholder="0.00"
                                   aria-label={`Quoted price for ${itemLabel}`}
                                   required
+                                />
+                              </td>
+                              <td className="sqs-availability-cell">
+                                <input
+                                  type="checkbox"
+                                  className="sqs-availability-checkbox ebid-availability-checkbox"
+                                  checked={!line.isLineitemAvailable}
+                                  onChange={(e) => handleLineItemAvailabilityChange(itemKey, !e.target.checked)}
+                                  aria-label={`Mark ${itemLabel} as available`}
                                 />
                               </td>
                               {showRankColumn && (
