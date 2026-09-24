@@ -211,6 +211,71 @@ const ExternalSupplierBid: React.FC = () => {
   const currency = (rfq as any)?.currency || '';
   const fmtCurrency = (val: number) => `${(val || 0).toFixed(2)}${currency ? ` ${currency}` : ''}`;
 
+  // Populates every piece of state derived from a fetched RFQ — the raw `rfq`
+  // object itself plus the form fields mirrored from the supplier's existing
+  // quotation (total/discount/tax/delivery, per-item prices). Shared by the
+  // initial load and every live refetch (including right after this visitor's
+  // own submit) so a fresh GET always shows up in the table, not just in `rfq`.
+  const applyRfqData = (data: ExternalRFQDetailResponse) => {
+    setRfq(data);
+
+    const existingQuote = data.supplierQuotation?.[0];
+    if (existingQuote) {
+      setQuotationId(existingQuote.qutationId || existingQuote.id || null);
+      setHasExistingQuote(existingQuote.status === 'SUBMITTED');
+      setTotalPrice(existingQuote.totalPrice || 0);
+      setDeliveryCharge(existingQuote.deliveryCharge || 0);
+      setDeliveryType(existingQuote.deliveryType || 'PERCENTAGE');
+      setDiscount(existingQuote.discount || 0);
+      setDiscountType(existingQuote.discountType || 'PERCENTAGE');
+      setTax(existingQuote.tax || 0);
+      setTaxType(existingQuote.taxType || 'PERCENTAGE');
+    }
+
+    // The backend echoes each supplier quotation item's `supplierRFQItemId` as the
+    // all-zero placeholder GUID, so matching on it misses every existing quote.
+    // `item.id` on an external RFQ item is that same supplierRFQItemId, not the
+    // buyer's item id — the field that actually lines up with
+    // `supplierQuotationItems[].buyerRFQItemId` is `item.buyerRFQItemId` itself.
+    const findExistingItemQuote = (item: (typeof data.items)[number]) =>
+      data.supplierQuotationItems?.find(
+        (qi) =>
+          (item.buyerRFQItemId && qi.buyerRFQItemId === item.buyerRFQItemId) ||
+          (item.supplierRFQItemId && qi.supplierRFQItemId === item.supplierRFQItemId)
+      );
+
+    const prices: { [key: string]: number } = {};
+    data.items?.forEach((item, idx) => {
+      const key = item.id || item.buyerRFQItemId || `item-${idx}`;
+      const existingItemQuote = findExistingItemQuote(item);
+      prices[key] = existingItemQuote?.quotedPrice ?? 0;
+    });
+    setItemPrices(prices);
+
+    if (!data.addLotOption) {
+      const nextLineItems: { [supplierRFQItemId: string]: QuoteLineItem } = {};
+      data.items?.forEach((item) => {
+        const itemKey = item.supplierRFQItemId;
+        if (!itemKey) return;
+        const source = findExistingItemQuote(item);
+        nextLineItems[itemKey] = {
+          deliveryCharge: source?.deliveryCharge ?? 0,
+          deliveryType: source?.deliveryType || 'PERCENTAGE',
+          discount: source?.discount ?? 0,
+          discountType: source?.discountType || 'PERCENTAGE',
+          tax: source?.tax ?? 0,
+          taxType: source?.taxType || 'PERCENTAGE',
+          quotedPrice: source?.quotedPrice ?? 0,
+          subTotal: source?.subTotal ?? 0,
+          quotedAmount: source?.quotedAmount ?? 0,
+        };
+      });
+      setLineItems(nextLineItems);
+    } else {
+      setLineItems({});
+    }
+  };
+
   useEffect(() => {
     if (!rfq) return;
     const t = setInterval(() => setWindowTick((n) => n + 1), 30000);
@@ -221,13 +286,12 @@ const ExternalSupplierBid: React.FC = () => {
     document.title = rfq ? `Quote: ${rfq.title}` : 'Request for Quotation';
   }, [rfq]);
 
-  // Live-refreshes rank/status (e.g. a teammate using the same bid link in
-  // another tab submits, or the buyer's side otherwise updates the
-  // quotation) without touching the price/answer fields the visitor may
-  // currently be filling in. No supplierId to scope the connection with —
-  // same as ExternalSupplierChat, it connects on rfqId + the session token
-  // header alone, and reuses that same shared connection rather than
-  // opening a second one (see rfqChatHub.ts).
+  // Live-refreshes rank/status/quotation data (e.g. this visitor's own submit
+  // just got broadcast back, a teammate using the same bid link in another tab
+  // submits, or the buyer's side otherwise updates the quotation). No
+  // supplierId to scope the connection with — same as ExternalSupplierChat, it
+  // connects on rfqId + the session token header alone, and reuses that same
+  // shared connection rather than opening a second one (see rfqChatHub.ts).
   const quotationRefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!rfqId || !sessionToken) return;
@@ -236,7 +300,7 @@ const ExternalSupplierBid: React.FC = () => {
       if (quotationRefetchTimerRef.current) clearTimeout(quotationRefetchTimerRef.current);
       quotationRefetchTimerRef.current = setTimeout(async () => {
         const data = await fetchExternalRfqDetails(rfqId, sessionToken);
-        if (!isErrorResponse(data)) setRfq(data);
+        if (!isErrorResponse(data)) applyRfqData(data);
       }, 500);
     };
 
@@ -278,63 +342,7 @@ const ExternalSupplierBid: React.FC = () => {
         return;
       }
 
-      setRfq(data);
-
-      const existingQuote = data.supplierQuotation?.[0];
-      if (existingQuote) {
-        setQuotationId(existingQuote.qutationId || existingQuote.id || null);
-        setHasExistingQuote(existingQuote.status === 'SUBMITTED');
-        setTotalPrice(existingQuote.totalPrice || 0);
-        setDeliveryCharge(existingQuote.deliveryCharge || 0);
-        setDeliveryType(existingQuote.deliveryType || 'PERCENTAGE');
-        setDiscount(existingQuote.discount || 0);
-        setDiscountType(existingQuote.discountType || 'PERCENTAGE');
-        setTax(existingQuote.tax || 0);
-        setTaxType(existingQuote.taxType || 'PERCENTAGE');
-      }
-
-      // The backend echoes each supplier quotation item's `supplierRFQItemId` as the
-      // all-zero placeholder GUID, so matching on it misses every existing quote.
-      // `item.id` on an external RFQ item is that same supplierRFQItemId, not the
-      // buyer's item id — the field that actually lines up with
-      // `supplierQuotationItems[].buyerRFQItemId` is `item.buyerRFQItemId` itself.
-      const findExistingItemQuote = (item: (typeof data.items)[number]) =>
-        data.supplierQuotationItems?.find(
-          (qi) =>
-            (item.buyerRFQItemId && qi.buyerRFQItemId === item.buyerRFQItemId) ||
-            (item.supplierRFQItemId && qi.supplierRFQItemId === item.supplierRFQItemId)
-        );
-
-      const prices: { [key: string]: number } = {};
-      data.items?.forEach((item, idx) => {
-        const key = item.id || item.buyerRFQItemId || `item-${idx}`;
-        const existingItemQuote = findExistingItemQuote(item);
-        prices[key] = existingItemQuote?.quotedPrice ?? 0;
-      });
-      setItemPrices(prices);
-
-      if (!data.addLotOption) {
-        const nextLineItems: { [supplierRFQItemId: string]: QuoteLineItem } = {};
-        data.items?.forEach((item) => {
-          const itemKey = item.supplierRFQItemId;
-          if (!itemKey) return;
-          const source = findExistingItemQuote(item);
-          nextLineItems[itemKey] = {
-            deliveryCharge: source?.deliveryCharge ?? 0,
-            deliveryType: source?.deliveryType || 'PERCENTAGE',
-            discount: source?.discount ?? 0,
-            discountType: source?.discountType || 'PERCENTAGE',
-            tax: source?.tax ?? 0,
-            taxType: source?.taxType || 'PERCENTAGE',
-            quotedPrice: source?.quotedPrice ?? 0,
-            subTotal: source?.subTotal ?? 0,
-            quotedAmount: source?.quotedAmount ?? 0,
-          };
-        });
-        setLineItems(nextLineItems);
-      } else {
-        setLineItems({});
-      }
+      applyRfqData(data);
 
       /* [buyer-questions]
       const initialAnswers: typeof answers = {};
