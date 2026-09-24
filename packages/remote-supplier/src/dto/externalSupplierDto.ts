@@ -30,6 +30,7 @@ export interface ExternalSupplierQuotationItem {
   subTotal?: number;
   lineNumber?: number;
   rank?: string | number | null;
+  isLineitemAvailable?: boolean;
 }
 
 export interface ExternalRFQDetailResponse {
@@ -61,6 +62,7 @@ export interface ExternalQuotationItemPayload {
   discountType?: string;
   tax?: number;
   taxType?: string;
+  isLineitemAvailable?: boolean;
 }
 
 export interface ExternalSubmitQuotationPayload {
