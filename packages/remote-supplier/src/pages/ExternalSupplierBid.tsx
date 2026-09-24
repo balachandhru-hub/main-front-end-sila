@@ -195,7 +195,8 @@ const ExternalSupplierBid: React.FC = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  // const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [showRegisterContent, setShowRegisterContent] = useState(false);
 
   const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -239,7 +240,7 @@ const ExternalSupplierBid: React.FC = () => {
 
     startRfqChatHub(
       { rfqId, sessionToken },
-      () => {},
+      () => { },
       undefined,
       handleQuotationSubmitted
     ).catch((err) => {
@@ -517,7 +518,7 @@ const ExternalSupplierBid: React.FC = () => {
     setShowConfirm(false);
     setSubmitting(true);
     setSubmitError(null);
-    setSubmitSuccess(false);
+    // setSubmitSuccess(false);
 
     try {
       const supplierRFQId = rfq.items?.[0]?.supplierRFQId || null;
@@ -570,7 +571,7 @@ const ExternalSupplierBid: React.FC = () => {
         return;
       }
 
-      setSubmitSuccess(true);
+      // setSubmitSuccess(true);
     } catch (err: any) {
       setSubmitError(err?.message || 'Failed to submit quotation. Please try again.');
     } finally {
@@ -597,21 +598,23 @@ const ExternalSupplierBid: React.FC = () => {
         <p>{loadErrorMessage || fallbackBody[loadErrorKind]}</p>
       </div>
     );
-  } else if (submitSuccess) {
+  }
+ else if (showRegisterContent) {
     content = (
       <div className="ebid-status-card ebid-status-success">
         <FaCheckCircle className="ebid-status-icon ebid-status-icon-success" />
         <h1>Quotation Submitted Successfully</h1>
-        <p>Your quotation for <strong>{rfq?.title}</strong> has been sent to the buyer. You can close this page now.</p>
+        <p>Your quotation for <strong>{rfq?.title}</strong> has been {(rfq?.status === "Freezing" || rfq?.status === "Frozen") ? "Frozen" : (rfq?.status === "AWARDED") ? "Awarded" : "Successful"}. You can close this page now.</p>
         <div className="ebid-register-prompt">
           <p>Want to continue using the platform? Register now to create your account and access more features.</p>
           <button type="button" className="ebid-submit-btn ebid-btn-with-icon" onClick={() => navigate('/')}>
-            <FaUserPlus /> Register
+            <FaUserPlus /> Continue
           </button>
         </div>
       </div>
     );
-  } else if (rfq) {
+  }
+  else if (rfq) {
     const formatRank = (val: unknown): string => {
       if (val === null || val === undefined || val === '') return '';
       return String(val);
@@ -821,6 +824,7 @@ const ExternalSupplierBid: React.FC = () => {
                     <input
                       id="sqs-bulk-value-input"
                       className="sila-input sqs-bulk-input"
+                      min={0}
                       type="number"
                       value={bulkValue}
                       onChange={(e) => setBulkValue(e.target.value)}
@@ -1262,33 +1266,48 @@ const ExternalSupplierBid: React.FC = () => {
                 />
               )}
             </div>
-            <div className="sqs-footer-actions">
-              <button
-                type="submit"
-                className="sila-btn sila-btn--primary"
-                disabled={submitting || !canSubmit || isRfqAwarded || frozen || closed}
-                aria-busy={submitting || undefined}
-                title={
-                  notYetOpen
-                    ? "This RFQ hasn't opened for bidding yet."
-                    : frozen
-                      ? "The buyer has frozen this RFQ's bid."
-                      : closed
-                        ? "This RFQ's submission window has closed."
-                        : undefined
-                }
-              >
-                {submitting && <span className="sila-spinner" aria-hidden="true" />}
-                {submitting ? 'Submitting...' : notYetOpen ? 'Not Yet Open' : frozen ? 'Bid Frozen' : closed ? 'Submission Closed': isRfqAwarded? 'Quotation Closed': 'Submit Quotation'}
-              </button>
-            </div>
+            
+
+              <div className="sqs-footer-actions">
+                {rfq.status === 'Open' ? (
+                  <button
+                    type="submit"
+                    className="sila-btn sila-btn--primary"
+                    disabled={submitting || !canSubmit}
+                    aria-busy={submitting || undefined}
+                  >
+                    {submitting && <span className="sila-spinner" aria-hidden="true" />}
+                    {submitting ? 'Submitting...' : 'Submit Quotation'}
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="sila-btn sila-btn--primary"
+                      disabled
+                    >
+                      {submitting ? 'Submitting...' : notYetOpen ? 'Not Yet Open' : frozen ? 'Bid Frozen' :
+                        closed ? 'Submission Closed' : isRfqAwarded ? 'Quotation Closed' : 'Quotation Closed'}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="sila-btn sila-btn--primary"
+                      onClick={() =>setShowRegisterContent(true)}
+                    >
+                      Register
+                    </button>
+                  </>
+                )}
+              </div>
+          
           </div>
         </form>
       </div>
     );
   }
 
-  const isStatusView = loading || !!loadErrorKind || submitSuccess;
+  const isStatusView = loading || !!loadErrorKind || showRegisterContent;
 
   return (
     <div className="ebid-page">
