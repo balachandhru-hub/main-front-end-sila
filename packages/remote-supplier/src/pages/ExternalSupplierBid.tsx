@@ -762,11 +762,11 @@ const ExternalSupplierBid: React.FC = () => {
                     <dd className="sila-meta-value">{rfq.title || '—'}</dd>
                   </div>
                   <div className="sila-meta-item">
-                    <dt className="sila-meta-label">Start date &amp; time</dt>
+                    <dt className="sila-meta-label">Start date &amp; time (UTC)</dt>
                     <dd className="sila-meta-value sqs-tabular">{formatDateTime(rfq.startDate)}</dd>
                   </div>
                   <div className="sila-meta-item">
-                    <dt className="sila-meta-label">Close date &amp; time</dt>
+                    <dt className="sila-meta-label">Close date &amp; time (UTC)</dt>
                     <dd className="sila-meta-value sqs-tabular">{formatDateTime(rfq.endDate)}</dd>
                   </div>
                   <div className="sila-meta-item">
