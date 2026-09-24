@@ -496,7 +496,7 @@ export function buildContractCoverPdfBytes(input: ContractPdfInput): Uint8Array 
 
   // Footer, added to every page once total content (and so total page count) is known: a rule, contract number
   // on the left, page numbers on the right.
-  const totalPages = doc.internal.getNumberOfPages();
+  const totalPages = doc.getNumberOfPages();
   for (let page = 1; page <= totalPages; page++) {
     doc.setPage(page);
     doc.setDrawColor(...SILA_BORDER_RGB);
