@@ -915,7 +915,7 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
                           </div>
 
                           <div>
-                            <div className="eauction-detail-label">Start Date &amp; Time</div>
+                            <div className="eauction-detail-label">Start Date &amp; Time (UTC)</div>
                             <div className="eauction-detail-value">
                               {selectedRfqDetails.startDate
                                 ? new Date(selectedRfqDetails.startDate).toLocaleString('en-IN', {
@@ -930,7 +930,7 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
                           </div>
 
                           <div>
-                            <div className="eauction-detail-label">End Date &amp; Time</div>
+                            <div className="eauction-detail-label">End Date &amp; Time (UTC)</div>
                             <div className="eauction-detail-value">
                               {selectedRfqDetails.endDate
                                 ? new Date(selectedRfqDetails.endDate).toLocaleString('en-IN', {
