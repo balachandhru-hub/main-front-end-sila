@@ -556,7 +556,14 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
         supplierId: supplierId as string,
         answers: Object.values(rfqAnswers).map((a) => {
           const question = selectedRfq.questions?.find(q => q.questionId === a.rfqQuestionId);
-          const allOptionIds = question?.options?.map(opt => opt.optionId) || [];
+
+          let questionOptionId: string | null = a.questionOptionId || (a.questionOptionIds?.length ? a.questionOptionIds[0] : null);
+          let questionOptionIds: string[] = a.questionOptionIds || [];
+          if (question?.questionType === "Radio") {
+            questionOptionIds = [];
+          } else if (question?.questionType === "Checkbox") {
+            questionOptionId = null;
+          }
 
           const answerAttachment: RfqDocumentAssetDto | null =
             a.file && a.fileBase64
@@ -577,8 +584,8 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
           return {
             rfqQuestionId: a.rfqQuestionId,
             answer: a.answer || "",
-            questionOptionId: a.questionOptionId || (a.questionOptionIds?.length ? a.questionOptionIds[0] : null),
-            questionOptionIds: allOptionIds,
+            questionOptionId,
+            questionOptionIds,
             attachment: answerAttachment
           };
         }),
