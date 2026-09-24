@@ -10,6 +10,8 @@ import {
   IconMessageSquare,
   startRfqChatHub,
   stopRfqChatHub,
+  toastService,
+  ToastContainer,
 } from '@vosox/shared-ui';
 import type { QuotationSubmittedEvent } from '@vosox/shared-ui';
 import { FaCheckCircle, FaExclamationCircle, FaUserPlus } from 'react-icons/fa';
@@ -21,6 +23,7 @@ import {
 import type {
   ExternalRFQDetailResponse,
   ExternalSubmitQuotationPayload,
+  ExternalSubmitQuotationResponse,
 } from '../dto/externalSupplierDto';
 // Additional Questions from Buyer: disabled for now. Uncomment every block marked [buyer-questions] to bring it back.
 // [buyer-questions] import type { RFQQuestion } from '../dto/supplierDto';
@@ -196,7 +199,6 @@ const ExternalSupplierBid: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   // const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [showRegisterContent, setShowRegisterContent] = useState(false);
 
   const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -291,10 +293,22 @@ const ExternalSupplierBid: React.FC = () => {
         setTaxType(existingQuote.taxType || 'PERCENTAGE');
       }
 
+      // The backend echoes each supplier quotation item's `supplierRFQItemId` as the
+      // all-zero placeholder GUID, so matching on it misses every existing quote.
+      // `item.id` on an external RFQ item is that same supplierRFQItemId, not the
+      // buyer's item id — the field that actually lines up with
+      // `supplierQuotationItems[].buyerRFQItemId` is `item.buyerRFQItemId` itself.
+      const findExistingItemQuote = (item: (typeof data.items)[number]) =>
+        data.supplierQuotationItems?.find(
+          (qi) =>
+            (item.buyerRFQItemId && qi.buyerRFQItemId === item.buyerRFQItemId) ||
+            (item.supplierRFQItemId && qi.supplierRFQItemId === item.supplierRFQItemId)
+        );
+
       const prices: { [key: string]: number } = {};
       data.items?.forEach((item, idx) => {
         const key = item.id || item.buyerRFQItemId || `item-${idx}`;
-        const existingItemQuote = data.supplierQuotationItems?.[idx];
+        const existingItemQuote = findExistingItemQuote(item);
         prices[key] = existingItemQuote?.quotedPrice ?? 0;
       });
       setItemPrices(prices);
@@ -304,7 +318,7 @@ const ExternalSupplierBid: React.FC = () => {
         data.items?.forEach((item) => {
           const itemKey = item.supplierRFQItemId;
           if (!itemKey) return;
-          const source = data.supplierQuotationItems?.find((qi) => qi.supplierRFQItemId === itemKey);
+          const source = findExistingItemQuote(item);
           nextLineItems[itemKey] = {
             deliveryCharge: source?.deliveryCharge ?? 0,
             deliveryType: source?.deliveryType || 'PERCENTAGE',
@@ -336,7 +350,7 @@ const ExternalSupplierBid: React.FC = () => {
     load();
   }, [rfqId, sessionToken]);
 
-  const { notYetOpen, closed, frozen, canSubmit } = useMemo(
+  const { notYetOpen, frozen, canSubmit } = useMemo(
     () => getSubmissionWindowStatus(rfq),
     [rfq, windowTick]
   );
@@ -567,13 +581,19 @@ const ExternalSupplierBid: React.FC = () => {
       const result = await submitExternalQuotation(rfqId, sessionToken, payload);
 
       if (isErrorResponse(result)) {
-        setSubmitError(result.message || 'Failed to submit quotation. Please try again.');
+        const errorMessage = result.description || result.message || 'Failed to submit quotation. Please try again.';
+        setSubmitError(errorMessage);
+        toastService.error(errorMessage);
         return;
       }
 
+      const successResult: ExternalSubmitQuotationResponse = result;
+      toastService.success(successResult.description || successResult.message || 'Quotation submitted successfully.');
       // setSubmitSuccess(true);
     } catch (err: any) {
-      setSubmitError(err?.message || 'Failed to submit quotation. Please try again.');
+      const errorMessage = err?.message || 'Failed to submit quotation. Please try again.';
+      setSubmitError(errorMessage);
+      toastService.error(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -599,7 +619,7 @@ const ExternalSupplierBid: React.FC = () => {
       </div>
     );
   }
- else if (showRegisterContent) {
+ else if (rfq && rfq.status !== 'Open') {
     content = (
       <div className="ebid-status-card ebid-status-success">
         <FaCheckCircle className="ebid-status-icon ebid-status-icon-success" />
@@ -608,7 +628,7 @@ const ExternalSupplierBid: React.FC = () => {
         <div className="ebid-register-prompt">
           <p>Want to continue using the platform? Register now to create your account and access more features.</p>
           <button type="button" className="ebid-submit-btn ebid-btn-with-icon" onClick={() => navigate('/')}>
-            <FaUserPlus /> Continue
+            <FaUserPlus /> Register
           </button>
         </div>
       </div>
@@ -1018,13 +1038,12 @@ const ExternalSupplierBid: React.FC = () => {
                       <tbody>
                         {rfq.items?.map((item, idx) => {
                           const itemKey = item.supplierRFQItemId || `item-${idx}`;
-                          const itemId = item.id || item.buyerRFQItemId;
                           const line = lineItems[itemKey] || EMPTY_LINE_ITEM;
                           const matchedItem =
                             rfq.supplierQuotationItems?.find(
                               (qi) =>
-                                (qi.supplierRFQItemId && (qi.supplierRFQItemId === itemKey || qi.supplierRFQItemId === itemId)) ||
-                                (qi.buyerRFQItemId && (qi.buyerRFQItemId === itemKey || qi.buyerRFQItemId === itemId))
+                                (item.buyerRFQItemId && qi.buyerRFQItemId === item.buyerRFQItemId) ||
+                                (item.supplierRFQItemId && qi.supplierRFQItemId === item.supplierRFQItemId)
                             ) || rfq.supplierQuotationItems?.[idx];
                           const itemRank = formatRank(matchedItem?.rank) || '--';
                           const itemLabel = item.description || `item ${idx + 1}`;
@@ -1269,36 +1288,15 @@ const ExternalSupplierBid: React.FC = () => {
             
 
               <div className="sqs-footer-actions">
-                {rfq.status === 'Open' ? (
-                  <button
-                    type="submit"
-                    className="sila-btn sila-btn--primary"
-                    disabled={submitting || !canSubmit}
-                    aria-busy={submitting || undefined}
-                  >
-                    {submitting && <span className="sila-spinner" aria-hidden="true" />}
-                    {submitting ? 'Submitting...' : 'Submit Quotation'}
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      className="sila-btn sila-btn--primary"
-                      disabled
-                    >
-                      {submitting ? 'Submitting...' : notYetOpen ? 'Not Yet Open' : frozen ? 'Bid Frozen' :
-                        closed ? 'Submission Closed' : isRfqAwarded ? 'Quotation Closed' : 'Quotation Closed'}
-                    </button>
-
-                    <button
-                      type="button"
-                      className="sila-btn sila-btn--primary"
-                      onClick={() =>setShowRegisterContent(true)}
-                    >
-                      Register
-                    </button>
-                  </>
-                )}
+                <button
+                  type="submit"
+                  className="sila-btn sila-btn--primary"
+                  disabled={submitting || !canSubmit}
+                  aria-busy={submitting || undefined}
+                >
+                  {submitting && <span className="sila-spinner" aria-hidden="true" />}
+                  {submitting ? 'Submitting...' : 'Submit Quotation'}
+                </button>
               </div>
           
           </div>
@@ -1307,10 +1305,11 @@ const ExternalSupplierBid: React.FC = () => {
     );
   }
 
-  const isStatusView = loading || !!loadErrorKind || showRegisterContent;
+  const isStatusView = loading || !!loadErrorKind || (!!rfq && rfq.status !== 'Open');
 
   return (
     <div className="ebid-page">
+      <ToastContainer />
       <header className="ebid-header">
         <div className="ebid-header-inner">
           <img src={SilaLogo} alt="SILA" className="ebid-header-logo" />
