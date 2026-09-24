@@ -354,8 +354,8 @@ export interface RFQDetailResponse {
   /** true when the supplier submitted their own Terms & Conditions. */
   supplierTermsAndCondition?: boolean;
   supplierTermsConditionDocuments?: RFQDetailDocument[];
-  /** true once the buyer has accepted - drives the "Buyer — Accepted" status. */
-  buyerTermsAndConditionAccepted?: boolean;
+  /** "ACCEPTED" once the buyer has accepted - drives the "Buyer — Accepted" status. */
+  buyerTermsAndConditionAccepted?: 'ACCEPTED' | 'REJECTED' | 'PENDING';
   status?: string;
   /** "CONTRACT_CREATED" once the buyer has created the contract for an awarded RFQ; null before that. */
   contractStatus?: string | null;

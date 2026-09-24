@@ -8,7 +8,7 @@ import {
     type ItemMasterDto,
     type ItemMasterDetailDto,
 } from "../api/Buyerapi";
-import { EmptyState, Loader, isErrorResponse, toastService, ItemMasterModal, type ItemMasterModalApi } from "@vosox/shared-ui";
+import { EmptyState, Loader, isErrorResponse, toastService, ItemMasterModal, type ItemMasterModalApi,SearchInput } from "@vosox/shared-ui";
 import { FaPlus } from "react-icons/fa";
 import "./ItemMasterCatalog.css";
 
@@ -36,6 +36,12 @@ const IconChevronLeft = () => (
     </svg>
 );
 
+const IconChevronRight = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
 const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose }) => {
     const [itemMasters, setItemMasters] = useState<ItemMasterDto[]>([]);
     const [showListView, setShowListView] = useState(true);
@@ -45,17 +51,31 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
     const [detailLoading, setDetailLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [detailError, setDetailError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [itemMasterPage, setItemMasterPage] = useState(1);
+    const[itemMasterHasMore, setItemMasterHasMore] = useState(true);
+    const ITEM_MASTER_PAGE_SIZE=10;
 
-    const fetchItemMasters = async () => {
+    const fetchItemMasters = async (page:number) => {
         if (!buyerId) return;
 
         setLoading(true);
         setError(null);
+        const index = (page - 1) * ITEM_MASTER_PAGE_SIZE;
+        const limit = ITEM_MASTER_PAGE_SIZE+1;
 
         try {
-            const result = await getAllItemMasters(buyerId, 0, 100);
+            const result = await getAllItemMasters(buyerId, index, limit,searchQuery.trim());
             const resolved = result?.data?.data || result?.data || result || [];
-            setItemMasters(Array.isArray(resolved) ? resolved : []);
+            const hasMore = Array.isArray(resolved) && resolved.length > ITEM_MASTER_PAGE_SIZE;
+
+            const pageItems = hasMore
+             ? resolved.slice(0, ITEM_MASTER_PAGE_SIZE)
+             : resolved;
+
+            setItemMasters(pageItems);
+            setItemMasterPage(page);
+            setItemMasterHasMore(hasMore);
         } catch (err: any) {
             const message = err?.message || "Failed to load item masters.";
             setError(message);
@@ -66,9 +86,21 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
     };
 
     useEffect(() => {
-        fetchItemMasters();
+        fetchItemMasters(1);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [buyerId]);
+    }, [buyerId,searchQuery]);
+
+    const handleItemMasterNextPage = () => {
+       if (loading || !itemMasterHasMore) return;
+       fetchItemMasters(itemMasterPage + 1);
+    };
+
+    const handleItemMasterPrevPage = () => {
+       if (loading || itemMasterPage <= 1) return;
+       fetchItemMasters(itemMasterPage - 1);
+    };
+
+    const startIndex = (itemMasterPage - 1) * ITEM_MASTER_PAGE_SIZE;
 
     const handleRowClick = async (id: string) => {
         setShowListView(false);
@@ -105,7 +137,7 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
             {error && (
                 <div className="imc-error-banner" role="alert">
                     <span>{error}</span>
-                    <button type="button" className="imc-btn-retry sila-btn sila-btn--secondary sila-btn--sm" onClick={fetchItemMasters}>
+                    <button type="button" className="imc-btn-retry sila-btn sila-btn--secondary sila-btn--sm" onClick={() => fetchItemMasters(itemMasterPage)}>
                         Retry
                     </button>
                 </div>
@@ -179,6 +211,14 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
                         </div>
                     </div>
 
+                    <SearchInput
+                             containerClassName="ua-search-wrapper"
+                             className="ua-search-input"
+                             placeholder="Search by material, description, or group..."
+                             label="Search item masters"
+                             value={searchQuery}
+                             onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                     {loading ? (
                         <div className="imc-loading-state">
                             <Loader size={28} message="Loading item masters..." />
@@ -195,6 +235,7 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
                             }
                         />
                     ) : (
+                        <>
                         <div className="item-master-table-container">
                             <table className="item-master-table">
                                 <thead>
@@ -214,8 +255,8 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
                                             onKeyDown={(e) => {
                                                 if (e.key === "Enter") handleRowClick(item.id);
                                             }}
-                                        >
-                                            <td className="imc-col-index">{index + 1}</td>
+                                        >   
+                                            <td className="imc-col-index">{startIndex + index + 1}</td>
                                             <td><span className="sila-ref">{item.materialCode}</span></td>
                                             <td>{item.description}</td>
                                             <td>{item.materialGroup}</td>
@@ -224,6 +265,30 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
                                 </tbody>
                             </table>
                         </div>
+                        <div className="imc-pagination">
+                                  <button
+                                    className="imc-pagination-button"
+                                    type="button"
+                                    onClick={handleItemMasterPrevPage}
+                                    disabled={itemMasterPage <= 1 || loading}
+                                  >
+                                  <IconChevronLeft />
+                                  </button>
+
+                                  <span className="imc-pagination-number">
+                                    Page {itemMasterPage}
+                                  </span>
+
+                                  <button
+                                     className="imc-pagination-button"
+                                     type="button"
+                                     onClick={handleItemMasterNextPage}
+                                     disabled={!itemMasterHasMore || loading}
+                                   >
+                                   <IconChevronRight />
+                                   </button>
+                                 </div>
+                       </>
                     )}
                 </div>
             )}
@@ -234,7 +299,7 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
                 buyerId={buyerId}
                 api={itemMasterModalApi}
                 onSuccess={() => {
-                    fetchItemMasters();
+                    fetchItemMasters(1);
                     handleBackToList();
                 }}
             />

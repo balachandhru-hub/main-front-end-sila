@@ -286,7 +286,10 @@ export const PlatformUserDashboard: React.FC = () => {
   ];
 
   return (
-    <AppShell
+    <AppShell
+
+
+
       onLogoClick={() => selectTab('buyers')}
       navItems={navItems}
       activeNav={activeTab}
@@ -303,263 +306,264 @@ export const PlatformUserDashboard: React.FC = () => {
           />
           <div className="plat-main-content">
 
-          {/* CONTROLS BAR: SEARCH, TABS & VIEW TOGGLE */}
-          <div className="plat-controls-card">
-            <div className="plat-search-bar">
-              <FaSearch className="plat-search-lens" aria-hidden="true" />
-              <input
-                type="search"
-                placeholder={`Search ${activeTab} by name, email, industry, or location...`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="plat-search-field sila-input"
-                aria-label={`Search ${activeTab}`}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  className="plat-search-clear"
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Clear search"
-                  title="Clear search"
-                >
-                  <FaTimes aria-hidden="true" />
-                </button>
-              )}
-            </div>
-
-            <div className="plat-controls-right">
-              {/* Entity Type Toggle Tabs */}
-              <div className="plat-segmented-tabs" role="tablist" aria-label="Organisation type">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeTab === 'buyers'}
-                  className={`plat-seg-tab ${activeTab === 'buyers' ? 'active-buyer-tab' : ''}`}
-                  onClick={() => setActiveTab('buyers')}
-                >
-                  <FaUser className="plat-seg-icon" aria-hidden="true" /> Buyers
-                  <span className="plat-seg-count">{buyers.length}</span>
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeTab === 'suppliers'}
-                  className={`plat-seg-tab ${activeTab === 'suppliers' ? 'active-supplier-tab' : ''}`}
-                  onClick={() => setActiveTab('suppliers')}
-                >
-                  <FaBuilding className="plat-seg-icon" aria-hidden="true" /> Suppliers
-                  <span className="plat-seg-count">{suppliers.length}</span>
-                </button>
-              </div>
-
-              {/* Grid / Table View Mode Switcher */}
-              <div className="plat-view-switcher" role="group" aria-label="View mode">
-                <button
-                  type="button"
-                  className={`plat-view-btn ${viewMode === 'grid' ? 'active' : ''}`}
-                  onClick={() => setViewMode('grid')}
-                  title="Grid Card View"
-                  aria-label="Grid Card View"
-                  aria-pressed={viewMode === 'grid'}
-                >
-                  <FaThLarge aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  className={`plat-view-btn ${viewMode === 'table' ? 'active' : ''}`}
-                  onClick={() => setViewMode('table')}
-                  title="Table View"
-                  aria-label="Table View"
-                  aria-pressed={viewMode === 'table'}
-                >
-                  <FaList aria-hidden="true" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* ERROR BANNER */}
-          {error && (
-            <div className="plat-error-alert sila-alert sila-alert--danger" role="alert">
-              <FaExclamationCircle className="plat-error-icon" aria-hidden="true" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* CONTENT SECTION */}
-          {loading ? (
-            <div className="plat-loading-wrapper" role="status" aria-live="polite">
-              <span className="sila-spinner sila-spinner--lg plat-spinner" aria-hidden="true"></span>
-              <span className="plat-loading-text">Loading platform registry data...</span>
-            </div>
-          ) : filteredList.length === 0 ? (
-            <div className="plat-empty-card">
-              <EmptyState
-                icon={activeTab === 'buyers' ? <FaUser aria-hidden="true" /> : <FaBuilding aria-hidden="true" />}
-                title={`No ${activeTab} found`}
-                description={
-                  searchQuery
-                    ? `No matching ${activeTab} found for "${searchQuery}".`
-                    : `There are currently no registered ${activeTab} on this page.`
-                }
-              />
-            </div>
-          ) : viewMode === 'grid' ? (
-            /* GRID CARD VIEW */
-            <div
-              className={`plat-grid-container ${sectionLoading ? 'plat-grid-loading' : ''}`}
-              aria-busy={sectionLoading}
-            >
-              {filteredList.map((item) => {
-                const rec = getRecordProfile(item);
-                const openDetail = () => setSelectedDetail({ type: activeTab, record: item });
-
-                return (
-                  <div
-                    key={rec.orgId || Math.random()}
-                    className={`plat-v2-card ${activeTab}`}
-                    onClick={openDetail}
-                    onKeyDown={(e) => {
-                      if (e.target !== e.currentTarget) return;
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        openDetail();
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`View details for ${rec.organizationName}`}
+            {/* CONTROLS BAR: SEARCH, TABS & VIEW TOGGLE */}
+            <div className="plat-controls-card">
+              <div className="plat-search-bar">
+                <FaSearch className="plat-search-lens" aria-hidden="true" />
+                <input
+                  type="search"
+                  placeholder={`Search ${activeTab} by name, email, industry, or location...`}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="plat-search-field sila-input"
+                  aria-label={`Search ${activeTab}`}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className="plat-search-clear"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Clear search"
+                    title="Clear search"
                   >
-                    <div className="plat-v2-card-header">
-                      <div className={`plat-v2-avatar ${activeTab}-avatar`} aria-hidden="true">{rec.initials}</div>
-                      <div className="plat-v2-header-meta">
-                        <div className="plat-v2-title-row">
-                          <h3 className="plat-v2-card-title" title={rec.organizationName}>{rec.organizationName}</h3>
-                          <StatusBadge status="Active" size="sm" className="plat-v2-status-chip" />
-                        </div>
-                        <div className="plat-v2-badge-group">
-                          {rec.businessType && <span className="plat-v2-pill plat-v2-pill-type">{rec.businessType}</span>}
-                          {rec.industry && <span className="plat-v2-pill plat-v2-pill-industry">{rec.industry}</span>}
-                        </div>
-                      </div>
-                    </div>
+                    <FaTimes aria-hidden="true" />
+                  </button>
+                )}
+              </div>
 
-                    {rec.description && (
-                      <p className="plat-v2-desc" title={rec.description}>
-                        {rec.description}
-                      </p>
-                    )}
+              <div className="plat-controls-right">
+                {/* Entity Type Toggle Tabs */}
+                <div className="plat-segmented-tabs" role="tablist" aria-label="Organisation type">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === 'buyers'}
+                    className={`plat-seg-tab ${activeTab === 'buyers' ? 'active-buyer-tab' : ''}`}
+                    onClick={() => setActiveTab('buyers')}
+                  >
+                    <FaUser className="plat-seg-icon" aria-hidden="true" /> Buyers
+                    <span className="plat-seg-count">{buyers.length}</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === 'suppliers'}
+                    className={`plat-seg-tab ${activeTab === 'suppliers' ? 'active-supplier-tab' : ''}`}
+                    onClick={() => setActiveTab('suppliers')}
+                  >
+                    <FaBuilding className="plat-seg-icon" aria-hidden="true" /> Suppliers
+                    <span className="plat-seg-count">{suppliers.length}</span>
+                  </button>
+                </div>
 
-                    <div className="plat-v2-contact-grid">
-                      <div className="plat-v2-contact-item">
-                        <FaEnvelope className="plat-v2-contact-icon" aria-hidden="true" />
-                        <span className="plat-v2-contact-val" title={rec.email}>
-                          {rec.email}
-                        </span>
-                      </div>
-                      <div className="plat-v2-contact-item">
-                        <FaPhone className="plat-v2-contact-icon" aria-hidden="true" />
-                        <span className="plat-v2-contact-val">{rec.phone}</span>
-                      </div>
-                      <div className="plat-v2-contact-item">
-                        <FaMapMarkerAlt className="plat-v2-contact-icon" aria-hidden="true" />
-                        <span className="plat-v2-contact-val" title={rec.location}>
-                          {rec.location}
-                        </span>
-                      </div>
-                      {rec.website && (
-                        <div className="plat-v2-contact-item">
-                          <FaGlobe className="plat-v2-contact-icon" aria-hidden="true" />
-                          <a
-                            href={rec.website.startsWith('http') ? rec.website : `https://${rec.website}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="plat-v2-link"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <span className="plat-v2-link-text">{rec.website}</span>
-                            <FaExternalLinkAlt className="plat-v2-link-icon" aria-hidden="true" />
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                {/* Grid / Table View Mode Switcher */}
+                <div className="plat-view-switcher" role="group" aria-label="View mode">
+                  <button
+                    type="button"
+                    className={`plat-view-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                    onClick={() => setViewMode('grid')}
+                    title="Grid Card View"
+                    aria-label="Grid Card View"
+                    aria-pressed={viewMode === 'grid'}
+                  >
+                    <FaThLarge aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className={`plat-view-btn ${viewMode === 'table' ? 'active' : ''}`}
+                    onClick={() => setViewMode('table')}
+                    title="Table View"
+                    aria-label="Table View"
+                    aria-pressed={viewMode === 'table'}
+                  >
+                    <FaList aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
             </div>
-          ) : (
-            /* TABLE VIEW */
-            <div
-              className={`plat-table-container sila-table-wrap ${sectionLoading ? 'plat-grid-loading' : ''}`}
-              aria-busy={sectionLoading}
-            >
-              <table className="plat-data-table sila-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Organization</th>
-                    <th scope="col">Business Type</th>
-                    <th scope="col">Industry</th>
-                    <th scope="col">Contact Info</th>
-                    <th scope="col">Location</th>
-                    <th scope="col" className="sila-cell-actions">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredList.map((item) => {
-                    const rec = getRecordProfile(item);
 
-                    return (
-                      <tr key={rec.orgId || Math.random()}>
-                        <td>
-                          <div className="plat-tbl-org">
-                            <div className={`plat-tbl-avatar ${activeTab}-avatar`} aria-hidden="true">{rec.initials}</div>
-                            <div className="plat-tbl-org-text">
-                              <div className="plat-tbl-org-name">{rec.organizationName}</div>
-                              <div className="plat-tbl-org-id">
-                                ID: <span className="sila-ref">#{rec.orgId}</span>
+            {/* ERROR BANNER */}
+            {error && (
+              <div className="plat-error-alert sila-alert sila-alert--danger" role="alert">
+                <FaExclamationCircle className="plat-error-icon" aria-hidden="true" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* CONTENT SECTION */}
+            {loading ? (
+              <div className="plat-loading-wrapper" role="status" aria-live="polite">
+                <span className="sila-spinner sila-spinner--lg plat-spinner" aria-hidden="true"></span>
+                <span className="plat-loading-text">Loading platform registry data...</span>
+              </div>
+            ) : filteredList.length === 0 ? (
+              <div className="plat-empty-card">
+                <EmptyState
+                  icon={activeTab === 'buyers' ? <FaUser aria-hidden="true" /> : <FaBuilding aria-hidden="true" />}
+                  title={`No ${activeTab} found`}
+                  description={
+                    searchQuery
+                      ? `No matching ${activeTab} found for "${searchQuery}".`
+                      : `There are currently no registered ${activeTab} on this page.`
+                  }
+                />
+              </div>
+            ) : viewMode === 'grid' ? (
+              /* GRID CARD VIEW */
+              <div
+                className={`plat-grid-container ${sectionLoading ? 'plat-grid-loading' : ''}`}
+                aria-busy={sectionLoading}
+              >
+                {filteredList.map((item) => {
+                  const rec = getRecordProfile(item);
+                  const openDetail = () => setSelectedDetail({ type: activeTab, record: item });
+
+                  return (
+                    <div
+                      key={rec.orgId || Math.random()}
+                      className={`plat-v2-card ${activeTab}`}
+                      onClick={openDetail}
+                      onKeyDown={(e) => {
+                        if (e.target !== e.currentTarget) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          openDetail();
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`View details for ${rec.organizationName}`}
+                    >
+                      <div className="plat-v2-card-header">
+                        <div className={`plat-v2-avatar ${activeTab}-avatar`} aria-hidden="true">{rec.initials}</div>
+                        <div className="plat-v2-header-meta">
+                          <div className="plat-v2-title-row">
+                            <h3 className="plat-v2-card-title" title={rec.organizationName}>{rec.organizationName}</h3>
+                            <StatusBadge status="Active" size="sm" className="plat-v2-status-chip" />
+                          </div>
+                          <div className="plat-v2-badge-group">
+                            {rec.businessType && <span className="plat-v2-pill plat-v2-pill-type">{rec.businessType}</span>}
+                            {rec.industry && <span className="plat-v2-pill plat-v2-pill-industry">{rec.industry}</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {rec.description && (
+                        <p className="plat-v2-desc" title={rec.description}>
+                          {rec.description}
+                        </p>
+                      )}
+
+                      <div className="plat-v2-contact-grid">
+                        <div className="plat-v2-contact-item">
+                          <FaEnvelope className="plat-v2-contact-icon" aria-hidden="true" />
+                          <span className="plat-v2-contact-val" title={rec.email}>
+                            {rec.email}
+                          </span>
+                        </div>
+                        <div className="plat-v2-contact-item">
+                          <FaPhone className="plat-v2-contact-icon" aria-hidden="true" />
+                          <span className="plat-v2-contact-val">{rec.phone}</span>
+                        </div>
+                        <div className="plat-v2-contact-item">
+                          <FaMapMarkerAlt className="plat-v2-contact-icon" aria-hidden="true" />
+                          <span className="plat-v2-contact-val" title={rec.location}>
+                            {rec.location}
+                          </span>
+                        </div>
+                        {rec.website && (
+                          <div className="plat-v2-contact-item">
+                            <FaGlobe className="plat-v2-contact-icon" aria-hidden="true" />
+                            <a
+                              href={rec.website.startsWith('http://') || rec.website.startsWith('https://')? 
+                                    rec.website : `https://${rec.website.replace(/^https?:?\/\//, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="plat-v2-link"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span className="plat-v2-link-text">{rec.website}</span>
+                              <FaExternalLinkAlt className="plat-v2-link-icon" aria-hidden="true" />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* TABLE VIEW */
+              <div
+                className={`plat-table-container sila-table-wrap ${sectionLoading ? 'plat-grid-loading' : ''}`}
+                aria-busy={sectionLoading}
+              >
+                <table className="plat-data-table sila-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Organization</th>
+                      <th scope="col">Business Type</th>
+                      <th scope="col">Industry</th>
+                      <th scope="col">Contact Info</th>
+                      <th scope="col">Location</th>
+                      <th scope="col" className="sila-cell-actions">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredList.map((item) => {
+                      const rec = getRecordProfile(item);
+
+                      return (
+                        <tr key={rec.orgId || Math.random()}>
+                          <td>
+                            <div className="plat-tbl-org">
+                              <div className={`plat-tbl-avatar ${activeTab}-avatar`} aria-hidden="true">{rec.initials}</div>
+                              <div className="plat-tbl-org-text">
+                                <div className="plat-tbl-org-name">{rec.organizationName}</div>
+                                <div className="plat-tbl-org-id">
+                                  ID: <span className="sila-ref">#{rec.orgId}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className="plat-v2-pill plat-v2-pill-type">{rec.businessType || 'N/A'}</span>
-                        </td>
-                        <td>
-                          <span className="plat-v2-pill plat-v2-pill-industry">{rec.industry || 'N/A'}</span>
-                        </td>
-                        <td>
-                          <div className="plat-tbl-contact">
-                            <div>{rec.email}</div>
-                            <div className="plat-tbl-phone">{rec.phone}</div>
-                          </div>
-                        </td>
-                        <td className="plat-tbl-location">{rec.location || 'N/A'}</td>
-                        <td className="sila-cell-actions">
-                          <button
-                            type="button"
-                            className="plat-v2-action-btn sila-btn sila-btn--secondary sila-btn--sm"
-                            onClick={() => setSelectedDetail({ type: activeTab, record: item })}
-                            aria-label={`View details for ${rec.organizationName}`}
-                          >
-                            Details
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+                          </td>
+                          <td>
+                            <span className="plat-v2-pill plat-v2-pill-type">{rec.businessType || 'N/A'}</span>
+                          </td>
+                          <td>
+                            <span className="plat-v2-pill plat-v2-pill-industry">{rec.industry || 'N/A'}</span>
+                          </td>
+                          <td>
+                            <div className="plat-tbl-contact">
+                              <div>{rec.email}</div>
+                              <div className="plat-tbl-phone">{rec.phone}</div>
+                            </div>
+                          </td>
+                          <td className="plat-tbl-location">{rec.location || 'N/A'}</td>
+                          <td className="sila-cell-actions">
+                            <button
+                              type="button"
+                              className="plat-v2-action-btn sila-btn sila-btn--secondary sila-btn--sm"
+                              onClick={() => setSelectedDetail({ type: activeTab, record: item })}
+                              aria-label={`View details for ${rec.organizationName}`}
+                            >
+                              Details
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-          {/* INFINITE SCROLL LOADING INDICATOR */}
-          {loadingMore && (
-            <div className="plat-loading-more" role="status" aria-live="polite">
-              <span className="sila-spinner plat-spinner" aria-hidden="true"></span>
-              <span className="plat-loading-more-text">Loading more {activeTab}...</span>
-            </div>
-          )}
+            {/* INFINITE SCROLL LOADING INDICATOR */}
+            {loadingMore && (
+              <div className="plat-loading-more" role="status" aria-live="polite">
+                <span className="sila-spinner plat-spinner" aria-hidden="true"></span>
+                <span className="plat-loading-more-text">Loading more {activeTab}...</span>
+              </div>
+            )}
           </div>
         </>
       ) : (
