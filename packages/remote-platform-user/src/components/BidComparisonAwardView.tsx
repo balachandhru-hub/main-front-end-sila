@@ -113,7 +113,10 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   const [showUnawardModal, setShowUnawardModal] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState("all");
   const [selections, setSelections] = useState<Record<string, string>>({});
-  const [autoSelected, setAutoSelected] = useState(false);
+  // Line-item IDs the buyer picked a supplier for by hand (Comparison / By-supplier
+  // tabs). Auto-selection re-runs on every new supplier bid (see autoSelectLowest),
+  // but must never clobber one of these.
+  const manualSelectionsRef = useRef<Set<string>>(new Set());
   const [expandedSuppliers, setExpandedSuppliers] = useState<Record<string, boolean>>({});
   const [viewingDoc, setViewingDoc] = useState<{ fileName: string; url: string; contentType: string } | null>(null);
   const [loadingDocId, setLoadingDocId] = useState<string | null>(null);
@@ -351,6 +354,18 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     }, 0);
   }, [selections, lineItems, effectiveQuotations]);
 
+  // Applies a freshly computed lowest-bid selection, but keeps any item the
+  // buyer already picked by hand (see manualSelectionsRef) untouched.
+  const applyAutoSelections = (autoSel: Record<string, string>) => {
+    setSelections((prev) => {
+      const merged: Record<string, string> = { ...autoSel };
+      manualSelectionsRef.current.forEach((itemId) => {
+        if (prev[itemId]) merged[itemId] = prev[itemId];
+      });
+      return merged;
+    });
+  };
+
   const autoSelectLowest = () => {
     const newSel: Record<string, string> = {};
 
@@ -380,7 +395,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
       }
 
       if (Object.keys(newSel).length > 0) {
-        setSelections(newSel);
+        applyAutoSelections(newSel);
         return;
       }
     }
@@ -411,7 +426,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     });
 
     if (Object.keys(newSel).length > 0) {
-      setSelections(newSel);
+      applyAutoSelections(newSel);
     } else {
       const totals = effectiveQuotations.map((q: any) => ({
         q,
@@ -428,14 +443,14 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
         lineItems.forEach((item: any) => {
           newSel[item.id || item.rfqItemId] = suppId;
         });
-        setSelections(newSel);
+        applyAutoSelections(newSel);
       }
     }
   };
 
   useEffect(() => {
-    setAutoSelected(false);
     setSelections({});
+    manualSelectionsRef.current.clear();
   }, [rfq?.id, rfq?._id]);
 
   useEffect(() => {
@@ -482,12 +497,16 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveRfqIdForHub]);
 
+  // Re-runs whenever the set of supplier quotations changes — including when
+  // SignalR (see handleQuotationSubmitted above) brings in a new or updated
+  // bid — so a newly-lowest supplier gets auto-selected without waiting for
+  // a manual refresh. Items the buyer already selected by hand are left
+  // alone (see applyAutoSelections).
   useEffect(() => {
-    if (!autoSelected && lineItems.length > 0 && effectiveQuotations.length > 0) {
+    if (lineItems.length > 0 && effectiveQuotations.length > 0) {
       autoSelectLowest();
-      setAutoSelected(true);
     }
-  }, [lineItems, effectiveQuotations, autoSelected]);
+  }, [lineItems, effectiveQuotations]);
 
   useEffect(() => {
     if (isLotOption && viewMode === "comparison") {
@@ -737,7 +756,11 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
 
   const selectAllForSupplier = (suppId: string) => {
     const newSel: Record<string, string> = {};
-    lineItems.forEach((item: any) => { newSel[item.id || item.itemId] = suppId; });
+    lineItems.forEach((item: any) => {
+      const itemId = item.id || item.itemId;
+      newSel[itemId] = suppId;
+      manualSelectionsRef.current.add(itemId);
+    });
     setSelections(newSel);
   };
 
@@ -1371,7 +1394,10 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                                   type="button"
                                   className={`bca-btn bca-cmp-sel-btn ${isSelected ? "bca-btn-selected" : "bca-btn-outline"}`}
                                   aria-pressed={isSelected}
-                                  onClick={() => setSelections(prev => ({ ...prev, [item.id]: s.id }))}
+                                  onClick={() => {
+                                    manualSelectionsRef.current.add(item.id);
+                                    setSelections(prev => ({ ...prev, [item.id]: s.id }));
+                                  }}
                                 >
                                   {isSelected ? <><FaCheck aria-hidden="true" /> Selected</> : "Select"}
                                 </button>
