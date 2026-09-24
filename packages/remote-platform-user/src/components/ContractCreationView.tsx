@@ -845,6 +845,14 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         ?.supplierTermsAndConditionAccepted || "PENDING";
   const activeSupplierTermsAccepted = activeSupplierTermsStatus === "ACCEPTED";
   const activeSupplierTermsRejected = activeSupplierTermsStatus === "REJECTED";
+  // Buyer role: termsAndCondition === false on its own is not proof the supplier chose "proceed with buyer's
+  // terms" - it is also the backend's default/unset value before the supplier has responded at all, so it must
+  // not be treated as "resolved" by itself (otherwise a freshly opened, never-sent contract would show as
+  // already accepted). Requiring the supplier's e-signature too means this only kicks in once the supplier has
+  // actually gone through their "No" choice and signed, which is the point that choice becomes final - see the
+  // "Supplier Terms Received" card hidden below for the same termsAndCondition === false case.
+  const buyerSideTermsResolved =
+    !isSupplier && activeTcEntry?.termsAndCondition === false && (activeEsignEntry?.attachments?.length ?? 0) > 0;
   // Buyer role: "Proceed to Signing" is only enabled once both the active supplier's acceptance statuses are
   // true. Supplier role: accepting the buyer's T&C only unlocks the Yes/No choice below - it must not by itself
   // enable signing. Signing is only ready once that second choice is actually resolved: "No" (proceed with the
@@ -855,7 +863,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       (activeTcEntry?.termsAndCondition === false ||
         supplierProceededWithBuyerTc ||
         activeSupplierTermsAccepted)
-    : activeBuyerTermsAccepted && activeSupplierTermsAccepted;
+    : activeBuyerTermsAccepted && (activeSupplierTermsAccepted || buyerSideTermsResolved);
   const activeContractRef = contractRefs.find((ref) => String(ref.supplierId) === activeSupplierId);
   const activeCreated: ContractDetails | undefined = isSupplier
     ? supplierContract ?? undefined
@@ -1769,6 +1777,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     supplierName: getSupplierName(contract.supplierId),
     rfqTitle: rfq?.title || rfq?.rfqNo || rfq?.name || "—",
     contractValue: getContractValue(id),
+    currency,
     startDate: contract.startDate,
     endDate: contract.endDate,
     lineItemRows: activeLineItemRows,
@@ -1911,6 +1920,9 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
         }
       }
       toastService.success("Contract created successfully.", 5000);
+      // Refresh the RFQ's contract/terms/e-sign status (GET /api/v1/buyer/rfq-by-id) so the newly created
+      // contract shows up without requiring a manual reload.
+      await loadLatestContractStatus();
     } catch (err: any) {
       const errorMsg = err?.message || "Failed to create the contract.";
       setCreateContractError(errorMsg);
@@ -2197,11 +2209,11 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               tab (activeSupplierId). Supplier role: rfq-by-id returns these as flat booleans for the single
               buyer-supplier context, used directly. See activeBuyerTermsAccepted / activeSupplierTermsAccepted. */}
           <div className="contract-accept-summary">
-            <span className={`contract-accept-status${activeSupplierTermsAccepted ? " contract-accept-status--done" : activeSupplierTermsRejected ? " contract-accept-status--rejected" : " contract-accept-status--pending"}`}>
+            <span className={`contract-accept-status${activeSupplierTermsAccepted || buyerSideTermsResolved ? " contract-accept-status--done" : activeSupplierTermsRejected ? " contract-accept-status--rejected" : " contract-accept-status--pending"}`}>
               <span className="contract-accept-status-icon" aria-hidden="true">
-                {activeSupplierTermsAccepted ? "✓" : activeSupplierTermsRejected ? "✕" : "⏳"}
+                {activeSupplierTermsAccepted || buyerSideTermsResolved ? "✓" : activeSupplierTermsRejected ? "✕" : "⏳"}
               </span>
-              Buyer — {activeSupplierTermsAccepted ? "Accepted" : activeSupplierTermsRejected ? "Rejected" : "Awaiting Acceptance"}
+              Buyer — {activeSupplierTermsAccepted || buyerSideTermsResolved ? "Accepted" : activeSupplierTermsRejected ? "Rejected" : "Awaiting Acceptance"}
             </span>
             <span className={`contract-accept-status${activeBuyerTermsAccepted ? " contract-accept-status--done" : activeBuyerTermsRejected ? " contract-accept-status--rejected" : " contract-accept-status--pending"}`}>
               <span className="contract-accept-status-icon" aria-hidden="true">
@@ -2438,7 +2450,9 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
           {/* Action Step: Terms Negotiation & Acceptance */}
           {showTermsAcceptanceCard && (
             <div className="contract-step-card">
-              {isSupplier && (<>
+              {/* Supplier: once the supplier has signed, their T&C choice (own terms or the buyer's) is already
+                  final - re-showing this radio/choice prompt during signing would be redundant and misleading. */}
+              {isSupplier && !activeContract.supplierSigned && (<>
               <div className="contract-subsection-title contract-subsection-title--tight">
                 Buyer Terms Review &amp; Acceptance
               </div>

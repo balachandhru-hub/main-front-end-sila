@@ -20,8 +20,17 @@ function getPdfjsLib() {
   return pdfjsLibPromise;
 }
 
-// The SILA brand blue (packages/shared-ui/src/styles/tokens.css: --sila-primary), as RGB for jsPDF/pdf-lib color setters.
+// SILA brand palette (packages/shared-ui/src/styles/tokens.css), as RGB for jsPDF/pdf-lib color setters.
 export const SILA_PRIMARY_RGB: [number, number, number] = [31, 92, 196];
+export const SILA_PRIMARY_SOFT_RGB: [number, number, number] = [238, 244, 253];
+export const SILA_SUCCESS_RGB: [number, number, number] = [21, 128, 61];
+export const SILA_SUCCESS_SOFT_RGB: [number, number, number] = [236, 253, 243];
+export const SILA_SUCCESS_BORDER_RGB: [number, number, number] = [187, 229, 200];
+export const SILA_TEXT_RGB: [number, number, number] = [15, 23, 42];
+export const SILA_TEXT_SECONDARY_RGB: [number, number, number] = [51, 65, 85];
+export const SILA_TEXT_MUTED_RGB: [number, number, number] = [100, 116, 139];
+export const SILA_BORDER_RGB: [number, number, number] = [226, 232, 240];
+export const SILA_ROW_ALT_RGB: [number, number, number] = [248, 250, 252];
 
 export interface ContractPdfLineItemRow {
   idx: number;
@@ -41,6 +50,8 @@ export interface ContractPdfInput {
   supplierName: string;
   rfqTitle: string;
   contractValue: number;
+  /** ISO currency code (e.g. "AED", "INR"), appended after formatted amounts. Omitted when the RFQ has none. */
+  currency?: string;
   startDate: string;
   endDate: string;
   lineItemRows: ContractPdfLineItemRow[];
@@ -133,156 +144,240 @@ export function buildContractCoverPdfBytes(input: ContractPdfInput): Uint8Array 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const marginX = 40;
-  let y = 48;
+  const marginBottom = 56;
+  const contentWidth = pageWidth - marginX * 2;
+  const money = (val: number) => `${fmtINR(val)}${input.currency ? ` ${input.currency}` : ""}`;
+  let y = 0;
 
-  const ensureSpace = (needed: number) => {
-    if (y + needed > pageHeight - 40) {
+  // A fresh page below the header band, ready for content - used for the first page (after drawHeader) and every
+  // page break thereafter (drawHeader is only ever called once, on page 1).
+  const startContentArea = () => {
+    y = 96;
+  };
+
+  const ensureSpace = (needed: number, onNewPage?: () => void) => {
+    if (y + needed > pageHeight - marginBottom) {
       doc.addPage();
-      y = 48;
+      startContentArea();
+      onNewPage?.();
     }
   };
 
-  // Header: SILA logo on the left, contract name/number to its right, with a brand-colored rule beneath.
-  const logoWidth = 90;
-  const logoHeight = logoWidth * (101 / 420);
-  let headerTextX = marginX;
-  if (input.logoDataUrl) {
-    try {
-      doc.addImage(input.logoDataUrl, "PNG", marginX, y - 20, logoWidth, logoHeight);
-      headerTextX = marginX + logoWidth + 16;
-    } catch {
-      // Non-fatal: the header still renders without the logo.
+  // Header band: SILA logo + document eyebrow/title on the left, an "Executed" status pill on the right (this
+  // PDF is only ever built once both parties have signed), with a brand rule beneath.
+  const drawHeader = () => {
+    const logoWidth = 78;
+    const logoHeight = logoWidth * (101 / 420);
+    let textX = marginX;
+    if (input.logoDataUrl) {
+      try {
+        doc.addImage(input.logoDataUrl, "PNG", marginX, 34, logoWidth, logoHeight);
+        textX = marginX + logoWidth + 14;
+      } catch {
+        // Non-fatal: the header still renders without the logo.
+      }
     }
-  }
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.setTextColor(...SILA_PRIMARY_RGB);
-  doc.text(input.contractName, headerTextX, y);
-  y += 18;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(85);
-  doc.text(`Contract No. ${input.contractNumber}`, headerTextX, y);
-  y = Math.max(y, 4 + logoHeight) + 14;
-  doc.setDrawColor(...SILA_PRIMARY_RGB);
-  doc.setLineWidth(1.2);
-  doc.line(marginX, y, pageWidth - marginX, y);
-  doc.setLineWidth(0.75);
-  y += 20;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...SILA_TEXT_MUTED_RGB);
+    doc.text("SUPPLIER CONTRACT", textX, 40);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(...SILA_TEXT_RGB);
+    doc.text(input.contractName, textX, 58);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(...SILA_TEXT_MUTED_RGB);
+    doc.text(`Contract No. ${input.contractNumber}`, textX, 72);
 
-  doc.setTextColor(30);
-  [
-    `RFQ Title: ${input.rfqTitle}`,
-    `Supplier: ${input.supplierName}`,
-    `Contract Value: ${fmtINR(input.contractValue)}`,
-    `Start Date: ${input.startDate}`,
-    `End Date: ${input.endDate}`,
-  ].forEach((line) => {
-    doc.text(line, marginX, y);
-    y += 14;
+    // "Executed" status pill, top-right.
+    const pillLabel = "EXECUTED";
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    const pillTextWidth = doc.getTextWidth(pillLabel);
+    const pillWidth = pillTextWidth + 26;
+    const pillHeight = 18;
+    const pillX = pageWidth - marginX - pillWidth;
+    const pillY = 32;
+    doc.setFillColor(...SILA_SUCCESS_SOFT_RGB);
+    doc.setDrawColor(...SILA_SUCCESS_BORDER_RGB);
+    doc.setLineWidth(0.75);
+    doc.roundedRect(pillX, pillY, pillWidth, pillHeight, 9, 9, "FD");
+    doc.setTextColor(...SILA_SUCCESS_RGB);
+    doc.text(pillLabel, pillX + pillWidth / 2, pillY + pillHeight / 2 + 3, { align: "center" });
+
+    doc.setDrawColor(...SILA_PRIMARY_RGB);
+    doc.setLineWidth(1.4);
+    doc.line(marginX, 84, pageWidth - marginX, 84);
+    doc.setLineWidth(0.75);
+    startContentArea();
+  };
+  drawHeader();
+
+  // Summary card: a soft-tinted panel with a two-column label/value grid, in the style of an Ariba-type
+  // contract summary rather than a run of plain "Label: value" text lines.
+  const summaryFields: [string, string][] = [
+    ["RFQ TITLE", input.rfqTitle],
+    ["SUPPLIER", input.supplierName],
+    ["CONTRACT VALUE", money(input.contractValue)],
+    ["CONTRACT PERIOD", `${input.startDate}  to  ${input.endDate}`],
+  ];
+  const summaryColWidth = contentWidth / 2;
+  const summaryRowHeight = 34;
+  const summaryHeight = Math.ceil(summaryFields.length / 2) * summaryRowHeight + 16;
+  doc.setFillColor(...SILA_PRIMARY_SOFT_RGB);
+  doc.roundedRect(marginX, y, contentWidth, summaryHeight, 6, 6, "F");
+  summaryFields.forEach(([label, value], i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const cellX = marginX + 18 + col * summaryColWidth;
+    const cellY = y + 20 + row * summaryRowHeight;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...SILA_TEXT_MUTED_RGB);
+    doc.text(label, cellX, cellY);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.setTextColor(...SILA_TEXT_RGB);
+    const valueLines = doc.splitTextToSize(value, summaryColWidth - 36);
+    doc.text(valueLines[0] || "", cellX, cellY + 15);
   });
-  y += 10;
+  y += summaryHeight + 24;
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.setTextColor(...SILA_PRIMARY_RGB);
-  doc.text("Selected Line Items", marginX, y);
-  doc.setTextColor(30);
-  y += 16;
+  // Section heading with a small brand-colored accent bar, reused for "Selected Line Items" and both
+  // Terms & Conditions sections below.
+  const sectionHeading = (label: string) => {
+    doc.setFillColor(...SILA_PRIMARY_RGB);
+    doc.rect(marginX, y - 10, 3, 13, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11.5);
+    doc.setTextColor(...SILA_TEXT_RGB);
+    doc.text(label, marginX + 10, y);
+    y += 18;
+  };
+
+  sectionHeading("Selected Line Items");
 
   const columns: { label: string; width: number; align: "left" | "right" }[] = [
-    { label: "#", width: 16, align: "left" },
-    { label: "Material", width: 100, align: "left" },
-    { label: "Cost Center / Code", width: 92, align: "left" },
-    { label: "Qty", width: 26, align: "right" },
-    { label: "UOM", width: 28, align: "right" },
-    { label: "Unit Price", width: 55, align: "right" },
-    { label: "Tax / Disc / Del", width: 100, align: "right" },
-    { label: "Subtotal", width: 60, align: "right" },
+    { label: "#", width: 20, align: "left" },
+    { label: "Material", width: 140, align: "left" },
+    { label: "Cost Center / Code", width: 85, align: "left" },
+    { label: "Qty", width: 30, align: "right" },
+    { label: "UOM", width: 30, align: "right" },
+    { label: "Unit Price", width: 65, align: "right" },
+    { label: "Tax / Disc / Del", width: 75, align: "right" },
+    { label: "Subtotal", width: 70, align: "right" },
   ];
   const tableWidth = columns.reduce((sum, c) => sum + c.width, 0);
-  const baseCellFontSize = 9;
-  const minCellFontSize = 6.5;
+  const cellFontSize = 8.25;
+  const cellLineHeight = 10;
+  const headerRowHeight = 22;
+  const cellVPad = 8;
 
-  // Shrinks a cell's font just enough to fit its column (rather than letting it overflow into the next one),
-  // so wider breakdown/description values never collide with neighboring columns.
-  const fitCellFontSize = (text: string, maxWidth: number): number => {
-    let size = baseCellFontSize;
-    doc.setFontSize(size);
-    while (size > minCellFontSize && doc.getTextWidth(text) > maxWidth) {
-      size -= 0.5;
-      doc.setFontSize(size);
-    }
-    return size;
+  // Wraps a cell's text to fit inside its own column (rather than shrinking the font until it *might* fit) -
+  // this is what stops long material names/breakdowns from bleeding into the next column, since every row's
+  // height grows to match its tallest wrapped cell instead of forcing everything onto one line.
+  const wrapCell = (text: string, colWidth: number): string[] => {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(cellFontSize);
+    return doc.splitTextToSize(String(text ?? ""), colWidth - 10);
   };
 
-  const drawRow = (cells: string[], isHeader: boolean) => {
-    if (isHeader) {
-      doc.setFillColor(238, 244, 253); // --sila-primary-soft
-      doc.rect(marginX, y - 9, tableWidth, 13, "F");
-    }
-    doc.setFont("helvetica", isHeader ? "bold" : "normal");
-    doc.setTextColor(...(isHeader ? SILA_PRIMARY_RGB : ([30, 30, 30] as [number, number, number])));
+  const drawTableHeader = () => {
+    doc.setFillColor(...SILA_PRIMARY_RGB);
+    doc.rect(marginX, y, tableWidth, headerRowHeight, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(cellFontSize);
+    doc.setTextColor(255, 255, 255);
     let x = marginX;
-    cells.forEach((cell, i) => {
-      const col = columns[i];
-      const cellMaxWidth = col.width - 4;
-      fitCellFontSize(cell, cellMaxWidth);
-      const textX = col.align === "right" ? x + col.width - 2 : x + 2;
-      doc.text(cell, textX, y, { align: col.align });
+    columns.forEach((col) => {
+      const textX = col.align === "right" ? x + col.width - 5 : x + 5;
+      doc.text(col.label, textX, y + headerRowHeight / 2 + 3, { align: col.align });
       x += col.width;
     });
-    doc.setDrawColor(220);
-    doc.line(marginX, y + 4, marginX + tableWidth, y + 4);
-    y += 14;
+    y += headerRowHeight;
   };
 
-  ensureSpace(20);
-  drawRow(columns.map((c) => c.label), true);
-  doc.setTextColor(30);
-  input.lineItemRows.forEach((row) => {
-    ensureSpace(16);
-    drawRow(
+  const drawTableRow = (cells: string[], zebra: boolean) => {
+    const wrapped = cells.map((cell, i) => wrapCell(cell, columns[i].width));
+    const maxLines = Math.max(...wrapped.map((w) => w.length), 1);
+    const rowHeight = Math.max(maxLines * cellLineHeight + cellVPad, 22);
+    ensureSpace(rowHeight, drawTableHeader);
+    if (zebra) {
+      doc.setFillColor(...SILA_ROW_ALT_RGB);
+      doc.rect(marginX, y, tableWidth, rowHeight, "F");
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(cellFontSize);
+    doc.setTextColor(...SILA_TEXT_RGB);
+    let x = marginX;
+    columns.forEach((col, i) => {
+      const textX = col.align === "right" ? x + col.width - 5 : x + 5;
+      let ly = y + cellVPad / 2 + cellLineHeight - 1;
+      wrapped[i].forEach((line) => {
+        doc.text(line, textX, ly, { align: col.align });
+        ly += cellLineHeight;
+      });
+      x += col.width;
+      if (i < columns.length - 1) {
+        doc.setDrawColor(...SILA_BORDER_RGB);
+        doc.setLineWidth(0.4);
+        doc.line(x, y, x, y + rowHeight);
+      }
+    });
+    doc.setDrawColor(...SILA_BORDER_RGB);
+    doc.setLineWidth(0.5);
+    doc.line(marginX, y + rowHeight, marginX + tableWidth, y + rowHeight);
+    y += rowHeight;
+  };
+
+  ensureSpace(headerRowHeight);
+  drawTableHeader();
+  input.lineItemRows.forEach((row, i) => {
+    drawTableRow(
       [
         String(row.idx),
         row.material,
         row.costCenterCode,
         String(row.qty),
         row.uom,
-        fmtINR(row.unitPrice),
-        row.breakdownStr,
-        fmtINR(row.subtotal),
+        money(row.unitPrice),
+        row.breakdownStr || "—",
+        money(row.subtotal),
       ],
-      false
+      i % 2 === 1
     );
   });
-  y += 6;
+  y += 10;
+
+  // Total row: right-aligned, in its own highlighted strip so it reads as a totals bar rather than another line
+  // of body text.
+  const totalBarHeight = 26;
+  ensureSpace(totalBarHeight + 8);
+  doc.setFillColor(...SILA_PRIMARY_SOFT_RGB);
+  doc.rect(marginX, y, tableWidth, totalBarHeight, "F");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
+  doc.setFontSize(10.5);
   doc.setTextColor(...SILA_PRIMARY_RGB);
-  doc.text(`Total Contract Value: ${fmtINR(input.contractValue)}`, pageWidth - marginX, y, { align: "right" });
-  doc.setTextColor(30);
-  y += 26;
+  doc.text("Total Contract Value", marginX + 10, y + totalBarHeight / 2 + 3.5);
+  doc.text(money(input.contractValue), marginX + tableWidth - 10, y + totalBarHeight / 2 + 3.5, { align: "right" });
+  y += totalBarHeight + 26;
 
   // Prints each party's actual Terms & Conditions text inline: the extracted text of their attached PDF(s) when
   // available, falling back to the buyer's own free-text draft (when there's no attachment) or, failing that, a
-  // pointer to the attached file(s) so the reader always sees something rather than a blank section.
+  // pointer to the attached file(s) so the reader always sees something rather than a blank section. Rendered
+  // inside a bordered card so it reads as a document exhibit rather than loose body text.
   const writeTcSection = (label: string, docs: RfqAssetAttachment[], extractedText?: string, text?: string) => {
-    ensureSpace(30);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.setTextColor(...SILA_PRIMARY_RGB);
-    doc.text(label, marginX, y);
-    doc.setTextColor(30);
-    y += 16;
+    ensureSpace(46);
+    sectionHeading(label);
+
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(50);
+    doc.setFontSize(8.75);
     const pdfDocs = docs.filter(isPdfAttachment);
     const otherDocs = docs.filter((d) => !isPdfAttachment(d));
     let lines: string[];
     if (extractedText && extractedText.trim()) {
-      lines = doc.splitTextToSize(extractedText.trim(), pageWidth - marginX * 2);
+      lines = doc.splitTextToSize(extractedText.trim(), contentWidth - 28);
     } else if (docs.length > 0) {
       lines = [
         ...(pdfDocs.length > 0
@@ -291,15 +386,39 @@ export function buildContractCoverPdfBytes(input: ContractPdfInput): Uint8Array 
         ...otherDocs.map((d) => `- ${d.fileName || d.assetName || "Terms & Conditions document"}`),
       ];
     } else {
-      lines = doc.splitTextToSize(text || "", pageWidth - marginX * 2);
+      lines = doc.splitTextToSize(text || "", contentWidth - 28);
     }
+
+    const lineHeight = 12.5;
+    const cardHeight = lines.length * lineHeight + 24;
+    // A single bordered card only works when it fits on one page - a fully extracted multi-page T&C PDF can run
+    // far longer than that, and boxing it would just clip past the bottom margin instead of paginating. Past
+    // that size, fall back to plain flowing paragraphs (still page-broken via ensureSpace) with no box.
+    const maxSinglePageCardHeight = pageHeight - marginBottom - 96;
+    if (cardHeight > maxSinglePageCardHeight) {
+      doc.setTextColor(...SILA_TEXT_SECONDARY_RGB);
+      lines.forEach((line) => {
+        ensureSpace(lineHeight);
+        doc.text(line, marginX + 4, y);
+        y += lineHeight;
+      });
+      doc.setTextColor(...SILA_TEXT_RGB);
+      y += 14;
+      return;
+    }
+    ensureSpace(cardHeight);
+    doc.setDrawColor(...SILA_BORDER_RGB);
+    doc.setLineWidth(0.75);
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(marginX, y, contentWidth, cardHeight, 4, 4, "S");
+    let ly = y + 18;
+    doc.setTextColor(...SILA_TEXT_SECONDARY_RGB);
     lines.forEach((line) => {
-      ensureSpace(14);
-      doc.text(line, marginX, y);
-      y += 13;
+      doc.text(line, marginX + 14, ly);
+      ly += lineHeight;
     });
-    doc.setTextColor(30);
-    y += 8;
+    doc.setTextColor(...SILA_TEXT_RGB);
+    y += cardHeight + 22;
   };
 
   writeTcSection("Buyer Terms & Conditions", input.buyerTermsDocs, input.buyerTermsExtractedText, input.buyerTcContent);
@@ -307,55 +426,88 @@ export function buildContractCoverPdfBytes(input: ContractPdfInput): Uint8Array 
     writeTcSection("Supplier Terms & Conditions", input.supplierTermsDocs, input.supplierTermsExtractedText);
   }
 
-  ensureSpace(120);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.setTextColor(...SILA_PRIMARY_RGB);
-  doc.text("Signatures", marginX, y);
-  doc.setTextColor(30);
-  y += 16;
+  // Signatures: two bordered cards side by side, each with a labeled header strip, the drawn/uploaded signature
+  // (or a text "/s/ Name" mark when none is available), signer name/designation and a "Digitally Signed" tag.
+  const signBoxHeight = 104;
+  ensureSpace(20 + signBoxHeight);
+  sectionHeading("Signatures");
 
-  const signBoxWidth = (pageWidth - marginX * 2 - 20) / 2;
+  const signGap = 20;
+  const signBoxWidth = (contentWidth - signGap) / 2;
   const writeSignature = (label: string, details: SignDetails | null | undefined, x: number) => {
     const boxTop = y;
-    doc.setDrawColor(...SILA_PRIMARY_RGB);
-    doc.setLineWidth(1);
-    doc.rect(x, boxTop, signBoxWidth, 90);
+    doc.setDrawColor(...SILA_BORDER_RGB);
     doc.setLineWidth(0.75);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
+    doc.roundedRect(x, boxTop, signBoxWidth, signBoxHeight, 4, 4, "S");
+
+    doc.setFillColor(...SILA_PRIMARY_SOFT_RGB);
+    doc.rect(x, boxTop, signBoxWidth, 22, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
     doc.setTextColor(...SILA_PRIMARY_RGB);
-    doc.text(label, x + 8, boxTop + 14);
-    doc.setTextColor(30);
+    const labelLines = doc.splitTextToSize(label.toUpperCase(), signBoxWidth - 16);
+    doc.text(labelLines[0] || "", x + 10, boxTop + 14);
+
     if (!details) {
-      doc.text("Not signed", x + 8, boxTop + 40);
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(9.5);
+      doc.setTextColor(...SILA_TEXT_MUTED_RGB);
+      doc.text("Not signed", x + 12, boxTop + 52);
       return;
     }
+
+    let signatureDrawn = false;
     if (details.drawnSignatureUrl) {
       try {
-        doc.addImage(details.drawnSignatureUrl, "PNG", x + 8, boxTop + 18, 100, 36);
+        doc.addImage(details.drawnSignatureUrl, "PNG", x + 12, boxTop + 28, 110, 34);
+        signatureDrawn = true;
       } catch {
-        doc.setFont("helvetica", "italic");
-        doc.setFontSize(13);
-        doc.text(`/s/ ${details.signerName}`, x + 8, boxTop + 40);
+        signatureDrawn = false;
       }
-    } else {
+    }
+    if (!signatureDrawn) {
       doc.setFont("helvetica", "italic");
-      doc.setFontSize(13);
-      doc.text(`/s/ ${details.signerName}`, x + 8, boxTop + 40);
+      doc.setFontSize(14);
+      doc.setTextColor(...SILA_TEXT_RGB);
+      doc.text(`/s/ ${details.signerName}`, x + 12, boxTop + 48);
     }
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.text(`${details.signerName} (${details.signerDesignation})`, x + 8, boxTop + 66);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9.5);
+    doc.setTextColor(...SILA_TEXT_RGB);
+    doc.text(`${details.signerName} (${details.signerDesignation})`, x + 12, boxTop + 74);
     if (details.signedAt) {
-      doc.setTextColor(140);
-      doc.text(details.signedAt, x + 8, boxTop + 80);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...SILA_TEXT_MUTED_RGB);
+      doc.text(`Signed ${details.signedAt}`, x + 12, boxTop + 87);
     }
-    doc.setTextColor(30);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...SILA_SUCCESS_RGB);
+    doc.text("DIGITALLY SIGNED", x + signBoxWidth - 10, boxTop + signBoxHeight - 10, { align: "right" });
+    doc.setTextColor(...SILA_TEXT_RGB);
   };
 
   writeSignature("Buyer", input.buyerSignDetails, marginX);
-  writeSignature(`Supplier (${input.supplierName})`, input.supplierSignDetails, marginX + signBoxWidth + 20);
+  writeSignature(`Supplier (${input.supplierName})`, input.supplierSignDetails, marginX + signBoxWidth + signGap);
+  y += signBoxHeight;
+
+  // Footer, added to every page once total content (and so total page count) is known: a rule, contract number
+  // on the left, page numbers on the right.
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let page = 1; page <= totalPages; page++) {
+    doc.setPage(page);
+    doc.setDrawColor(...SILA_BORDER_RGB);
+    doc.setLineWidth(0.5);
+    doc.line(marginX, pageHeight - 36, pageWidth - marginX, pageHeight - 36);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...SILA_TEXT_MUTED_RGB);
+    doc.text(`Contract No. ${input.contractNumber} · Generated via SILA ProcurementSuite`, marginX, pageHeight - 22);
+    doc.text(`Page ${page} of ${totalPages}`, pageWidth - marginX, pageHeight - 22, { align: "right" });
+  }
 
   return new Uint8Array(doc.output("arraybuffer"));
 }
