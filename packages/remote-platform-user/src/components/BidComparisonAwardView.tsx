@@ -1292,6 +1292,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
             const ranks: Record<string, string> = {};
             const breakdown: Record<string, { discount: number; discountType: string; tax: number; taxType: string; delivery: number; deliveryType: string }> = {};
             const awarded: Record<string, boolean> = {};
+            const notAvailable: Record<string, boolean> = {};
             effectiveQuotations.forEach((q: any) => {
               const suppId = q.quotationId || q.supplierId || q._id || 'unknown';
               const qi = getQuoteItemForRfqItem(q, item);
@@ -1306,6 +1307,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                 deliveryType: qi?.deliveryType || 'AMOUNT',
               };
               awarded[suppId] = qi?.isAwarded === true;
+              notAvailable[suppId] = qi?.isLineitemAvailable === true;
             });
             return {
               id: item.id,
@@ -1318,6 +1320,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
               ranks,
               breakdown,
               awarded,
+              notAvailable,
             };
           });
 
@@ -1370,16 +1373,18 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                             ? selections[item.id] === s.id
                             : isLowest;
                           const isAwardedItem = (item.awarded as Record<string, boolean>)?.[s.id] === true;
+                          const isNotAvailable = (item.notAvailable as Record<string, boolean>)?.[s.id] === true;
                           const discAmtResolved = resolveBreakdownAmount(bd.discount, bd.discountType, price);
                           const taxBasis = price - discAmtResolved;
                           const rank = rankLabel || (price > 0 ? String([...Object.values(item.prices as Record<string, number>)].filter(p => p > 0).sort((a, b) => a - b).indexOf(price) + 1) : '');
                           const isCellHighlighted = isRfqAwarded ? isAwardedItem : isSelected;
 
                           return (
-                            <td key={s.id} className={`bca-cmp-td-supp${isCellHighlighted ? " bca-cmp-td-selected" : ""}`}>
+                            <td key={s.id} className={`bca-cmp-td-supp${isCellHighlighted ? " bca-cmp-td-selected" : ""}${isNotAvailable ? " bca-cmp-td-unavailable" : ""}`}>
                               <div className="bca-cmp-price-row">
                                 <span className="bca-cmp-price">{total > 0 ? fmtINR(total) : '—'}</span>
                                 {isLowest && <span className="bca-lowest-badge">LOWEST</span>}
+                                {isNotAvailable && <span className="bca-unavailable-badge">NOT AVAILABLE</span>}
                               </div>
                               {isRfqAwarded ? (
                                 isAwardedItem ? (

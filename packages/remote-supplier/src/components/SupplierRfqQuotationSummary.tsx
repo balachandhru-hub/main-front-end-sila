@@ -322,6 +322,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
     quotedPrice: number;
     subTotal: number;
     quotedAmount: number;
+    isLineitemAvailable: boolean;
   }
   const [quoteLineItems, setQuoteLineItems] = useState<{ [supplierRFQItemId: string]: QuoteLineItem }>({});
 
@@ -412,6 +413,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
             quotedPrice: source?.quotedPrice ?? 0,
             subTotal: source?.subTotal ?? 0,
             quotedAmount: source?.quotedAmount ?? 0,
+            isLineitemAvailable: source?.isLineitemAvailable ?? false,
           };
         });
         setQuoteLineItems(lineItems);
@@ -452,6 +454,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
         quotedPrice: 0,
         subTotal: 0,
         quotedAmount: 0,
+        isLineitemAvailable: false,
       };
       const isNumericField = field === "deliveryCharge" || field === "discount" || field === "tax" || field === "quotedPrice";
       return {
@@ -459,6 +462,30 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
         [supplierRFQItemId]: {
           ...existing,
           [field]: isNumericField ? (Number(value) || 0) : value,
+        },
+      };
+    });
+  };
+
+  const handleLineItemAvailabilityChange = (supplierRFQItemId: string, checked: boolean) => {
+    setQuoteLineItems((prev) => {
+      const existing: QuoteLineItem = prev[supplierRFQItemId] || {
+        deliveryCharge: 0,
+        deliveryType: "PERCENTAGE",
+        discount: 0,
+        discountType: "PERCENTAGE",
+        tax: 0,
+        taxType: "PERCENTAGE",
+        quotedPrice: 0,
+        subTotal: 0,
+        quotedAmount: 0,
+        isLineitemAvailable: false,
+      };
+      return {
+        ...prev,
+        [supplierRFQItemId]: {
+          ...existing,
+          isLineitemAvailable: checked,
         },
       };
     });
@@ -892,7 +919,8 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
               discountType: line?.discountType || "PERCENTAGE",
               tax: Number(line?.tax ?? 0),
               taxType: line?.taxType || "PERCENTAGE",
-            } as any;
+              isLineitemAvailable: Boolean(line?.isLineitemAvailable),
+            };
           })
         })
       };
@@ -1470,6 +1498,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                                   <th scope="col">
                                     Quoted Price<span className="sila-required" aria-hidden="true">*</span>
                                   </th>
+                                  <th scope="col" className="sqs-availability-cell">Available</th>
 
                                   {showRankColumn && (
                                     <th scope="col" className="sila-num">Rank</th>
@@ -1493,6 +1522,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                                     quotedPrice: 0,
                                     subTotal: 0,
                                     quotedAmount: 0,
+                                    isLineitemAvailable: false,
                                   };
                                   const matchedItem = allQuotationItems.find(
                                     (qi) =>
@@ -1580,6 +1610,15 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                                           placeholder="0.00"
                                           aria-label={`Quoted price for ${itemLabel}`}
                                           required
+                                        />
+                                      </td>
+                                      <td className="sqs-availability-cell">
+                                        <input
+                                          type="checkbox"
+                                          className="sqs-availability-checkbox"
+                                          checked={!line.isLineitemAvailable}
+                                          onChange={(e) => handleLineItemAvailabilityChange(itemKey, !e.target.checked)}
+                                          aria-label={`Mark ${itemLabel} as available`}
                                         />
                                       </td>
                                       {showRankColumn && (

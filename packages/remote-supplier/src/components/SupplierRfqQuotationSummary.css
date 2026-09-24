@@ -345,6 +345,17 @@
   font-weight: var(--sila-weight-semibold);
 }
 
+.sqs-line-table .sqs-availability-cell {
+  text-align: center;
+}
+
+.sqs-line-table .sqs-availability-checkbox {
+  width: 1.125rem;
+  height: 1.125rem;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
 /* ---- Pricing (lot) ------------------------------------------------------- */
 
 .sqs-pricing {
