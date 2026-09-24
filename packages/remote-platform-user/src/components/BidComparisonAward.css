@@ -913,6 +913,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--sila-space-1-5);
+  margin-bottom: var(--sila-space-2);
 }
 
 .bca-cmp-price {
@@ -920,12 +921,6 @@
   font-weight: var(--sila-weight-semibold);
   font-variant-numeric: tabular-nums;
   color: var(--sila-text);
-}
-
-.bca-cmp-per-unit {
-  padding: 0.125rem 0 var(--sila-space-2);
-  font-size: var(--sila-text-2xs);
-  color: var(--sila-text-muted);
 }
 
 .bca-cmp-sel-btn {
