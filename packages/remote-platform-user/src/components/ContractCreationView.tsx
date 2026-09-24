@@ -1366,45 +1366,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     setShowContractNameModal(true);
   };
 
-  // Buyer: the Terms & Conditions sent with the contract. The document added through "Proposed Edits" if there
-  // is one, otherwise the buyer's own Terms & Conditions attached to the RFQ.
-  // const buildContractAttachments = async (ids: string[]) => {
-  //   const { entityId, entityType } = await getEntityTypeByKey("BUYER");
-  //   const uploaded = ids.map((id) => contracts[id]?.buyerTcFile).find((file) => file);
-  //   if (uploaded) {
-  //     return [
-  //       {
-  //         entityId,
-  //         entityType,
-  //         assetType: "TERMS_CONDITION",
-  //         fileName: uploaded.name,
-  //         contentType: uploaded.type || resolveMimeType(undefined, uploaded.name),
-  //         isSingletonAsset: false,
-  //         fileBytes: await readFileAsBase64(uploaded),
-  //       },
-  //     ];
-  //   }
-  //   const attachments = [];
-  //   for (const doc of buyerTermsDocs) {
-  //     if (!doc.id) continue;
-  //     const asset = await fetchBuyerAsset(doc.id);
-  //     if (!("fileBytes" in asset) || !asset.fileBytes) {
-  //       throw new Error(`Could not load ${doc.fileName || doc.assetName || "the Terms & Conditions document"}.`);
-  //     }
-  //     const fileName = asset.fileName || doc.fileName || doc.assetName || "Terms_and_Conditions";
-  //     attachments.push({
-  //       entityId,
-  //       entityType,
-  //       assetType: "TERMS_CONDITION",
-  //       fileName,
-  //       contentType: resolveMimeType(asset.contentType || asset.fileType, fileName),
-  //       isSingletonAsset: false,
-  //       fileBytes: asset.fileBytes.replace(/^data:.*?;base64,/, ""),
-  //     });
-  //   }
-  //   return attachments;
-  // };
-
   // Buyer: invite one supplier per contract to review and negotiate Terms & Conditions. This no longer creates
   // the contract itself - that happens once both parties have signed (see handleCreateContract).
   // Stops at the first failure; contracts already sent stay sent. Returns an error message, or null on success.
