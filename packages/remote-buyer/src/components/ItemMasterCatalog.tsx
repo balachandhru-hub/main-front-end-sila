@@ -5,17 +5,30 @@ import {
     createItemMaster,
     getMasterApprovalFlows,
     checkItemMasterSimilarity,
+    uploadItemMasterFile,
     type ItemMasterDto,
     type ItemMasterDetailDto,
 } from "../api/Buyerapi";
-import { EmptyState, Loader, isErrorResponse, toastService, ItemMasterModal, type ItemMasterModalApi,SearchInput } from "@vosox/shared-ui";
-import { FaPlus } from "react-icons/fa";
+import {
+    EmptyState,
+    Loader,
+    isErrorResponse,
+    toastService,
+    ItemMasterModal,
+    type ItemMasterModalApi,
+    ItemMasterUploadModal,
+    type ItemMasterUploadModalApi,
+    SearchInput,
+} from "@vosox/shared-ui";
+import { FaPlus, FaUpload } from "react-icons/fa";
 import "./ItemMasterCatalog.css";
 
 const itemMasterModalApi: ItemMasterModalApi = { createItemMaster, getMasterApprovalFlows, checkItemMasterSimilarity };
+const itemMasterUploadModalApi: ItemMasterUploadModalApi = { uploadItemMasterFile, getMasterApprovalFlows };
 
 interface ItemMasterCatalogProps {
     buyerId: string;
+    organizationId: string;
     onClose?: () => void;
 }
 
@@ -42,11 +55,12 @@ const IconChevronRight = () => (
   </svg>
 );
 
-const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose }) => {
+const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, organizationId, onClose }) => {
     const [itemMasters, setItemMasters] = useState<ItemMasterDto[]>([]);
     const [showListView, setShowListView] = useState(true);
     const [selectedItemDetail, setSelectedItemDetail] = useState<ItemMasterDetailDto | null>(null);
     const [showItemMasterModal, setShowItemMasterModal] = useState(false);
+    const [showItemMasterUploadModal, setShowItemMasterUploadModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [detailLoading, setDetailLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -132,6 +146,10 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
         setShowItemMasterModal(true);
     };
 
+    const handleUploadItemMasterClick = () => {
+        setShowItemMasterUploadModal(true);
+    };
+
     return (
         <div className="imc-container">
             {error && (
@@ -203,6 +221,11 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
                                     Close
                                 </button>
                             )}
+
+                            <button type="button" className="imc-btn-secondary sila-btn sila-btn--secondary" onClick={handleUploadItemMasterClick}>
+                                <FaUpload aria-hidden="true" />
+                                Upload Item Master
+                            </button>
 
                             <button type="button" className="imc-btn-primary sila-btn sila-btn--primary" onClick={handleAddItemMasterClick}>
                                 <FaPlus aria-hidden="true" />
@@ -298,6 +321,18 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, onClose 
                 onClose={() => setShowItemMasterModal(false)}
                 buyerId={buyerId}
                 api={itemMasterModalApi}
+                onSuccess={() => {
+                    fetchItemMasters(1);
+                    handleBackToList();
+                }}
+            />
+
+            <ItemMasterUploadModal
+                isOpen={showItemMasterUploadModal}
+                onClose={() => setShowItemMasterUploadModal(false)}
+                buyerId={buyerId}
+                organizationId={organizationId}
+                api={itemMasterUploadModalApi}
                 onSuccess={() => {
                     fetchItemMasters(1);
                     handleBackToList();

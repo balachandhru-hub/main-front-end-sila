@@ -49,6 +49,34 @@ export interface ItemMasterSimilarityDto {
   description: string;
 }
 
+export interface UploadItemMasterDocumentDto {
+  entityType: string;
+  entityId: string;
+  assetType: string;
+  fileBytes: string;
+  fileName: string;
+  contentType: string;
+  isSingletonAsset: boolean;
+  id?: string;
+}
+
+export interface UploadItemMasterFilePayload {
+  document: UploadItemMasterDocumentDto;
+  organizationId: string;
+  buyerId: string;
+  title: string;
+  approvalFlowId: string;
+  comment: string;
+}
+
+export interface ItemMasterUploadResultDto {
+  totalRows: number;
+  successfulUploads: number;
+  failedUploads: number;
+  errors: string[];
+  excelMaterialMasterId: string;
+}
+
 // ─── Get Master Approval Flows ───
 export const getMasterApprovalFlows = async (
   buyerId: string,
@@ -215,7 +243,33 @@ export const deleteItemMaster = async (itemMasterId: string): Promise<any> => {
   }
 };
 
-// ─── Upload Item Master Excel ───
+// ─── Upload Item Master File (JSON body, base64 document - current backend contract) ───
+export const uploadItemMasterFile = async (
+  payload: UploadItemMasterFilePayload
+): Promise<ItemMasterUploadResultDto> => {
+  try {
+    const response = await platformInstance.post('/api/v1/buyer/item-master/upload', payload);
+    return response.data;
+  } catch (error: any) {
+    const status = error.response?.status || 'unknown';
+    const responseData = error.response?.data;
+
+    let errMsg = 'Failed to upload item master file.';
+    if (typeof responseData === 'string') {
+      errMsg = responseData;
+    } else if (responseData?.message) {
+      errMsg = responseData.message;
+    } else if (responseData?.description) {
+      errMsg = responseData.description;
+    } else if (error.message) {
+      errMsg = error.message;
+    }
+
+    throw new Error(`${errMsg} (${status})`);
+  }
+};
+
+// ─── Upload Item Master Excel (legacy multipart contract - kept for ItemMaster.tsx) ───
 export const uploadItemMasterExcel = async (
   buyerId: string,
   file: File

@@ -1,4 +1,17 @@
-/* Add Item Master modal — follows .sila-modal / .sila-form-grid */
+/* Add / Upload Item Master modals — follow .sila-modal / .sila-form-grid */
+
+.item-master-modal-hidden-input {
+  display: none;
+}
+
+.item-master-file-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.sila-dropzone.item-master-input-error {
+  border-color: var(--sila-danger);
+}
 
 .item-master-modal-overlay {
   position: fixed;

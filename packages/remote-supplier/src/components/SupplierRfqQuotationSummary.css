@@ -184,6 +184,41 @@
   margin-left: auto;
 }
 
+/* ---- Excel apply ---------------------------------------------------------- */
+
+.sqs-excel-apply {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sila-space-3);
+  padding: var(--sila-space-4) var(--sila-space-5);
+  background: var(--sila-surface-subtle);
+  border-bottom: 0.0625rem solid var(--sila-border-subtle);
+}
+
+.sqs-excel-apply-head {
+  display: flex;
+  flex-direction: column;
+}
+
+.sqs-excel-apply-title {
+  font-size: var(--sila-text-sm);
+  font-weight: var(--sila-weight-semibold);
+  color: var(--sila-text);
+}
+
+.sqs-excel-apply-subtitle {
+  padding: 0.125rem 0 0;
+  font-size: var(--sila-text-xs);
+  color: var(--sila-text-muted);
+}
+
+.sqs-excel-apply-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sila-space-3);
+}
+
 /* Toggle chips (class names kept from the original markup) */
 .pud-bulk-toggle {
   display: inline-flex;
@@ -716,6 +751,10 @@
   align-items: center;
   gap: var(--sila-space-2, 10px);
   flex-wrap: wrap;
+}
+
+.sqs-excel-file-input {
+  display: none;
 }
 
 .sqs-btn-review-contract {

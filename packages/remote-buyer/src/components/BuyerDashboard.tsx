@@ -26,6 +26,7 @@ import {
   getMasterApprovalFlows,
   createBuyerChatApi,
   checkItemMasterSimilarity,
+  uploadItemMasterFile,
 } from "../api/Buyerapi";
 import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../api/masterdataApi";
 import { getOrganizationUsersForRfq } from "../../../remote-platform-user/src/api/networkAdminApi";
@@ -944,6 +945,7 @@ const BuyersDashboard: React.FC = () => {
     getCurrencies,
     fetchReferenceList,
     itemMaster: { createItemMaster, getMasterApprovalFlows, checkItemMasterSimilarity },
+    itemMasterUpload: { uploadItemMasterFile, getMasterApprovalFlows },
     supplierUsers: { getOrganizationUsersForRfq },
   };
 
@@ -960,7 +962,7 @@ const BuyersDashboard: React.FC = () => {
             ) : activeNav === "template" ? (
               <UserTemplate />
             ) : activeNav === "materialService" ? (
-              <ItemMasterCatalog buyerId={buyerId || ""} />
+              <ItemMasterCatalog buyerId={buyerId || ""} organizationId={buyerProfile?.organizationId || ""} />
             ) : activeNav === "material" ? (
               selectedMaterial ? (
                 <MaterialApprovalDetail
