@@ -14,6 +14,12 @@ const CheckIcon = () => (
         <path d="M4 12.5l5 5L20 6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
 );
+const IconBack = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <line x1="19" y1="12" x2="5" y2="12" />
+        <polyline points="12 19 5 12 12 5" />
+    </svg>
+);
 
 const OTP_LENGTH = 6;
 const OTP_DURATION = 600; // seconds
@@ -256,6 +262,14 @@ const BuyersRegistration: React.FC<BuyersRegistrationProps> = ({
         }
     };
 
+    const handleBack = () => {
+        if (step > 1) {
+            setStep((prev) => (prev - 1) as 1 | 2 | 3);
+        } else {
+            navigate(-1);
+        }
+    };
+
     return (
         <div className="vr-page">
             <Header />
@@ -263,15 +277,26 @@ const BuyersRegistration: React.FC<BuyersRegistrationProps> = ({
             <main className="vr-main">
                 <div className={`vr-shell ${step === 3 ? 'vr-shell--wide' : ''}`}>
                     <div className="vr-intro">
-                        <div className="vr-intro-text">
-                            <h1 className="vr-title">Buyer Registration</h1>
-                            {step < 3 && (
-                                <p className="vr-subtitle">
-                                    {step === 1
-                                        ? 'Create your buyer account to start sourcing opportunities'
-                                        : 'Email Verification'}
-                                </p>
-                            )}
+                        <div className="vr-intro-header">
+                            <button
+                                type="button"
+                                className="sila-btn sila-btn--secondary sila-btn--icon sila-btn--sm vr-back-btn"
+                                onClick={handleBack}
+                                aria-label="Back"
+                                title="Back"
+                            >
+                                <IconBack />
+                            </button>
+                            <div className="vr-intro-text">
+                                <h1 className="vr-title">Buyer Registration</h1>
+                                {step < 3 && (
+                                    <p className="vr-subtitle">
+                                        {step === 1
+                                            ? 'Create your buyer account to start sourcing opportunities'
+                                            : 'Email Verification'}
+                                    </p>
+                                )}
+                            </div>
                         </div>
                         <span className="vr-step-indicator">Step {step} of 3</span>
                     </div>
@@ -310,7 +335,8 @@ const BuyersRegistration: React.FC<BuyersRegistrationProps> = ({
 
                                                         if (isValidEmail(value)) {
                                                             setOtpError('');
-                                                        }}}
+                                                        }
+                                                    }}
                                                     aria-invalid={otpError ? true : undefined}
                                                     aria-describedby={otpError ? 'vr-email-hint vr-email-error' : 'vr-email-hint'}
                                                 />

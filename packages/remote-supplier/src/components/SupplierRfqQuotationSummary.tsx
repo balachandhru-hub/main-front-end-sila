@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./SupplierRfqQuotationSummary.css";
-import SupplierRFQChat from "./SupplierRFQChat/SupplierRFQChat";
 import ContractCreationView from "../../../remote-platform-user/src/components/ContractCreationView";
 import {
   fetchRFQById,
@@ -15,6 +14,7 @@ import {
   uploadSupplierEsign,
   updateBuyerTermsConditionStatus,
   fetchSupplierContractById,
+  createSupplierChatApi,
   type RFQDetailResponse,
   type SubmitQuotationPayload,
   type RfqDocumentAssetDto,
@@ -22,7 +22,21 @@ import {
   type PersonDetailDto,
   fetchBuyerAsset,
 } from "../api/supplierApi";
-import { Button, EmptyState, Loader, PageHeader, StatusBadge, isErrorResponse, Dropdown } from "@vosox/shared-ui";
+import { apiKey as supplierApiKey } from "../api/supplierInstance";
+import { useSupplierAuthStore } from "../store/useSupplierAuthStore";
+import {
+  Button,
+  ChatPanel,
+  EmptyState,
+  Loader,
+  PageHeader,
+  StatusBadge,
+  isErrorResponse,
+  Dropdown,
+  startRfqChatHub,
+  stopRfqChatHub,
+} from "@vosox/shared-ui";
+import type { QuotationSubmittedEvent } from "@vosox/shared-ui";
 
 const TYPE_OPTIONS = [
   { name: "Percentage", value: "PERCENTAGE" },
@@ -143,7 +157,20 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
   onRfqsRefresh,
   personDetail,
 }) => {
+  // Sourced from the store, which fetches it once (on login and on reload) via
+  // SupplierApp's mount effect - no per-component fetch, no local cache.
+  const storePersonDetail = useSupplierAuthStore((state) => state.personDetail);
+  const chatProfile = personDetail ?? storePersonDetail;
+  const isLoadingChatProfile = useSupplierAuthStore((state) => state.personDetailLoading);
+
   const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // The RFQ's own currency (e.g. "INR", "USD") — RFQDetailResponse doesn't
+  // declare this field, but the supplier's own quotation does, so fall back
+  // to that. Left blank (not defaulted to "INR") when neither returns one,
+  // since guessing a currency could mislead the supplier.
+  const currency = (selectedRfq as any)?.currency || ownQuotation?.currency || "";
+  const fmtCurrency = (val: number) => `${(val || 0).toFixed(2)}${currency ? ` ${currency}` : ""}`;
 
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [otpStage, setOtpStage] = useState<"none" | "send" | "verify">("none");
@@ -216,6 +243,60 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
     return () => clearInterval(t);
   }, [selectedRfq]);
 
+  // Live-refreshes this supplier's own quotation/rank the moment it changes
+  // server-side - e.g. a teammate at the same supplier org submitting from
+  // another tab/session. Uses the same shared hub connection the RFQ chat
+  // drawer below opens on top of this screen (see rfqChatHub.ts) rather
+  // than a second parallel connection.
+  const quotationRefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!selectedRfqId || !supplierId) return;
+
+    const handleQuotationSubmitted = (payload: QuotationSubmittedEvent) => {
+      if (payload?.SupplierId && payload.SupplierId !== supplierId) return;
+
+      // Coalesce a burst of near-simultaneous events into a single re-fetch.
+      if (quotationRefetchTimerRef.current) clearTimeout(quotationRefetchTimerRef.current);
+      quotationRefetchTimerRef.current = setTimeout(async () => {
+        try {
+          const updatedDetails = await fetchRFQById(selectedRfqId);
+          if (!isErrorResponse(updatedDetails)) setSelectedRfq(updatedDetails);
+
+          const updatedQuotation = await fetchSupplierQuotationBySupplierId(selectedRfqId);
+          if (
+            !isErrorResponse(updatedQuotation) &&
+            updatedQuotation &&
+            "suppliers" in updatedQuotation &&
+            Array.isArray(updatedQuotation.suppliers)
+          ) {
+            const mine =
+              updatedQuotation.suppliers.find((s) => s.supplierId === supplierId) ||
+              updatedQuotation.suppliers[0] ||
+              null;
+            setOwnQuotation(mine);
+          }
+        } catch {
+          // A missed live refresh isn't fatal - reopening the RFQ re-fetches anyway.
+        }
+      }, 500);
+    };
+
+    startRfqChatHub(
+      { rfqId: selectedRfqId, supplierId, headers: { "X-API-Key": supplierApiKey } },
+      () => {},
+      undefined,
+      handleQuotationSubmitted
+    ).catch((err) => {
+      console.error("[SupplierRfqQuotationSummary] SignalR connection failed:", err);
+    });
+
+    return () => {
+      if (quotationRefetchTimerRef.current) clearTimeout(quotationRefetchTimerRef.current);
+      stopRfqChatHub();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRfqId, supplierId]);
+
   const { notYetOpen, closed, frozen, canSubmit } = useMemo(
     () => getRfqSubmissionWindowStatus(selectedRfq),
     [selectedRfq, rfqWindowTick],
@@ -241,6 +322,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
     quotedPrice: number;
     subTotal: number;
     quotedAmount: number;
+    isLineitemAvailable: boolean;
   }
   const [quoteLineItems, setQuoteLineItems] = useState<{ [supplierRFQItemId: string]: QuoteLineItem }>({});
 
@@ -331,6 +413,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
             quotedPrice: source?.quotedPrice ?? 0,
             subTotal: source?.subTotal ?? 0,
             quotedAmount: source?.quotedAmount ?? 0,
+            isLineitemAvailable: source?.isLineitemAvailable ?? false,
           };
         });
         setQuoteLineItems(lineItems);
@@ -371,6 +454,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
         quotedPrice: 0,
         subTotal: 0,
         quotedAmount: 0,
+        isLineitemAvailable: false,
       };
       const isNumericField = field === "deliveryCharge" || field === "discount" || field === "tax" || field === "quotedPrice";
       return {
@@ -378,6 +462,30 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
         [supplierRFQItemId]: {
           ...existing,
           [field]: isNumericField ? (Number(value) || 0) : value,
+        },
+      };
+    });
+  };
+
+  const handleLineItemAvailabilityChange = (supplierRFQItemId: string, checked: boolean) => {
+    setQuoteLineItems((prev) => {
+      const existing: QuoteLineItem = prev[supplierRFQItemId] || {
+        deliveryCharge: 0,
+        deliveryType: "PERCENTAGE",
+        discount: 0,
+        discountType: "PERCENTAGE",
+        tax: 0,
+        taxType: "PERCENTAGE",
+        quotedPrice: 0,
+        subTotal: 0,
+        quotedAmount: 0,
+        isLineitemAvailable: false,
+      };
+      return {
+        ...prev,
+        [supplierRFQItemId]: {
+          ...existing,
+          isLineitemAvailable: checked,
         },
       };
     });
@@ -556,7 +664,14 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
         supplierId: supplierId as string,
         answers: Object.values(rfqAnswers).map((a) => {
           const question = selectedRfq.questions?.find(q => q.questionId === a.rfqQuestionId);
-          const allOptionIds = question?.options?.map(opt => opt.optionId) || [];
+
+          let questionOptionId: string | null = a.questionOptionId || (a.questionOptionIds?.length ? a.questionOptionIds[0] : null);
+          let questionOptionIds: string[] = a.questionOptionIds || [];
+          if (question?.questionType === "Radio") {
+            questionOptionIds = [];
+          } else if (question?.questionType === "Checkbox") {
+            questionOptionId = null;
+          }
 
           const answerAttachment: RfqDocumentAssetDto | null =
             a.file && a.fileBase64
@@ -577,8 +692,8 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
           return {
             rfqQuestionId: a.rfqQuestionId,
             answer: a.answer || "",
-            questionOptionId: a.questionOptionId || (a.questionOptionIds?.length ? a.questionOptionIds[0] : null),
-            questionOptionIds: allOptionIds,
+            questionOptionId,
+            questionOptionIds,
             attachment: answerAttachment
           };
         }),
@@ -811,7 +926,8 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
               discountType: line?.discountType || "PERCENTAGE",
               tax: Number(line?.tax ?? 0),
               taxType: line?.taxType || "PERCENTAGE",
-            } as any;
+              isLineitemAvailable: Boolean(line?.isLineitemAvailable),
+            };
           })
         })
       };
@@ -886,13 +1002,14 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
   const isContractCreated = selectedRfq?.status === "AWARDED" && !!selectedRfq?.isSupplierInvitedForContract;
 
   if (showContractView && selectedRfq) {
+    const chatSupplierId = supplierId || ownQuotation?.supplierId || undefined;
     return (
       <ContractCreationView
         rfq={{ ...selectedRfq, rfqId: selectedRfqId || (selectedRfq as any)?.rfqId, id: selectedRfqId || (selectedRfq as any)?.id }}
         lineItems={selectedRfq.items || []}
         effectiveQuotations={ownQuotation ? [ownQuotation] : (selectedRfq.supplierQuotation || [])}
         role="supplier"
-        supplierId={supplierId || ownQuotation?.supplierId || undefined}
+        supplierId={chatSupplierId}
         supplierName={ownQuotation?.supplierName || undefined}
         onUploadSupplierTerms={uploadSupplierTermsAndCondition}
         onUploadSupplierEsign={uploadSupplierEsign}
@@ -903,6 +1020,14 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
           if (!isErrorResponse(latest)) setSelectedRfq(latest);
         }}
         onBack={() => setShowContractView(false)}
+        chatApi={selectedRfqId && chatSupplierId ? createSupplierChatApi(selectedRfqId, chatSupplierId) : undefined}
+        chatHubParams={
+          selectedRfqId && chatSupplierId
+            ? { rfqId: selectedRfqId, supplierId: chatSupplierId, headers: { "X-API-Key": supplierApiKey } }
+            : undefined
+        }
+        currentUserProfile={chatProfile}
+        isLoadingCurrentUserProfile={isLoadingChatProfile}
       />
     );
   }
@@ -1074,11 +1199,11 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                         <dd className="sila-meta-value">{selectedRfq.title || "—"}</dd>
                       </div>
                       <div className="sila-meta-item">
-                        <dt className="sila-meta-label">Start date &amp; time</dt>
+                        <dt className="sila-meta-label">Start date &amp; time (UTC)</dt>
                         <dd className="sila-meta-value sqs-tabular">{formatDateTime(selectedRfq.startDate)}</dd>
                       </div>
                       <div className="sila-meta-item">
-                        <dt className="sila-meta-label">Close date &amp; time</dt>
+                        <dt className="sila-meta-label">Close date &amp; time (UTC)</dt>
                         <dd className="sila-meta-value sqs-tabular">{formatDateTime(selectedRfq.endDate)}</dd>
                       </div>
                       <div className="sila-meta-item">
@@ -1347,7 +1472,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
 
                             <div className="sqs-total">
                               <label className="sqs-total-label" htmlFor="sqs-lot-total">
-                                Total Price Quote<span className="sila-required" aria-hidden="true">*</span>
+                                Total Price Quote{currency ? ` (${currency})` : ""}<span className="sila-required" aria-hidden="true">*</span>
                               </label>
                               <input
                                 id="sqs-lot-total"
@@ -1380,13 +1505,14 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                                   <th scope="col">
                                     Quoted Price<span className="sila-required" aria-hidden="true">*</span>
                                   </th>
+                                  <th scope="col" className="sqs-availability-cell">Available</th>
 
                                   {showRankColumn && (
                                     <th scope="col" className="sila-num">Rank</th>
                                   )}
 
-                                  <th scope="col" className="sila-num">Sub Total</th>
-                                  <th scope="col" className="sila-num">Quoted Amount</th>
+                                  <th scope="col" className="sila-num">Sub Total{currency ? ` (${currency})` : ""}</th>
+                                  <th scope="col" className="sila-num">Quoted Amount{currency ? ` (${currency})` : ""}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1403,6 +1529,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                                     quotedPrice: 0,
                                     subTotal: 0,
                                     quotedAmount: 0,
+                                    isLineitemAvailable: false,
                                   };
                                   const matchedItem = allQuotationItems.find(
                                     (qi) =>
@@ -1492,16 +1619,25 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                                           required
                                         />
                                       </td>
+                                      <td className="sqs-availability-cell">
+                                        <input
+                                          type="checkbox"
+                                          className="sqs-availability-checkbox"
+                                          checked={!line.isLineitemAvailable}
+                                          onChange={(e) => handleLineItemAvailabilityChange(itemKey, !e.target.checked)}
+                                          aria-label={`Mark ${itemLabel} as available`}
+                                        />
+                                      </td>
                                       {showRankColumn && (
                                         <td className="sila-num sila-cell-strong">
                                           {quotationStatus === 'SUBMITTED' ? itemRank : "-"}
                                         </td>
                                       )}
                                       <td className="sila-num">
-                                        {line.subTotal.toFixed(2)}
+                                        {fmtCurrency(line.subTotal)}
                                       </td>
                                       <td className="sila-num sila-cell-strong">
-                                        {line.quotedAmount.toFixed(2)}
+                                        {fmtCurrency(line.quotedAmount)}
                                       </td>
                                     </tr>
                                   );
@@ -1513,7 +1649,7 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
                           <div className="sqs-total sqs-total--readonly">
                             <span className="sqs-total-label">Total Price Quote</span>
                             <span className="sqs-total-value">
-                              {Number(quoteTotalPrice).toFixed(2)}
+                              {fmtCurrency(Number(quoteTotalPrice))}
                             </span>
                           </div>
                         </>
@@ -1905,14 +2041,16 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
       )}
 
       {isChatOpen && selectedRfqId && supplierId && (
-        <SupplierRFQChat
+        <ChatPanel
+          role="supplier"
           onClose={() => setIsChatOpen(false)}
           rfqId={selectedRfqId}
           rfqTitle={selectedRfq?.title}
-          supplierId={supplierId}
-          buyerId={selectedRfq?.buyerId}
-          buyerName={selectedRfq?.buyerName}
-          personDetail={personDetail}
+          counterparties={[{ id: supplierId, name: selectedRfq?.buyerName || "Buyer", isExternal: false }]}
+          currentUserProfile={chatProfile}
+          isLoadingCurrentUserProfile={isLoadingChatProfile}
+          api={createSupplierChatApi(selectedRfqId, supplierId)}
+          hubParams={{ rfqId: selectedRfqId, supplierId, headers: { "X-API-Key": supplierApiKey } }}
         />
       )}
     </>

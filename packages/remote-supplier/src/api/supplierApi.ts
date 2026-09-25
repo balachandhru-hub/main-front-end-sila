@@ -19,14 +19,16 @@ import type {
   VerifyOtpPayload,
   SupplierQuotationBySupplierIdResponse,
 } from '../dto/supplierDto';
+import { isErrorResponse } from '@vosox/shared-ui';
 import type { ErrorResponseDto } from '@vosox/shared-ui';
 import type {
+  ChatApiAdapter,
   ChatMessageDto,
   ChatThreadDto,
   ChatAttachmentInputDto,
   ChatAttachmentDownloadDto,
   MarkThreadReadResponseDto,
-} from '../../../remote-buyer/src/dto/chatDto';
+} from '@vosox/shared-ui';
 export type {
   ChatMessageDto,
   ChatThreadDto,
@@ -34,7 +36,7 @@ export type {
   ChatAttachmentDto,
   ChatAttachmentDownloadDto,
   MarkThreadReadResponseDto,
-} from '../../../remote-buyer/src/dto/chatDto';
+} from '@vosox/shared-ui';
 export type {
   SupplierQuotationBySupplierIdResponse,
   SupplierQuotationByIdItem,
@@ -1635,6 +1637,48 @@ export const downloadSupplierMessageAttachment = async (
   }
 };
 
+/**
+ * Builds the ChatPanel API adapter for the supplier side of a given RFQ — see ChatApiAdapter in @vosox/shared-ui.
+ * Normalizes this API's ErrorResponseDto-return style into thrown Errors (same fallback text as before) so
+ * ChatPanel only ever deals with resolve-or-throw promises, matching the buyer adapter's contract.
+ */
+export const createSupplierChatApi = (rfqId: string, supplierId: string): ChatApiAdapter => ({
+  fetchThreads: async () => {
+    const result = await fetchSupplierMessageThreads(rfqId);
+    if (isErrorResponse(result)) {
+      throw new Error(result.description || result.message || 'Failed to load conversation.');
+    }
+    return result;
+  },
+  fetchHistory: async (threadId, index, limit) => {
+    const result = await fetchSupplierMessageHistory(threadId, index, limit);
+    if (isErrorResponse(result)) {
+      throw new Error(result.description || result.message || 'Failed to load conversation history.');
+    }
+    return result;
+  },
+  markThreadRead: async (threadId) => {
+    const result = await markSupplierThreadAsRead(threadId);
+    if (isErrorResponse(result)) {
+      throw new Error(result.description || result.message || 'Failed to mark conversation as read.');
+    }
+  },
+  sendMessage: async (_target, body, attachments) => {
+    const result = await sendSupplierMessage({ rfqId, supplierId, body, attachments });
+    if (isErrorResponse(result)) {
+      throw new Error(result.description || result.message || 'Failed to send message.');
+    }
+    return result;
+  },
+  downloadAttachment: async (attachmentId) => {
+    const result = await downloadSupplierMessageAttachment(attachmentId);
+    if (isErrorResponse(result)) {
+      throw new Error(result.description || result.message || 'Failed to download attachment.');
+    }
+    return result;
+  },
+});
+
 /** Aggregated bidding figures for the supplier dashboard (GET /api/v1/supplier/dashboard-analytics). */
 export const fetchSupplierDashboardAnalytics = async (): Promise<SupplierDashboardAnalytics> => {
   // Users only ever see a neutral message; the technical reason goes to the console.
@@ -1674,10 +1718,11 @@ export const uploadSupplierTermsAndCondition = async (payload: {
     const rfqId = typeof payload === 'object' && payload.rfqId ? payload.rfqId : payload;
     const termsAndCondition = typeof payload === 'object' && payload.termsAndCondition !== undefined ? payload.termsAndCondition : true;
     // rfqId/termsAndCondition are already in the query string above; the body is only for the document, when
-    // there is one (the "Yes, upload supplier terms" path) - otherwise it stays empty (the "No" path).
+    // there is one (the "Yes, upload supplier terms" path) - the "No" (Proceed with Buyer T&C) path sends no
+    // body at all, not an empty object.
     const assetData = (payload && typeof payload === 'object')
-      ? (payload.assetUpload || (Array.isArray(payload.documents) ? payload.documents[0] : payload.documents) || {})
-      : {};
+      ? (payload.assetUpload || (Array.isArray(payload.documents) ? payload.documents[0] : payload.documents) || undefined)
+      : undefined;
 
     const url = `/api/v1/supplier/supplier-terms-condition?rfqId=${encodeURIComponent(rfqId)}&termsAndCondition=${Boolean(termsAndCondition)}`;
     let response;

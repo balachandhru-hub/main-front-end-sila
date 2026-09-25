@@ -174,3 +174,45 @@
   height: calc(var(--sila-control-height-sm) - 0.125rem);
   font-size: var(--sila-text-sm);
 }
+
+/* --- Available checkbox (line items table) --- */
+
+.ebid-availability-checkbox {
+  appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  border: 0.0938rem solid var(--sila-border-strong);
+  border-radius: var(--sila-radius-sm);
+  background: var(--sila-surface);
+  cursor: pointer;
+  vertical-align: middle;
+  transition: var(--sila-transition);
+  position: relative;
+}
+
+.ebid-availability-checkbox:hover {
+  border-color: var(--sila-primary);
+}
+
+.ebid-availability-checkbox:focus-visible {
+  outline: none;
+  box-shadow: var(--sila-focus-ring);
+}
+
+.ebid-availability-checkbox:checked {
+  background: var(--sila-primary);
+  border-color: var(--sila-primary);
+}
+
+.ebid-availability-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 0.3125rem;
+  top: 0.125rem;
+  width: 0.3125rem;
+  height: 0.5625rem;
+  border: solid var(--sila-surface);
+  border-width: 0 0.125rem 0.125rem 0;
+  transform: rotate(45deg);
+}
