@@ -117,6 +117,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
   // tabs). Auto-selection re-runs on every new supplier bid (see autoSelectLowest),
   // but must never clobber one of these.
   const manualSelectionsRef = useRef<Set<string>>(new Set());
+  const viewModeRef = useRef(viewMode);
   const [expandedSuppliers, setExpandedSuppliers] = useState<Record<string, boolean>>({});
   const [viewingDoc, setViewingDoc] = useState<{ fileName: string; url: string; contentType: string } | null>(null);
   const [loadingDocId, setLoadingDocId] = useState<string | null>(null);
@@ -457,6 +458,10 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
     setRefreshedRfq(null);
   }, [rfqId, rfqProp?.rfqId]);
 
+  useEffect(() => {
+    viewModeRef.current = viewMode;
+  }, [viewMode]);
+
   // Live-refreshes the moment a supplier (registered or external) submits or
   // updates a quotation on this RFQ, so a buyer sitting on this screen sees
   // the new bid without reloading. Buyers are already auto-joined on the
@@ -482,6 +487,18 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           .catch(() => {
             // A missed live refresh isn't fatal - the next manual action
             // (freeze, award, tab switch) will fetch fresh data anyway.
+          });
+
+        // Bid History tracks first-vs-current bid per supplier from its own
+        // endpoint, so it needs its own refetch here too - otherwise a buyer
+        // sitting on that tab (or returning to it later) sees a stale
+        // snapshot even though Bid Comparison already updated live above.
+        getBidComparisonData(effectiveRfqIdForHub)
+          .then((response) => {
+            if (!isBidComparisonError(response)) setBidHistoryApiData(response);
+          })
+          .catch(() => {
+            // Same reasoning as above - the next tab switch re-fetches anyway.
           });
       }, 500);
     };
