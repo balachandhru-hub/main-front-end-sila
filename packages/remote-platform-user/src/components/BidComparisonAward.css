@@ -1778,6 +1778,10 @@
 }
 
 /* ── Bid History View ── */
+.bca-cmp-table thead th.bca-hist-th-supp {
+  text-align: center;
+}
+
 .bca-cmp-table thead th.bca-hist-sub-th {
   padding: 0.375rem var(--sila-space-3) var(--sila-space-2);
   border-bottom: 0.0625rem solid var(--sila-border);
@@ -1815,6 +1819,19 @@
 
 .bca-hist-current-td { background: var(--sila-surface); }
 .bca-hist-current-td.bca-cmp-td-selected { background: var(--sila-primary-soft); }
+
+/* First Bid reads as a muted, historical value; Current Bid is the one that
+   matters right now, so it takes the same primary color as its header. */
+.bca-hist-first-td .bca-cmp-price,
+.bca-hist-first-td .bca-cmp-total-price {
+  color: var(--sila-text-muted);
+  font-weight: var(--sila-weight-medium);
+}
+
+.bca-hist-current-td .bca-cmp-price,
+.bca-hist-current-td .bca-cmp-total-price {
+  color: var(--sila-primary);
+}
 
 .bca-hist-current-row {
   display: flex;
