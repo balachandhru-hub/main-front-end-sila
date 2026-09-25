@@ -1517,7 +1517,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                     <th className="bca-cmp-th-fixed bca-cmp-th-sm">Qty</th>
                     <th className="bca-cmp-th-fixed bca-cmp-th-sm">UOM</th>
                     {bidHistoryData.map(s => (
-                      <th key={s.id} className="bca-cmp-th-supp" colSpan={2}>
+                      <th key={s.id} className="bca-cmp-th-supp bca-hist-th-supp" colSpan={2}>
                         <div className="bca-cmp-supp-name">{s.name}</div>
                       </th>
                     ))}
