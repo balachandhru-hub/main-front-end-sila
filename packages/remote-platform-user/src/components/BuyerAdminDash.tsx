@@ -1017,7 +1017,7 @@ const BuyerAdminDash: React.FC = () => {
                 />
               )
             ) : activeNav === "materialService" ? (
-              <ItemMasterCatalog buyerId={buyerId || ""} />
+              <ItemMasterCatalog buyerId={buyerId || ""} organizationId={buyerProfile?.organizationId || ""} />
             ) : activeNav === "createRFQ" ? (
               <CreateRFQ onNavClick={handleNavClick} onRfqCreated={refreshRfqs} api={createRfqApi} />
             ) : activeNav === "product" ? (
