@@ -208,6 +208,34 @@ export interface ItemMasterSimilarityDto {
   description: string;
 }
 
+export interface UploadItemMasterDocumentDto {
+  entityType: string;
+  entityId: string;
+  assetType: string;
+  fileBytes: string;
+  fileName: string;
+  contentType: string;
+  isSingletonAsset: boolean;
+  id?: string;
+}
+
+export interface UploadItemMasterFilePayload {
+  document: UploadItemMasterDocumentDto;
+  organizationId: string;
+  buyerId: string;
+  title: string;
+  approvalFlowId: string;
+  comment: string;
+}
+
+export interface ItemMasterUploadResultDto {
+  totalRows: number;
+  successfulUploads: number;
+  failedUploads: number;
+  errors: string[];
+  excelMaterialMasterId: string;
+}
+
 /* ---------------------------------- Supplier user DTO (for SupplierUsersModal) ---------------------------------- */
 
 export interface SupplierRfqUserDto {
@@ -229,12 +257,17 @@ export interface ItemMasterModalApi {
   checkItemMasterSimilarity: (buyerId: string, description: string, materialGroup: string) => Promise<ItemMasterSimilarityDto[]>;
 }
 
+export interface ItemMasterUploadModalApi {
+  uploadItemMasterFile: (payload: UploadItemMasterFilePayload) => Promise<ItemMasterUploadResultDto>;
+  getMasterApprovalFlows: (buyerId: string, index?: number, limit?: number) => Promise<MasterApprovalFlowDto[]>;
+}
+
 export interface SupplierUsersModalApi {
   getOrganizationUsersForRfq: (organizationId: string) => Promise<SupplierRfqUserDto[]>;
 }
 
 export interface CreateRFQApi {
-  getBuyerProfile: () => Promise<{ id: string } | null>;
+  getBuyerProfile: () => Promise<{ id: string; organizationId?: string } | null>;
   getAllDepartments: (buyerId: string, index?: number, limit?: number, searchTerm?: string) => Promise<any>;
   getAllCostCenters: (departmentId: string, index?: number, limit?: number, searchTerm?: string) => Promise<any>;
   getAllItemMasters: (buyerId: string, index?: number, limit?: number, searchTerm?: string) => Promise<any>;
@@ -249,5 +282,6 @@ export interface CreateRFQApi {
   getCurrencies: (index: number, limit: number) => Promise<PagedResult<CurrencyDto> | { statusCode: number }>;
   fetchReferenceList: (keys: string[]) => Promise<any[] | { statusCode: number }>;
   itemMaster: ItemMasterModalApi;
+  itemMasterUpload: ItemMasterUploadModalApi;
   supplierUsers: SupplierUsersModalApi;
 }

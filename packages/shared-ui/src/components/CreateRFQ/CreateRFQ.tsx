@@ -9,6 +9,7 @@ import { StatusBadge } from "../StatusBadge";
 import { Loader } from "../Loader";
 import { FaCloudUploadAlt, FaFileAlt, FaShieldAlt, FaTimes } from "react-icons/fa";
 import ItemMasterModal from "./ItemMasterModal";
+import ItemMasterUploadModal from "./ItemMasterUploadModal";
 import SupplierUsersModal from "./SupplierUsersModal";
 import ExternalSupplierModal, { type ExternalSupplierFormValues } from "./ExternalSupplierModal";
 import type {
@@ -236,6 +237,7 @@ const CreateRFQ: React.FC<CreateRFQProps> = ({ onNavClick, onRfqCreated, api }) 
     const [activeStep, setActiveStep] = useState<StepKey>("details");
 
     const [buyerProfileId, setBuyerProfileId] = useState<string>("");
+    const [buyerOrganizationId, setBuyerOrganizationId] = useState<string>("");
 
     const [rfqTitle, setRfqTitle] = useState("");
     const [department, setDepartment] = useState("");
@@ -246,6 +248,9 @@ const CreateRFQ: React.FC<CreateRFQProps> = ({ onNavClick, onRfqCreated, api }) 
                 const profile = await api.getBuyerProfile();
                 if (profile?.id) {
                     setBuyerProfileId(profile.id);
+                }
+                if (profile?.organizationId) {
+                    setBuyerOrganizationId(profile.organizationId);
                 }
             } catch (err) {
 
@@ -601,6 +606,7 @@ if (Array.isArray(data)) {
     const [viewTemplateError, setViewTemplateError] = useState<string | null>(null);
     const [viewTemplateData, setViewTemplateData] = useState<VerificationTemplate | null>(null);
     const [isItemMasterModalOpen, setIsItemMasterModalOpen] = useState(false);
+    const [isItemMasterUploadModalOpen, setIsItemMasterUploadModalOpen] = useState(false);
     const [isExternalSupplierModalOpen, setIsExternalSupplierModalOpen] = useState(false);
 
     const handleViewTemplate = async () => {
@@ -1567,6 +1573,13 @@ if (Array.isArray(data)) {
                                 >
                                     <IconPlus /> Add Item Master
                                 </button>
+                                <button
+                                    type="button"
+                                    className="bd-btn-add bd-btn-add--secondary"
+                                    onClick={() => setIsItemMasterUploadModalOpen(true)}
+                                >
+                                    <FaCloudUploadAlt aria-hidden="true" /> Upload Item Master
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -2006,6 +2019,14 @@ if (Array.isArray(data)) {
                 onClose={() => setIsItemMasterModalOpen(false)}
                 buyerId={buyerProfileId}
                 api={api.itemMaster}
+            />
+
+            <ItemMasterUploadModal
+                isOpen={isItemMasterUploadModalOpen}
+                onClose={() => setIsItemMasterUploadModalOpen(false)}
+                buyerId={buyerProfileId}
+                organizationId={buyerOrganizationId}
+                api={api.itemMasterUpload}
             />
 
             <SupplierUsersModal

@@ -85,7 +85,8 @@
   color: var(--sila-text);
 }
 
-.imc-btn-primary svg {
+.imc-btn-primary svg,
+.imc-btn-secondary svg {
   width: 0.75rem;
   height: 0.75rem;
 }

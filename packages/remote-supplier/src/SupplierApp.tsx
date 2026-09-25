@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { ToastContainer } from '@vosox/shared-ui';
 import SupplierDashboard from './components/SupplierDashboard';
 import SupplierProfilePage from './pages/SupplierProfilePage';
 import { useSupplierAuthStore } from './store/useSupplierAuthStore';
@@ -15,11 +16,14 @@ const SupplierApp: React.FC = () => {
   }, [fetchPersonDetail]);
 
   return (
-    <Routes>
-      <Route path="profile" element={<SupplierProfilePage />} />
-      {/* Dashboard sections (/dashboard, /rfqs, /catalog, …) are resolved inside the dashboard. */}
-      <Route path="*" element={<SupplierDashboard />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="profile" element={<SupplierProfilePage />} />
+        {/* Dashboard sections (/dashboard, /rfqs, /catalog, …) are resolved inside the dashboard. */}
+        <Route path="*" element={<SupplierDashboard />} />
+      </Routes>
+      <ToastContainer />
+    </>
   );
 };
 
