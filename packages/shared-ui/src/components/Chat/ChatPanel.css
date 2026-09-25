@@ -1,5 +1,6 @@
-/* RFQ chat drawer — shared by the buyer (BuyerRFQChat) and supplier (SupplierRFQChat,
-   ExternalSupplierChat) remotes, which import this file directly. Keep every brc-/brcd- class. */
+/* RFQ chat drawer — shared by the buyer and supplier remotes via ChatPanel.
+   Keep every brc-/brcd- class name (also referenced directly by the unmigrated
+   ExternalSupplierChat variant in remote-supplier). */
 
 .brc-overlay {
     position: fixed;

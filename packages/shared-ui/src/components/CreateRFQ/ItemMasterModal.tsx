@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { toastService } from "../../services/toastservice";
 import Dropdown from "../DropDown/DropDown";
 import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from "../DropDown/DropDown.types";
 import { FaTimes } from "react-icons/fa";
 import "./ItemMasterModal.css";
-import type { ItemMasterModalApi, MasterApprovalFlowDto } from "./types";
+import type { ItemMasterModalApi, MasterApprovalFlowDto, ItemMasterSimilarityDto } from "./types";
 
 // Page size used by the async (paginated) Approval Flow Dropdown
 const APPROVAL_FLOW_PAGE_SIZE = 40;
@@ -56,6 +56,13 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const [similarItemMasters, setSimilarItemMasters] = useState<ItemMasterSimilarityDto[]>([]);
+    const [isCheckingSimilarity, setIsCheckingSimilarity] = useState(false);
+    const [similarityError, setSimilarityError] = useState("");
+    // Tracks the (materialGroup, description) pair the last similarity check ran for, so
+    // re-focusing/blurring a field without changing its value doesn't re-hit the API.
+    const lastSimilarityCheckRef = useRef<{ materialGroup: string; description: string } | null>(null);
+
     if (!isOpen) {
         return null;
     }
@@ -103,6 +110,36 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
         }
     };
 
+    // Fires when both Material group and Description have a value and either field loses focus.
+    // Surfaces existing item masters that look like duplicates; it never blocks submission.
+    const checkSimilarity = async () => {
+        const trimmedMaterialGroup = materialGroup.trim();
+        const trimmedDescription = description.trim();
+
+        if (!trimmedMaterialGroup || !trimmedDescription || !buyerId) {
+            return;
+        }
+
+        const lastChecked = lastSimilarityCheckRef.current;
+        if (lastChecked && lastChecked.materialGroup === trimmedMaterialGroup && lastChecked.description === trimmedDescription) {
+            return;
+        }
+        lastSimilarityCheckRef.current = { materialGroup: trimmedMaterialGroup, description: trimmedDescription };
+
+        setIsCheckingSimilarity(true);
+        setSimilarityError("");
+
+        try {
+            const matches = await api.checkItemMasterSimilarity(buyerId, trimmedDescription, trimmedMaterialGroup);
+            setSimilarItemMasters(matches);
+        } catch (error: any) {
+            setSimilarItemMasters([]);
+            setSimilarityError(error?.message || "Failed to check for similar item masters.");
+        } finally {
+            setIsCheckingSimilarity(false);
+        }
+    };
+
     const resetForm = () => {
         setDescription("");
         setMaterialCode("");
@@ -118,6 +155,9 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
         setSelectedApprovalFlow(null);
         setComment("");
         setErrors({});
+        setSimilarItemMasters([]);
+        setSimilarityError("");
+        lastSimilarityCheckRef.current = null;
     };
 
     const handleClose = () => {
@@ -280,7 +320,10 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                                 onChange={(e) => {
                                     setMaterialGroup(e.target.value);
                                     clearFieldError(setErrors, "materialGroup");
+                                    setSimilarItemMasters([]);
+                                    setSimilarityError("");
                                 }}
+                                onBlur={checkSimilarity}
                             />
 
                             {errors.materialGroup && (
@@ -334,12 +377,44 @@ const ItemMasterModal: React.FC<ItemMasterModalProps> = ({
                             onChange={(e) => {
                                 setDescription(e.target.value);
                                 clearFieldError(setErrors, "description");
+                                setSimilarItemMasters([]);
+                                setSimilarityError("");
                             }}
+                            onBlur={checkSimilarity}
                         />
 
                         {errors.description && (
                             <div className="item-master-error" id="item-master-error-description">
                                 {errors.description}
+                            </div>
+                        )}
+
+                        {isCheckingSimilarity && (
+                            <div className="item-master-field-hint">Checking for similar item masters...</div>
+                        )}
+
+                        {!isCheckingSimilarity && similarityError && (
+                            <div className="item-master-field-hint item-master-field-hint-error">
+                                {similarityError}
+                            </div>
+                        )}
+
+                        {!isCheckingSimilarity && !similarityError && similarItemMasters.length > 0 && (
+                            <div className="sila-alert item-master-similarity-alert" role="status">
+                                <div>
+                                    <p className="item-master-similarity-title">
+                                        Similar item masters already exist. You can continue with one of these instead of creating a new one:
+                                    </p>
+
+                                    <ul className="item-master-similarity-list">
+                                        {similarItemMasters.map((item) => (
+                                            <li key={item.id}>
+                                                <span className="item-master-similarity-code">{item.materialCode}</span>
+                                                <span className="item-master-similarity-desc">{item.description}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
                             </div>
                         )}
                     </div>

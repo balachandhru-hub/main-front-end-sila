@@ -38,6 +38,7 @@ interface QuoteLineItem {
   quotedPrice: number;
   subTotal: number;
   quotedAmount: number;
+  isLineitemAvailable: boolean;
 }
 
 interface EAuctionWidgetProps {
@@ -133,6 +134,13 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
   const [ownQuotation, setOwnQuotation] = useState<SupplierQuotationByIdItem | null>(null);
   const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
   const [loadingApi, setLoadingApi] = useState<boolean>(false);
+
+  // The RFQ's own currency (e.g. "INR", "USD") — RFQDetailResponse doesn't
+  // declare this field, but the supplier's own quotation does, so fall back
+  // to that. Left blank (not defaulted to "INR") when neither returns one,
+  // since guessing a currency could mislead the supplier.
+  const currency = (selectedRfqDetails as any)?.currency || ownQuotation?.currency || "";
+  const fmtCurrency = (val: number) => `${(val || 0).toFixed(2)}${currency ? ` ${currency}` : ""}`;
 
   // Supplier's rank on the current lot (single-lot / addLotOption bidding only)
   const headerRank = React.useMemo(() => formatRank(
@@ -291,6 +299,139 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
     fetchLiveBidsTotal();
   }, [isModalOpen, supplierId]);
 
+  const loadRfqDetailsAndQuotation = async (rfqId: string) => {
+    setLoadingDetails(true);
+    let isAddLotOption = false;
+    try {
+      const [detailsRes, quoteRes] = await Promise.all([
+        fetchRFQById(rfqId),
+        fetchSupplierQuotationBySupplierId(rfqId),
+      ]);
+
+      if (detailsRes && !('statusCode' in detailsRes) && 'title' in detailsRes) {
+        const det = detailsRes as RFQDetailResponse;
+        setSelectedRfqDetails(det);
+        isAddLotOption = Boolean(det.addLotOption);
+
+        // Enrich auction list row with detailed RFQ info (delivery location, endDate, orgName)
+        setAuctions((prev) =>
+          prev.map((auc) => {
+            if (auc.id === rfqId) {
+              const loc = det.deliveryLocation || auc.deliveryLocation;
+              const end = det.endDate || auc.endDate;
+              const org = (det as any).organizationName || auc.organizationName;
+              return {
+                ...auc,
+                deliveryLocation: loc,
+                organizationName: org,
+                endDate: end,
+                formattedEndDate: end ? formatEndDateStr(end) : auc.formattedEndDate,
+              };
+            }
+            return auc;
+          })
+        );
+
+        // Pre-fill item prices if available
+        const prices: { [key: string]: string } = {};
+        if (det.items) {
+          det.items.forEach((item, idx) => {
+            const key = item.id || item.buyerRFQItemId || `item-${idx}`;
+            const itemQuote = det.supplierQuotationItems?.[idx];
+            prices[key] = itemQuote?.quotedPrice ? String(itemQuote.quotedPrice) : "0";
+          });
+        }
+        setItemPrices(prices);
+
+        // Pre-fill per-item line details for line-item (non-lot) bidding
+        if (!det.addLotOption) {
+          const lineItems: { [supplierRFQItemId: string]: QuoteLineItem } = {};
+          det.items?.forEach((item) => {
+            const itemKey = item.supplierRFQItemId;
+            if (!itemKey) return;
+            const source = det.supplierQuotationItems?.find(
+              (qi) => qi.supplierRFQItemId === itemKey
+            );
+            lineItems[itemKey] = {
+              deliveryCharge: source?.deliveryCharge ?? 0,
+              deliveryType: source?.deliveryType || "PERCENTAGE",
+              discount: source?.discount ?? 0,
+              discountType: source?.discountType || "PERCENTAGE",
+              tax: source?.tax ?? 0,
+              taxType: source?.taxType || "PERCENTAGE",
+              quotedPrice: source?.quotedPrice ?? 0,
+              subTotal: source?.subTotal ?? 0,
+              quotedAmount: source?.quotedAmount ?? 0,
+              isLineitemAvailable: source?.isLineitemAvailable ?? false,
+            };
+          });
+          setQuoteLineItems(lineItems);
+        } else {
+          setQuoteLineItems({});
+        }
+
+        if (det.supplierQuotation && det.supplierQuotation.length > 0) {
+          const sq = det.supplierQuotation[0];
+          if (sq.totalPrice) setTotalPriceQuote(String(sq.totalPrice));
+          if (sq.deliveryCharge !== null && sq.deliveryCharge !== undefined) setDeliveryCharge(String(sq.deliveryCharge));
+          if (sq.deliveryType) setDeliveryType(sq.deliveryType);
+          if (sq.discount !== null && sq.discount !== undefined) setDiscount(String(sq.discount));
+          if (sq.discountType) setDiscountType(sq.discountType);
+          if (sq.tax !== null && sq.tax !== undefined) setTax(String(sq.tax));
+          if (sq.taxType) setTaxType(sq.taxType);
+        }
+      } else {
+        setSelectedRfqDetails(null);
+      }
+
+      if (quoteRes && !('statusCode' in quoteRes) && 'suppliers' in quoteRes && Array.isArray(quoteRes.suppliers)) {
+        const mine = quoteRes.suppliers.find((s) => s.supplierId === supplierId) || quoteRes.suppliers[0] || null;
+        if (mine) {
+          setOwnQuotation(mine);
+          if (mine.totalPrice) setTotalPriceQuote(String(mine.totalPrice));
+          if (mine.deliveryCharge !== null && mine.deliveryCharge !== undefined) setDeliveryCharge(String(mine.deliveryCharge));
+          if (mine.deliveryType) setDeliveryType(mine.deliveryType);
+          if (mine.discount !== null && mine.discount !== undefined) setDiscount(String(mine.discount));
+          if (mine.tax !== null && mine.tax !== undefined) setTax(String(mine.tax));
+          if (mine.supplierQuotationItems && mine.supplierQuotationItems.length > 0) {
+            const prices: { [key: string]: string } = {};
+            mine.supplierQuotationItems.forEach((qi, idx) => {
+              const key = qi.supplierRFQItemId || qi.buyerRFQItemId || `item-${idx}`;
+              prices[key] = String(qi.quotedPrice || 0);
+            });
+            setItemPrices((prev) => ({ ...prev, ...prices }));
+
+            if (!isAddLotOption) {
+              setQuoteLineItems((prev) => {
+                const next = { ...prev };
+                mine.supplierQuotationItems?.forEach((qi) => {
+                  if (!qi.supplierRFQItemId) return;
+                  next[qi.supplierRFQItemId] = {
+                    deliveryCharge: qi.deliveryCharge ?? 0,
+                    deliveryType: qi.deliveryType || "PERCENTAGE",
+                    discount: qi.discount ?? 0,
+                    discountType: qi.discountType || "PERCENTAGE",
+                    tax: qi.tax ?? 0,
+                    taxType: qi.taxType || "PERCENTAGE",
+                    quotedPrice: qi.quotedPrice ?? 0,
+                    subTotal: qi.subTotal ?? 0,
+                    quotedAmount: qi.quotedAmount ?? 0,
+                    isLineitemAvailable: qi.isLineitemAvailable ?? false,
+                  };
+                });
+                return next;
+              });
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error loading RFQ details for bidding:", err);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
   // Load RFQ details and supplier quotation when selectedLot changes
   useEffect(() => {
     if (!selectedLot?.id) {
@@ -298,139 +439,8 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
       setOwnQuotation(null);
       return;
     }
-
-    const loadRfqDetailsAndQuotation = async () => {
-      setLoadingDetails(true);
-      let isAddLotOption = false;
-      try {
-        const [detailsRes, quoteRes] = await Promise.all([
-          fetchRFQById(selectedLot.id),
-          fetchSupplierQuotationBySupplierId(selectedLot.id),
-        ]);
-
-        if (detailsRes && !('statusCode' in detailsRes) && 'title' in detailsRes) {
-          const det = detailsRes as RFQDetailResponse;
-          setSelectedRfqDetails(det);
-          isAddLotOption = Boolean(det.addLotOption);
-
-          // Enrich auction list row with detailed RFQ info (delivery location, endDate, orgName)
-          setAuctions((prev) =>
-            prev.map((auc) => {
-              if (auc.id === selectedLot.id) {
-                const loc = det.deliveryLocation || auc.deliveryLocation;
-                const end = det.endDate || auc.endDate;
-                const org = (det as any).organizationName || auc.organizationName;
-                return {
-                  ...auc,
-                  deliveryLocation: loc,
-                  organizationName: org,
-                  endDate: end,
-                  formattedEndDate: end ? formatEndDateStr(end) : auc.formattedEndDate,
-                };
-              }
-              return auc;
-            })
-          );
-
-          // Pre-fill item prices if available
-          const prices: { [key: string]: string } = {};
-          if (det.items) {
-            det.items.forEach((item, idx) => {
-              const key = item.id || item.buyerRFQItemId || `item-${idx}`;
-              const itemQuote = det.supplierQuotationItems?.[idx];
-              prices[key] = itemQuote?.quotedPrice ? String(itemQuote.quotedPrice) : "0";
-            });
-          }
-          setItemPrices(prices);
-
-          // Pre-fill per-item line details for line-item (non-lot) bidding
-          if (!det.addLotOption) {
-            const lineItems: { [supplierRFQItemId: string]: QuoteLineItem } = {};
-            det.items?.forEach((item) => {
-              const itemKey = item.supplierRFQItemId;
-              if (!itemKey) return;
-              const source = det.supplierQuotationItems?.find(
-                (qi) => qi.supplierRFQItemId === itemKey
-              );
-              lineItems[itemKey] = {
-                deliveryCharge: source?.deliveryCharge ?? 0,
-                deliveryType: source?.deliveryType || "PERCENTAGE",
-                discount: source?.discount ?? 0,
-                discountType: source?.discountType || "PERCENTAGE",
-                tax: source?.tax ?? 0,
-                taxType: source?.taxType || "PERCENTAGE",
-                quotedPrice: source?.quotedPrice ?? 0,
-                subTotal: source?.subTotal ?? 0,
-                quotedAmount: source?.quotedAmount ?? 0,
-              };
-            });
-            setQuoteLineItems(lineItems);
-          } else {
-            setQuoteLineItems({});
-          }
-
-          if (det.supplierQuotation && det.supplierQuotation.length > 0) {
-            const sq = det.supplierQuotation[0];
-            if (sq.totalPrice) setTotalPriceQuote(String(sq.totalPrice));
-            if (sq.deliveryCharge !== null && sq.deliveryCharge !== undefined) setDeliveryCharge(String(sq.deliveryCharge));
-            if (sq.deliveryType) setDeliveryType(sq.deliveryType);
-            if (sq.discount !== null && sq.discount !== undefined) setDiscount(String(sq.discount));
-            if (sq.discountType) setDiscountType(sq.discountType);
-            if (sq.tax !== null && sq.tax !== undefined) setTax(String(sq.tax));
-            if (sq.taxType) setTaxType(sq.taxType);
-          }
-        } else {
-          setSelectedRfqDetails(null);
-        }
-
-        if (quoteRes && !('statusCode' in quoteRes) && 'suppliers' in quoteRes && Array.isArray(quoteRes.suppliers)) {
-          const mine = quoteRes.suppliers.find((s) => s.supplierId === supplierId) || quoteRes.suppliers[0] || null;
-          if (mine) {
-            setOwnQuotation(mine);
-            if (mine.totalPrice) setTotalPriceQuote(String(mine.totalPrice));
-            if (mine.deliveryCharge !== null && mine.deliveryCharge !== undefined) setDeliveryCharge(String(mine.deliveryCharge));
-            if (mine.deliveryType) setDeliveryType(mine.deliveryType);
-            if (mine.discount !== null && mine.discount !== undefined) setDiscount(String(mine.discount));
-            if (mine.tax !== null && mine.tax !== undefined) setTax(String(mine.tax));
-            if (mine.supplierQuotationItems && mine.supplierQuotationItems.length > 0) {
-              const prices: { [key: string]: string } = {};
-              mine.supplierQuotationItems.forEach((qi, idx) => {
-                const key = qi.supplierRFQItemId || qi.buyerRFQItemId || `item-${idx}`;
-                prices[key] = String(qi.quotedPrice || 0);
-              });
-              setItemPrices((prev) => ({ ...prev, ...prices }));
-
-              if (!isAddLotOption) {
-                setQuoteLineItems((prev) => {
-                  const next = { ...prev };
-                  mine.supplierQuotationItems?.forEach((qi) => {
-                    if (!qi.supplierRFQItemId) return;
-                    next[qi.supplierRFQItemId] = {
-                      deliveryCharge: qi.deliveryCharge ?? 0,
-                      deliveryType: qi.deliveryType || "PERCENTAGE",
-                      discount: qi.discount ?? 0,
-                      discountType: qi.discountType || "PERCENTAGE",
-                      tax: qi.tax ?? 0,
-                      taxType: qi.taxType || "PERCENTAGE",
-                      quotedPrice: qi.quotedPrice ?? 0,
-                      subTotal: qi.subTotal ?? 0,
-                      quotedAmount: qi.quotedAmount ?? 0,
-                    };
-                  });
-                  return next;
-                });
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Error loading RFQ details for bidding:", err);
-      } finally {
-        setLoadingDetails(false);
-      }
-    };
-
-    loadRfqDetailsAndQuotation();
+    loadRfqDetailsAndQuotation(selectedLot.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLot?.id]);
 
   // OTP Verification States
@@ -543,6 +553,7 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
         quotedPrice: 0,
         subTotal: 0,
         quotedAmount: 0,
+        isLineitemAvailable: false,
       };
       const isNumericField = field === "deliveryCharge" || field === "discount" || field === "tax" || field === "quotedPrice";
       return {
@@ -550,6 +561,30 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
         [supplierRFQItemId]: {
           ...existing,
           [field]: isNumericField ? (Number(value) || 0) : value,
+        },
+      };
+    });
+  };
+
+  const handleLineItemAvailabilityChange = (supplierRFQItemId: string, checked: boolean) => {
+    setQuoteLineItems((prev) => {
+      const existing: QuoteLineItem = prev[supplierRFQItemId] || {
+        deliveryCharge: 0,
+        deliveryType: "PERCENTAGE",
+        discount: 0,
+        discountType: "PERCENTAGE",
+        tax: 0,
+        taxType: "PERCENTAGE",
+        quotedPrice: 0,
+        subTotal: 0,
+        quotedAmount: 0,
+        isLineitemAvailable: false,
+      };
+      return {
+        ...prev,
+        [supplierRFQItemId]: {
+          ...existing,
+          isLineitemAvailable: checked,
         },
       };
     });
@@ -651,6 +686,7 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
                 discountType: line?.discountType || "PERCENTAGE",
                 tax: Number(line?.tax ?? 0),
                 taxType: line?.taxType || "PERCENTAGE",
+                isLineitemAvailable: Boolean(line?.isLineitemAvailable),
               } as any;
             })
       };
@@ -660,9 +696,12 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
         throw new Error(res.message || "Failed to submit live bid.");
       }
 
-      const formattedBid = `$${Number(totalPriceQuote).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+      const formattedBid = fmtCurrency(Number(totalPriceQuote));
       setBidSubmittedMessage(`Live Bid of ${formattedBid} successfully submitted for ${selectedLot.name}! Your bid has been recorded.`);
-      await fetchLiveBidsData();
+      await Promise.all([
+        loadRfqDetailsAndQuotation(selectedLot.id),
+        fetchLiveBidsData(),
+      ]);
       setTimeout(() => setBidSubmittedMessage(null), 6000);
     } catch (err: any) {
       setSubmitBidError(err.message || "Failed to submit live bid.");
@@ -908,7 +947,7 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
                           </div>
 
                           <div>
-                            <div className="eauction-detail-label">Start Date &amp; Time</div>
+                            <div className="eauction-detail-label">Start Date &amp; Time (UTC)</div>
                             <div className="eauction-detail-value">
                               {selectedRfqDetails.startDate
                                 ? new Date(selectedRfqDetails.startDate).toLocaleString('en-IN', {
@@ -923,7 +962,7 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
                           </div>
 
                           <div>
-                            <div className="eauction-detail-label">End Date &amp; Time</div>
+                            <div className="eauction-detail-label">End Date &amp; Time (UTC)</div>
                             <div className="eauction-detail-value">
                               {selectedRfqDetails.endDate
                                 ? new Date(selectedRfqDetails.endDate).toLocaleString('en-IN', {
@@ -1131,9 +1170,10 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
                                   <th>Tax</th>
                                   <th>Tax Type</th>
                                   <th className="eauction-col-right">Quoted Price</th>
+                                  <th className="eauction-availability-cell">Available</th>
                                   <th>Rank</th>
-                                  <th className="eauction-col-right">Sub Total</th>
-                                  <th className="eauction-col-right">Quoted Amount</th>
+                                  <th className="eauction-col-right">Sub Total{currency ? ` (${currency})` : ""}</th>
+                                  <th className="eauction-col-right">Quoted Amount{currency ? ` (${currency})` : ""}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1150,6 +1190,7 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
                                     quotedPrice: 0,
                                     subTotal: 0,
                                     quotedAmount: 0,
+                                    isLineitemAvailable: false,
                                   };
                                   const matchedItem = allQuotationItems.find(
                                     (qi) =>
@@ -1248,14 +1289,23 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
                                           className="eauction-line-input eauction-line-input--price"
                                         />
                                       </td>
+                                      <td className="eauction-availability-cell">
+                                        <input
+                                          type="checkbox"
+                                          className="eauction-availability-checkbox"
+                                          checked={!line.isLineitemAvailable}
+                                          onChange={(e) => handleLineItemAvailabilityChange(itemKey, !e.target.checked)}
+                                          aria-label={`Mark ${item.description || "item"} as available`}
+                                        />
+                                      </td>
                                       <td className="eauction-cell-strong">
                                         {itemRank}
                                       </td>
                                       <td className="eauction-col-right eauction-cell-strong">
-                                        {line.subTotal.toFixed(2)}
+                                        {fmtCurrency(line.subTotal)}
                                       </td>
                                       <td className="eauction-col-right eauction-cell-strong">
-                                        {line.quotedAmount.toFixed(2)}
+                                        {fmtCurrency(line.quotedAmount)}
                                       </td>
                                     </tr>
                                   );
@@ -1404,7 +1454,7 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
                         <div className="eauction-total-quote-row">
                           <div className="eauction-total-quote-label">Total Price Quote</div>
                           <div className="eauction-total-quote-value-box">
-                            <span className="eauction-total-quote-currency">$</span>
+                            <span className="eauction-total-quote-currency">{currency}</span>
                             <input
                               type="number"
                               value={totalPriceQuote}

@@ -334,6 +334,7 @@ export interface RFQSupplierQuotationItem {
   subTotal?: number;
   quotedAmount?: number;
   rank?: string | number;
+  isLineitemAvailable?: boolean;
 }
 
 export interface RFQDetailResponse {
@@ -354,8 +355,8 @@ export interface RFQDetailResponse {
   /** true when the supplier submitted their own Terms & Conditions. */
   supplierTermsAndCondition?: boolean;
   supplierTermsConditionDocuments?: RFQDetailDocument[];
-  /** true once the buyer has accepted - drives the "Buyer — Accepted" status. */
-  buyerTermsAndConditionAccepted?: boolean;
+  /** "ACCEPTED" once the buyer has accepted - drives the "Buyer — Accepted" status. */
+  buyerTermsAndConditionAccepted?: 'ACCEPTED' | 'REJECTED' | 'PENDING';
   status?: string;
   /** "CONTRACT_CREATED" once the buyer has created the contract for an awarded RFQ; null before that. */
   contractStatus?: string | null;
@@ -408,6 +409,13 @@ export interface SubmitQuotationPayload {
     supplierRFQItemId?: string | null;
     buyerRFQItemId: string;
     quotedPrice: number;
+    deliveryCharge?: number;
+    deliveryType?: string;
+    discount?: number;
+    discountType?: string;
+    tax?: number;
+    taxType?: string;
+    isLineitemAvailable?: boolean;
   }[];
 }
 // ============================================================================
@@ -527,6 +535,7 @@ export interface SupplierQuotationByIdItem {
     taxType?: string | null;
     quotedAmount?: number;
     subTotal?: number;
+    isLineitemAvailable?: boolean;
     lineNumber?: number;
     rank?: string | number;
     isAwarded?: boolean;

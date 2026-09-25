@@ -34,3 +34,4 @@ export * from './types/profile';
 export * from './types/SuccessResponseDto';
 export * from './types/ErrorResponseDto';
 export * from './components/CreateRFQ';
+export * from './components/Chat';

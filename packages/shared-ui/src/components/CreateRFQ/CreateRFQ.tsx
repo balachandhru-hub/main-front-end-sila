@@ -1187,7 +1187,7 @@ if (Array.isArray(data)) {
                         <div className="sila-form-grid bd-form-grid">
                             <div className={`bd-field sila-field${errors.startDateTime ? " sila-field--error" : ""}`}>
                                 <label className="bd-label sila-label">
-                                    Start Date &amp; Time (UTC)<span className="sila-required" aria-hidden="true">*</span>
+                                    Start Date &amp; Time<span className="sila-required" aria-hidden="true">*</span>
                                 </label>
                                 <DateTimePicker
                                     mode="datetime"
@@ -1211,7 +1211,7 @@ if (Array.isArray(data)) {
                                 {errors.startDateTime && <div className="bd-error-text sila-error-text">{errors.startDateTime}</div>}
                             </div>
                             <div className={`bd-field sila-field${errors.endDateTime ? " sila-field--error" : ""}`}>
-                                <label className="bd-label sila-label">End Date &amp; Time (UTC)</label>
+                                <label className="bd-label sila-label">End Date &amp; Time</label>
                                 <DateTimePicker
                                     mode="datetime"
                                     value={endDateTime}
@@ -1231,7 +1231,7 @@ if (Array.isArray(data)) {
                                 {errors.endDateTime && <div className="bd-error-text sila-error-text">{errors.endDateTime}</div>}
                             </div>
                             <div className={`bd-field sila-field${errors.deliveryTargetDate ? " sila-field--error" : ""}`}>
-                                <label className="bd-label sila-label">Delivery Target Date (UTC)</label>
+                                <label className="bd-label sila-label">Delivery Target Date </label>
                                 <DateTimePicker
                                     mode="datetime"
                                     value={deliveryTargetDate}

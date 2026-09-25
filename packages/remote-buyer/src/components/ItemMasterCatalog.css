@@ -120,6 +120,25 @@
   border-radius: var(--sila-radius);
 }
 
+/* ---- List view: search input ---- */
+.ua-search-input{
+  flex: 1 1 17.5rem;
+  max-width: 27.5rem;
+  min-width: 0;
+}
+
+.ua-search-wrapper{
+  padding-bottom: 1.25rem;
+}
+
+@media (max-width:48rem){
+  .ua-search-wrapper{
+    max-width: none;
+    flex-basis: auto;
+  }
+}
+
+
 /* ---- List view: item master table (matches .sila-table) ---- */
 
 .item-master-table-container {
@@ -186,6 +205,63 @@
 .item-master-table tbody tr:focus-visible {
   outline: 0.125rem solid var(--sila-primary);
   outline-offset: -0.125rem;
+}
+
+/* ---- Item Master: pagination ---- */
+
+.imc-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--sila-space-2);
+    margin-top: var(--sila-space-3);
+    padding-top: var(--sila-space-3);
+    border-top: 0.0625rem solid var(--sila-border-subtle);
+}
+
+.imc-pagination-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--sila-control-height-sm);
+    height: var(--sila-control-height-sm);
+    padding: 0;
+    border: 0.0625rem solid var(--sila-border);
+    border-radius: var(--sila-radius);
+    background: var(--sila-surface);
+    color: var(--sila-text-secondary);
+    cursor: pointer;
+    transition: var(--sila-transition);
+}
+
+.imc-pagination-button:hover:not(:disabled) {
+    background: var(--sila-surface-hover);
+    color: var(--sila-text);
+}
+
+.imc-pagination-button:focus-visible {
+    outline: none;
+    box-shadow: var(--sila-focus-ring);
+}
+
+.imc-pagination-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.imc-pagination-button-active {
+    background: var(--sila-primary-soft);
+    border-color: var(--sila-primary-border);
+    color: var(--sila-primary);
+}
+
+.imc-pagination-number {
+    min-width: 4rem;
+    text-align: center;
+    font-size: var(--sila-text-sm);
+    font-weight: var(--sila-weight-medium);
+    font-variant-numeric: tabular-nums;
+    color: var(--sila-text-secondary);
 }
 
 /* ---- Detail view ---- */
