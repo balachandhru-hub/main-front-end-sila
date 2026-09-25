@@ -1100,6 +1100,23 @@
   box-shadow: var(--sila-focus-ring);
 }
 
+/* ---- Excel apply ---------------------------------------------------------- */
+
+.eauction-excel-apply-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sila-space-2);
+  margin-left: 0;
+}
+
+.eauction-excel-apply-panel .eauction-bulk-apply-controls {
+  justify-content: flex-end;
+}
+
+.eauction-excel-file-input {
+  display: none;
+}
+
 /* ---- Line-item inputs ---------------------------------------------------- */
 
 .eauction-table--line-items th,

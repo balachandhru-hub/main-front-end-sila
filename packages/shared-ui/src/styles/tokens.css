@@ -136,7 +136,9 @@
   --sila-z-topbar: 1000;
   --sila-z-dropdown: 1100;
   --sila-z-modal: 1200;
-  --sila-z-toast: 1300;
+  /* Above every one-off hardcoded z-index in the app (the highest today is EAuctionWidget's
+     OTP modal at 99999) - toasts must stay visible over any modal, in any remote. */
+  --sila-z-toast: 100000;
 
   /* ---- Back-compat aliases ------------------------------------------- */
   /* Older page styles read these generic names; point them at the tokens
