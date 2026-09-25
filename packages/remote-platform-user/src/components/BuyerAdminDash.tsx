@@ -25,7 +25,7 @@ import {
   createBuyerChatApi,
 } from "../../../remote-buyer/src/api/Buyerapi";
 import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../../../remote-buyer/src/api/masterdataApi";
-import { createItemMaster, getMasterApprovalFlows, checkItemMasterSimilarity } from "../api/itemmasterapi";
+import { createItemMaster, getMasterApprovalFlows, checkItemMasterSimilarity, uploadItemMasterFile } from "../api/itemmasterapi";
 import { getOrganizationUsersForRfq } from "../api/networkAdminApi";
 import { logoutPlatformUser } from "../api/platformApi";
 import { BuyerAnalytics, ChatPanel, CreateRFQ, StatusBadge, toastService, useAsyncData, useRouteNav, type ChatCounterpartyRef, type CreateRFQApi, type RouteNavPaths } from "@vosox/shared-ui";
@@ -939,6 +939,7 @@ const BuyerAdminDash: React.FC = () => {
     getCurrencies,
     fetchReferenceList,
     itemMaster: { createItemMaster, getMasterApprovalFlows, checkItemMasterSimilarity },
+    itemMasterUpload: { uploadItemMasterFile, getMasterApprovalFlows },
     supplierUsers: { getOrganizationUsersForRfq },
   };
 
