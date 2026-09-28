@@ -32,7 +32,6 @@ import {
   Dropdown,
   startRfqChatHub,
   stopRfqChatHub,
-  toastService,
 } from "@vosox/shared-ui";
 import type { QuotationSubmittedEvent } from "@vosox/shared-ui";
 import { useOtpVerification, getCookie, deleteCookie, VERIFICATION_TOKEN_COOKIE } from "../hooks/useOtpVerification";
