@@ -7,7 +7,7 @@ import {
   fetchClassifications,
   fetchCommodities,
 } from "../api/masterdataApi";
-import { 
+import {
   fetchBuyerCatalog,
   fetchBuyerAsset,
   fetchBuyerCatalogDetail} from "../api/Buyerapi";
@@ -310,20 +310,20 @@ const Product: React.FC = () => {
 
   // ---- Handle Search Input ----
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const value = e.target.value;
+    const value = e.target.value;
 
-  setFilters((prev) => ({
-    ...prev,
-    search: value,
-  }));
+    setFilters((prev) => ({
+      ...prev,
+      search: value,
+    }));
 
-  if (value.trim() === "") {
-    fetchProducts({
-      ...filters,
-      search: "",
-      index: 0,
-    });
-  }
+    if (value.trim() === "") {
+      fetchProducts({
+        ...filters,
+        search: "",
+        index: 0,
+      });
+    }
   };
 
   const fetchProducts = async (filterState: FilterState) => {
@@ -861,25 +861,31 @@ const Product: React.FC = () => {
 
             {catalogResults.length > PRODUCT_PAGE_SIZE && (
               <nav className="pud-catalog-pagination" aria-label="Product pages">
-                <button
-                  type="button"
-                  className="pud-btn pud-btn-outline"
-                  disabled={productPage === 0}
-                  onClick={() => setProductPage((p) => Math.max(0, p - 1))}
-                >
-                  <IconChevronLeft /> Previous
-                </button>
-                <span className="pud-catalog-pagination-info">
-                  Page {productPage + 1} of {productTotalPages}
-                </span>
-                <button
-                  type="button"
-                  className="pud-btn pud-btn-outline"
-                  disabled={productPage >= productTotalPages - 1}
-                  onClick={() => setProductPage((p) => Math.min(productTotalPages - 1, p + 1))}
-                >
-                  Next <IconChevronRight />
-                </button>
+                <div className="pud-previous-btn">
+                  <button
+                    type="button"
+                    className="pud-btn pud-btn-outline"
+                    disabled={productPage === 0}
+                    onClick={() => setProductPage((p) => Math.max(0, p - 1))}
+                  >
+                    <IconChevronLeft /> Previous
+                  </button>
+                </div>
+                <div className="pud-pagination-info">
+                  <span className="pud-catalog-pagination-info">
+                    Page {productPage + 1} of {productTotalPages}
+                  </span>
+                </div>
+                <div className="pud-next-btn">
+                  <button
+                    type="button"
+                    className="pud-btn pud-btn-outline"
+                    disabled={productPage >= productTotalPages - 1}
+                    onClick={() => setProductPage((p) => Math.min(productTotalPages - 1, p + 1))}
+                  >
+                    Next <IconChevronRight />
+                  </button>
+                </div>
               </nav>
             )}
           </>

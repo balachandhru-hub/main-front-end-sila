@@ -1323,7 +1323,7 @@ const Dropdown: FC<DropdownProps> = (props) => {
                       handleSearchChange
                     }
                     aria-autocomplete="list"
-                    autoComplete="off"
+                    autoComplete="off-search"
                   />
                 )}
               </div>
@@ -1372,7 +1372,9 @@ const Dropdown: FC<DropdownProps> = (props) => {
                   handleSearchChange
                 }
                 aria-autocomplete="list"
-                autoComplete="off"
+                // Chrome ignores "off" for address-like fields (e.g. Country) and shows saved addresses;
+                // an unrecognised token keeps its autofill popup away from this search box.
+                autoComplete="off-search"
               />
  
               {isClearable &&
