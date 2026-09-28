@@ -12,6 +12,7 @@ import {
 } from '../api/supplierApi';
 import { useOtpVerification, getCookie, deleteCookie, VERIFICATION_TOKEN_COOKIE, VERIFICATION_TOKEN_STORAGE_KEY, OTP_EXPIRY_STORAGE_KEY } from '../hooks/useOtpVerification';
 import { useQuotationExcelSync, type QuoteLineItem } from '../hooks/useQuotationExcelSync';
+import { useBulkApply } from '../hooks/useBulkApply';
 
 /* ---------------------------------- Interfaces ---------------------------------- */
 
@@ -489,44 +490,18 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
   };
 
   // Bulk Apply — line-item (non-lot) bidding only
-  const [bulkValue, setBulkValue] = useState<string>("");
-  const [bulkValueType, setBulkValueType] = useState<"PERCENTAGE" | "AMOUNT">("PERCENTAGE");
-  const [bulkFields, setBulkFields] = useState({
-    deliveryCharge: false,
-    discount: false,
-    tax: false,
-    quotedPrice: false,
+  const {
+    bulkValue,
+    setBulkValue,
+    bulkValueType,
+    setBulkValueType,
+    bulkFields,
+    handleBulkFieldToggle,
+    handleBulkApply,
+  } = useBulkApply({
+    items: selectedRfqDetails?.items,
+    onFieldChange: handleLineItemFieldChange,
   });
-
-  const bulkTypeFieldMap: Partial<Record<keyof typeof bulkFields, keyof QuoteLineItem>> = {
-    deliveryCharge: "deliveryType",
-    discount: "discountType",
-    tax: "taxType",
-  };
-
-  const handleBulkFieldToggle = (field: keyof typeof bulkFields, checked: boolean) => {
-    setBulkFields((prev) => ({ ...prev, [field]: checked }));
-  };
-
-  const handleBulkApply = () => {
-    if (bulkValue === "" || !selectedRfqDetails?.items) return;
-
-    const fieldKeys = (Object.keys(bulkFields) as (keyof typeof bulkFields)[]).filter(
-      (key) => bulkFields[key]
-    );
-    if (fieldKeys.length === 0) return;
-
-    selectedRfqDetails.items.forEach((item, idx) => {
-      const itemKey = item.supplierRFQItemId || `item-${idx}`;
-      fieldKeys.forEach((field) => {
-        handleLineItemFieldChange(itemKey, field, bulkValue);
-        const typeField = bulkTypeFieldMap[field];
-        if (typeField) {
-          handleLineItemFieldChange(itemKey, typeField, bulkValueType);
-        }
-      });
-    });
-  };
 
   // Excel Apply — line-item (non-lot) bidding only
   const {
