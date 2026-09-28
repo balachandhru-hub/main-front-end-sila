@@ -23,6 +23,8 @@ export * from './components/Card';
 export * from './components/QuestionList';
 export * from './components/FormField';
 export * from './components/SearchInput';
+export { default as Input } from './components/Input/Input';
+export * from './components/Input/Input.types';
 export * from './components/Modal';
 export * from './components/DateTimePicker/DateTimePicker';
 export { default as ToastContainer } from './ToastContainer/ToastContainer';
