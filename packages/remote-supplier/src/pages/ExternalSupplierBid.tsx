@@ -29,6 +29,7 @@ import type {
 // [buyer-questions] import type { RFQQuestion } from '../dto/supplierDto';
 import ExternalSupplierChat from '../components/ExternalSupplierChat/ExternalSupplierChat';
 import { useQuotationExcelSync, EMPTY_LINE_ITEM, type QuoteLineItem } from '../hooks/useQuotationExcelSync';
+import { useBulkApply } from '../hooks/useBulkApply';
 import SilaLogo from '../assets/SILA_Logo.png';
 import '../components/SupplierDashboard.css';
 import '../components/SupplierRfqQuotationSummary.css';
@@ -379,42 +380,18 @@ const ExternalSupplierBid: React.FC = () => {
     });
   };
 
-  const [bulkValue, setBulkValue] = useState('');
-  const [bulkValueType, setBulkValueType] = useState<'PERCENTAGE' | 'AMOUNT'>('PERCENTAGE');
-  const [bulkFields, setBulkFields] = useState({
-    deliveryCharge: false,
-    discount: false,
-    tax: false,
-    quotedPrice: false,
+  const {
+    bulkValue,
+    setBulkValue,
+    bulkValueType,
+    setBulkValueType,
+    bulkFields,
+    handleBulkFieldToggle,
+    handleBulkApply,
+  } = useBulkApply({
+    items: rfq?.items,
+    onFieldChange: handleLineItemFieldChange,
   });
-
-  const bulkTypeFieldMap: Partial<Record<keyof typeof bulkFields, keyof QuoteLineItem>> = {
-    deliveryCharge: 'deliveryType',
-    discount: 'discountType',
-    tax: 'taxType',
-  };
-
-  const handleBulkFieldToggle = (field: keyof typeof bulkFields, checked: boolean) => {
-    setBulkFields((prev) => ({ ...prev, [field]: checked }));
-  };
-
-  const handleBulkApply = () => {
-    if (bulkValue === '' || !rfq?.items) return;
-
-    const fieldKeys = (Object.keys(bulkFields) as (keyof typeof bulkFields)[]).filter((key) => bulkFields[key]);
-    if (fieldKeys.length === 0) return;
-
-    rfq.items.forEach((item, idx) => {
-      const itemKey = item.supplierRFQItemId || `item-${idx}`;
-      fieldKeys.forEach((field) => {
-        handleLineItemFieldChange(itemKey, field, bulkValue);
-        const typeField = bulkTypeFieldMap[field];
-        if (typeField) {
-          handleLineItemFieldChange(itemKey, typeField, bulkValueType);
-        }
-      });
-    });
-  };
 
   const {
     excelFileInputRef,
