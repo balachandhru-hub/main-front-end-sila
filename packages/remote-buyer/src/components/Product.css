@@ -413,8 +413,9 @@
 .pud-product-page .pud-catalog-pagination {
   gap: var(--sila-space-4);
   margin-top: var(--sila-space-4);
-  padding-top: var(--sila-space-4);
+  padding: var(--sila-space-2);
   border-top: 0.0625rem solid var(--sila-border-subtle);
+  display: flex;
 }
 
 .pud-product-page .pud-catalog-pagination .pud-btn {
@@ -422,7 +423,9 @@
   padding: 0 var(--sila-space-3);
   font-size: var(--sila-text-sm);
 }
-
+.pud-pagination-info{
+  margin-top:var(--sila-space-1);
+}
 .pud-product-page .pud-catalog-pagination-info {
   font-size: var(--sila-text-sm);
   font-weight: var(--sila-weight-medium);
