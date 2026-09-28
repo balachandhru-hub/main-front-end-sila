@@ -3,21 +3,38 @@ import {
   Button,
   Dropdown,
   EmptyState,
+  Input,
   Loader,
   PageHeader,
+  RESTRICTIONS_KEYS,
   SearchInput,
-  ToastContainer,
   toastService as toast,
 } from '@vosox/shared-ui';
-import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from '@vosox/shared-ui';
+import type {
+  DropdownValue,
+  DropdownLoadParams,
+  DropdownLoadResult,
+  RestrictionConfig,
+} from '@vosox/shared-ui';
 import { createBusinessUser, getOrganizationUsers } from './api/departmentcostapi';
 import { getCountries } from './api/networkAdminApi';
-import { FaEye, FaEyeSlash, FaPlus, FaTimes, FaUsers, FaExclamationCircle } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaUsers } from 'react-icons/fa';
 import './UserAdmin.css';
 import { useNetworkAdminAuthStore } from './store/useAuthStore';
 
 // Page size used by the async (paginated) Country Dropdown
 const COUNTRY_PAGE_SIZE = 40;
+
+// International phone: digits, optional leading "+", and common separators while typing.
+// Max length is 20 (not 15) because it also counts the separators; digits are checked on submit.
+const PHONE_RESTRICTIONS: RestrictionConfig[] = [
+  { name: RESTRICTIONS_KEYS.PHONE },
+  { name: RESTRICTIONS_KEYS.MAX_LENGTH, max: 20 },
+];
+
+// E.164: optional "+", then 7-15 digits (separators are stripped before checking)
+const normalizePhone = (phone: string): string => phone.replace(/[\s\-()]/g, '');
+const isValidPhone = (phone: string): boolean => /^\+?\d{7,15}$/.test(normalizePhone(phone));
 
 interface BusinessUser {
   personId: string;
@@ -33,25 +50,38 @@ interface BusinessUser {
   createdDate?: string;
 }
 
+interface UserFormData {
+  name: string;
+  email: string;
+  phone: string;
+  country: string;
+  addressLine: string;
+  userName: string;
+  password: string;
+  confirmPassword: string;
+}
+
+type FormErrors = Partial<Record<keyof UserFormData, string>>;
+
+const INITIAL_FORM_DATA: UserFormData = {
+  name: '',
+  email: '',
+  phone: '',
+  country: '',
+  addressLine: '',
+  userName: '',
+  password: '',
+  confirmPassword: '',
+};
+
 const UserAdmin: React.FC = () => {
   const currentUser = useNetworkAdminAuthStore((state) => state.currentUser);
   const userRole = currentUser?.userRole;
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    country: '',
-    addressLine: '',
-    userName: '',
-    password: '',
-    confirmPassword: '',
-  });
-  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState<UserFormData>(INITIAL_FORM_DATA);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [listLoading, setListLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [users, setUsers] = useState<BusinessUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<DropdownValue | null>(null);
@@ -74,7 +104,7 @@ const UserAdmin: React.FC = () => {
     const fetchUsers = async () => {
       const orgId = currentUser?.organizationId;
       if (!orgId) {
-        setError('Organization ID not found. Please log in again.');
+        toast.error('Organization ID not found. Please log in again.');
         return;
       }
       setListLoading(true);
@@ -121,69 +151,55 @@ const UserAdmin: React.FC = () => {
 
   const handleCreateClick = () => {
     setShowModal(true);
-    setError(null);
+    setFormErrors({});
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      country: '',
-      addressLine: '',
-      userName: '',
-      password: '',
-      confirmPassword: '',
-    });
-    setError(null);
-    setShowPassword(false);
-    setShowConfirmPassword(false);
+    setFormData(INITIAL_FORM_DATA);
+    setFormErrors({});
     setSelectedCountry(null);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const clearFieldError = (field: keyof UserFormData) => {
+    setFormErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    clearFieldError(name as keyof UserFormData);
+  };
+
+  const validateForm = (): FormErrors => {
+    const errors: FormErrors = {};
+
+    if (!formData.name) errors.name = 'Name is required';
+    if (!formData.email) errors.email = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = 'Please enter a valid email';
+    if (!formData.userName) errors.userName = 'Username is required';
+    if (!formData.phone) errors.phone = 'Phone is required';
+    else if (!isValidPhone(formData.phone)) {
+      errors.phone = 'Enter a valid phone number with 7-15 digits (country code optional, e.g. +91 98765 43210)';
+    }
+    if (!formData.country) errors.country = 'Country is required';
+    if (!formData.addressLine) errors.addressLine = 'Address is required';
+    if (!formData.password) errors.password = 'Password is required';
+    else if (formData.password.length < 6) errors.password = 'Password must be at least 6 characters';
+    if (!formData.confirmPassword) errors.confirmPassword = 'Confirm password is required';
+    else if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Passwords do not match';
+
+    return errors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
 
-    if (
-      !formData.name ||
-      !formData.email ||
-      !formData.phone ||
-      !formData.country ||
-      !formData.addressLine ||
-      !formData.userName ||
-      !formData.password ||
-      !formData.confirmPassword
-    ) {
-      setError('All fields are required');
-      return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError('Please enter a valid email');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (!/^\d{10}$/.test(formData.phone)) {
-      setError('Please enter a valid 10-digit phone number');
-      return;
-    }
+    const errors = validateForm();
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     setIsLoading(true);
 
@@ -192,7 +208,7 @@ const UserAdmin: React.FC = () => {
       const userTypeDisplay = getUserTypeDisplayName();
 
       if (!roleId) {
-        setError('Invalid user role. Cannot create business user.');
+        toast.error('Invalid user role. Cannot create business user.');
         setIsLoading(false);
         return;
       }
@@ -200,7 +216,7 @@ const UserAdmin: React.FC = () => {
       const response = await createBusinessUser({
         name: formData.name,
         email: formData.email,
-        phone: formData.phone,
+        phone: normalizePhone(formData.phone),
         country: formData.country,
         addressLine: formData.addressLine,
         userName: formData.userName,
@@ -229,7 +245,7 @@ const UserAdmin: React.FC = () => {
           userName: formData.userName,
           roleId: roleId,
           roleName: userTypeDisplay,
-          phone: formData.phone,
+          phone: normalizePhone(formData.phone),
           country: formData.country,
           addressLine: formData.addressLine,
           createdDate: new Date().toISOString().split('T')[0],
@@ -247,7 +263,6 @@ const UserAdmin: React.FC = () => {
           pauseOnHover: true,
           draggable: true,
         });
-        setError(errorMessage);
         console.error('API Response:', response);
       }
     } catch (err: any) {
@@ -260,7 +275,6 @@ const UserAdmin: React.FC = () => {
         pauseOnHover: true,
         draggable: true,
       });
-      setError(errorMessage);
       console.error('Create user error:', err);
     } finally {
       setIsLoading(false);
@@ -279,55 +293,8 @@ const UserAdmin: React.FC = () => {
     );
   }, [searchQuery, users]);
 
-  const renderPasswordField = (
-    id: string,
-    name: 'password' | 'confirmPassword',
-    label: string,
-    placeholder: string,
-    visible: boolean,
-    toggle: () => void
-  ) => (
-    <div className="user-admin-form-group">
-      <label htmlFor={id} className="user-admin-label">
-        {label} <span className="sila-required" aria-hidden="true">*</span>
-      </label>
-      <div className="user-admin-password-wrapper">
-        <input
-          id={id}
-          type={visible ? 'text' : 'password'}
-          name={name}
-          value={formData[name]}
-          onChange={handleInputChange}
-          placeholder={placeholder}
-          className="user-admin-input user-admin-input--with-toggle"
-          aria-required="true"
-        />
-        <button
-          type="button"
-          onClick={toggle}
-          className="user-admin-password-toggle"
-          aria-label={visible ? 'Hide password' : 'Show password'}
-        >
-          {visible ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
-        </button>
-      </div>
-    </div>
-  );
-
   return (
     <div className="ua-dashboard">
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
-
       <PageHeader className="ua-header" title={getPageTitle()} description={getPageSubtitle()} />
 
       <div className="ua-content-wrapper">
@@ -418,77 +385,55 @@ const UserAdmin: React.FC = () => {
             </div>
 
             <form className="user-admin-form">
-              {error && (
-                <div className="user-admin-error sila-alert sila-alert--danger" role="alert">
-                  <FaExclamationCircle className="user-admin-error-icon" aria-hidden="true" />
-                  <span>{error}</span>
-                </div>
-              )}
-
               <div className="user-admin-form-grid">
-                <div className="user-admin-form-group">
-                  <label htmlFor="ua-name" className="user-admin-label">
-                    Name <span className="sila-required" aria-hidden="true">*</span>
-                  </label>
-                  <input
-                    id="ua-name"
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="Enter full name"
-                    className="user-admin-input"
-                    aria-required="true"
-                  />
-                </div>
+                <Input
+                  id="ua-name"
+                  label="Name"
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="Enter full name"
+                  required
+                  error={formErrors.name}
+                />
 
-                <div className="user-admin-form-group">
-                  <label htmlFor="ua-email" className="user-admin-label">
-                    Email Address <span className="sila-required" aria-hidden="true">*</span>
-                  </label>
-                  <input
-                    id="ua-email"
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="Enter email address"
-                    className="user-admin-input"
-                    aria-required="true"
-                  />
-                </div>
+                <Input
+                  id="ua-email"
+                  label="Email Address"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  placeholder="Enter email address"
+                  required
+                  error={formErrors.email}
+                />
 
-                <div className="user-admin-form-group">
-                  <label htmlFor="ua-username" className="user-admin-label">
-                    Username <span className="sila-required" aria-hidden="true">*</span>
-                  </label>
-                  <input
-                    id="ua-username"
-                    type="text"
-                    name="userName"
-                    value={formData.userName}
-                    onChange={handleInputChange}
-                    placeholder="Enter username"
-                    className="user-admin-input"
-                    aria-required="true"
-                  />
-                </div>
+                <Input
+                  id="ua-username"
+                  label="Username"
+                  type="text"
+                  name="userName"
+                  value={formData.userName}
+                  onChange={handleInputChange}
+                  placeholder="Enter username"
+                  required
+                  error={formErrors.userName}
+                />
 
-                <div className="user-admin-form-group">
-                  <label htmlFor="ua-phone" className="user-admin-label">
-                    Phone <span className="sila-required" aria-hidden="true">*</span>
-                  </label>
-                  <input
-                    id="ua-phone"
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="Enter 10-digit phone number"
-                    className="user-admin-input"
-                    aria-required="true"
-                  />
-                </div>
+                <Input
+                  id="ua-phone"
+                  label="Phone"
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  placeholder="e.g. +91 98765 43210"
+                  restrictions={PHONE_RESTRICTIONS}
+                  required
+                  error={formErrors.phone}
+                />
 
                 <div
                   className="user-admin-form-group"
@@ -504,40 +449,50 @@ const UserAdmin: React.FC = () => {
                     isAsync
                     loadOptions={loadCountryOptions}
                     value={selectedCountry}
+                    error={formErrors.country}
                     onChange={(val) => {
                       setSelectedCountry(val);
                       setFormData((prev) => ({ ...prev, country: val?.value || '' }));
+                      clearFieldError('country');
                     }}
                   />
                 </div>
 
-                <div className="user-admin-form-group">
-                  <label htmlFor="ua-address" className="user-admin-label">
-                    Address <span className="sila-required" aria-hidden="true">*</span>
-                  </label>
-                  <input
-                    id="ua-address"
-                    type="text"
-                    name="addressLine"
-                    value={formData.addressLine}
-                    onChange={handleInputChange}
-                    placeholder="Enter address"
-                    className="user-admin-input"
-                    aria-required="true"
-                  />
-                </div>
+                <Input
+                  id="ua-address"
+                  label="Address"
+                  type="text"
+                  name="addressLine"
+                  value={formData.addressLine}
+                  onChange={handleInputChange}
+                  placeholder="Enter address"
+                  required
+                  error={formErrors.addressLine}
+                />
 
-                {renderPasswordField('ua-password', 'password', 'Password', 'Enter password', showPassword, () =>
-                  setShowPassword(!showPassword)
-                )}
-                {renderPasswordField(
-                  'ua-confirm-password',
-                  'confirmPassword',
-                  'Confirm Password',
-                  'Confirm password',
-                  showConfirmPassword,
-                  () => setShowConfirmPassword(!showConfirmPassword)
-                )}
+                <Input
+                  id="ua-password"
+                  label="Password"
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="Enter password"
+                  required
+                  error={formErrors.password}
+                />
+
+                <Input
+                  id="ua-confirm-password"
+                  label="Confirm Password"
+                  type="password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  placeholder="Confirm password"
+                  required
+                  error={formErrors.confirmPassword}
+                />
               </div>
             </form>
             <footer className="user-admin-footer">
@@ -553,19 +508,13 @@ const UserAdmin: React.FC = () => {
                 <Button
                   type="submit"
                   variant="primary"
-                  disabled={isLoading}
+                  loading={isLoading}
                   onClick={handleSubmit}
                 >
                   {isLoading ? 'Creating...' : 'Create User'}
                 </Button>
               </div>
             </footer>
-
-            {isLoading && (
-              <div className="user-admin-loading-overlay">
-                <Loader />
-              </div>
-            )}
           </div>
         </div>
       )}
