@@ -6,15 +6,13 @@ import {
   fetchRFQById,
   fetchSupplierQuotationBySupplierId,
   submitSupplierQuotation,
-  sendOtp,
-  verifyOtp,
-  getSupplierProfile,
   type RFQDetailResponse,
   type SupplierQuotationByIdItem,
   type SubmitQuotationPayload,
 } from '../api/supplierApi';
 import { QUOTATION_EXCEL_HEADERS, buildCsv, parseCsv, downloadCsv } from '../utils/quotationExcel';
 import { toastService } from '@vosox/shared-ui';
+import { useOtpVerification, getCookie, deleteCookie, VERIFICATION_TOKEN_COOKIE, VERIFICATION_TOKEN_STORAGE_KEY, OTP_EXPIRY_STORAGE_KEY } from '../hooks/useOtpVerification';
 
 /* ---------------------------------- Interfaces ---------------------------------- */
 
@@ -66,22 +64,6 @@ const formatEndDateStr = (dateStr?: string) => {
   } catch {
     return dateStr;
   }
-};
-
-const VERIFICATION_TOKEN_COOKIE = "vsx_verification_token";
-const VERIFICATION_TOKEN_TTL_SECONDS = 30 * 60;
-
-const getCookie = (name: string): string | null => {
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
-};
-
-const setCookie = (name: string, value: string, maxAgeSeconds: number) => {
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSeconds}; SameSite=Lax`;
-};
-
-const deleteCookie = (name: string) => {
-  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
 };
 
 const IconChevronLeft = () => (
@@ -445,98 +427,26 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLot?.id]);
 
-  // OTP Verification States
-  const [otpStage, setOtpStage] = useState<"none" | "send" | "verify">("none");
-  const [otpCode, setOtpCode] = useState("");
-  const [otpError, setOtpError] = useState<string | null>(null);
-  const [sendingOtp, setSendingOtp] = useState(false);
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
-  const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
-  const [otpRemaining, setOtpRemaining] = useState(600);
-  const supplierEmailRef = React.useRef<string | null>(null);
-
-  useEffect(() => {
-    if (otpStage !== "verify" || !otpExpiresAt) return;
-    const interval = setInterval(() => {
-      const left = Math.max(0, Math.round((otpExpiresAt - Date.now()) / 1000));
-      setOtpRemaining(left);
-      if (left <= 0) clearInterval(interval);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [otpStage, otpExpiresAt]);
+  const {
+    otpStage,
+    setOtpStage,
+    otpCode,
+    setOtpCode,
+    otpError,
+    setOtpError,
+    sendingOtp,
+    verifyingOtp,
+    setOtpExpiresAt,
+    otpRemaining,
+    setOtpRemaining,
+    handleSendOtp,
+    handleVerifyOtp,
+  } = useOtpVerification({ onVerified: (token) => executeSubmitLiveBid(token) });
 
   const formatOtpTimer = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
     return `${m}:${s < 10 ? '0' : ''}${s}`;
-  };
-
-  const handleSendOtp = async () => {
-    setOtpError(null);
-    setSendingOtp(true);
-    try {
-      if (!supplierEmailRef.current) {
-        const profile = await getSupplierProfile();
-        if (profile && "businessProfile" in profile) {
-          supplierEmailRef.current = (profile as any).businessProfile?.email || null;
-        }
-      }
-      const res = await sendOtp();
-      if (res && "statusCode" in res && (res as any).statusCode >= 400) {
-        const message = (res as any).message || "";
-        const description = (res as any).description || "";
-        const otpAlreadySent = /already.*sent/i.test(message) || /already.*sent/i.test(description);
-        if (!otpAlreadySent) {
-          setOtpError(message || "Couldn't send the code, try again.");
-          return;
-        }
-      }
-      const expiry = Date.now() + 10 * 60 * 1000;
-      sessionStorage.setItem("vsx_otp_expiry", String(expiry));
-      deleteCookie(VERIFICATION_TOKEN_COOKIE);
-      sessionStorage.removeItem("vsx_verification_token");
-      setOtpExpiresAt(expiry);
-      setOtpRemaining(600);
-      setOtpCode("");
-      setOtpStage("verify");
-    } catch (err: any) {
-      setOtpError(err?.message || "Couldn't send the code, try again.");
-    } finally {
-      setSendingOtp(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!otpCode.trim()) {
-      setOtpError("Enter the code we emailed you.");
-      return;
-    }
-    if (otpRemaining <= 0) {
-      setOtpError("Code expired. Please resend the OTP.");
-      return;
-    }
-    setVerifyingOtp(true);
-    setOtpError(null);
-    try {
-      const res = await verifyOtp({ email: supplierEmailRef.current || "", otp: otpCode.trim() });
-      if (!res || (res as any).success === false || ("statusCode" in res && (res as any).statusCode >= 400)) {
-        setOtpError((res as any)?.message || "That code didn't match, try again.");
-        return;
-      }
-      const token = (res as any).token;
-      if (!token) {
-        setOtpError("Verification failed, please retry.");
-        return;
-      }
-      setCookie(VERIFICATION_TOKEN_COOKIE, token, VERIFICATION_TOKEN_TTL_SECONDS);
-      sessionStorage.setItem("vsx_verification_token", token);
-      setOtpStage("none");
-      await executeSubmitLiveBid(token);
-    } catch (err: any) {
-      setOtpError(err?.message || "That code didn't match, try again.");
-    } finally {
-      setVerifyingOtp(false);
-    }
   };
 
   const handleLineItemFieldChange = (
@@ -866,13 +776,13 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
     if (!selectedLot) return;
     setSubmitBidError(null);
 
-    const verificationToken = getCookie(VERIFICATION_TOKEN_COOKIE) || sessionStorage.getItem("vsx_verification_token");
+    const verificationToken = getCookie(VERIFICATION_TOKEN_COOKIE) || sessionStorage.getItem(VERIFICATION_TOKEN_STORAGE_KEY);
     if (verificationToken) {
       await executeSubmitLiveBid(verificationToken);
       return;
     }
 
-    const storedExpiry = Number(sessionStorage.getItem("vsx_otp_expiry") || 0);
+    const storedExpiry = Number(sessionStorage.getItem(OTP_EXPIRY_STORAGE_KEY) || 0);
     if (storedExpiry && Date.now() < storedExpiry) {
       setOtpCode("");
       setOtpExpiresAt(storedExpiry);
@@ -881,9 +791,9 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
       return;
     }
 
-    sessionStorage.removeItem("vsx_otp_expiry");
+    sessionStorage.removeItem(OTP_EXPIRY_STORAGE_KEY);
     deleteCookie(VERIFICATION_TOKEN_COOKIE);
-    sessionStorage.removeItem("vsx_verification_token");
+    sessionStorage.removeItem(VERIFICATION_TOKEN_STORAGE_KEY);
     setOtpCode("");
     setOtpError(null);
     setOtpStage("send");
