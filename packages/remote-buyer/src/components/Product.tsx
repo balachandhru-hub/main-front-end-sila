@@ -13,56 +13,19 @@ import {
   fetchBuyerCatalogDetail} from "../api/Buyerapi";
 import type { BuyerCatalogResponse as BuyerCatalogResponseType } from "../api/Buyerapi";
 import type { DropdownValue, DropdownLoadParams, DropdownLoadResult } from "@vosox/shared-ui";
-import { EmptyState, Loader, isErrorResponse, Dropdown } from "@vosox/shared-ui";
-
-/* ============================== Icons ============================== */
-
-const IconSearch = () => (
-  <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" />
-    <path d="m21 21-4.35-4.35" />
-  </svg>
-);
-
-const IconFilter = () => (
-  <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-  </svg>
-);
-
-const IconFileGeneric = () => (
-  <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <path d="M14 2v6h6" />
-  </svg>
-);
-
-const IconLoader = () => (
-  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pud-loader">
-    <circle cx="12" cy="12" r="10" />
-    <path d="M12 6v6l4 2" />
-  </svg>
-);
-
-const IconExternalLink = () => (
-  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-    <polyline points="15 3 21 3 21 9" />
-    <line x1="10" y1="14" x2="21" y2="3" />
-  </svg>
-);
-
-const IconChevronLeft = () => (
-  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="15 18 9 12 15 6" />
-  </svg>
-);
-
-const IconChevronRight = () => (
-  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="9 18 15 12 9 6" />
-  </svg>
-);
+import {
+  EmptyState,
+  Loader,
+  isErrorResponse,
+  Dropdown,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ExternalLinkIcon,
+  FileIcon,
+  FilterIcon,
+  LoaderIcon,
+  SearchIcon,
+} from "@vosox/shared-ui";
 
 /* ============================== Types ============================== */
 
@@ -470,12 +433,12 @@ const Product: React.FC = () => {
               className="pud-btn pud-btn-outline"
               onClick={() => setShowPunchOutFullPage(false)}
             >
-              <IconChevronLeft /> Back to {selectedProduct.catalogName}
+              <ChevronLeftIcon /> Back to {selectedProduct.catalogName}
             </button>
           </div>
           <div className="pud-catalog-fullview-actions">
             <span className="pud-modal-badge">
-              <IconExternalLink /> PunchOut Catalog
+              <ExternalLinkIcon /> PunchOut Catalog
             </span>
           </div>
         </div>
@@ -498,7 +461,7 @@ const Product: React.FC = () => {
                   rel="noopener noreferrer"
                   className="pud-btn pud-btn-message"
                 >
-                  <IconExternalLink /> Open in New Tab
+                  <ExternalLinkIcon /> Open in New Tab
                 </a>
               </div>
             ) : (
@@ -522,7 +485,7 @@ const Product: React.FC = () => {
         <div className="pud-catalog-fullview-header">
           <div>
             <button type="button" className="pud-btn pud-btn-outline" onClick={closeProductDetail}>
-              <IconChevronLeft /> Back to Products
+              <ChevronLeftIcon /> Back to Products
             </button>
           </div>
         </div>
@@ -550,7 +513,7 @@ const Product: React.FC = () => {
                   className="pud-product-detail-image"
                 />
               ) : (
-                <div className="pud-product-detail-placeholder"><IconFileGeneric /></div>
+                <div className="pud-product-detail-placeholder"><FileIcon /></div>
               )}
 
               {selectedProductImages.length > 1 && (
@@ -562,7 +525,7 @@ const Product: React.FC = () => {
                     title="Previous image"
                     aria-label="Previous image"
                   >
-                    <IconChevronLeft />
+                    <ChevronLeftIcon />
                   </button>
                   <button
                     type="button"
@@ -571,7 +534,7 @@ const Product: React.FC = () => {
                     title="Next image"
                     aria-label="Next image"
                   >
-                    <IconChevronRight />
+                    <ChevronRightIcon />
                   </button>
                 </>
               )}
@@ -670,7 +633,7 @@ const Product: React.FC = () => {
                   className="pud-product-item-link"
                   onClick={() => handlePunchOutPreview(selectedProduct.punchOutUrl)}
                 >
-                  <IconExternalLink /> View Catalog
+                  <ExternalLinkIcon /> View Catalog
                 </button>
               </div>
             )}
@@ -691,7 +654,7 @@ const Product: React.FC = () => {
       <div className="pud-product-filters">
         <div className="pud-product-filter-card">
           <div className="pud-product-filter-title">
-            <IconFilter /> Filter by Classification
+            <FilterIcon /> Filter by Classification
           </div>
 
           <div className="pud-product-filter-grid">
@@ -772,7 +735,7 @@ const Product: React.FC = () => {
                 disabled={loadingResults}
                 aria-label="Search products"
               >
-                {loadingResults ? <IconLoader /> : <IconSearch />}
+                {loadingResults ? <LoaderIcon className="pud-loader" /> : <SearchIcon />}
               </button>
             </div>
           </div>
@@ -794,7 +757,7 @@ const Product: React.FC = () => {
         ) : hasSearched && catalogResults.length === 0 ? (
           <EmptyState
             className="pud-product-empty"
-            icon={<IconFileGeneric />}
+            icon={<FileIcon />}
             title="No products found"
             description="Try adjusting your filters or search terms"
           />
@@ -829,7 +792,7 @@ const Product: React.FC = () => {
                       {imageSrc ? (
                         <img src={imageSrc} alt={item.catalogName} />
                       ) : (
-                        <div className="pud-catalog-card-media-placeholder"><IconFileGeneric /></div>
+                        <div className="pud-catalog-card-media-placeholder"><FileIcon /></div>
                       )}
                       {item.isPunchOut && (
                         <span className="pud-catalog-card-source pud-catalog-card-source-created">
@@ -867,7 +830,7 @@ const Product: React.FC = () => {
                   disabled={productPage === 0}
                   onClick={() => setProductPage((p) => Math.max(0, p - 1))}
                 >
-                  <IconChevronLeft /> Previous
+                  <ChevronLeftIcon /> Previous
                 </button>
                 <span className="pud-catalog-pagination-info">
                   Page {productPage + 1} of {productTotalPages}
@@ -878,7 +841,7 @@ const Product: React.FC = () => {
                   disabled={productPage >= productTotalPages - 1}
                   onClick={() => setProductPage((p) => Math.min(productTotalPages - 1, p + 1))}
                 >
-                  Next <IconChevronRight />
+                  Next <ChevronRightIcon />
                 </button>
               </nav>
             )}
@@ -887,7 +850,7 @@ const Product: React.FC = () => {
           !hasSearched && (
             <EmptyState
               className="pud-product-empty"
-              icon={<IconSearch />}
+              icon={<SearchIcon />}
               title="Start searching"
               description="Select filters or enter a search term to find products"
             />
