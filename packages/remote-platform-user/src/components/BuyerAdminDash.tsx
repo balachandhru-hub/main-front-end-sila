@@ -30,6 +30,7 @@ import { getOrganizationUsersForRfq } from "../api/networkAdminApi";
 import { logoutPlatformUser } from "../api/platformApi";
 import { BuyerAnalytics, ChatPanel, CreateRFQ, StatusBadge, toastService, useAsyncData, useRouteNav, type ChatCounterpartyRef, type CreateRFQApi, type RouteNavPaths } from "@vosox/shared-ui";
 import UserTemplate from "./UserTemplate";
+import ContractTemplate from "./ContractTemplate";
 import ApprovalManagement from "./ApprovalManagement/ApprovalManagement";
 import { ToastContainer } from "@vosox/shared-ui";
 import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
@@ -270,6 +271,7 @@ const BUYER_ADMIN_NAV_PATHS: RouteNavPaths = {
   product: "product-catalog",
   userList: "users",
   template: "templates",
+  contractTemplate: "contract-templates",
   approvalManagement: "approval-management",
   material: "material-approvals",
   contract: "contract-approvals",
@@ -289,6 +291,7 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
     label: "Configuration",
     subItems: [
       { key: "template", label: "Templates" },
+      { key: "contractTemplate", label: "Contract Templates" },
       { key: "approvalManagement", label: "Approval Management" }
     ]
   },
@@ -972,6 +975,8 @@ const BuyerAdminDash: React.FC = () => {
                   <UserTemplate templates={templates} />
                 )}
               </div>
+            ) : activeNav === "contractTemplate" ? (
+              <ContractTemplate />
             ) : activeNav === "approvalManagement" ? (
               <ApprovalManagement />
             ) : activeNav === "material" ? (
