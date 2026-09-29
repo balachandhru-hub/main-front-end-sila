@@ -108,14 +108,6 @@
   min-height: 12.5rem;
 }
 
-.nad-delete-warning {
-  display: block;
-  padding-top: var(--sila-space-2);
-  font-size: var(--sila-text-sm);
-  font-weight: var(--sila-weight-medium);
-  color: var(--sila-danger);
-}
-
 /* ---- User table (UserListTable rendered inside this page) ----------- */
 
 .nad-lists-section .nad-table-container {

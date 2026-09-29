@@ -1,100 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './EAuctionWidget.css';
-import { FaArrowRight, FaBolt, FaDownload, FaEnvelope, FaFileUpload, FaKey, FaTimes } from 'react-icons/fa';
+import { FaBolt, FaDownload, FaEnvelope, FaFileUpload, FaKey, FaTimes } from 'react-icons/fa';
 import {
-  fetchRFQMasterData,
   fetchRFQById,
   fetchSupplierQuotationBySupplierId,
   submitSupplierQuotation,
-  sendOtp,
-  verifyOtp,
-  getSupplierProfile,
   type RFQDetailResponse,
   type SupplierQuotationByIdItem,
   type SubmitQuotationPayload,
 } from '../api/supplierApi';
-import { QUOTATION_EXCEL_HEADERS, buildCsv, parseCsv, downloadCsv } from '../utils/quotationExcel';
-import { toastService } from '@vosox/shared-ui';
+import { useOtpVerification, getCookie, deleteCookie, VERIFICATION_TOKEN_COOKIE, VERIFICATION_TOKEN_STORAGE_KEY, OTP_EXPIRY_STORAGE_KEY } from '../hooks/useOtpVerification';
+import { useQuotationExcelSync, type QuoteLineItem } from '../hooks/useQuotationExcelSync';
+import { useBulkApply } from '../hooks/useBulkApply';
+import { useLiveBids, formatEndDateStr } from '../hooks/useLiveBids';
+import LiveBidList from './EAuction/LiveBidList';
+import AuctionTriggerBar from './EAuction/AuctionTriggerBar';
 
 /* ---------------------------------- Interfaces ---------------------------------- */
-
-export interface LiveAuctionItem {
-  id: string;
-  supplierRFQId?: string;
-  name: string;
-  itemCode: string;
-  organizationName: string;
-  deliveryLocation: string;
-  endDate: string;
-  formattedEndDate: string;
-  status?: string | null;
-}
-
-interface QuoteLineItem {
-  deliveryCharge: number;
-  deliveryType: string;
-  discount: number;
-  discountType: string;
-  tax: number;
-  taxType: string;
-  quotedPrice: number;
-  subTotal: number;
-  quotedAmount: number;
-  isLineitemAvailable: boolean;
-}
 
 interface EAuctionWidgetProps {
   supplierId: string | null;
 }
-
-const formatEndDateStr = (dateStr?: string) => {
-  if (!dateStr) return "N/A";
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    const dateFormatted = d.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-    const timeFormatted = d.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-    return `${dateFormatted}, ${timeFormatted}`;
-  } catch {
-    return dateStr;
-  }
-};
-
-const VERIFICATION_TOKEN_COOKIE = "vsx_verification_token";
-const VERIFICATION_TOKEN_TTL_SECONDS = 30 * 60;
-
-const getCookie = (name: string): string | null => {
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
-};
-
-const setCookie = (name: string, value: string, maxAgeSeconds: number) => {
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSeconds}; SameSite=Lax`;
-};
-
-const deleteCookie = (name: string) => {
-  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
-};
-
-const IconChevronLeft = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="15 18 9 12 15 6" />
-  </svg>
-);
-
-const IconChevronRight = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="9 18 15 12 9 6" />
-  </svg>
-);
 
 const formatRank = (val: any): string => {
   if (val == null || val === "") return "";
@@ -110,20 +36,22 @@ const IconBoltFilled = () => (
 
 /* ---------------------------------- Component ---------------------------------- */
 
-const PAGE_SIZE = 6;
-// The rfq-master-data endpoint returns a bare array with no total, so the count is
-// resolved with one wide fetch when the board opens.
-const TOTAL_COUNT_FETCH_LIMIT = 1000;
-
 export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [auctions, setAuctions] = useState<LiveAuctionItem[]>([]);
-  const [selectedLot, setSelectedLot] = useState<LiveAuctionItem | null>(null);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalAuctions, setTotalAuctions] = useState<number>(0);
-  const [hasNextPage, setHasNextPage] = useState<boolean>(false);
-  const knownTotalRef = useRef<number>(0);
+
+  const {
+    auctions,
+    setAuctions,
+    selectedLot,
+    setSelectedLot,
+    currentPage,
+    setCurrentPage,
+    totalAuctions,
+    hasNextPage,
+    loadingApi,
+    fetchLiveBidsData,
+  } = useLiveBids(supplierId, isModalOpen);
 
   const handleCloseEauctionModal = () => {
     setIsModalOpen(false);
@@ -135,7 +63,6 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
   const [selectedRfqDetails, setSelectedRfqDetails] = useState<RFQDetailResponse | null>(null);
   const [ownQuotation, setOwnQuotation] = useState<SupplierQuotationByIdItem | null>(null);
   const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
-  const [loadingApi, setLoadingApi] = useState<boolean>(false);
 
   // The RFQ's own currency (e.g. "INR", "USD") — RFQDetailResponse doesn't
   // declare this field, but the supplier's own quotation does, so fall back
@@ -180,126 +107,6 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
   const [submittingBid, setSubmittingBid] = useState<boolean>(false);
   const [submitBidError, setSubmitBidError] = useState<string | null>(null);
   const [bidSubmittedMessage, setBidSubmittedMessage] = useState<string | null>(null);
-
-  const fetchLiveBidsData = async (page: number = currentPage) => {
-    if (!supplierId) {
-      setAuctions([]);
-      setSelectedLot(null);
-      return;
-    }
-    setLoadingApi(true);
-    const startIndex = (page - 1) * PAGE_SIZE;
-    try {
-      const res = await fetchRFQMasterData({
-        index: startIndex,
-        limit: PAGE_SIZE,
-        supplierId,
-        status: "LIVE",
-      });
-
-      const rawList = Array.isArray(res)
-        ? res
-        : (res as any)?.data && Array.isArray((res as any).data)
-          ? (res as any).data
-          : (res as any)?.rfqs && Array.isArray((res as any).rfqs)
-            ? (res as any).rfqs
-            : [];
-
-      const reportedTotal =
-        (res as any)?.totalCount ??
-        (res as any)?.total ??
-        (res as any)?.totalRecords ??
-        null;
-
-      if (typeof reportedTotal === 'number') {
-        knownTotalRef.current = reportedTotal;
-        setTotalAuctions(reportedTotal);
-        setHasNextPage(startIndex + rawList.length < reportedTotal);
-      } else if (knownTotalRef.current > 0) {
-        setHasNextPage(startIndex + rawList.length < knownTotalRef.current);
-      } else {
-        // No total known yet: a full page means there is more to come
-        setHasNextPage(rawList.length === PAGE_SIZE);
-        setTotalAuctions((prev) => Math.max(prev, startIndex + rawList.length));
-      }
-
-      if (rawList.length > 0) {
-        const mapped: LiveAuctionItem[] = rawList.map((item: any, idx: number) => {
-          const endDateRaw = item.endDate || item.end_date || item.closingDate || "";
-          const orgName = item.organizationName || item.organization_name || item.orgName || item.companyName || "IBM Technologies Pvt ltd";
-          const loc = item.deliveryLocation || item.delivery_location || item.location || "N/A";
-
-          return {
-            id: item.rfqId || item.id || `live-rfq-${idx}`,
-            supplierRFQId: item.supplierRFQId || item.supplier_rfq_id,
-            name: item.title || item.rfqTitle || `Live Sourcing Tender #${idx + 1}`,
-            itemCode: item.rfqNumber || item.rfq_number || `RFQ-${idx + 1}`,
-            organizationName: orgName,
-            deliveryLocation: loc,
-            endDate: endDateRaw,
-            formattedEndDate: formatEndDateStr(endDateRaw),
-            status: item.status || null,
-          };
-        });
-
-        setAuctions(mapped);
-        setSelectedLot((prev) => prev ? (mapped.find(m => m.id === prev.id) || mapped[0]) : mapped[0]);
-      } else {
-        setAuctions([]);
-        setSelectedLot(null);
-        // Landed on an empty page (rows removed since last fetch) - step back
-        if (page > 1) setCurrentPage(page - 1);
-      }
-    } catch (err) {
-      console.error("Error fetching live RFQ master data:", err);
-      setAuctions([]);
-      setSelectedLot(null);
-      setTotalAuctions(0);
-      setHasNextPage(false);
-    } finally {
-      setLoadingApi(false);
-    }
-  };
-
-  // Resolve the true total tender count (the list endpoint does not report one)
-  const fetchLiveBidsTotal = async () => {
-    if (!supplierId) return;
-    try {
-      const res = await fetchRFQMasterData({
-        index: 0,
-        limit: TOTAL_COUNT_FETCH_LIMIT,
-        supplierId,
-        status: "LIVE",
-      });
-
-      const reportedTotal =
-        (res as any)?.totalCount ?? (res as any)?.total ?? (res as any)?.totalRecords ?? null;
-
-      const fullList = Array.isArray(res)
-        ? res
-        : (res as any)?.data && Array.isArray((res as any).data)
-          ? (res as any).data
-          : (res as any)?.rfqs && Array.isArray((res as any).rfqs)
-            ? (res as any).rfqs
-            : [];
-
-      const total = typeof reportedTotal === 'number' ? reportedTotal : fullList.length;
-      knownTotalRef.current = total;
-      setTotalAuctions(total);
-      setHasNextPage((prev) => (total > 0 ? currentPage * PAGE_SIZE < total : prev));
-    } catch (err) {
-      console.error("Error fetching live RFQ total count:", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchLiveBidsData(currentPage);
-  }, [isModalOpen, currentPage, supplierId]);
-
-  useEffect(() => {
-    knownTotalRef.current = 0;
-    fetchLiveBidsTotal();
-  }, [isModalOpen, supplierId]);
 
   const loadRfqDetailsAndQuotation = async (rfqId: string) => {
     setLoadingDetails(true);
@@ -445,98 +252,26 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLot?.id]);
 
-  // OTP Verification States
-  const [otpStage, setOtpStage] = useState<"none" | "send" | "verify">("none");
-  const [otpCode, setOtpCode] = useState("");
-  const [otpError, setOtpError] = useState<string | null>(null);
-  const [sendingOtp, setSendingOtp] = useState(false);
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
-  const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
-  const [otpRemaining, setOtpRemaining] = useState(600);
-  const supplierEmailRef = React.useRef<string | null>(null);
-
-  useEffect(() => {
-    if (otpStage !== "verify" || !otpExpiresAt) return;
-    const interval = setInterval(() => {
-      const left = Math.max(0, Math.round((otpExpiresAt - Date.now()) / 1000));
-      setOtpRemaining(left);
-      if (left <= 0) clearInterval(interval);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [otpStage, otpExpiresAt]);
+  const {
+    otpStage,
+    setOtpStage,
+    otpCode,
+    setOtpCode,
+    otpError,
+    setOtpError,
+    sendingOtp,
+    verifyingOtp,
+    setOtpExpiresAt,
+    otpRemaining,
+    setOtpRemaining,
+    handleSendOtp,
+    handleVerifyOtp,
+  } = useOtpVerification({ onVerified: (token) => executeSubmitLiveBid(token) });
 
   const formatOtpTimer = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
     return `${m}:${s < 10 ? '0' : ''}${s}`;
-  };
-
-  const handleSendOtp = async () => {
-    setOtpError(null);
-    setSendingOtp(true);
-    try {
-      if (!supplierEmailRef.current) {
-        const profile = await getSupplierProfile();
-        if (profile && "businessProfile" in profile) {
-          supplierEmailRef.current = (profile as any).businessProfile?.email || null;
-        }
-      }
-      const res = await sendOtp();
-      if (res && "statusCode" in res && (res as any).statusCode >= 400) {
-        const message = (res as any).message || "";
-        const description = (res as any).description || "";
-        const otpAlreadySent = /already.*sent/i.test(message) || /already.*sent/i.test(description);
-        if (!otpAlreadySent) {
-          setOtpError(message || "Couldn't send the code, try again.");
-          return;
-        }
-      }
-      const expiry = Date.now() + 10 * 60 * 1000;
-      sessionStorage.setItem("vsx_otp_expiry", String(expiry));
-      deleteCookie(VERIFICATION_TOKEN_COOKIE);
-      sessionStorage.removeItem("vsx_verification_token");
-      setOtpExpiresAt(expiry);
-      setOtpRemaining(600);
-      setOtpCode("");
-      setOtpStage("verify");
-    } catch (err: any) {
-      setOtpError(err?.message || "Couldn't send the code, try again.");
-    } finally {
-      setSendingOtp(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!otpCode.trim()) {
-      setOtpError("Enter the code we emailed you.");
-      return;
-    }
-    if (otpRemaining <= 0) {
-      setOtpError("Code expired. Please resend the OTP.");
-      return;
-    }
-    setVerifyingOtp(true);
-    setOtpError(null);
-    try {
-      const res = await verifyOtp({ email: supplierEmailRef.current || "", otp: otpCode.trim() });
-      if (!res || (res as any).success === false || ("statusCode" in res && (res as any).statusCode >= 400)) {
-        setOtpError((res as any)?.message || "That code didn't match, try again.");
-        return;
-      }
-      const token = (res as any).token;
-      if (!token) {
-        setOtpError("Verification failed, please retry.");
-        return;
-      }
-      setCookie(VERIFICATION_TOKEN_COOKIE, token, VERIFICATION_TOKEN_TTL_SECONDS);
-      sessionStorage.setItem("vsx_verification_token", token);
-      setOtpStage("none");
-      await executeSubmitLiveBid(token);
-    } catch (err: any) {
-      setOtpError(err?.message || "That code didn't match, try again.");
-    } finally {
-      setVerifyingOtp(false);
-    }
   };
 
   const handleLineItemFieldChange = (
@@ -593,194 +328,31 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
   };
 
   // Bulk Apply — line-item (non-lot) bidding only
-  const [bulkValue, setBulkValue] = useState<string>("");
-  const [bulkValueType, setBulkValueType] = useState<"PERCENTAGE" | "AMOUNT">("PERCENTAGE");
-  const [bulkFields, setBulkFields] = useState({
-    deliveryCharge: false,
-    discount: false,
-    tax: false,
-    quotedPrice: false,
+  const {
+    bulkValue,
+    setBulkValue,
+    bulkValueType,
+    setBulkValueType,
+    bulkFields,
+    handleBulkFieldToggle,
+    handleBulkApply,
+  } = useBulkApply({
+    items: selectedRfqDetails?.items,
+    onFieldChange: handleLineItemFieldChange,
   });
 
-  const bulkTypeFieldMap: Partial<Record<keyof typeof bulkFields, keyof QuoteLineItem>> = {
-    deliveryCharge: "deliveryType",
-    discount: "discountType",
-    tax: "taxType",
-  };
-
-  const handleBulkFieldToggle = (field: keyof typeof bulkFields, checked: boolean) => {
-    setBulkFields((prev) => ({ ...prev, [field]: checked }));
-  };
-
-  const handleBulkApply = () => {
-    if (bulkValue === "" || !selectedRfqDetails?.items) return;
-
-    const fieldKeys = (Object.keys(bulkFields) as (keyof typeof bulkFields)[]).filter(
-      (key) => bulkFields[key]
-    );
-    if (fieldKeys.length === 0) return;
-
-    selectedRfqDetails.items.forEach((item, idx) => {
-      const itemKey = item.supplierRFQItemId || `item-${idx}`;
-      fieldKeys.forEach((field) => {
-        handleLineItemFieldChange(itemKey, field, bulkValue);
-        const typeField = bulkTypeFieldMap[field];
-        if (typeField) {
-          handleLineItemFieldChange(itemKey, typeField, bulkValueType);
-        }
-      });
-    });
-  };
-
   // Excel Apply — line-item (non-lot) bidding only
-  const excelFileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const handleDownloadQuotationExcel = () => {
-    if (!selectedRfqDetails?.items?.length) return;
-
-    const rows = selectedRfqDetails.items.map((item, idx) => {
-      const itemKey = item.supplierRFQItemId || `item-${idx}`;
-      const line = quoteLineItems[itemKey];
-      return [
-        itemKey,
-        item.description || "",
-        item.materialCode || "",
-        item.quantity ?? "",
-        item.uom || "",
-        line?.deliveryCharge ?? 0,
-        line?.deliveryType || "PERCENTAGE",
-        line?.discount ?? 0,
-        line?.discountType || "PERCENTAGE",
-        line?.tax ?? 0,
-        line?.taxType || "PERCENTAGE",
-        line?.quotedPrice ?? 0,
-        // "Available" in the UI is the checkbox state, which is the inverse of isLineitemAvailable.
-        line?.isLineitemAvailable ? "No" : "Yes",
-      ];
-    });
-
-    const csv = buildCsv([[...QUOTATION_EXCEL_HEADERS], ...rows]);
-    downloadCsv(csv, `quotation-summary-${selectedLot?.id || "rfq"}.csv`);
-  };
-
-  const handleQuotationExcelFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !selectedRfqDetails?.items) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const rows = parseCsv(String(reader.result || ""));
-        if (rows.length < 2) {
-          toastService.error("The uploaded file has no data rows.");
-          return;
-        }
-
-        const [headerRow, ...dataRows] = rows;
-        const colIndex = (name: string) =>
-          headerRow.findIndex((h) => h.trim().toLowerCase() === name.toLowerCase());
-
-        const idxItemKey = colIndex("Item Key");
-        const idxCode = colIndex("Code");
-        const idxDeliveryCharge = colIndex("Delivery Charge");
-        const idxDeliveryType = colIndex("Delivery Type");
-        const idxDiscount = colIndex("Discount");
-        const idxDiscountType = colIndex("Discount Type");
-        const idxTax = colIndex("Tax");
-        const idxTaxType = colIndex("Tax Type");
-        const idxQuotedPrice = colIndex("Quoted Price");
-        const idxAvailable = colIndex("Available");
-
-        if (idxQuotedPrice === -1) {
-          toastService.error("The uploaded file is missing the required \"Quoted Price\" column. Please use the downloaded template.");
-          return;
-        }
-        if (idxItemKey === -1 && idxCode === -1) {
-          toastService.error("The uploaded file is missing the \"Item Key\" and \"Code\" columns needed to match rows to items. Please use the downloaded template.");
-          return;
-        }
-
-        const normalizeType = (value: string | undefined, fallback: string) => {
-          const v = (value || "").trim().toUpperCase();
-          return v === "PERCENTAGE" || v === "AMOUNT" ? v : fallback;
-        };
-        const parseNumber = (value: string | undefined, fallback: number) => {
-          const n = Number((value || "").trim());
-          return Number.isFinite(n) ? n : fallback;
-        };
-        // "Available" column is the checkbox's own Yes/No state, inverse of isLineitemAvailable.
-        const parseAvailable = (value: string | undefined, fallback: boolean) => {
-          const v = (value || "").trim().toLowerCase();
-          if (["yes", "true", "1"].includes(v)) return false;
-          if (["no", "false", "0"].includes(v)) return true;
-          return fallback;
-        };
-
-        const items = selectedRfqDetails.items || [];
-        // Match strictly by identity (Item Key, then material Code) - never by row position, since
-        // a file re-ordered in Excel or downloaded for a different RFQ would otherwise silently
-        // apply the wrong row's values to an item.
-        const matches = items.map((item, idx) => {
-          const itemKey = item.supplierRFQItemId || `item-${idx}`;
-          const matchRow =
-            (idxItemKey !== -1 && dataRows.find((r) => r[idxItemKey] === itemKey)) ||
-            (idxCode !== -1 && item.materialCode && dataRows.find((r) => r[idxCode] === item.materialCode)) ||
-            null;
-          return { itemKey, matchRow };
-        });
-
-        const matchedCount = matches.filter((m) => m.matchRow).length;
-        if (matchedCount === 0) {
-          toastService.error("None of the rows in this file match this RFQ's items. Make sure you're uploading the spreadsheet downloaded for this RFQ.");
-          return;
-        }
-
-        setQuoteLineItems((prev) => {
-          const next = { ...prev };
-          matches.forEach(({ itemKey, matchRow }) => {
-            if (!matchRow) return;
-
-            const existing: QuoteLineItem = next[itemKey] || {
-              deliveryCharge: 0,
-              deliveryType: "PERCENTAGE",
-              discount: 0,
-              discountType: "PERCENTAGE",
-              tax: 0,
-              taxType: "PERCENTAGE",
-              quotedPrice: 0,
-              subTotal: 0,
-              quotedAmount: 0,
-              isLineitemAvailable: false,
-            };
-
-            next[itemKey] = {
-              ...existing,
-              deliveryCharge: idxDeliveryCharge !== -1 ? parseNumber(matchRow[idxDeliveryCharge], existing.deliveryCharge) : existing.deliveryCharge,
-              deliveryType: idxDeliveryType !== -1 ? normalizeType(matchRow[idxDeliveryType], existing.deliveryType) : existing.deliveryType,
-              discount: idxDiscount !== -1 ? parseNumber(matchRow[idxDiscount], existing.discount) : existing.discount,
-              discountType: idxDiscountType !== -1 ? normalizeType(matchRow[idxDiscountType], existing.discountType) : existing.discountType,
-              tax: idxTax !== -1 ? parseNumber(matchRow[idxTax], existing.tax) : existing.tax,
-              taxType: idxTaxType !== -1 ? normalizeType(matchRow[idxTaxType], existing.taxType) : existing.taxType,
-              quotedPrice: parseNumber(matchRow[idxQuotedPrice], existing.quotedPrice),
-              isLineitemAvailable: idxAvailable !== -1 ? parseAvailable(matchRow[idxAvailable], existing.isLineitemAvailable) : existing.isLineitemAvailable,
-            };
-          });
-          return next;
-        });
-
-        toastService.success(
-          matchedCount < items.length
-            ? `Applied values for ${matchedCount} of ${items.length} items. ${items.length - matchedCount} item(s) in this RFQ weren't found in the file and were left unchanged.`
-            : "Spreadsheet values applied. Review the table below, then submit your bid."
-        );
-      } catch {
-        toastService.error("Couldn't read that file. Please upload the downloaded template without changing its columns.");
-      }
-    };
-    reader.onerror = () => toastService.error("Couldn't read that file. Please try again.");
-    reader.readAsText(file);
-  };
+  const {
+    excelFileInputRef,
+    handleDownloadQuotationExcel,
+    handleQuotationExcelFileChange,
+  } = useQuotationExcelSync({
+    items: selectedRfqDetails?.items,
+    lineItems: quoteLineItems,
+    setLineItems: setQuoteLineItems,
+    fileNameId: selectedLot?.id,
+    fullMatchSuccessMessage: "Spreadsheet values applied. Review the table below, then submit your bid.",
+  });
 
   const executeSubmitLiveBid = async (verificationToken: string) => {
     if (!selectedLot) return;
@@ -866,13 +438,13 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
     if (!selectedLot) return;
     setSubmitBidError(null);
 
-    const verificationToken = getCookie(VERIFICATION_TOKEN_COOKIE) || sessionStorage.getItem("vsx_verification_token");
+    const verificationToken = getCookie(VERIFICATION_TOKEN_COOKIE) || sessionStorage.getItem(VERIFICATION_TOKEN_STORAGE_KEY);
     if (verificationToken) {
       await executeSubmitLiveBid(verificationToken);
       return;
     }
 
-    const storedExpiry = Number(sessionStorage.getItem("vsx_otp_expiry") || 0);
+    const storedExpiry = Number(sessionStorage.getItem(OTP_EXPIRY_STORAGE_KEY) || 0);
     if (storedExpiry && Date.now() < storedExpiry) {
       setOtpCode("");
       setOtpExpiresAt(storedExpiry);
@@ -881,9 +453,9 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
       return;
     }
 
-    sessionStorage.removeItem("vsx_otp_expiry");
+    sessionStorage.removeItem(OTP_EXPIRY_STORAGE_KEY);
     deleteCookie(VERIFICATION_TOKEN_COOKIE);
-    sessionStorage.removeItem("vsx_verification_token");
+    sessionStorage.removeItem(VERIFICATION_TOKEN_STORAGE_KEY);
     setOtpCode("");
     setOtpError(null);
     setOtpStage("send");
@@ -892,62 +464,14 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
   return (
     <>
       {/* Bottom Right Floating Trigger Widget for Supplier Side */}
-      <div
-        className="eauction-floating-bar"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        {/* Hover Popover Preview Card */}
-        {isHovered && !isModalOpen && (
-          <div className="eauction-preview-popover">
-            <div className="eauction-preview-header">
-              <div className="eauction-preview-title">
-                <FaBolt aria-hidden="true" />
-                <span>Live e-Auction Bidding</span>
-              </div>
-              <span className="eauction-live-status">Live reverse auction</span>
-            </div>
-
-            {selectedLot ? (
-              <div className="eauction-preview-item">
-                <div className="eauction-preview-item-title">{selectedLot.name}</div>
-                <div className="eauction-preview-meta">
-                  <span>Code: <strong className="eauction-bid-price">{selectedLot.itemCode}</strong></span>
-                  <span>Closing: <strong className="eauction-timer">{selectedLot.formattedEndDate}</strong></span>
-                </div>
-              </div>
-            ) : (
-              <div className="eauction-preview-item">
-                <div className="eauction-preview-item-title eauction-preview-empty">
-                  No active live bids available
-                </div>
-              </div>
-            )}
-
-            <button
-              type="button"
-              className="eauction-enter-btn"
-              onClick={() => setIsModalOpen(true)}
-            >
-              <span>Enter Supplier Bidding Console</span>
-              <FaArrowRight aria-hidden="true" />
-            </button>
-          </div>
-        )}
-
-        {/* Floating Bar Button */}
-        <button
-          type="button"
-          className="eauction-trigger-btn"
-          onClick={() => setIsModalOpen(true)}
-          title="Open Live e-Auction Bidding Console"
-        >
-          <span className="eauction-pulse-dot" aria-hidden="true" />
-          <FaBolt aria-hidden="true" className="eauction-trigger-icon" />
-          <span>Live e-Auction</span>
-          <span className="eauction-badge-count">{totalAuctions} Live</span>
-        </button>
-      </div>
+      <AuctionTriggerBar
+        selectedLot={selectedLot}
+        totalAuctions={totalAuctions}
+        isHovered={isHovered}
+        isModalOpen={isModalOpen}
+        onHoverChange={setIsHovered}
+        onOpen={() => setIsModalOpen(true)}
+      />
 
       {/* Full Live Portal Modal View */}
       {isModalOpen && (
@@ -985,95 +509,17 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
             {/* Main Portal Body */}
             <div className="eauction-portal-body">
               {/* Left Sidebar: Live RFQ List */}
-              <aside className="eauction-sidebar">
-                <div className="eauction-sidebar-header">
-                  <div className="eauction-panel-title-text">My live bid status &amp; ranks</div>
-                  <span className="eauction-live-pill"><span className="eauction-live-pill-dot" aria-hidden="true" />Real-time bidding active</span>
-                </div>
-
-                <div className="eauction-sidebar-list">
-                  {loadingApi ? (
-                    <div className="eauction-sidebar-status">Loading live bid status...</div>
-                  ) : auctions.length === 0 ? (
-                    <div className="eauction-empty-state">
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10" />
-                        <line x1="12" y1="8" x2="12" />
-                        <line x1="12" y1="16" x2="12.01" y2="16" />
-                      </svg>
-                      <span className="eauction-empty-title">No live bids found</span>
-                      <span className="eauction-empty-subtitle">There are currently no active live auctions available for your account.</span>
-                    </div>
-                  ) : (
-                    auctions.map((auc) => {
-                      const isSelected = Boolean(selectedLot && auc.id === selectedLot.id);
-                      return (
-                        <div
-                          key={auc.id}
-                          className={`eauction-sidebar-item${isSelected ? ' is-selected' : ''}`}
-                          onClick={() => setSelectedLot(auc)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              setSelectedLot(auc);
-                            }
-                          }}
-                          role="button"
-                          tabIndex={0}
-                          aria-pressed={isSelected}
-                        >
-                          <div className="eauction-sidebar-item-title">{auc.name}</div>
-                          <div className="eauction-sidebar-item-code sila-ref">{auc.itemCode}</div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-
-                {/* Pagination Bar */}
-                {auctions.length > 0 && (() => {
-                  const startItem = (currentPage - 1) * PAGE_SIZE + 1;
-                  const endItem = (currentPage - 1) * PAGE_SIZE + auctions.length;
-                  const canGoPrev = currentPage > 1;
-                  const canGoNext = hasNextPage;
-
-                  return (
-                    <div className="eauction-sidebar-footer">
-                      <div className="eauction-pagination-bar">
-                        <div className="eauction-pagination-info">
-                          <strong>{startItem}</strong>–<strong>{endItem}</strong> of <strong>{Math.max(totalAuctions, endItem)}</strong>
-                        </div>
-
-                        <div className="eauction-pagination-controls">
-                          <button
-                            type="button"
-                            className={`eauction-page-btn${!canGoPrev ? ' is-disabled' : ''}`}
-                            onClick={() => canGoPrev && setCurrentPage((p) => Math.max(1, p - 1))}
-                            disabled={!canGoPrev}
-                            aria-label="Previous page"
-                          >
-                            <IconChevronLeft />
-                          </button>
-
-                          <span className="eauction-page-btn is-current" aria-current="page">
-                            {currentPage}
-                          </span>
-
-                          <button
-                            type="button"
-                            className={`eauction-page-btn${!canGoNext ? ' is-disabled' : ''}`}
-                            onClick={() => canGoNext && setCurrentPage((p) => p + 1)}
-                            disabled={!canGoNext}
-                            aria-label="Next page"
-                          >
-                            <IconChevronRight />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </aside>
+              <LiveBidList
+                auctions={auctions}
+                selectedLot={selectedLot}
+                onSelectLot={setSelectedLot}
+                loadingApi={loadingApi}
+                currentPage={currentPage}
+                totalAuctions={totalAuctions}
+                hasNextPage={hasNextPage}
+                onPrevPage={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                onNextPage={() => setCurrentPage((p) => p + 1)}
+              />
 
               {/* Main Content Workspace */}
               <div className="eauction-main-content">
