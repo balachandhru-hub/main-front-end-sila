@@ -420,7 +420,7 @@ const Invitations: React.FC<InvitationsProps> = ({ isAdmin = false, adminRole })
     const [searchQuery, setSearchQuery] = useState("");
     const [appliedSearchQuery, setAppliedSearchQuery] = useState("");
 
-    const PAGE_SIZE = 10;
+    const PAGE_SIZE = 12;
     const [currentPage, setCurrentPage] = useState(0);
     const [hasNextPage, setHasNextPage] = useState(false);
 
