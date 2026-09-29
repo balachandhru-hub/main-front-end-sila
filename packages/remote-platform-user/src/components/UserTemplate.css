@@ -32,6 +32,8 @@
 .ut-header-content {
   flex: 1;
   min-width: 12rem;
+  display: flex;
+  gap: 0.75rem;
 }
 
 .ut-back-btn {

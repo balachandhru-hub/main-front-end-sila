@@ -22,6 +22,7 @@
 
 .pud-content > .sila-page-header.pud-page-header {
   margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 /* Legacy nav classes still used by Catalog's (hidden) nav widget */
@@ -1362,9 +1363,9 @@
     flex-wrap: wrap;
   }
 
-  .pud-match-actions {
+  /* .pud-match-actions {
     flex-direction: column;
-  }
+  } */
 
   .pud-modal-overlay {
     padding: var(--sila-space-4);

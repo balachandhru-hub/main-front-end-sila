@@ -1278,6 +1278,9 @@ button.sila-kpi:focus-visible { outline: none; box-shadow: var(--sila-focus-ring
 /* ======================================================================== */
 /* Charts                                                                   */
 /* ======================================================================== */
+.sila-chart *:focus {
+  outline: none !important;
+}
 
 .sila-chart-grid {
   display: grid;

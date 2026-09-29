@@ -35,6 +35,9 @@ import {
 } from '../../../remote-buyer/src/api/Buyerapi';
 import { fetchDropdownReferenceList, type ReferenceListItemDto } from '../../../remote-buyer/src/api/masterdataApi';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
+import { useNavigate } from 'react-router-dom';
+import { FaTimes } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa6';
 
 interface TemplateQuestion {
   questionId: string;
@@ -663,6 +666,11 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
   };
 
   const createSteps = ['Enter Template Information', 'Configure Form Fields'];
+  const navigate = useNavigate();
+
+  const handleClose = () => {
+    navigate('/settings');
+  };
 
   if (showCreateForm) {
     return (
@@ -1195,8 +1203,23 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
     <div className="ut-container">
       <div className="ut-header sila-page-header">
         <div className="ut-header-content">
-          <h1 className="sila-page-title">Onboarding Registration Templates</h1>
-          <p className="sila-page-description">Configure compliance checks, required physical files, and document parameters for unverified vendor groups.</p>
+          <div className="ut-header-back-button">
+            <button
+              type="button"
+              className="sila-btn sila-btn--secondary sila-btn--icon sila-btn--sm sila-page-back cp-back-btn"
+              onClick={handleClose}
+              title="Close"
+              aria-label="Close"
+            >
+
+              <FaArrowLeft className="cp-back-btn-icon" aria-hidden="true" />
+            </button>
+          </div>
+          <div className="ut-header-page-title">
+            <h1 className="sila-page-title">Onboarding Registration Templates</h1>
+            <p className="sila-page-description">Configure compliance checks, required physical files, and document parameters for unverified vendor groups.</p>
+          </div>
+
         </div>
         {currentUser?.userRole === "BUYER_ADMINISTRATOR" && (
           <button type="button" className="ut-btn-create sila-btn sila-btn--primary" onClick={handleCreateTemplate}>
