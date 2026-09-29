@@ -6,10 +6,10 @@ import UserListTable from '../UserListTable/UserListTable';
 import CreateUserModal from '../CreateUserModal/CreateUserModal';
 import {
   Button,
-  ConfirmDialog,
   EmptyState,
   KpiCard,
   Loader,
+  Modal,
   PageHeader,
   SearchInput,
   ToastContainer,
@@ -339,24 +339,38 @@ const NetworkAdminDashboard: React.FC = () => {
         isLoading={isCreatingUser}
       />
 
-      <ConfirmDialog
-        open={isDeleteModalOpen}
-        title="Delete User"
-        tone="danger"
-        busy={isDeletingUser}
-        confirmLabel={isDeletingUser ? 'Deleting...' : 'Delete'}
-        cancelLabel="Cancel"
-        onConfirm={confirmDeleteUser}
-        onCancel={() => {
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          if (isDeletingUser) return;
           setIsDeleteModalOpen(false);
           setUserToDelete(null);
         }}
-        message={
-          <>
-            Are you sure you want to delete <strong>{userToDelete?.name}</strong>?
-            <span className="nad-delete-warning">This action cannot be undone.</span>
-          </>
-        }
+        variant="danger"
+        headerProps={{ heading: 'Delete User' }}
+        bodyProps={{
+          content: (
+            <>
+              Are you sure you want to delete <strong>{userToDelete?.name}</strong>?
+            </>
+          ),
+          contentDescription: 'This action cannot be undone.',
+        }}
+        footerProps={{
+          secondaryButton: {
+            text: 'Cancel',
+            onClick: () => {
+              setIsDeleteModalOpen(false);
+              setUserToDelete(null);
+            },
+            disabled: isDeletingUser,
+          },
+          primaryButton: {
+            text: isDeletingUser ? 'Deleting...' : 'Delete',
+            onClick: confirmDeleteUser,
+            loading: isDeletingUser,
+          },
+        }}
       />
     </Header>
   );
