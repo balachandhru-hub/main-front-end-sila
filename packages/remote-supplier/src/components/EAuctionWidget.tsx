@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './EAuctionWidget.css';
-import { FaArrowRight, FaBolt, FaDownload, FaEnvelope, FaFileUpload, FaKey, FaTimes } from 'react-icons/fa';
+import { FaBolt, FaDownload, FaEnvelope, FaFileUpload, FaKey, FaTimes } from 'react-icons/fa';
 import {
-  fetchRFQMasterData,
   fetchRFQById,
   fetchSupplierQuotationBySupplierId,
   submitSupplierQuotation,
@@ -13,57 +12,15 @@ import {
 import { useOtpVerification, getCookie, deleteCookie, VERIFICATION_TOKEN_COOKIE, VERIFICATION_TOKEN_STORAGE_KEY, OTP_EXPIRY_STORAGE_KEY } from '../hooks/useOtpVerification';
 import { useQuotationExcelSync, type QuoteLineItem } from '../hooks/useQuotationExcelSync';
 import { useBulkApply } from '../hooks/useBulkApply';
+import { useLiveBids, formatEndDateStr } from '../hooks/useLiveBids';
+import LiveBidList from './EAuction/LiveBidList';
+import AuctionTriggerBar from './EAuction/AuctionTriggerBar';
 
 /* ---------------------------------- Interfaces ---------------------------------- */
-
-export interface LiveAuctionItem {
-  id: string;
-  supplierRFQId?: string;
-  name: string;
-  itemCode: string;
-  organizationName: string;
-  deliveryLocation: string;
-  endDate: string;
-  formattedEndDate: string;
-  status?: string | null;
-}
 
 interface EAuctionWidgetProps {
   supplierId: string | null;
 }
-
-const formatEndDateStr = (dateStr?: string) => {
-  if (!dateStr) return "N/A";
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    const dateFormatted = d.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-    const timeFormatted = d.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-    return `${dateFormatted}, ${timeFormatted}`;
-  } catch {
-    return dateStr;
-  }
-};
-
-const IconChevronLeft = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="15 18 9 12 15 6" />
-  </svg>
-);
-
-const IconChevronRight = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="9 18 15 12 9 6" />
-  </svg>
-);
 
 const formatRank = (val: any): string => {
   if (val == null || val === "") return "";
@@ -79,20 +36,22 @@ const IconBoltFilled = () => (
 
 /* ---------------------------------- Component ---------------------------------- */
 
-const PAGE_SIZE = 6;
-// The rfq-master-data endpoint returns a bare array with no total, so the count is
-// resolved with one wide fetch when the board opens.
-const TOTAL_COUNT_FETCH_LIMIT = 1000;
-
 export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [auctions, setAuctions] = useState<LiveAuctionItem[]>([]);
-  const [selectedLot, setSelectedLot] = useState<LiveAuctionItem | null>(null);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalAuctions, setTotalAuctions] = useState<number>(0);
-  const [hasNextPage, setHasNextPage] = useState<boolean>(false);
-  const knownTotalRef = useRef<number>(0);
+
+  const {
+    auctions,
+    setAuctions,
+    selectedLot,
+    setSelectedLot,
+    currentPage,
+    setCurrentPage,
+    totalAuctions,
+    hasNextPage,
+    loadingApi,
+    fetchLiveBidsData,
+  } = useLiveBids(supplierId, isModalOpen);
 
   const handleCloseEauctionModal = () => {
     setIsModalOpen(false);
@@ -104,7 +63,6 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
   const [selectedRfqDetails, setSelectedRfqDetails] = useState<RFQDetailResponse | null>(null);
   const [ownQuotation, setOwnQuotation] = useState<SupplierQuotationByIdItem | null>(null);
   const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
-  const [loadingApi, setLoadingApi] = useState<boolean>(false);
 
   // The RFQ's own currency (e.g. "INR", "USD") — RFQDetailResponse doesn't
   // declare this field, but the supplier's own quotation does, so fall back
@@ -149,126 +107,6 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
   const [submittingBid, setSubmittingBid] = useState<boolean>(false);
   const [submitBidError, setSubmitBidError] = useState<string | null>(null);
   const [bidSubmittedMessage, setBidSubmittedMessage] = useState<string | null>(null);
-
-  const fetchLiveBidsData = async (page: number = currentPage) => {
-    if (!supplierId) {
-      setAuctions([]);
-      setSelectedLot(null);
-      return;
-    }
-    setLoadingApi(true);
-    const startIndex = (page - 1) * PAGE_SIZE;
-    try {
-      const res = await fetchRFQMasterData({
-        index: startIndex,
-        limit: PAGE_SIZE,
-        supplierId,
-        status: "LIVE",
-      });
-
-      const rawList = Array.isArray(res)
-        ? res
-        : (res as any)?.data && Array.isArray((res as any).data)
-          ? (res as any).data
-          : (res as any)?.rfqs && Array.isArray((res as any).rfqs)
-            ? (res as any).rfqs
-            : [];
-
-      const reportedTotal =
-        (res as any)?.totalCount ??
-        (res as any)?.total ??
-        (res as any)?.totalRecords ??
-        null;
-
-      if (typeof reportedTotal === 'number') {
-        knownTotalRef.current = reportedTotal;
-        setTotalAuctions(reportedTotal);
-        setHasNextPage(startIndex + rawList.length < reportedTotal);
-      } else if (knownTotalRef.current > 0) {
-        setHasNextPage(startIndex + rawList.length < knownTotalRef.current);
-      } else {
-        // No total known yet: a full page means there is more to come
-        setHasNextPage(rawList.length === PAGE_SIZE);
-        setTotalAuctions((prev) => Math.max(prev, startIndex + rawList.length));
-      }
-
-      if (rawList.length > 0) {
-        const mapped: LiveAuctionItem[] = rawList.map((item: any, idx: number) => {
-          const endDateRaw = item.endDate || item.end_date || item.closingDate || "";
-          const orgName = item.organizationName || item.organization_name || item.orgName || item.companyName || "IBM Technologies Pvt ltd";
-          const loc = item.deliveryLocation || item.delivery_location || item.location || "N/A";
-
-          return {
-            id: item.rfqId || item.id || `live-rfq-${idx}`,
-            supplierRFQId: item.supplierRFQId || item.supplier_rfq_id,
-            name: item.title || item.rfqTitle || `Live Sourcing Tender #${idx + 1}`,
-            itemCode: item.rfqNumber || item.rfq_number || `RFQ-${idx + 1}`,
-            organizationName: orgName,
-            deliveryLocation: loc,
-            endDate: endDateRaw,
-            formattedEndDate: formatEndDateStr(endDateRaw),
-            status: item.status || null,
-          };
-        });
-
-        setAuctions(mapped);
-        setSelectedLot((prev) => prev ? (mapped.find(m => m.id === prev.id) || mapped[0]) : mapped[0]);
-      } else {
-        setAuctions([]);
-        setSelectedLot(null);
-        // Landed on an empty page (rows removed since last fetch) - step back
-        if (page > 1) setCurrentPage(page - 1);
-      }
-    } catch (err) {
-      console.error("Error fetching live RFQ master data:", err);
-      setAuctions([]);
-      setSelectedLot(null);
-      setTotalAuctions(0);
-      setHasNextPage(false);
-    } finally {
-      setLoadingApi(false);
-    }
-  };
-
-  // Resolve the true total tender count (the list endpoint does not report one)
-  const fetchLiveBidsTotal = async () => {
-    if (!supplierId) return;
-    try {
-      const res = await fetchRFQMasterData({
-        index: 0,
-        limit: TOTAL_COUNT_FETCH_LIMIT,
-        supplierId,
-        status: "LIVE",
-      });
-
-      const reportedTotal =
-        (res as any)?.totalCount ?? (res as any)?.total ?? (res as any)?.totalRecords ?? null;
-
-      const fullList = Array.isArray(res)
-        ? res
-        : (res as any)?.data && Array.isArray((res as any).data)
-          ? (res as any).data
-          : (res as any)?.rfqs && Array.isArray((res as any).rfqs)
-            ? (res as any).rfqs
-            : [];
-
-      const total = typeof reportedTotal === 'number' ? reportedTotal : fullList.length;
-      knownTotalRef.current = total;
-      setTotalAuctions(total);
-      setHasNextPage((prev) => (total > 0 ? currentPage * PAGE_SIZE < total : prev));
-    } catch (err) {
-      console.error("Error fetching live RFQ total count:", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchLiveBidsData(currentPage);
-  }, [isModalOpen, currentPage, supplierId]);
-
-  useEffect(() => {
-    knownTotalRef.current = 0;
-    fetchLiveBidsTotal();
-  }, [isModalOpen, supplierId]);
 
   const loadRfqDetailsAndQuotation = async (rfqId: string) => {
     setLoadingDetails(true);
@@ -626,62 +464,14 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
   return (
     <>
       {/* Bottom Right Floating Trigger Widget for Supplier Side */}
-      <div
-        className="eauction-floating-bar"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        {/* Hover Popover Preview Card */}
-        {isHovered && !isModalOpen && (
-          <div className="eauction-preview-popover">
-            <div className="eauction-preview-header">
-              <div className="eauction-preview-title">
-                <FaBolt aria-hidden="true" />
-                <span>Live e-Auction Bidding</span>
-              </div>
-              <span className="eauction-live-status">Live reverse auction</span>
-            </div>
-
-            {selectedLot ? (
-              <div className="eauction-preview-item">
-                <div className="eauction-preview-item-title">{selectedLot.name}</div>
-                <div className="eauction-preview-meta">
-                  <span>Code: <strong className="eauction-bid-price">{selectedLot.itemCode}</strong></span>
-                  <span>Closing: <strong className="eauction-timer">{selectedLot.formattedEndDate}</strong></span>
-                </div>
-              </div>
-            ) : (
-              <div className="eauction-preview-item">
-                <div className="eauction-preview-item-title eauction-preview-empty">
-                  No active live bids available
-                </div>
-              </div>
-            )}
-
-            <button
-              type="button"
-              className="eauction-enter-btn"
-              onClick={() => setIsModalOpen(true)}
-            >
-              <span>Enter Supplier Bidding Console</span>
-              <FaArrowRight aria-hidden="true" />
-            </button>
-          </div>
-        )}
-
-        {/* Floating Bar Button */}
-        <button
-          type="button"
-          className="eauction-trigger-btn"
-          onClick={() => setIsModalOpen(true)}
-          title="Open Live e-Auction Bidding Console"
-        >
-          <span className="eauction-pulse-dot" aria-hidden="true" />
-          <FaBolt aria-hidden="true" className="eauction-trigger-icon" />
-          <span>Live e-Auction</span>
-          <span className="eauction-badge-count">{totalAuctions} Live</span>
-        </button>
-      </div>
+      <AuctionTriggerBar
+        selectedLot={selectedLot}
+        totalAuctions={totalAuctions}
+        isHovered={isHovered}
+        isModalOpen={isModalOpen}
+        onHoverChange={setIsHovered}
+        onOpen={() => setIsModalOpen(true)}
+      />
 
       {/* Full Live Portal Modal View */}
       {isModalOpen && (
@@ -719,95 +509,17 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
             {/* Main Portal Body */}
             <div className="eauction-portal-body">
               {/* Left Sidebar: Live RFQ List */}
-              <aside className="eauction-sidebar">
-                <div className="eauction-sidebar-header">
-                  <div className="eauction-panel-title-text">My live bid status &amp; ranks</div>
-                  <span className="eauction-live-pill"><span className="eauction-live-pill-dot" aria-hidden="true" />Real-time bidding active</span>
-                </div>
-
-                <div className="eauction-sidebar-list">
-                  {loadingApi ? (
-                    <div className="eauction-sidebar-status">Loading live bid status...</div>
-                  ) : auctions.length === 0 ? (
-                    <div className="eauction-empty-state">
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10" />
-                        <line x1="12" y1="8" x2="12" />
-                        <line x1="12" y1="16" x2="12.01" y2="16" />
-                      </svg>
-                      <span className="eauction-empty-title">No live bids found</span>
-                      <span className="eauction-empty-subtitle">There are currently no active live auctions available for your account.</span>
-                    </div>
-                  ) : (
-                    auctions.map((auc) => {
-                      const isSelected = Boolean(selectedLot && auc.id === selectedLot.id);
-                      return (
-                        <div
-                          key={auc.id}
-                          className={`eauction-sidebar-item${isSelected ? ' is-selected' : ''}`}
-                          onClick={() => setSelectedLot(auc)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              setSelectedLot(auc);
-                            }
-                          }}
-                          role="button"
-                          tabIndex={0}
-                          aria-pressed={isSelected}
-                        >
-                          <div className="eauction-sidebar-item-title">{auc.name}</div>
-                          <div className="eauction-sidebar-item-code sila-ref">{auc.itemCode}</div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-
-                {/* Pagination Bar */}
-                {auctions.length > 0 && (() => {
-                  const startItem = (currentPage - 1) * PAGE_SIZE + 1;
-                  const endItem = (currentPage - 1) * PAGE_SIZE + auctions.length;
-                  const canGoPrev = currentPage > 1;
-                  const canGoNext = hasNextPage;
-
-                  return (
-                    <div className="eauction-sidebar-footer">
-                      <div className="eauction-pagination-bar">
-                        <div className="eauction-pagination-info">
-                          <strong>{startItem}</strong>–<strong>{endItem}</strong> of <strong>{Math.max(totalAuctions, endItem)}</strong>
-                        </div>
-
-                        <div className="eauction-pagination-controls">
-                          <button
-                            type="button"
-                            className={`eauction-page-btn${!canGoPrev ? ' is-disabled' : ''}`}
-                            onClick={() => canGoPrev && setCurrentPage((p) => Math.max(1, p - 1))}
-                            disabled={!canGoPrev}
-                            aria-label="Previous page"
-                          >
-                            <IconChevronLeft />
-                          </button>
-
-                          <span className="eauction-page-btn is-current" aria-current="page">
-                            {currentPage}
-                          </span>
-
-                          <button
-                            type="button"
-                            className={`eauction-page-btn${!canGoNext ? ' is-disabled' : ''}`}
-                            onClick={() => canGoNext && setCurrentPage((p) => p + 1)}
-                            disabled={!canGoNext}
-                            aria-label="Next page"
-                          >
-                            <IconChevronRight />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </aside>
+              <LiveBidList
+                auctions={auctions}
+                selectedLot={selectedLot}
+                onSelectLot={setSelectedLot}
+                loadingApi={loadingApi}
+                currentPage={currentPage}
+                totalAuctions={totalAuctions}
+                hasNextPage={hasNextPage}
+                onPrevPage={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                onNextPage={() => setCurrentPage((p) => p + 1)}
+              />
 
               {/* Main Content Workspace */}
               <div className="eauction-main-content">
