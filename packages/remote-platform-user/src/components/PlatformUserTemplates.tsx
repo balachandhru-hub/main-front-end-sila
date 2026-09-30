@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 // import { useNavigate } from 'react-router-dom';
-import { FaTimes } from 'react-icons/fa';
+// import { FaTimes } from 'react-icons/fa';
 import { getAllBuyers } from '../api/platformApi';
 import { EmptyState } from '@vosox/shared-ui';
 import UserTemplate from './UserTemplate';

@@ -32,7 +32,6 @@
   flex: 1;
   display: flex;
   justify-content: center;
-  padding: var(--sila-page-padding-y) var(--sila-page-padding-x);
 }
 
 .put-content-wrapper {

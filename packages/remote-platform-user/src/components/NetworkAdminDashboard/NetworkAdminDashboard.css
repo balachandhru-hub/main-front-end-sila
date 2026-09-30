@@ -24,6 +24,7 @@
 /* PageHeader already carries its own spacing; the flex gap handles the rest. */
 .nad-content .nad-content-header {
   margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 /* ---- KPI strip ------------------------------------------------------- */
