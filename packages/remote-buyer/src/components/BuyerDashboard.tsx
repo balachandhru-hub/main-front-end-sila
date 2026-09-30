@@ -21,6 +21,7 @@ import { useMaterialApprovals } from "../hooks/useMaterialApprovals";
 import { useContracts } from "../hooks/useContracts";
 import { useBuyerAuthStore } from "../store/useBuyerAuthStore";
 import UserTemplate from "../../../remote-platform-user/src/components/UserTemplate.tsx";
+import ContractTemplate from "../../../remote-platform-user/src/components/ContractTemplate.tsx";
 import BidComparisonAwardView from "../../../remote-platform-user/src/components/BidComparisonAwardView.tsx";
 import MaterialTable from "../../../remote-platform-user/src/components/Material/MaterialTable";
 import MaterialApprovalDetail from "../../../remote-platform-user/src/components/Material/MaterialApprovalDetail";
@@ -223,6 +224,8 @@ const BuyersDashboard: React.FC = () => {
               <Models />
             ) : activeNav === "template" ? (
               <UserTemplate />
+            ) : activeNav === "contractTemplate" ? (
+              <ContractTemplate />
             ) : activeNav === "materialService" ? (
               <ItemMasterCatalog buyerId={buyerId || ""} organizationId={buyerProfile?.organizationId || ""} />
             ) : activeNav === "material" ? (
