@@ -1,8 +1,14 @@
 import React from 'react';
 import type { PendingMaterialApproval, MaterialApprovalKpi } from './materialApi';
 import { classifyStatusText, formatMaterialStatus, MATERIAL_STATUS_FILTER_OPTIONS } from './materialApi';
-import { EmptyState, KpiCard, StatusBadge, TableSkeleton } from '@vosox/shared-ui';
+import { Dropdown, KpiCard, StatusBadge, Table } from '@vosox/shared-ui';
+import type { DropdownOption, DropdownValue, TableColumn } from '@vosox/shared-ui';
 import './MaterialApproval.css';
+
+const STATUS_DROPDOWN_OPTIONS: DropdownOption[] = MATERIAL_STATUS_FILTER_OPTIONS.map((opt) => ({
+  name: opt.label,
+  value: opt.value,
+}));
 
 const IconSearch = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -65,6 +71,9 @@ interface MaterialTableProps {
   searchInput: string;
   onSearchInputChange: (value: string) => void;
   onSearchSubmit: () => void;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
 }
 
 const TONE_BY_STATUS = {
@@ -97,7 +106,74 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
   searchInput,
   onSearchInputChange,
   onSearchSubmit,
+  page,
+  pageSize,
+  onPageChange,
 }) => {
+  const showError = Boolean(error) && records.length === 0;
+  const matchedStatusOption = STATUS_DROPDOWN_OPTIONS.find((opt) => opt.value === statusFilter);
+  const selectedStatusOption: DropdownValue | null = matchedStatusOption
+    ? { name: matchedStatusOption.name, value: matchedStatusOption.value ?? matchedStatusOption.name }
+    : null;
+  // The API has no total count; a full page means there's likely another one.
+  const hasNextPage = records.length === pageSize;
+
+  const columns: TableColumn<PendingMaterialApproval>[] = [
+    {
+      id: 'sno',
+      header: 'S.No',
+      headerClassName: 'matap-col-sno',
+      align: 'right',
+      className: 'matap-cell-sno',
+      cell: ({ rowIndex }) => (page - 1) * pageSize + rowIndex + 1,
+    },
+    {
+      id: 'order',
+      header: 'Order',
+      align: 'right',
+      cell: ({ row }) => <span className="matap-order-chip">{row.order}</span>,
+    },
+    {
+      id: 'materialCode',
+      header: 'Material Code',
+      cell: ({ row }) => <span className="sila-ref matap-code">{row.materialCode}</span>,
+    },
+    {
+      id: 'description',
+      header: 'Description',
+      accessorKey: 'description',
+      className: 'matap-cell-strong',
+    },
+    {
+      id: 'productType',
+      header: 'Product Type',
+      accessorKey: 'productType',
+      className: 'matap-cell-muted',
+    },
+    {
+      id: 'materialGroup',
+      header: 'Material Group',
+      accessorKey: 'materialGroup',
+      className: 'matap-cell-muted',
+    },
+    {
+      id: 'approvalStatus',
+      header: 'Approval Status',
+      cell: ({ row }) => <MaterialStatusBadge value={row.approvalStatus} />,
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      cell: ({ row }) => <MaterialStatusBadge value={row.status} />,
+    },
+    {
+      id: 'chevron',
+      header: <span className="sila-visually-hidden">Open</span>,
+      className: 'matap-cell-chevron',
+      cell: () => <IconChevronRight />,
+    },
+  ];
+
   return (
     <div className="matap-panel">
       <div className="matap-header-row">
@@ -138,68 +214,43 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
             )}
           </div>
 
-          <select
-            className="sila-select matap-status-select"
-            aria-label="Filter by status"
-            value={statusFilter}
-            onChange={(e) => onStatusFilterChange(e.target.value)}
-          >
-            {MATERIAL_STATUS_FILTER_OPTIONS.map((opt) => (
-              <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-
-          {!loading && records.length > 0 && (
-            <span className="matap-result-count">{records.length} request{records.length === 1 ? '' : 's'}</span>
-          )}
+          <Dropdown
+            className="matap-status-select"
+            label="Status"
+            hideLabel
+            placeholder="All Status"
+            options={STATUS_DROPDOWN_OPTIONS}
+            value={selectedStatusOption}
+            onChange={(value) => onStatusFilterChange(value?.value ?? '')}
+          />
         </div>
 
-        {loading ? (
-          <TableSkeleton rows={5} columns={7} label="Loading material approvals…" />
-        ) : error && records.length === 0 ? (
-          <EmptyState variant="error" title="Couldn't load material approvals" description={error} />
-        ) : records.length === 0 ? (
-          <EmptyState title="No material approvals found." description="Try a different status or search term." />
-        ) : (
-          <div className="sila-table-wrap">
-            <table className="sila-table matap-table">
-              <thead>
-                <tr>
-                  <th className="matap-col-sno sila-num">S.No</th>
-                  <th className="sila-num">Order</th>
-                  <th>Material Code</th>
-                  <th>Description</th>
-                  <th>Product Type</th>
-                  <th>Material Group</th>
-                  <th>Approval Status</th>
-                  <th>Status</th>
-                  <th><span className="sila-visually-hidden">Open</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.map((record, idx) => (
-                  <tr
-                    key={record.predefinedMaterialId}
-                    className={`sila-row-clickable${classifyStatusText(record.approvalStatus) === 'pending' ? ' matap-row-pending' : ''}`}
-                    tabIndex={0}
-                    onClick={() => onRowClick(record)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') onRowClick(record); }}
-                  >
-                    <td className="matap-cell-sno sila-num">{idx + 1}</td>
-                    <td className="sila-num"><span className="matap-order-chip">{record.order}</span></td>
-                    <td><span className="sila-ref matap-code">{record.materialCode}</span></td>
-                    <td className="matap-cell-strong">{record.description}</td>
-                    <td className="matap-cell-muted">{record.productType}</td>
-                    <td className="matap-cell-muted">{record.materialGroup}</td>
-                    <td><MaterialStatusBadge value={record.approvalStatus} /></td>
-                    <td><MaterialStatusBadge value={record.status} /></td>
-                    <td className="matap-cell-chevron"><IconChevronRight /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <Table<PendingMaterialApproval>
+          columns={columns}
+          data={records}
+          getRowId={(record) => record.predefinedMaterialId}
+          loading={loading}
+          loadingRows={pageSize}
+          loadingLabel="Loading material approvals…"
+          error={showError ? "Couldn't load material approvals" : undefined}
+          errorDescription={showError ? error : undefined}
+          emptyState={{ title: 'No material approvals found.', description: 'Try a different status or search term.' }}
+          onRowClick={onRowClick}
+          rowClassName={(record) => (classifyStatusText(record.approvalStatus) === 'pending' ? 'matap-row-pending' : '')}
+          className="matap-table"
+          pagination={
+            records.length > 0
+              ? {
+                  page,
+                  hasNext: hasNextPage,
+                  onPrevious: () => onPageChange(Math.max(1, page - 1)),
+                  onNext: () => onPageChange(page + 1),
+                  disabled: loading,
+                  summary: `Page ${page}`,
+                }
+              : undefined
+          }
+        />
       </div>
     </div>
   );

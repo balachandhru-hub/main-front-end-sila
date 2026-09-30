@@ -4,12 +4,9 @@ import ContractCreationView from "../../../remote-platform-user/src/components/C
 import {
   fetchRFQById,
   fetchSupplierQuotationBySupplierId,
-  getSupplierProfile,
   submitSupplierQuotation,
   submitRfqAnswers,
   fetchMetadataReferenceList,
-  sendOtp,
-  verifyOtp,
   uploadSupplierTermsAndCondition,
   uploadSupplierEsign,
   updateBuyerTermsConditionStatus,
@@ -35,10 +32,11 @@ import {
   Dropdown,
   startRfqChatHub,
   stopRfqChatHub,
-  toastService,
 } from "@vosox/shared-ui";
 import type { QuotationSubmittedEvent } from "@vosox/shared-ui";
-import { QUOTATION_EXCEL_HEADERS, buildCsv, parseCsv, downloadCsv } from "../utils/quotationExcel";
+import { useOtpVerification, getCookie, deleteCookie, VERIFICATION_TOKEN_COOKIE } from "../hooks/useOtpVerification";
+import { useQuotationExcelSync, type QuoteLineItem } from "../hooks/useQuotationExcelSync";
+import { useBulkApply } from "../hooks/useBulkApply";
 
 const TYPE_OPTIONS = [
   { name: "Percentage", value: "PERCENTAGE" },
@@ -113,22 +111,6 @@ const IconAlertCircle = () => (
   </svg>
 );
 
-const VERIFICATION_TOKEN_COOKIE = "vsx_verification_token";
-const VERIFICATION_TOKEN_TTL_SECONDS = 30 * 60;
-
-const getCookie = (name: string): string | null => {
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
-};
-
-const setCookie = (name: string, value: string, maxAgeSeconds: number) => {
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSeconds}; SameSite=Lax`;
-};
-
-const deleteCookie = (name: string) => {
-  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
-};
-
 interface SupplierRfqQuotationSummaryProps {
   selectedRfq: RFQDetailResponse | null;
   selectedRfqId: string | null;
@@ -175,16 +157,19 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
   const fmtCurrency = (val: number) => `${(val || 0).toFixed(2)}${currency ? ` ${currency}` : ""}`;
 
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
-  const [otpStage, setOtpStage] = useState<"none" | "send" | "verify">("none");
-  const [otpCode, setOtpCode] = useState("");
-  const [otpError, setOtpError] = useState<string | null>(null);
-  const [sendingOtp, setSendingOtp] = useState(false);
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
-  const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
-  const [otpRemaining, setOtpRemaining] = useState(600);
-  const supplierEmailRef = useRef<string | null>(null);
-
-  const OTP_WINDOW_MS = 10 * 60 * 1000;
+  const {
+    otpStage,
+    setOtpStage,
+    otpCode,
+    setOtpCode,
+    otpError,
+    setOtpError,
+    sendingOtp,
+    verifyingOtp,
+    otpRemaining,
+    handleSendOtp,
+    handleVerifyOtp,
+  } = useOtpVerification({ onVerified: () => setShowConfirmSubmit(true) });
 
   const formatOtpTimer = (secs: number) => {
     const m = Math.floor(secs / 60).toString().padStart(2, "0");
@@ -211,17 +196,6 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
 
     return { notYetOpen, closed, frozen, canSubmit: !notYetOpen && !closed && !frozen };
   };
-
-  useEffect(() => {
-    if (otpStage !== "verify" || !otpExpiresAt) return;
-    const tick = () => {
-      const left = Math.max(0, Math.round((otpExpiresAt - Date.now()) / 1000));
-      setOtpRemaining(left);
-    };
-    tick();
-    const t = setInterval(tick, 1000);
-    return () => clearInterval(t);
-  }, [otpStage, otpExpiresAt]);
 
   const [rfqAnswers, setRfqAnswers] = useState<{
     [questionId: string]: {
@@ -314,18 +288,6 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
   const [quoteTaxType, setQuoteTaxType] = useState<string>("PERCENTAGE");
   const [quoteItemPrices, setQuoteItemPrices] = useState<{ [key: string]: number }>({});
 
-  interface QuoteLineItem {
-    deliveryCharge: number;
-    deliveryType: string;
-    discount: number;
-    discountType: string;
-    tax: number;
-    taxType: string;
-    quotedPrice: number;
-    subTotal: number;
-    quotedAmount: number;
-    isLineitemAvailable: boolean;
-  }
   const [quoteLineItems, setQuoteLineItems] = useState<{ [supplierRFQItemId: string]: QuoteLineItem }>({});
 
   const [submittingQuote, setSubmittingQuote] = useState(false);
@@ -511,193 +473,30 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
     }
   };
 
-  const [bulkValue, setBulkValue] = useState("");
-  const [bulkValueType, setBulkValueType] = useState<"PERCENTAGE" | "AMOUNT">("PERCENTAGE");
-  const [bulkFields, setBulkFields] = useState({
-    deliveryCharge: false,
-    discount: false,
-    tax: false,
-    quotedPrice: false,
+  const {
+    bulkValue,
+    setBulkValue,
+    bulkValueType,
+    setBulkValueType,
+    bulkFields,
+    handleBulkFieldToggle,
+    handleBulkApply,
+  } = useBulkApply({
+    items: selectedRfq?.items,
+    onFieldChange: handleLineItemFieldChange,
   });
 
-  const bulkTypeFieldMap: Partial<Record<keyof typeof bulkFields, keyof QuoteLineItem>> = {
-    deliveryCharge: "deliveryType",
-    discount: "discountType",
-    tax: "taxType",
-  };
-
-  const handleBulkFieldToggle = (field: keyof typeof bulkFields, checked: boolean) => {
-    setBulkFields((prev) => ({ ...prev, [field]: checked }));
-  };
-
-  const handleBulkApply = () => {
-    if (bulkValue === "" || !selectedRfq?.items) return;
-
-    const fieldKeys = (Object.keys(bulkFields) as (keyof typeof bulkFields)[]).filter(
-      (key) => bulkFields[key]
-    );
-    if (fieldKeys.length === 0) return;
-
-    selectedRfq.items.forEach((item, idx) => {
-      const itemKey = item.supplierRFQItemId || `item-${idx}`;
-      fieldKeys.forEach((field) => {
-        handleLineItemFieldChange(itemKey, field, bulkValue);
-        const typeField = bulkTypeFieldMap[field];
-        if (typeField) {
-          handleLineItemFieldChange(itemKey, typeField, bulkValueType);
-        }
-      });
-    });
-  };
-
-  const excelFileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const handleDownloadQuotationExcel = () => {
-    if (!selectedRfq?.items?.length) return;
-
-    const rows = selectedRfq.items.map((item, idx) => {
-      const itemKey = item.supplierRFQItemId || `item-${idx}`;
-      const line = quoteLineItems[itemKey];
-      return [
-        itemKey,
-        item.description || "",
-        item.materialCode || "",
-        item.quantity ?? "",
-        item.uom || "",
-        line?.deliveryCharge ?? 0,
-        line?.deliveryType || "PERCENTAGE",
-        line?.discount ?? 0,
-        line?.discountType || "PERCENTAGE",
-        line?.tax ?? 0,
-        line?.taxType || "PERCENTAGE",
-        line?.quotedPrice ?? 0,
-        // "Available" in the UI is the checkbox state, which is the inverse of isLineitemAvailable.
-        line?.isLineitemAvailable ? "No" : "Yes",
-      ];
-    });
-
-    const csv = buildCsv([[...QUOTATION_EXCEL_HEADERS], ...rows]);
-    downloadCsv(csv, `quotation-summary-${selectedRfqId || "rfq"}.csv`);
-  };
-
-  const handleQuotationExcelFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !selectedRfq?.items) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const rows = parseCsv(String(reader.result || ""));
-        if (rows.length < 2) {
-          toastService.error("The uploaded file has no data rows.");
-          return;
-        }
-
-        const [headerRow, ...dataRows] = rows;
-        const colIndex = (name: string) =>
-          headerRow.findIndex((h) => h.trim().toLowerCase() === name.toLowerCase());
-
-        const idxItemKey = colIndex("Item Key");
-        const idxCode = colIndex("Code");
-        const idxDeliveryCharge = colIndex("Delivery Charge");
-        const idxDeliveryType = colIndex("Delivery Type");
-        const idxDiscount = colIndex("Discount");
-        const idxDiscountType = colIndex("Discount Type");
-        const idxTax = colIndex("Tax");
-        const idxTaxType = colIndex("Tax Type");
-        const idxQuotedPrice = colIndex("Quoted Price");
-        const idxAvailable = colIndex("Available");
-
-        if (idxQuotedPrice === -1) {
-          toastService.error("The uploaded file is missing the required \"Quoted Price\" column. Please use the downloaded template.");
-          return;
-        }
-        if (idxItemKey === -1 && idxCode === -1) {
-          toastService.error("The uploaded file is missing the \"Item Key\" and \"Code\" columns needed to match rows to items. Please use the downloaded template.");
-          return;
-        }
-
-        const normalizeType = (value: string | undefined, fallback: string) => {
-          const v = (value || "").trim().toUpperCase();
-          return v === "PERCENTAGE" || v === "AMOUNT" ? v : fallback;
-        };
-        const parseNumber = (value: string | undefined, fallback: number) => {
-          const n = Number((value || "").trim());
-          return Number.isFinite(n) ? n : fallback;
-        };
-        // "Available" column is the checkbox's own Yes/No state, inverse of isLineitemAvailable.
-        const parseAvailable = (value: string | undefined, fallback: boolean) => {
-          const v = (value || "").trim().toLowerCase();
-          if (["yes", "true", "1"].includes(v)) return false;
-          if (["no", "false", "0"].includes(v)) return true;
-          return fallback;
-        };
-
-        const items = selectedRfq.items || [];
-        // Match strictly by identity (Item Key, then material Code) - never by row position, since
-        // a file re-ordered in Excel or downloaded for a different RFQ would otherwise silently
-        // apply the wrong row's values to an item.
-        const matches = items.map((item, idx) => {
-          const itemKey = item.supplierRFQItemId || `item-${idx}`;
-          const matchRow =
-            (idxItemKey !== -1 && dataRows.find((r) => r[idxItemKey] === itemKey)) ||
-            (idxCode !== -1 && item.materialCode && dataRows.find((r) => r[idxCode] === item.materialCode)) ||
-            null;
-          return { itemKey, matchRow };
-        });
-
-        const matchedCount = matches.filter((m) => m.matchRow).length;
-        if (matchedCount === 0) {
-          toastService.error("None of the rows in this file match this RFQ's items. Make sure you're uploading the spreadsheet downloaded for this RFQ.");
-          return;
-        }
-
-        setQuoteLineItems((prev) => {
-          const next = { ...prev };
-          matches.forEach(({ itemKey, matchRow }) => {
-            if (!matchRow) return;
-
-            const existing: QuoteLineItem = next[itemKey] || {
-              deliveryCharge: 0,
-              deliveryType: "PERCENTAGE",
-              discount: 0,
-              discountType: "PERCENTAGE",
-              tax: 0,
-              taxType: "PERCENTAGE",
-              quotedPrice: 0,
-              subTotal: 0,
-              quotedAmount: 0,
-              isLineitemAvailable: false,
-            };
-
-            next[itemKey] = {
-              ...existing,
-              deliveryCharge: idxDeliveryCharge !== -1 ? parseNumber(matchRow[idxDeliveryCharge], existing.deliveryCharge) : existing.deliveryCharge,
-              deliveryType: idxDeliveryType !== -1 ? normalizeType(matchRow[idxDeliveryType], existing.deliveryType) : existing.deliveryType,
-              discount: idxDiscount !== -1 ? parseNumber(matchRow[idxDiscount], existing.discount) : existing.discount,
-              discountType: idxDiscountType !== -1 ? normalizeType(matchRow[idxDiscountType], existing.discountType) : existing.discountType,
-              tax: idxTax !== -1 ? parseNumber(matchRow[idxTax], existing.tax) : existing.tax,
-              taxType: idxTaxType !== -1 ? normalizeType(matchRow[idxTaxType], existing.taxType) : existing.taxType,
-              quotedPrice: parseNumber(matchRow[idxQuotedPrice], existing.quotedPrice),
-              isLineitemAvailable: idxAvailable !== -1 ? parseAvailable(matchRow[idxAvailable], existing.isLineitemAvailable) : existing.isLineitemAvailable,
-            };
-          });
-          return next;
-        });
-
-        toastService.success(
-          matchedCount < items.length
-            ? `Applied values for ${matchedCount} of ${items.length} items. ${items.length - matchedCount} item(s) in this RFQ weren't found in the file and were left unchanged.`
-            : "Spreadsheet values applied. Review the table below, then submit your quotation."
-        );
-      } catch {
-        toastService.error("Couldn't read that file. Please upload the downloaded template without changing its columns.");
-      }
-    };
-    reader.onerror = () => toastService.error("Couldn't read that file. Please try again.");
-    reader.readAsText(file);
-  };
+  const {
+    excelFileInputRef,
+    handleDownloadQuotationExcel,
+    handleQuotationExcelFileChange,
+  } = useQuotationExcelSync({
+    items: selectedRfq?.items,
+    lineItems: quoteLineItems,
+    setLineItems: setQuoteLineItems,
+    fileNameId: selectedRfqId,
+    fullMatchSuccessMessage: "Spreadsheet values applied. Review the table below, then submit your quotation.",
+  });
 
   const handleTextAnswerChange = (questionId: string, value: string) => {
     setRfqAnswers((prev) => ({
@@ -939,75 +738,6 @@ const SupplierRfqQuotationSummary: React.FC<SupplierRfqQuotationSummaryProps> = 
     sessionStorage.removeItem("vsx_otp_expiry");
     setOtpCode("");
     setOtpStage("send");
-  };
-
-  const handleSendOtp = async () => {
-    setOtpError(null);
-    setSendingOtp(true);
-    try {
-      if (!supplierEmailRef.current) {
-        const profile = await getSupplierProfile();
-        if (!isErrorResponse(profile) && profile && "businessProfile" in profile) {
-          supplierEmailRef.current = (profile as any).businessProfile?.email || null;
-        }
-      }
-      const res = await sendOtp();
-      if (res && "statusCode" in res && (res as any).statusCode >= 400) {
-        const message = (res as any).message || "";
-        const description = (res as any).description || "";
-        const otpAlreadySent = /already.*sent/i.test(message) || /already.*sent/i.test(description);
-        if (!otpAlreadySent) {
-          setOtpError(message || "Couldn't send the code, try again.");
-          return;
-        }
-        // Backend already has a live OTP for this supplier — let them verify the one they have
-        // instead of dead-ending on this error. If it's since expired server-side, verifyOtp
-        // will reject it and the supplier can hit Resend once our local countdown runs out.
-      }
-      const expiry = Date.now() + OTP_WINDOW_MS;
-      sessionStorage.setItem("vsx_otp_expiry", String(expiry));
-      deleteCookie(VERIFICATION_TOKEN_COOKIE);
-      setOtpExpiresAt(expiry);
-      setOtpRemaining(600);
-      setOtpCode("");
-      setOtpStage("verify");
-    } catch (err: any) {
-      setOtpError(err?.message || "Couldn't send the code, try again.");
-    } finally {
-      setSendingOtp(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!otpCode.trim()) {
-      setOtpError("Enter the code we emailed you.");
-      return;
-    }
-    if (otpRemaining <= 0) {
-      setOtpError("Code expired. Please resend the OTP.");
-      return;
-    }
-    setVerifyingOtp(true);
-    setOtpError(null);
-    try {
-      const res = await verifyOtp({ email: supplierEmailRef.current || "", otp: otpCode.trim() });
-      if (!res || (res as any).success === false || ("statusCode" in res && (res as any).statusCode >= 400)) {
-        setOtpError((res as any)?.message || "That code didn't match, try again.");
-        return;
-      }
-      const token = (res as any).token;
-      if (!token) {
-        setOtpError("Verification failed, please retry.");
-        return;
-      }
-      setCookie(VERIFICATION_TOKEN_COOKIE, token, VERIFICATION_TOKEN_TTL_SECONDS);
-      setOtpStage("none");
-      setShowConfirmSubmit(true);
-    } catch (err: any) {
-      setOtpError(err?.message || "That code didn't match, try again.");
-    } finally {
-      setVerifyingOtp(false);
-    }
   };
 
   const handleConfirmSubmitQuotation = async () => {

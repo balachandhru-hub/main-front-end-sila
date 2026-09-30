@@ -49,6 +49,7 @@ interface DropdownCache {
 const Dropdown: FC<DropdownProps> = (props) => {
   const {
     label,
+    hideLabel = false,
     isRequired = false,
     value = null,
     options = [],
@@ -1232,7 +1233,7 @@ const Dropdown: FC<DropdownProps> = (props) => {
       style={style}
     >
      {label && (
-          <label className="sila-dropdown__label">
+          <label className={`sila-dropdown__label${hideLabel ? " sila-visually-hidden" : ""}`}>
             {label}
  
             {isRequired && (
@@ -1323,7 +1324,7 @@ const Dropdown: FC<DropdownProps> = (props) => {
                       handleSearchChange
                     }
                     aria-autocomplete="list"
-                    autoComplete="off"
+                    autoComplete="off-search"
                   />
                 )}
               </div>
@@ -1372,7 +1373,9 @@ const Dropdown: FC<DropdownProps> = (props) => {
                   handleSearchChange
                 }
                 aria-autocomplete="list"
-                autoComplete="off"
+                // Chrome ignores "off" for address-like fields (e.g. Country) and shows saved addresses;
+                // an unrecognised token keeps its autofill popup away from this search box.
+                autoComplete="off-search"
               />
  
               {isClearable &&
