@@ -931,7 +931,7 @@ export const submitBuyerContractApprovalAction = async (
   payload: BuyerContractApprovalActionPayload
 ): Promise<StatusUpdateResponseDto | AssetErrorDto> => {
   try {
-    const response = await platformInstance.put(`/api/v1/buyer/contract/approval/${contractId}`, payload);
+    const response = await platformInstance.put(`/api/v1/buyer/predefined-contract/approval/${contractId}`, payload);
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 401) {
