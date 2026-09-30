@@ -1494,12 +1494,37 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   };
 
   // Buyer: once both sides' Terms & Conditions are accepted, "Approvals" is what actually creates the contract
-  // record (and its approval chain) in the backend - not "Proceed to Signing" (see createContractRecord). No
-  // signed PDF exists yet at this point, so it is created without attachments; the executed (signed) PDF is still
-  // built for View/Download from local signature state once both parties sign (see buildMergedContractPdfBytes /
-  // handleViewOrDownloadContract).
+  // record (and its approval chain) in the backend - not "Proceed to Signing" (see createContractRecord). Neither
+  // party has signed yet at this point, so the attached PDF is built with no signatures (buildContractPdfInput's
+  // sign-detail args are null) - it still merges in the line items, the contract template and both parties'
+  // Terms & Conditions, the same way handleCreateContract does for the later, fully-signed copy.
   const handleSendForApprovals = async (id: string) => {
-    await createContractRecord(id, []);
+    const contract = contracts[id];
+    if (!contract) return;
+    if (!hasContractName()) return;
+    setCreatingContract(true);
+    try {
+      const { entityId, entityType } = await getEntityTypeByKey("BUYER");
+      const mergedPdfBytes = await buildMergedContractPdfBytes(
+        buildContractPdfInput(id, contract, null, null)
+      );
+      const pdfAttachment = {
+        entityId,
+        entityType,
+        assetType: "PREDEFINE_CONTRACT_ATTACHMENT",
+        fileName: `${contract.contractNumber || "Contract"}.pdf`,
+        contentType: "application/pdf",
+        isSingletonAsset: false,
+        fileBytes: uint8ArrayToBase64(mergedPdfBytes),
+      };
+      await createContractRecord(id, [pdfAttachment]);
+    } catch (err: any) {
+      const errorMsg = err?.message || "Failed to create the contract.";
+      setCreateContractError(errorMsg);
+      toastService.error(errorMsg, 5000);
+    } finally {
+      setCreatingContract(false);
+    }
   };
 
   // Moves to the Signing step. Buyer role: only reachable once the contract record already exists (via "Approvals"
@@ -1840,6 +1865,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     buyerTcContent: contract.tcContent,
     buyerTermsDocs,
     supplierTermsDocs: supplierTcDocsForContract,
+    contractTemplateDocs,
     buyerSignDetails,
     supplierSignDetails,
     logoDataUrl,
@@ -1997,7 +2023,7 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
       const pdfAttachment = {
         entityId,
         entityType,
-        assetType: "CONTRACT_ATTACHMENT",
+        assetType: "PREDEFINE_CONTRACT_ATTACHMENT",
         fileName: `${contract.contractNumber || "Contract"}.pdf`,
         contentType: "application/pdf",
         isSingletonAsset: false,
