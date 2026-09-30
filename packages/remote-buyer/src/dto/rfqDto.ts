@@ -82,6 +82,10 @@ export interface CreateRFQPayload {
   deliveryTargetDate: string;
   budget: number;
   addLotOption: boolean;
+  segmentId?: string;
+  segmentTitle?: string;
+  familyId?: string;
+  familyTitle?: string;
   technicalSpecificationDocuments: RfqDocumentAssetDto[];
   termsConditionDocuments: RfqDocumentAssetDto[];
   questions: RfqQuestionDto[];

@@ -30,6 +30,7 @@ import { getOrganizationUsersForRfq } from "../api/networkAdminApi";
 import { logoutPlatformUser } from "../api/platformApi";
 import { BuyerAnalytics, ChatPanel, CreateRFQ, StatusBadge, toastService, useAsyncData, useRouteNav, type ChatCounterpartyRef, type CreateRFQApi, type RouteNavPaths } from "@vosox/shared-ui";
 import UserTemplate from "./UserTemplate";
+import ContractTemplate from "./ContractTemplate";
 import ApprovalManagement from "./ApprovalManagement/ApprovalManagement";
 import { ToastContainer } from "@vosox/shared-ui";
 import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
@@ -270,6 +271,7 @@ const BUYER_ADMIN_NAV_PATHS: RouteNavPaths = {
   product: "product-catalog",
   userList: "users",
   template: "templates",
+  contractTemplate: "contract-templates",
   approvalManagement: "approval-management",
   material: "material-approvals",
   contract: "contract-approvals",
@@ -289,6 +291,7 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
     label: "Configuration",
     subItems: [
       { key: "template", label: "Templates" },
+      { key: "contractTemplate", label: "Contract Templates" },
       { key: "approvalManagement", label: "Approval Management" }
     ]
   },
@@ -532,6 +535,9 @@ const BuyerAdminDash: React.FC = () => {
   const [materialKpi, setMaterialKpi] = useState<MaterialApprovalKpi | null>(null);
   const [loadingMaterialKpi, setLoadingMaterialKpi] = useState(false);
 
+  const MATERIAL_PAGE_SIZE = 10;
+  const [materialPage, setMaterialPage] = useState(1);
+
   useEffect(() => {
     const handle = setTimeout(() => setMaterialSearchTerm(materialSearchInput), 400);
     return () => clearTimeout(handle);
@@ -540,7 +546,12 @@ const BuyerAdminDash: React.FC = () => {
   const loadMaterialApprovals = () => {
     setLoadingMaterial(true);
     setMaterialError(null);
-    fetchPendingMaterialApprovals({ status: materialStatusFilter, searchTerm: materialSearchTerm })
+    fetchPendingMaterialApprovals({
+      status: materialStatusFilter,
+      searchTerm: materialSearchTerm,
+      index: (materialPage - 1) * MATERIAL_PAGE_SIZE,
+      limit: MATERIAL_PAGE_SIZE,
+    })
       .then(setMaterialRecords)
       .catch((err: any) => {
         setMaterialError(err.message || "Failed to load material approvals.");
@@ -566,8 +577,13 @@ const BuyerAdminDash: React.FC = () => {
 
   useEffect(() => {
     if (activeNav !== "material") return;
-    loadMaterialApprovals();
+    setMaterialPage(1);
   }, [activeNav, materialStatusFilter, materialSearchTerm]);
+
+  useEffect(() => {
+    if (activeNav !== "material") return;
+    loadMaterialApprovals();
+  }, [activeNav, materialStatusFilter, materialSearchTerm, materialPage]);
 
   const handleMaterialApprovalSubmitted = () => {
     setSelectedMaterial(null);
@@ -972,6 +988,8 @@ const BuyerAdminDash: React.FC = () => {
                   <UserTemplate templates={templates} />
                 )}
               </div>
+            ) : activeNav === "contractTemplate" ? (
+              <ContractTemplate />
             ) : activeNav === "approvalManagement" ? (
               <ApprovalManagement />
             ) : activeNav === "material" ? (
@@ -995,6 +1013,9 @@ const BuyerAdminDash: React.FC = () => {
                   searchInput={materialSearchInput}
                   onSearchInputChange={setMaterialSearchInput}
                   onSearchSubmit={() => setMaterialSearchTerm(materialSearchInput)}
+                  page={materialPage}
+                  pageSize={MATERIAL_PAGE_SIZE}
+                  onPageChange={setMaterialPage}
                 />
               )
             ) : activeNav === "contract" ? (

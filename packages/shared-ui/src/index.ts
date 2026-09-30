@@ -1,6 +1,7 @@
 import './styles/index.css';
 
 export * from './components/Button';
+export * from './components/icons';
 export { default as Dropdown } from './components/DropDown/DropDown';
 export * from './components/DropDown/DropDown.types';
 export * from './components/Loader';
@@ -11,6 +12,7 @@ export * from './components/PageHeader';
 export * from './components/EmptyState';
 export * from './components/Pagination';
 export * from './components/Skeleton';
+export * from './components/Table';
 export * from './components/KpiCard';
 export * from './components/KpiStrip';
 export * from './components/Charts';
