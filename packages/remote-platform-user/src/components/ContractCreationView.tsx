@@ -686,9 +686,9 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const buyerTermsDocs: RfqAssetAttachment[] =
     (rfq as any)?.termsConditionDocuments || (rfq as any)?.termsConditionDocument || [];
 
-  // Buyer: the RFQ's contract template document(s), from the buyer's rfq-by-id - shown so the buyer can
-  // download/preview the template the contract is based on.
-  const contractTemplateDocs: RfqAssetAttachment[] = !isSupplier ? (rfq as any)?.contractTemplateDocuments || [] : [];
+  // The RFQ's contract template document(s), from both the buyer's and the supplier's rfq-by-id - shown so either
+  // side can download/preview the template the contract is based on.
+  const contractTemplateDocs: RfqAssetAttachment[] = (rfq as any)?.contractTemplateDocuments || [];
 
   // termsAndCondition means "the supplier has their own Terms & Conditions".
   // Buyer: once the supplier's entry is known (true or false) there is no terms review card, the contract goes straight to signing.
