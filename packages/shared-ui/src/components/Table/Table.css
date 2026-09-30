@@ -72,3 +72,16 @@
   height: auto;
   padding: var(--sila-space-2) var(--sila-space-3);
 }
+
+/* Error / empty state rendered in the body when `alwaysShowHeader` is set. */
+.sila-table .sila-table-state-row,
+.sila-table .sila-table-state-row:hover,
+.sila-table .sila-table-state-row td {
+  background: var(--sila-surface, #fff);
+}
+
+.sila-table .sila-table-state-cell {
+  height: auto;
+  padding: var(--sila-space-8, 2rem) var(--sila-space-4);
+  border-bottom: 0;
+}

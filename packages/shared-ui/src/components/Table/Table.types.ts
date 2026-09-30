@@ -68,6 +68,8 @@ export interface TableProps<TRow> {
   /** Optional supporting text shown below `error` (e.g. the raw error message under a friendly title). */
   errorDescription?: React.ReactNode;
   emptyState?: TableEmptyStateConfig;
+  /** Keeps the column headers visible when the table shows the error or empty state (state renders in the body). */
+  alwaysShowHeader?: boolean;
 
   onRowClick?: (row: TRow, rowIndex: number) => void;
   rowClassName?: string | ((row: TRow, rowIndex: number) => string);

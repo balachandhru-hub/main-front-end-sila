@@ -109,7 +109,7 @@ const MaterialApprovalDetail: React.FC<MaterialApprovalDetailProps> = ({
         <div className="matap-detail-heading">
           <span className="sila-ref matap-detail-ref-badge">{material.materialCode}</span>
           <div className="matap-detail-title-row">
-            <h2 className="matap-detail-title">{material.description || 'Material Approval'}</h2>
+            <h2 className="matap-detail-title">{material.description || material.title || 'Material Approval'}</h2>
             {detail && <MaterialStatusBadge value={detail.status} />}
           </div>
           <div className="matap-detail-meta">
