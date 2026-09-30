@@ -452,6 +452,34 @@
   background: var(--sila-bg);
 }
 
+/* Back to sidebar — only shown on small screens (see 48rem media query) */
+.eauction-back-to-list {
+  display: none;
+  align-items: center;
+  gap: var(--sila-space-2);
+  align-self: flex-start;
+  height: var(--sila-control-height-sm);
+  padding: 0 var(--sila-space-3);
+  border: 0.0625rem solid var(--sila-border-strong);
+  border-radius: var(--sila-radius);
+  background: var(--sila-surface);
+  color: var(--sila-text-secondary);
+  font-size: var(--sila-text-sm);
+  font-weight: var(--sila-weight-medium);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: var(--sila-transition);
+}
+
+.eauction-back-to-list:hover {
+  background: var(--sila-surface-hover);
+}
+
+.eauction-back-to-list:focus-visible {
+  outline: none;
+  box-shadow: var(--sila-focus-ring);
+}
+
 /* Panel card */
 .eauction-panel-light {
   background: var(--sila-surface);
@@ -930,6 +958,23 @@
 @media (max-width: 64rem) {
   .eauction-grid-split { grid-template-columns: minmax(0, 1fr); }
   .eauction-project-banner { display: none; }
+  .eauction-portal-body {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .eauction-left-sidebar {
+    width: auto;
+    border-right: none;
+    border-bottom: 0.0625rem solid var(--sila-border);
+    overflow: visible;
+  }
+  /* Tablet and small screens: sidebar and workspace are separate full-screen views */
+  .eauction-portal-body.eauction-mobile-detail .eauction-left-sidebar,
+  .eauction-portal-body.eauction-mobile-list .eauction-main-content {
+    display: none;
+  }
+  .eauction-back-to-list { display: inline-flex; }
+  .eauction-main-content { overflow: visible; }
 }
 
 @media (max-width: 48rem) {
@@ -943,19 +988,8 @@
     max-height: none;
     border-radius: 0;
   }
-  .eauction-portal-body {
-    flex-direction: column;
-    overflow-y: auto;
-  }
-  .eauction-left-sidebar {
-    width: auto;
-    border-right: none;
-    border-bottom: 0.0625rem solid var(--sila-border);
-    overflow: visible;
-  }
   .eauction-main-content {
     padding: var(--sila-space-4);
-    overflow: visible;
   }
 }
 
