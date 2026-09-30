@@ -47,6 +47,7 @@ export const SupplierAnalytics: React.FC<SupplierAnalyticsProps> = ({ state, onV
 
       <KpiStrip
         label="Bidding summary"
+        className="sila-kpi-strip--cards"
         items={[
           {
             key: 'open',
@@ -59,9 +60,9 @@ export const SupplierAnalytics: React.FC<SupplierAnalyticsProps> = ({ state, onV
           },
           { key: 'invites', label: 'Invitations', value: kpis.invitations, icon: Icons.invites, caption: 'All time' },
           { key: 'quoted', label: 'Quotations submitted', value: kpis.quotationsSubmitted, icon: Icons.quoted, caption: 'RFQs quoted on' },
-          { key: 'awaiting', label: 'Awaiting decision', value: kpis.awaitingDecision, icon: Icons.awaiting, caption: 'Quoted, bidding over' },
-          { key: 'won', label: 'RFQs won', value: kpis.rfqsWon, icon: Icons.won, caption: `${kpis.winRate}% win rate` },
-          { key: 'lost', label: 'Not awarded', value: kpis.rfqsNotAwarded, icon: Icons.lost, caption: 'Awarded to others' },
+          { key: 'awaiting', label: 'Awaiting decision', value: kpis.awaitingDecision, icon: Icons.awaiting, tone: 'warning', caption: 'Quoted, bidding over' },
+          { key: 'won', label: 'RFQs won', value: kpis.rfqsWon, icon: Icons.won, tone: 'success', caption: `${kpis.winRate}% win rate` },
+          { key: 'lost', label: 'Not awarded', value: kpis.rfqsNotAwarded, icon: Icons.lost, tone: 'danger', caption: 'Awarded to others' },
         ]}
       />
 
