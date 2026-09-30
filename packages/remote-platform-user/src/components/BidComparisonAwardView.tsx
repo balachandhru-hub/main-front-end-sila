@@ -281,6 +281,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           quantity: item.quantity || item.qty || 1,
           uom: item.uom || item.unit || 'PCS',
           materialCode: item.materialCode || item.code || '',
+          isAwarded: item.isAwarded,
+          awardedSupplierId: item.awardedSupplierId,
         };
       });
     }
