@@ -34,7 +34,13 @@ export interface DropdownBaseProps {
    * Dropdown label
    */
   label?: string;
- 
+
+  /**
+   * Keep `label` as the field's accessible name but don't render it visually.
+   * Useful for compact filter bars where a visible label would break the layout.
+   */
+  hideLabel?: boolean;
+
   /**
    * Displays required indicator (*)
    */
