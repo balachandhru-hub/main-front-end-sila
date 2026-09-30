@@ -48,6 +48,10 @@
     flex-shrink: 0;
 }
 
+.vr-back-btn-change {
+    margin-bottom: 0;
+}
+
 .vr-title {
     margin: 0;
     font-size: var(--sila-text-2xl);
@@ -462,6 +466,7 @@
         padding-right: var(--sila-space-4);
     }
 
+
     .vr-panel--footer {
         flex-direction: column;
         align-items: stretch;
@@ -473,6 +478,10 @@
 
     .vr-stepper .sila-step {
         min-width: 5rem;
+    }
+
+    .vr-back-btn-chang {
+        margin-bottom: 2.5rem;
     }
 }
 

@@ -107,21 +107,7 @@ const BuyersDashboard: React.FC = () => {
   const buyerProfile = useBuyerAuthStore((state) => state.personDetail);
   const isLoadingBuyerProfile = useBuyerAuthStore((state) => state.personDetailLoading);
 
-  const {
-    materialRecords,
-    loadingMaterial,
-    materialError,
-    selectedMaterial,
-    setSelectedMaterial,
-    materialStatusFilter,
-    setMaterialStatusFilter,
-    materialSearchInput,
-    setMaterialSearchInput,
-    setMaterialSearchTerm,
-    materialKpi,
-    loadingMaterialKpi,
-    handleMaterialApprovalSubmitted,
-  } = useMaterialApprovals(activeNav);
+  const { selectedMaterial, setSelectedMaterial, handleMaterialApprovalSubmitted } = useMaterialApprovals(activeNav);
 
   const {
     contractRecords,
@@ -235,19 +221,7 @@ const BuyersDashboard: React.FC = () => {
                   onApprovalSubmitted={handleMaterialApprovalSubmitted}
                 />
               ) : (
-                <MaterialTable
-                  records={materialRecords}
-                  loading={loadingMaterial}
-                  error={materialError}
-                  onRowClick={setSelectedMaterial}
-                  kpi={materialKpi}
-                  loadingKpi={loadingMaterialKpi}
-                  statusFilter={materialStatusFilter}
-                  onStatusFilterChange={setMaterialStatusFilter}
-                  searchInput={materialSearchInput}
-                  onSearchInputChange={setMaterialSearchInput}
-                  onSearchSubmit={() => setMaterialSearchTerm(materialSearchInput)}
-                />
+                <MaterialTable onRowClick={setSelectedMaterial} />
               )
             ) : activeNav === "contract" ? (
               selectedContract ? (
