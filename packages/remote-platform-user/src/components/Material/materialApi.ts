@@ -108,13 +108,15 @@ export const formatMaterialStatus = (status: string | null | undefined): string 
 };
 
 export const fetchPendingMaterialApprovals = async (
-  params: { status?: string; searchTerm?: string } = {}
+  params: { status?: string; searchTerm?: string; index?: number; limit?: number } = {}
 ): Promise<PendingMaterialApproval[]> => {
   try {
     const response = await platformInstance.get<PendingMaterialApproval[]>('/api/v1/buyer/item-master/pending-approvals', {
       params: {
         status: params.status || undefined,
         searchTerm: params.searchTerm?.trim() || undefined,
+        index: params.index,
+        limit: params.limit,
       },
     });
     return Array.isArray(response.data) ? response.data : [];

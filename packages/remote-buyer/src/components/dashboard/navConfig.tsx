@@ -40,6 +40,7 @@ export const BUYER_NAV_PATHS: RouteNavPaths = {
   product: 'product-catalog',
   models: 'models',
   template: 'templates',
+  contractTemplate: 'contract-templates',
   approvalManagement: 'approval-management',
   material: 'material-approvals',
   contract: 'contract-approvals',
@@ -58,6 +59,7 @@ const navItems: BuyerNavItem[] = [
     label: "Configuration",
     subItems: [
       { key: "template", label: "Templates" },
+      { key: "contractTemplate", label: "Contract Templates" },
       { key: "approvalManagement", label: "Approval Management" }
     ]
   },
