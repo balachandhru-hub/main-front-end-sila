@@ -148,6 +148,8 @@ export interface GroupedColumnChartProps {
   /** Extra tooltip line per row, e.g. the budget of that month. */
   noteFor?: (row: Record<string, string | number>) => string | undefined;
   height?: number;
+  /** Rotate category labels to read vertically (bottom to top). */
+  verticalLabels?: boolean;
 }
 
 /**
@@ -161,6 +163,7 @@ export const GroupedColumnChart: React.FC<GroupedColumnChartProps> = ({
   formatCategory = (c) => c,
   noteFor,
   height = 260,
+  verticalLabels = false,
 }) => {
   const totals = series.map((s) => data.reduce((sum, row) => sum + Number(row[s.key] ?? 0), 0));
   const summary = series.map((s, i) => `${s.label} ${totals[i]}`).join(', ');
@@ -181,7 +184,15 @@ export const GroupedColumnChart: React.FC<GroupedColumnChartProps> = ({
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={labelled} margin={{ top: 8, right: 4, bottom: 0, left: 0 }} barCategoryGap="22%" barGap={2}>
             <CartesianGrid vertical={false} className="sila-chart-grid-line" />
-            <XAxis dataKey="__label" tickLine={false} axisLine={false} tickMargin={8} interval={0} className="sila-chart-axis" />
+            <XAxis
+              dataKey="__label"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              interval={0}
+              className="sila-chart-axis"
+              {...(verticalLabels && { angle: -90, textAnchor: 'end', height: 56, tick: { verticalAnchor: 'middle' } })}
+            />
             <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={40} className="sila-chart-axis" domain={[0, (max: number) => Math.max(max, 4)]} />
             <Tooltip
               cursor={{ className: 'sila-chart-cursor' }}
