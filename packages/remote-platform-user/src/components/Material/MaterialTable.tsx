@@ -7,10 +7,11 @@ import {
   formatMaterialStatus,
   MATERIAL_STATUS_FILTER_OPTIONS,
 } from './materialApi';
-import { fetchBuyerAsset } from '../../api/platformApi';
-import { resolveMimeType } from '../ContractCreation/contractFormatters';
+import readXlsxFile from 'read-excel-file/browser';
+import type { Sheet } from 'read-excel-file/browser';
+import { ExcelSheetGrid, loadMaterialAssetFile, saveLoadedAssetFile } from './MaterialAssetFile';
 import { toastService } from '@vosox/shared-ui';
-import { Dropdown, KpiCard, StatusBadge, Table } from '@vosox/shared-ui';
+import { Dropdown, KpiCard, Modal, StatusBadge, Table } from '@vosox/shared-ui';
 import type { DropdownOption, DropdownValue, TableColumn } from '@vosox/shared-ui';
 import './MaterialApproval.css';
 
@@ -68,8 +69,32 @@ const IconChevronRight = () => (
   </svg>
 );
 
+const IconEye = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+const IconDownload = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+
 interface MaterialTableProps {
   onRowClick: (record: PendingMaterialApproval) => void;
+}
+
+interface PreviewFile {
+  fileName: string;
+  /** Blob URL shown in an iframe for PDF/image/text files. Empty for Excel workbooks. */
+  url: string;
+  /** Parsed workbook for .xlsx files, shown as a spreadsheet grid. */
+  sheets: Sheet[];
+  isPreviewable: boolean;
 }
 
 const PAGE_SIZE = 10;
@@ -97,9 +122,12 @@ export const MaterialStatusBadge: React.FC<{ value: string }> = ({ value }) => (
   />
 );
 
+// The table remounts when a detail view is closed; remembering the tab here brings the user back to it.
+let lastMaterialType: MaterialUploadType = 'MANUAL';
+
 const MaterialTable: React.FC<MaterialTableProps> = ({ onRowClick }) => {
+  const [materialType, setMaterialType] = useState<MaterialUploadType>(lastMaterialType);
   const pageSize = PAGE_SIZE;
-  const [materialType, setMaterialType] = useState<MaterialUploadType>('MANUAL');
   const [records, setRecords] = useState<PendingMaterialApproval[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -112,6 +140,8 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ onRowClick }) => {
   const [page, setPage] = useState(1);
   const isBulk = materialType === 'EXCEL';
   const [downloadingAssetId, setDownloadingAssetId] = useState<string | null>(null);
+  const [previewingAssetId, setPreviewingAssetId] = useState<string | null>(null);
+  const [previewFile, setPreviewFile] = useState<PreviewFile | null>(null);
 
   useEffect(() => {
     const handle = setTimeout(() => setSearchTerm(searchInput), 400);
@@ -160,32 +190,37 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ onRowClick }) => {
   }, []);
 
   const handleDownload = async (record: PendingMaterialApproval) => {
-    const asset = record.asset;
-    if (!asset) return;
-    setDownloadingAssetId(asset.id);
-    try {
-      const res = await fetchBuyerAsset(asset.id);
-      if (!('fileBytes' in res) || !res.fileBytes) {
-        toastService.error('Document file content not available for download.');
-        return;
+    if (!record.asset) return;
+    setDownloadingAssetId(record.asset.id);
+    const file = await loadMaterialAssetFile(record.asset, 'Unable to download document.');
+    setDownloadingAssetId(null);
+    if (file) saveLoadedAssetFile(file);
+  };
+
+  const handlePreview = async (record: PendingMaterialApproval) => {
+    if (!record.asset) return;
+    setPreviewingAssetId(record.asset.id);
+    const file = await loadMaterialAssetFile(record.asset, 'Unable to preview document.');
+    setPreviewingAssetId(null);
+    if (!file) return;
+    if (/\.xlsx$/i.test(file.fileName)) {
+      URL.revokeObjectURL(file.url);
+      try {
+        const sheets = await readXlsxFile(file.blob);
+        setPreviewFile({ fileName: file.fileName, url: '', sheets, isPreviewable: true });
+      } catch {
+        toastService.error('Unable to read the Excel file for preview.');
       }
-      const fileName = res.fileName || asset.fileName || asset.assetName || 'ItemMaster.xlsx';
-      const mime = resolveMimeType(res.contentType || res.fileType, fileName);
-      const base64Str = res.fileBytes.includes(',') ? res.fileBytes.split(',')[1] : res.fileBytes;
-      const bytes = Uint8Array.from(atob(base64Str), (c) => c.charCodeAt(0));
-      const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch {
-      toastService.error('Unable to download document.');
-    } finally {
-      setDownloadingAssetId(null);
+      return;
     }
+    // Browsers render PDFs, images and text inline; other Office files can only be downloaded.
+    const isPreviewable = /^(application\/pdf|image\/|text\/)/.test(file.mime);
+    setPreviewFile({ fileName: file.fileName, url: file.url, sheets: [], isPreviewable });
+  };
+
+  const closePreview = () => {
+    if (previewFile?.url) URL.revokeObjectURL(previewFile.url);
+    setPreviewFile(null);
   };
 
   const showError = Boolean(error) && records.length === 0;
@@ -229,22 +264,38 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ onRowClick }) => {
     { ...approvalStatusColumn, width: '11rem' },
     { ...statusColumn, width: '10rem' },
     {
-      id: 'download',
-      header: 'Download',
-      width: '9rem',
+      id: 'actions',
+      header: 'Actions',
+      width: '8rem',
       cell: ({ row }) => (
-        <button
-          type="button"
-          className="sila-btn sila-btn--secondary"
-          disabled={!row.asset || downloadingAssetId === row.asset.id}
-          aria-label={`Download ${row.asset?.fileName ?? row.title ?? 'file'}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            void handleDownload(row);
-          }}
-        >
-          {downloadingAssetId === row.asset?.id ? 'Downloading…' : 'Download'}
-        </button>
+        <div className="matap-row-actions">
+          <button
+            type="button"
+            className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm"
+            disabled={!row.asset || previewingAssetId === row.asset.id}
+            aria-label={`Preview ${row.asset?.fileName ?? row.title ?? 'file'}`}
+            title="Preview"
+            onClick={(e) => {
+              e.stopPropagation();
+              void handlePreview(row);
+            }}
+          >
+            {previewingAssetId === row.asset?.id ? <span className="sila-spinner" aria-hidden="true" /> : <IconEye />}
+          </button>
+          <button
+            type="button"
+            className="sila-btn sila-btn--ghost sila-btn--icon sila-btn--sm"
+            disabled={!row.asset || downloadingAssetId === row.asset.id}
+            aria-label={`Download ${row.asset?.fileName ?? row.title ?? 'file'}`}
+            title="Download"
+            onClick={(e) => {
+              e.stopPropagation();
+              void handleDownload(row);
+            }}
+          >
+            {downloadingAssetId === row.asset?.id ? <span className="sila-spinner" aria-hidden="true" /> : <IconDownload />}
+          </button>
+        </div>
       ),
     },
   ];
@@ -322,7 +373,10 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ onRowClick }) => {
             aria-selected={materialType === type}
             aria-controls="matap-tabpanel"
             className={`matap-tab${materialType === type ? ' matap-tab--active' : ''}`}
-            onClick={() => setMaterialType(type)}
+            onClick={() => {
+              lastMaterialType = type;
+              setMaterialType(type);
+            }}
           >
             {label}
           </button>
@@ -387,6 +441,22 @@ const MaterialTable: React.FC<MaterialTableProps> = ({ onRowClick }) => {
           }
         />
       </div>
+
+      <Modal
+        isOpen={previewFile !== null}
+        onClose={closePreview}
+        size="xl"
+        headerProps={{ heading: previewFile?.fileName }}
+        footerProps={{ secondaryButton: { text: 'Close', onClick: closePreview } }}
+      >
+        {previewFile && previewFile.sheets.length > 0 ? (
+          <ExcelSheetGrid sheets={previewFile.sheets} />
+        ) : previewFile?.isPreviewable ? (
+          <iframe src={previewFile.url} title={previewFile.fileName} className="matap-preview-frame" />
+        ) : (
+          <p>This file type can't be previewed in the browser. Use the Download icon to open it.</p>
+        )}
+      </Modal>
     </div>
   );
 };

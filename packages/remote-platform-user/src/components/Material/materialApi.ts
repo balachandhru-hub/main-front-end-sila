@@ -49,6 +49,9 @@ export interface MaterialApprovalDetail {
   subUnit: string;
   microUnit: string;
   status: string;
+  // EXCEL (bulk) approvals carry a title and the uploaded file instead of material fields.
+  title?: string;
+  asset?: MaterialBulkAsset;
   approvalUsers: MaterialApprovalUserStatus[];
 }
 
