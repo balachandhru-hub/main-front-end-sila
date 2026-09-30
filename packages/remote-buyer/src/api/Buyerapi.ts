@@ -642,6 +642,83 @@ export const createRFQ = async (payload: CreateRFQPayload): Promise<CreateRFQRes
   }
 };
 
+export interface ContractTemplateAttachmentDto {
+  entityType: string;
+  entityId: string;
+  assetType: string;
+  fileBytes: string;
+  fileName: string;
+  contentType: string;
+  isSingletonAsset: boolean;
+  id?: string;
+}
+
+export interface CreateContractTemplatePayload {
+  segmentId: number;
+  templateName: string;
+  attachment: ContractTemplateAttachmentDto;
+}
+
+export const createContractTemplate = async (payload: CreateContractTemplatePayload): Promise<unknown> => {
+  try {
+    const response = await axiosInstance.post('/api/v1/buyer/contract-template', payload);
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to create contract template (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+/** GET response shape isn't in the shared Swagger doc yet, so field names are best-effort (id/contractTemplateId,
+ * segmentName/segmentId) - fetchContractTemplates in remote-platform-user maps whichever fields are present. */
+export interface ContractTemplateListItemDto {
+  contractTemplateId?: string;
+  id?: string;
+  templateName: string;
+  segmentId?: number;
+  segmentName?: string;
+  attachment?: Partial<ContractTemplateAttachmentDto>;
+}
+
+export const getContractTemplates = async (index = 0, limit = 10): Promise<ContractTemplateListItemDto[]> => {
+  try {
+    const response = await axiosInstance.get<ContractTemplateListItemDto[]>('/api/v1/buyer/contract-template', {
+      params: { index, limit },
+    });
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to fetch contract templates (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
+export interface UpdateContractTemplatePayload {
+  templateName: string;
+  attachment: ContractTemplateAttachmentDto;
+}
+
+export const updateContractTemplate = async (
+  contractTemplateId: string,
+  payload: UpdateContractTemplatePayload
+): Promise<unknown> => {
+  try {
+    const response = await axiosInstance.put(`/api/v1/buyer/contract-template/${contractTemplateId}`, payload);
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.data) {
+      const data = error.response.data;
+      throw new Error(data?.message || data?.description || `Failed to update contract template (${error.response.status}).`);
+    }
+    throw new Error('Could not reach the server. Please check your connection and try again.');
+  }
+};
+
 
 export const getVerifiedSuppliers = async (
   payload: VerifiedSupplierSearchPayload

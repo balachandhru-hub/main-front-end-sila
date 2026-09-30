@@ -1,6 +1,7 @@
 import './styles/index.css';
 
 export * from './components/Button';
+export * from './components/icons';
 export { default as Dropdown } from './components/DropDown/DropDown';
 export * from './components/DropDown/DropDown.types';
 export * from './components/Loader';
@@ -25,7 +26,8 @@ export * from './components/FormField';
 export * from './components/SearchInput';
 export { default as Input } from './components/Input/Input';
 export * from './components/Input/Input.types';
-export * from './components/Modal';
+export { Modal } from './components/Modal/Modal';
+export type { ModalProps, ModalHeaderProps, ModalFooterProps, ModalButtonProps, ModalVariant, ModalSize } from './components/Modal/Modal.types';
 export * from './components/DateTimePicker/DateTimePicker';
 export { default as ToastContainer } from './ToastContainer/ToastContainer';
 export { toastService } from './services/toastservice';
