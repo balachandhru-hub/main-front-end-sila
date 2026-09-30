@@ -13,7 +13,7 @@ import { BUYER_NAV_PATHS, buildHeaderNavItems } from "./dashboard/navConfig";
 import type { MatchCard, RfqPageView } from "./dashboard/types";
 import { logoutBuyer, getBuyerProfile, fetchBuyerDashboardAnalytics, createBuyerChatApi } from "../api/Buyerapi";
 import { createRfqApi } from "../api/createRfqApi";
-import { CONTRACT_PAGE_SIZE, MATERIAL_PAGE_SIZE } from "../constants";
+import { CONTRACT_PAGE_SIZE } from "../constants";
 import { useBuyerRfqs } from "../hooks/useBuyerRfqs";
 import { useAllRfqs } from "../hooks/useAllRfqs";
 import { useRfqDetail } from "../hooks/useRfqDetail";
@@ -107,23 +107,7 @@ const BuyersDashboard: React.FC = () => {
   const buyerProfile = useBuyerAuthStore((state) => state.personDetail);
   const isLoadingBuyerProfile = useBuyerAuthStore((state) => state.personDetailLoading);
 
-  const {
-    materialRecords,
-    loadingMaterial,
-    materialError,
-    selectedMaterial,
-    setSelectedMaterial,
-    materialStatusFilter,
-    setMaterialStatusFilter,
-    materialSearchInput,
-    setMaterialSearchInput,
-    setMaterialSearchTerm,
-    materialKpi,
-    loadingMaterialKpi,
-    handleMaterialApprovalSubmitted,
-    materialPage,
-    setMaterialPage,
-  } = useMaterialApprovals(activeNav);
+  const { selectedMaterial, setSelectedMaterial, handleMaterialApprovalSubmitted } = useMaterialApprovals(activeNav);
 
   const {
     contractRecords,
@@ -237,22 +221,7 @@ const BuyersDashboard: React.FC = () => {
                   onApprovalSubmitted={handleMaterialApprovalSubmitted}
                 />
               ) : (
-                <MaterialTable
-                  records={materialRecords}
-                  loading={loadingMaterial}
-                  error={materialError}
-                  onRowClick={setSelectedMaterial}
-                  kpi={materialKpi}
-                  loadingKpi={loadingMaterialKpi}
-                  statusFilter={materialStatusFilter}
-                  onStatusFilterChange={setMaterialStatusFilter}
-                  searchInput={materialSearchInput}
-                  onSearchInputChange={setMaterialSearchInput}
-                  onSearchSubmit={() => setMaterialSearchTerm(materialSearchInput)}
-                  page={materialPage}
-                  pageSize={MATERIAL_PAGE_SIZE}
-                  onPageChange={setMaterialPage}
-                />
+                <MaterialTable onRowClick={setSelectedMaterial} />
               )
             ) : activeNav === "contract" ? (
               selectedContract ? (

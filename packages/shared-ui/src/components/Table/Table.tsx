@@ -27,6 +27,7 @@ export function Table<TRow>({
   error,
   errorDescription,
   emptyState,
+  alwaysShowHeader = false,
   onRowClick,
   rowClassName,
   expandable,
@@ -116,11 +117,70 @@ export function Table<TRow>({
     return `Showing ${start}–${end} of ${pagination.totalItems}`;
   }, [pagination]);
 
+  const tableHead = (
+    <thead>
+      <tr>
+        {hasSelection && (
+          <th className="sila-table-select-cell">
+            <input
+              ref={selectAllRef}
+              type="checkbox"
+              checked={allOnPageSelected}
+              disabled={selectableRowIds.length === 0}
+              aria-label={allOnPageSelected ? 'Deselect all rows' : 'Select all rows'}
+              onChange={handleToggleSelectAll}
+            />
+          </th>
+        )}
+        {hasExpand && (
+          <th className="sila-table-expand-cell">
+            <span className="sila-visually-hidden">Expand</span>
+          </th>
+        )}
+        {columns.map((column) => (
+          <th
+            key={column.id}
+            className={[alignClassName(column.align), column.headerClassName].filter(Boolean).join(' ') || undefined}
+            style={column.width ? { width: column.width } : undefined}
+          >
+            {column.header}
+          </th>
+        ))}
+      </tr>
+    </thead>
+  );
+
+  // With `alwaysShowHeader`, error and empty states render inside the table body so the column headers stay visible.
+  const renderStatePanel = (state: React.ReactNode) => (
+    <div className={['sila-table-container', className].filter(Boolean).join(' ')}>
+      {alwaysShowHeader ? (
+        <div className={['sila-table-wrap', wrapClassName].filter(Boolean).join(' ')}>
+          <table className="sila-table" aria-label={ariaLabel}>
+            {tableHead}
+            <tbody>
+              <tr className="sila-table-state-row">
+                <td className="sila-table-state-cell" colSpan={totalColumnCount}>{state}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        state
+      )}
+    </div>
+  );
+
   if (error) {
-    return (
-      <div className={['sila-table-container', className].filter(Boolean).join(' ')}>
-        <EmptyState variant="error" title={error} description={errorDescription} />
-      </div>
+    return renderStatePanel(<EmptyState variant="error" title={error} description={errorDescription} />);
+  }
+
+  if (alwaysShowHeader && !loading && data.length === 0) {
+    return renderStatePanel(
+      <EmptyState
+        title={emptyState?.title ?? 'No records found.'}
+        description={emptyState?.description}
+        icon={emptyState?.icon}
+      />
     );
   }
 
@@ -138,36 +198,7 @@ export function Table<TRow>({
         <>
           <div className={['sila-table-wrap', wrapClassName].filter(Boolean).join(' ')}>
             <table className="sila-table" aria-label={ariaLabel}>
-              <thead>
-                <tr>
-                  {hasSelection && (
-                    <th className="sila-table-select-cell">
-                      <input
-                        ref={selectAllRef}
-                        type="checkbox"
-                        checked={allOnPageSelected}
-                        disabled={selectableRowIds.length === 0}
-                        aria-label={allOnPageSelected ? 'Deselect all rows' : 'Select all rows'}
-                        onChange={handleToggleSelectAll}
-                      />
-                    </th>
-                  )}
-                  {hasExpand && (
-                    <th className="sila-table-expand-cell">
-                      <span className="sila-visually-hidden">Expand</span>
-                    </th>
-                  )}
-                  {columns.map((column) => (
-                    <th
-                      key={column.id}
-                      className={[alignClassName(column.align), column.headerClassName].filter(Boolean).join(' ') || undefined}
-                      style={column.width ? { width: column.width } : undefined}
-                    >
-                      {column.header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
+              {tableHead}
               <tbody>
                 {data.map((row, rowIndex) => {
                   const rowId = rowIds[rowIndex];

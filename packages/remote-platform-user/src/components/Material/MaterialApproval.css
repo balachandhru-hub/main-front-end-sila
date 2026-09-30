@@ -334,6 +334,50 @@
     color: var(--sila-text-muted);
 }
 
+.matap-panel .matap-tabs {
+    display: flex;
+    gap: var(--sila-space-1);
+    /* Cancels the panel's flex gap so the tabs sit flush on the table card. */
+    margin-bottom: calc(-1 * var(--sila-space-5));
+    border-bottom: 0.0625rem solid var(--sila-border);
+}
+
+.matap-panel .matap-tab {
+    margin-bottom: -0.0625rem;
+    padding: var(--sila-space-3) var(--sila-space-5);
+    border: 0.0625rem solid transparent;
+    border-bottom: 0;
+    border-radius: var(--sila-radius-md) var(--sila-radius-md) 0 0;
+    background: transparent;
+    font: inherit;
+    font-size: var(--sila-text-sm);
+    font-weight: var(--sila-weight-medium);
+    color: var(--sila-text-muted);
+    cursor: pointer;
+    box-shadow: inset 0 -0.1875rem 0 transparent;
+}
+
+.matap-panel .matap-tab:hover { color: var(--sila-text); background: var(--sila-surface-subtle); }
+
+.matap-panel .matap-tab.matap-tab--active {
+    color: var(--sila-primary);
+    background: var(--sila-primary-soft);
+    border-color: var(--sila-border);
+    font-weight: var(--sila-weight-semibold);
+    box-shadow: inset 0 -0.1875rem 0 var(--sila-primary);
+}
+
+.matap-panel .matap-tab:focus-visible {
+    outline: 0.125rem solid var(--sila-primary);
+    outline-offset: -0.125rem;
+}
+
+.matap-panel .matap-tabs + .matap-table-card {
+    border-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
 /* Table */
 .matap-table td { height: 3.25rem; }
 .matap-col-sno { width: 4rem; }
