@@ -5,6 +5,7 @@ import {
   FaBolt,
   FaBoxes,
   FaCheck,
+  FaChevronLeft,
   FaMobileAlt,
   FaTimes,
   FaTrophy,
@@ -100,6 +101,26 @@ export const EAuctionWidget: React.FC = () => {
   const [newMessageText, setNewMessageText] = useState("");
   const [awardedSupplier, setAwardedSupplier] = useState<string | null>(null);
 
+  // Small screens only (CSS-driven): show either the sidebar or the workspace
+  const [mobileView, setMobileView] = useState<"list" | "detail">("list");
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setMobileView("list");
+  };
+
+  const sidebarItemProps = {
+    role: "button" as const,
+    tabIndex: 0,
+    onClick: () => setMobileView("detail"),
+    onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        setMobileView("detail");
+      }
+    },
+  };
+
   const handleSendMessage = () => {
     if (!newMessageText.trim()) return;
     const msg: LiveChatMessage = {
@@ -175,7 +196,7 @@ export const EAuctionWidget: React.FC = () => {
 
       {/* Full live portal modal view */}
       {isModalOpen && (
-        <div className="eauction-modal-overlay" onClick={() => setIsModalOpen(false)}>
+        <div className="eauction-modal-overlay" onClick={handleCloseModal}>
           <div
             className="eauction-portal-container"
             role="dialog"
@@ -206,7 +227,7 @@ export const EAuctionWidget: React.FC = () => {
                 <button
                   type="button"
                   className="eauction-portal-close"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={handleCloseModal}
                   title="Close e-Auction Console"
                   aria-label="Close e-Auction Console"
                 >
@@ -216,22 +237,26 @@ export const EAuctionWidget: React.FC = () => {
             </div>
 
             {/* Main portal body */}
-            <div className="eauction-portal-body">
+            <div className={`eauction-portal-body eauction-mobile-${mobileView}`}>
               {/* Left sidebar filters */}
               <div className="eauction-left-sidebar">
                 <div>
                   <div className="eauction-section-header">Live Auctions</div>
                   <div className="eauction-sidebar-menu">
-                    <div className="eauction-sidebar-item active" aria-current="true">
+                    <div
+                      className="eauction-sidebar-item active"
+                      aria-current="true"
+                      {...sidebarItemProps}
+                    >
                       <FaBolt className="eauction-icon" aria-hidden="true" /> Quick Links
                     </div>
-                    <div className="eauction-sidebar-item">
+                    <div className="eauction-sidebar-item" {...sidebarItemProps}>
                       <FaBoxes className="eauction-icon" aria-hidden="true" /> Quick Lots
                     </div>
-                    <div className="eauction-sidebar-item">
+                    <div className="eauction-sidebar-item" {...sidebarItemProps}>
                       <FaMobileAlt className="eauction-icon" aria-hidden="true" /> Applications
                     </div>
-                    <div className="eauction-sidebar-item">
+                    <div className="eauction-sidebar-item" {...sidebarItemProps}>
                       <FaAddressBook className="eauction-icon" aria-hidden="true" /> Contacts
                     </div>
                   </div>
@@ -265,6 +290,15 @@ export const EAuctionWidget: React.FC = () => {
 
               {/* Main content workspace */}
               <div className="eauction-main-content">
+                <button
+                  type="button"
+                  className="eauction-back-to-list"
+                  onClick={() => setMobileView("list")}
+                  aria-label="Back to live auctions menu"
+                >
+                  <FaChevronLeft aria-hidden="true" /> Back
+                </button>
+
                 {/* Active bids & rank grid */}
                 <div className="eauction-panel-light">
                   <div className="eauction-panel-head">
