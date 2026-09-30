@@ -161,7 +161,7 @@ const ItemMasterUploadModal: React.FC<ItemMasterUploadModalProps> = ({
         document: {
           entityType: "BUYER",
           entityId: buyerId,
-          assetType: "ITEM_MASTER_UPLOAD",
+          assetType: "EXCEL_MATERIAL_MASTER",
           fileBytes,
           fileName: (selectedFile as File).name,
           contentType: (selectedFile as File).type,
