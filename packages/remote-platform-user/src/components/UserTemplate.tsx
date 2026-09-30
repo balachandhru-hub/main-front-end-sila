@@ -1232,7 +1232,7 @@ export default function UserTemplate({ templates = [], organizationId }: UserTem
                 <tr>
                   <th scope="col" className="ut-col-name">Template Name</th>
                   <th scope="col" className="ut-col-modified">Last Modified</th>
-                  <th scope="col" className="ut-col-action">Action</th>
+                  <th scope="col" className="ut-col-action ut-col-action-heading">Action</th>
                 </tr>
               </thead>
               <tbody>

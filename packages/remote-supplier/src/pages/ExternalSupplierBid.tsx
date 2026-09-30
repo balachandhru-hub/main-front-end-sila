@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Loader,
@@ -8,15 +8,11 @@ import {
   StatusBadge,
   Dropdown,
   IconMessageSquare,
-  startRfqChatHub,
-  stopRfqChatHub,
   toastService,
   ToastContainer,
 } from '@vosox/shared-ui';
-import type { QuotationSubmittedEvent } from '@vosox/shared-ui';
 import { FaCheckCircle, FaExclamationCircle, FaUserPlus } from 'react-icons/fa';
 import {
-  fetchExternalRfqDetails,
   submitExternalQuotation,
   fetchExternalAsset,
 } from '../api/externalSupplierApi';
@@ -28,31 +24,13 @@ import type {
 // Additional Questions from Buyer: disabled for now. Uncomment every block marked [buyer-questions] to bring it back.
 // [buyer-questions] import type { RFQQuestion } from '../dto/supplierDto';
 import ExternalSupplierChat from '../components/ExternalSupplierChat/ExternalSupplierChat';
-import { QUOTATION_EXCEL_HEADERS, buildCsv, parseCsv, downloadCsv } from '../utils/quotationExcel';
+import { useQuotationExcelSync, EMPTY_LINE_ITEM, type QuoteLineItem } from '../hooks/useQuotationExcelSync';
+import { useBulkApply } from '../hooks/useBulkApply';
+import { useExternalRfqLoader, LOAD_ERROR_TITLES, type LoadErrorKind } from '../hooks/useExternalRfqLoader';
 import SilaLogo from '../assets/SILA_Logo.png';
 import '../components/SupplierDashboard.css';
 import '../components/SupplierRfqQuotationSummary.css';
 import './ExternalSupplierBid.css';
-
-const parseAsUtcMs = (dateStr?: string | null): number | null => {
-  if (!dateStr) return null;
-  const hasTz = /Z$|[+-]\d{2}:\d{2}$/.test(dateStr);
-  const ms = Date.parse(hasTz ? dateStr : `${dateStr}Z`);
-  return Number.isNaN(ms) ? null : ms;
-};
-
-const getSubmissionWindowStatus = (rfq: ExternalRFQDetailResponse | null) => {
-  if (!rfq) return { notYetOpen: false, closed: false, frozen: false, canSubmit: false };
-  const startMs = parseAsUtcMs(rfq.startDate);
-  const endMs = parseAsUtcMs(rfq.endDate);
-  const nowMs = Date.now();
-
-  const notYetOpen = startMs !== null && nowMs < startMs;
-  const closed = endMs !== null && nowMs > endMs;
-  const frozen = rfq.status === 'Freezing';
-
-  return { notYetOpen, closed, frozen, canSubmit: !notYetOpen && !closed && !frozen };
-};
 
 // Same inline icons as the supplier dashboard's RFQ detail view, so both screens look identical.
 const IconFile = () => (
@@ -114,22 +92,6 @@ const getTypeOption = (type: string) => TYPE_OPTIONS.find((option) => option.val
 const validId = (id?: string | null): string | null =>
   id && id !== '00000000-0000-0000-0000-000000000000' ? id : null;
 
-type LoadErrorKind = 'invalid-link' | 'forbidden' | 'not-found' | 'generic';
-
-const classifyLoadError = (statusCode: number): LoadErrorKind => {
-  if (statusCode === 401) return 'invalid-link';
-  if (statusCode === 403) return 'forbidden';
-  if (statusCode === 404) return 'not-found';
-  return 'generic';
-};
-
-const LOAD_ERROR_TITLES: Record<LoadErrorKind, string> = {
-  'invalid-link': 'This link is invalid or has expired',
-  forbidden: "You don't have access to this RFQ",
-  'not-found': 'RFQ not found',
-  generic: 'Something went wrong',
-};
-
 /* [buyer-questions]
 interface QuestionAnswerState {
   answer: string;
@@ -138,19 +100,6 @@ interface QuestionAnswerState {
   fileName?: string;
 }
 */
-
-interface QuoteLineItem {
-  deliveryCharge: number;
-  deliveryType: string;
-  discount: number;
-  discountType: string;
-  tax: number;
-  taxType: string;
-  quotedPrice: number;
-  subTotal: number;
-  quotedAmount: number;
-  isLineitemAvailable: boolean;
-}
 
 /* [buyer-questions]
 const isQuestionAnswered = (q: RFQQuestion, a?: QuestionAnswerState) => {
@@ -162,39 +111,40 @@ const isQuestionAnswered = (q: RFQQuestion, a?: QuestionAnswerState) => {
 };
 */
 
-const EMPTY_LINE_ITEM: QuoteLineItem = {
-  deliveryCharge: 0,
-  deliveryType: 'PERCENTAGE',
-  discount: 0,
-  discountType: 'PERCENTAGE',
-  tax: 0,
-  taxType: 'PERCENTAGE',
-  quotedPrice: 0,
-  subTotal: 0,
-  quotedAmount: 0,
-  isLineitemAvailable: false,
-};
-
 const ExternalSupplierBid: React.FC = () => {
   const { rfqId, sessionToken } = useParams<{ rfqId: string; sessionToken: string }>();
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(true);
-  const [loadErrorKind, setLoadErrorKind] = useState<LoadErrorKind | null>(null);
-  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
-  const [rfq, setRfq] = useState<ExternalRFQDetailResponse | null>(null);
-
-  const [totalPrice, setTotalPrice] = useState<number>(0);
-  const [deliveryCharge, setDeliveryCharge] = useState<number>(0);
-  const [deliveryType, setDeliveryType] = useState<string>('PERCENTAGE');
-  const [discount, setDiscount] = useState<number>(0);
-  const [discountType, setDiscountType] = useState<string>('PERCENTAGE');
-  const [tax, setTax] = useState<number>(0);
-  const [taxType, setTaxType] = useState<string>('PERCENTAGE');
-  const [itemPrices, setItemPrices] = useState<{ [key: string]: number }>({});
-  const [lineItems, setLineItems] = useState<{ [supplierRFQItemId: string]: QuoteLineItem }>({});
-  const [quotationId, setQuotationId] = useState<string | null>(null);
-  const [hasExistingQuote, setHasExistingQuote] = useState(false);
+  const {
+    loading,
+    loadErrorKind,
+    loadErrorMessage,
+    rfq,
+    totalPrice,
+    setTotalPrice,
+    deliveryCharge,
+    setDeliveryCharge,
+    deliveryType,
+    setDeliveryType,
+    discount,
+    setDiscount,
+    discountType,
+    setDiscountType,
+    tax,
+    setTax,
+    taxType,
+    setTaxType,
+    itemPrices,
+    lineItems,
+    setLineItems,
+    quotationId,
+    hasExistingQuote,
+    notYetOpen,
+    frozen,
+    canSubmit,
+    currency,
+    fmtCurrency,
+  } = useExternalRfqLoader(rfqId, sessionToken);
 
   // [buyer-questions] const [answers, setAnswers] = useState<{ [questionId: string]: QuestionAnswerState }>({});
 
@@ -204,168 +154,6 @@ const ExternalSupplierBid: React.FC = () => {
   // const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const [isChatOpen, setIsChatOpen] = useState(false);
-
-  const [windowTick, setWindowTick] = useState(0);
-
-  // The RFQ's own currency (e.g. "INR", "USD") — ExternalRFQDetailResponse
-  // doesn't declare this field. Left blank (not defaulted to "INR") when
-  // the API doesn't return one, since guessing a currency could mislead
-  // the supplier.
-  const currency = (rfq as any)?.currency || '';
-  const fmtCurrency = (val: number) => `${(val || 0).toFixed(2)}${currency ? ` ${currency}` : ''}`;
-
-  // Populates every piece of state derived from a fetched RFQ — the raw `rfq`
-  // object itself plus the form fields mirrored from the supplier's existing
-  // quotation (total/discount/tax/delivery, per-item prices). Shared by the
-  // initial load and every live refetch (including right after this visitor's
-  // own submit) so a fresh GET always shows up in the table, not just in `rfq`.
-  const applyRfqData = (data: ExternalRFQDetailResponse) => {
-    setRfq(data);
-
-    const existingQuote = data.supplierQuotation?.[0];
-    if (existingQuote) {
-      setQuotationId(existingQuote.qutationId || existingQuote.id || null);
-      setHasExistingQuote(existingQuote.status === 'SUBMITTED');
-      setTotalPrice(existingQuote.totalPrice || 0);
-      setDeliveryCharge(existingQuote.deliveryCharge || 0);
-      setDeliveryType(existingQuote.deliveryType || 'PERCENTAGE');
-      setDiscount(existingQuote.discount || 0);
-      setDiscountType(existingQuote.discountType || 'PERCENTAGE');
-      setTax(existingQuote.tax || 0);
-      setTaxType(existingQuote.taxType || 'PERCENTAGE');
-    }
-
-    // The backend echoes each supplier quotation item's `supplierRFQItemId` as the
-    // all-zero placeholder GUID, so matching on it misses every existing quote.
-    // `item.id` on an external RFQ item is that same supplierRFQItemId, not the
-    // buyer's item id — the field that actually lines up with
-    // `supplierQuotationItems[].buyerRFQItemId` is `item.buyerRFQItemId` itself.
-    const findExistingItemQuote = (item: (typeof data.items)[number]) =>
-      data.supplierQuotationItems?.find(
-        (qi) =>
-          (item.buyerRFQItemId && qi.buyerRFQItemId === item.buyerRFQItemId) ||
-          (item.supplierRFQItemId && qi.supplierRFQItemId === item.supplierRFQItemId)
-      );
-
-    const prices: { [key: string]: number } = {};
-    data.items?.forEach((item, idx) => {
-      const key = item.id || item.buyerRFQItemId || `item-${idx}`;
-      const existingItemQuote = findExistingItemQuote(item);
-      prices[key] = existingItemQuote?.quotedPrice ?? 0;
-    });
-    setItemPrices(prices);
-
-    if (!data.addLotOption) {
-      const nextLineItems: { [supplierRFQItemId: string]: QuoteLineItem } = {};
-      data.items?.forEach((item) => {
-        const itemKey = item.supplierRFQItemId;
-        if (!itemKey) return;
-        const source = findExistingItemQuote(item);
-        nextLineItems[itemKey] = {
-          deliveryCharge: source?.deliveryCharge ?? 0,
-          deliveryType: source?.deliveryType || 'PERCENTAGE',
-          discount: source?.discount ?? 0,
-          discountType: source?.discountType || 'PERCENTAGE',
-          tax: source?.tax ?? 0,
-          taxType: source?.taxType || 'PERCENTAGE',
-          quotedPrice: source?.quotedPrice ?? 0,
-          subTotal: source?.subTotal ?? 0,
-          quotedAmount: source?.quotedAmount ?? 0,
-          isLineitemAvailable: source?.isLineitemAvailable ?? false,
-        };
-      });
-      setLineItems(nextLineItems);
-    } else {
-      setLineItems({});
-    }
-  };
-
-  useEffect(() => {
-    if (!rfq) return;
-    const t = setInterval(() => setWindowTick((n) => n + 1), 30000);
-    return () => clearInterval(t);
-  }, [rfq]);
-
-  useEffect(() => {
-    document.title = rfq ? `Quote: ${rfq.title}` : 'Request for Quotation';
-  }, [rfq]);
-
-  // Live-refreshes rank/status/quotation data (e.g. this visitor's own submit
-  // just got broadcast back, a teammate using the same bid link in another tab
-  // submits, or the buyer's side otherwise updates the quotation). No
-  // supplierId to scope the connection with — same as ExternalSupplierChat, it
-  // connects on rfqId + the session token header alone, and reuses that same
-  // shared connection rather than opening a second one (see rfqChatHub.ts).
-  const quotationRefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (!rfqId || !sessionToken) return;
-
-    const handleQuotationSubmitted = (_payload: QuotationSubmittedEvent) => {
-      if (quotationRefetchTimerRef.current) clearTimeout(quotationRefetchTimerRef.current);
-      quotationRefetchTimerRef.current = setTimeout(async () => {
-        const data = await fetchExternalRfqDetails(rfqId, sessionToken);
-        if (!isErrorResponse(data)) applyRfqData(data);
-      }, 500);
-    };
-
-    startRfqChatHub(
-      { rfqId, sessionToken },
-      () => { },
-      undefined,
-      handleQuotationSubmitted
-    ).catch((err) => {
-      console.error('[ExternalSupplierBid] SignalR connection failed:', err);
-    });
-
-    return () => {
-      if (quotationRefetchTimerRef.current) clearTimeout(quotationRefetchTimerRef.current);
-      stopRfqChatHub();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rfqId, sessionToken]);
-
-  useEffect(() => {
-    const load = async () => {
-      if (!rfqId || !sessionToken) {
-        setLoadErrorKind('invalid-link');
-        setLoadErrorMessage('This link is missing required information and cannot be opened.');
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      setLoadErrorKind(null);
-      setLoadErrorMessage(null);
-
-      const data = await fetchExternalRfqDetails(rfqId, sessionToken);
-
-      if (isErrorResponse(data)) {
-        setLoadErrorKind(classifyLoadError(data.statusCode));
-        setLoadErrorMessage(data.message || data.description || null);
-        setLoading(false);
-        return;
-      }
-
-      applyRfqData(data);
-
-      /* [buyer-questions]
-      const initialAnswers: typeof answers = {};
-      data.questions?.forEach((q) => {
-        initialAnswers[q.questionId] = { answer: '', questionOptionId: null, questionOptionIds: [] };
-      });
-      setAnswers(initialAnswers);
-      */
-
-      setLoading(false);
-    };
-
-    load();
-  }, [rfqId, sessionToken]);
-
-  const { notYetOpen, frozen, canSubmit } = useMemo(
-    () => getSubmissionWindowStatus(rfq),
-    [rfq, windowTick]
-  );
 
   // Both chat identity values come from the route's sessionId alone (the
   // second /external-supplier/bid/{rfqId}/{sessionId} segment, captured above
@@ -405,180 +193,30 @@ const ExternalSupplierBid: React.FC = () => {
     });
   };
 
-  const [bulkValue, setBulkValue] = useState('');
-  const [bulkValueType, setBulkValueType] = useState<'PERCENTAGE' | 'AMOUNT'>('PERCENTAGE');
-  const [bulkFields, setBulkFields] = useState({
-    deliveryCharge: false,
-    discount: false,
-    tax: false,
-    quotedPrice: false,
+  const {
+    bulkValue,
+    setBulkValue,
+    bulkValueType,
+    setBulkValueType,
+    bulkFields,
+    handleBulkFieldToggle,
+    handleBulkApply,
+  } = useBulkApply({
+    items: rfq?.items,
+    onFieldChange: handleLineItemFieldChange,
   });
 
-  const bulkTypeFieldMap: Partial<Record<keyof typeof bulkFields, keyof QuoteLineItem>> = {
-    deliveryCharge: 'deliveryType',
-    discount: 'discountType',
-    tax: 'taxType',
-  };
-
-  const handleBulkFieldToggle = (field: keyof typeof bulkFields, checked: boolean) => {
-    setBulkFields((prev) => ({ ...prev, [field]: checked }));
-  };
-
-  const handleBulkApply = () => {
-    if (bulkValue === '' || !rfq?.items) return;
-
-    const fieldKeys = (Object.keys(bulkFields) as (keyof typeof bulkFields)[]).filter((key) => bulkFields[key]);
-    if (fieldKeys.length === 0) return;
-
-    rfq.items.forEach((item, idx) => {
-      const itemKey = item.supplierRFQItemId || `item-${idx}`;
-      fieldKeys.forEach((field) => {
-        handleLineItemFieldChange(itemKey, field, bulkValue);
-        const typeField = bulkTypeFieldMap[field];
-        if (typeField) {
-          handleLineItemFieldChange(itemKey, typeField, bulkValueType);
-        }
-      });
-    });
-  };
-
-  const excelFileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const handleDownloadQuotationExcel = () => {
-    if (!rfq?.items?.length) return;
-
-    const rows = rfq.items.map((item, idx) => {
-      const itemKey = item.supplierRFQItemId || `item-${idx}`;
-      const line = lineItems[itemKey];
-      return [
-        itemKey,
-        item.description || '',
-        item.materialCode || '',
-        item.quantity ?? '',
-        item.uom || '',
-        line?.deliveryCharge ?? 0,
-        line?.deliveryType || 'PERCENTAGE',
-        line?.discount ?? 0,
-        line?.discountType || 'PERCENTAGE',
-        line?.tax ?? 0,
-        line?.taxType || 'PERCENTAGE',
-        line?.quotedPrice ?? 0,
-        // "Available" in the UI is the checkbox state, which is the inverse of isLineitemAvailable.
-        line?.isLineitemAvailable ? 'No' : 'Yes',
-      ];
-    });
-
-    const csv = buildCsv([[...QUOTATION_EXCEL_HEADERS], ...rows]);
-    downloadCsv(csv, `quotation-summary-${rfqId || 'rfq'}.csv`);
-  };
-
-  const handleQuotationExcelFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file || !rfq?.items) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const rows = parseCsv(String(reader.result || ''));
-        if (rows.length < 2) {
-          toastService.error('The uploaded file has no data rows.');
-          return;
-        }
-
-        const [headerRow, ...dataRows] = rows;
-        const colIndex = (name: string) =>
-          headerRow.findIndex((h) => h.trim().toLowerCase() === name.toLowerCase());
-
-        const idxItemKey = colIndex('Item Key');
-        const idxCode = colIndex('Code');
-        const idxDeliveryCharge = colIndex('Delivery Charge');
-        const idxDeliveryType = colIndex('Delivery Type');
-        const idxDiscount = colIndex('Discount');
-        const idxDiscountType = colIndex('Discount Type');
-        const idxTax = colIndex('Tax');
-        const idxTaxType = colIndex('Tax Type');
-        const idxQuotedPrice = colIndex('Quoted Price');
-        const idxAvailable = colIndex('Available');
-
-        if (idxQuotedPrice === -1) {
-          toastService.error('The uploaded file is missing the required "Quoted Price" column. Please use the downloaded template.');
-          return;
-        }
-        if (idxItemKey === -1 && idxCode === -1) {
-          toastService.error('The uploaded file is missing the "Item Key" and "Code" columns needed to match rows to items. Please use the downloaded template.');
-          return;
-        }
-
-        const normalizeType = (value: string | undefined, fallback: string) => {
-          const v = (value || '').trim().toUpperCase();
-          return v === 'PERCENTAGE' || v === 'AMOUNT' ? v : fallback;
-        };
-        const parseNumber = (value: string | undefined, fallback: number) => {
-          const n = Number((value || '').trim());
-          return Number.isFinite(n) ? n : fallback;
-        };
-        // "Available" column is the checkbox's own Yes/No state, inverse of isLineitemAvailable.
-        const parseAvailable = (value: string | undefined, fallback: boolean) => {
-          const v = (value || '').trim().toLowerCase();
-          if (['yes', 'true', '1'].includes(v)) return false;
-          if (['no', 'false', '0'].includes(v)) return true;
-          return fallback;
-        };
-
-        const items = rfq.items || [];
-        // Match strictly by identity (Item Key, then material Code) - never by row position, since
-        // a file re-ordered in Excel or downloaded for a different RFQ would otherwise silently
-        // apply the wrong row's values to an item.
-        const matches = items.map((item, idx) => {
-          const itemKey = item.supplierRFQItemId || `item-${idx}`;
-          const matchRow =
-            (idxItemKey !== -1 && dataRows.find((r) => r[idxItemKey] === itemKey)) ||
-            (idxCode !== -1 && item.materialCode && dataRows.find((r) => r[idxCode] === item.materialCode)) ||
-            null;
-          return { itemKey, matchRow };
-        });
-
-        const matchedCount = matches.filter((m) => m.matchRow).length;
-        if (matchedCount === 0) {
-          toastService.error("None of the rows in this file match this RFQ's items. Make sure you're uploading the spreadsheet downloaded for this RFQ.");
-          return;
-        }
-
-        setLineItems((prev) => {
-          const next = { ...prev };
-          matches.forEach(({ itemKey, matchRow }) => {
-            if (!matchRow) return;
-
-            const existing: QuoteLineItem = next[itemKey] || EMPTY_LINE_ITEM;
-
-            next[itemKey] = {
-              ...existing,
-              deliveryCharge: idxDeliveryCharge !== -1 ? parseNumber(matchRow[idxDeliveryCharge], existing.deliveryCharge) : existing.deliveryCharge,
-              deliveryType: idxDeliveryType !== -1 ? normalizeType(matchRow[idxDeliveryType], existing.deliveryType) : existing.deliveryType,
-              discount: idxDiscount !== -1 ? parseNumber(matchRow[idxDiscount], existing.discount) : existing.discount,
-              discountType: idxDiscountType !== -1 ? normalizeType(matchRow[idxDiscountType], existing.discountType) : existing.discountType,
-              tax: idxTax !== -1 ? parseNumber(matchRow[idxTax], existing.tax) : existing.tax,
-              taxType: idxTaxType !== -1 ? normalizeType(matchRow[idxTaxType], existing.taxType) : existing.taxType,
-              quotedPrice: parseNumber(matchRow[idxQuotedPrice], existing.quotedPrice),
-              isLineitemAvailable: idxAvailable !== -1 ? parseAvailable(matchRow[idxAvailable], existing.isLineitemAvailable) : existing.isLineitemAvailable,
-            };
-          });
-          return next;
-        });
-
-        toastService.success(
-          matchedCount < items.length
-            ? `Applied values for ${matchedCount} of ${items.length} items. ${items.length - matchedCount} item(s) in this RFQ weren't found in the file and were left unchanged.`
-            : 'Spreadsheet values applied. Review the table below, then submit your quotation.'
-        );
-      } catch {
-        toastService.error('Couldn\'t read that file. Please upload the downloaded template without changing its columns.');
-      }
-    };
-    reader.onerror = () => toastService.error('Couldn\'t read that file. Please try again.');
-    reader.readAsText(file);
-  };
+  const {
+    excelFileInputRef,
+    handleDownloadQuotationExcel,
+    handleQuotationExcelFileChange,
+  } = useQuotationExcelSync({
+    items: rfq?.items,
+    lineItems,
+    setLineItems,
+    fileNameId: rfqId,
+    fullMatchSuccessMessage: 'Spreadsheet values applied. Review the table below, then submit your quotation.',
+  });
 
   /* [buyer-questions]
   const handleTextAnswerChange = (questionId: string, value: string) => {

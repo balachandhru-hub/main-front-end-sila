@@ -184,7 +184,7 @@
 ========================================= */
 .sila-dropdown__required {
   margin-left: 0.125rem;
-  color: #dc2626;
+  color: var(--sila-danger);
   font-weight: 600;
 }
 /* =========================================
@@ -230,7 +230,7 @@
 }
 .sila-dropdown__clear:hover:not(:disabled) {
   background: #f3f4f6;
-  color: #ef4444;
+  color: var(--sila-danger);
 }
 .sila-dropdown__clear:disabled {
   cursor: not-allowed;
@@ -355,10 +355,10 @@
   box-shadow: 0 0 0 0.1875rem var(--sila-danger-ring);
 }
 .sila-dropdown--error .sila-dropdown__label {
-  color: #dc2626;
+  color: var(--sila-danger);
 }
 .sila-dropdown--error.sila-dropdown--open .sila-dropdown__label {
-  color: #dc2626;
+  color: var(--sila-danger);
 }
 /* =========================================
    Messages
@@ -405,7 +405,7 @@
    Error Message
 ========================================= */
 .sila-dropdown__message--error {
-  color: #dc2626;
+  color: var(--sila-danger);
   font-weight: 500;
 }
 .sila-dropdown__message--error svg {
