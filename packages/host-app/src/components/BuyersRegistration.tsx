@@ -280,7 +280,7 @@ const BuyersRegistration: React.FC<BuyersRegistrationProps> = ({
                         <div className="vr-intro-header">
                             <button
                                 type="button"
-                                className="sila-btn sila-btn--secondary sila-btn--icon sila-btn--sm vr-back-btn"
+                                className={`sila-btn sila-btn--secondary sila-btn--icon sila-btn--sm ${step === 3 ? 'vr-back-btn-change' : 'vr-back-btn'} ${step === 1 ? 'vr-back-btn-chang' : ''}`}
                                 onClick={handleBack}
                                 aria-label="Back"
                                 title="Back"
@@ -750,8 +750,8 @@ const BuyersRegistration: React.FC<BuyersRegistrationProps> = ({
                         </div>
                     )}
                 </div>
-            </main>
-        </div>
+            </main >
+        </div >
     );
 };
 

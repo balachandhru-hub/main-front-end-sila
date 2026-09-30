@@ -1133,6 +1133,31 @@
   margin-top: 2px;
 }
 
+.contract-approval-list {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.contract-approval-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.contract-approval-row + .contract-approval-row {
+  border-top: 1px solid #f1f5f9;
+}
+
+.contract-approval-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
 .contract-signature-box {
   border-radius: 8px;
   padding: 12px 16px;
