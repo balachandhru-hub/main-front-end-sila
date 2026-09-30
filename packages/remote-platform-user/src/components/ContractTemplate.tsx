@@ -29,11 +29,11 @@ import {
 import {
   createContractTemplate,
   updateContractTemplate,
+  fetchBuyerAsset,
   type ContractTemplateAttachmentDto,
   type CreateContractTemplatePayload,
 } from '../../../remote-buyer/src/api/Buyerapi';
 import { fetchContractTemplates } from '../api/contractTemplateApi';
-import { fetchBuyerAsset } from '../api/platformApi';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
 import type {
   ClauseType,
@@ -50,6 +50,7 @@ import {
   slugifyTemplateName,
   toPdfDataUrl,
 } from './contractTemplatePdf';
+import { resolveMimeType } from './ContractCreation/contractFormatters';
 
 type CreationMode = 'form' | 'upload';
 
@@ -567,9 +568,9 @@ export default function ContractTemplate() {
           toastService.error('message' in asset ? asset.message : 'Failed to load the contract template file');
           return;
         }
-        const contentType = asset.contentType || 'application/pdf';
-        const dataUrl = toPdfDataUrl(asset.fileBytes, contentType);
         const fileName = asset.fileName || template.fileName || `${slugifyTemplateName(template.templateName)}.pdf`;
+        const contentType = resolveMimeType(asset.contentType, fileName);
+        const dataUrl = toPdfDataUrl(asset.fileBytes, contentType);
         setTemplates((prev) => prev.map((t) => (t.id === template.id ? { ...t, fileDataUrl: dataUrl, fileName } : t)));
         downloadDataUrl(dataUrl, fileName);
       } catch (err: any) {
@@ -577,6 +578,13 @@ export default function ContractTemplate() {
       } finally {
         setDownloadingId(null);
       }
+      return;
+    }
+
+    if (template.sourceType === 'uploaded') {
+      // No fileDataUrl and no attachmentId - the record has no reference to its file at all, so there's
+      // nothing to fetch. Surface this instead of silently falling through to an empty generated PDF.
+      toastService.error('This template has no attached file to download.');
       return;
     }
 
