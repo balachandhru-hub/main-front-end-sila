@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toastService } from "@vosox/shared-ui";
 import type { PendingMaterialApproval, MaterialApprovalKpi } from "../../../remote-platform-user/src/components/Material/materialApi";
 import { fetchPendingMaterialApprovals, fetchMaterialApprovalKpi } from "../../../remote-platform-user/src/components/Material/materialApi";
+import { MATERIAL_PAGE_SIZE } from "../constants";
 
 /** Material approvals list, filters and KPI counts; loads only while the "material" section is active. */
 export const useMaterialApprovals = (activeNav: string) => {
@@ -18,6 +19,8 @@ export const useMaterialApprovals = (activeNav: string) => {
   const [materialKpi, setMaterialKpi] = useState<MaterialApprovalKpi | null>(null);
   const [loadingMaterialKpi, setLoadingMaterialKpi] = useState(false);
 
+  const [materialPage, setMaterialPage] = useState(1);
+
   useEffect(() => {
     const handle = setTimeout(() => setMaterialSearchTerm(materialSearchInput), 400);
     return () => clearTimeout(handle);
@@ -26,7 +29,12 @@ export const useMaterialApprovals = (activeNav: string) => {
   const loadMaterialApprovals = () => {
     setLoadingMaterial(true);
     setMaterialError(null);
-    fetchPendingMaterialApprovals({ status: materialStatusFilter, searchTerm: materialSearchTerm })
+    fetchPendingMaterialApprovals({
+      status: materialStatusFilter,
+      searchTerm: materialSearchTerm,
+      index: (materialPage - 1) * MATERIAL_PAGE_SIZE,
+      limit: MATERIAL_PAGE_SIZE,
+    })
       .then(setMaterialRecords)
       .catch((err: any) => {
         setMaterialError(err.message || "Failed to load material approvals.");
@@ -52,8 +60,13 @@ export const useMaterialApprovals = (activeNav: string) => {
 
   useEffect(() => {
     if (activeNav !== "material") return;
-    loadMaterialApprovals();
+    setMaterialPage(1);
   }, [activeNav, materialStatusFilter, materialSearchTerm]);
+
+  useEffect(() => {
+    if (activeNav !== "material") return;
+    loadMaterialApprovals();
+  }, [activeNav, materialStatusFilter, materialSearchTerm, materialPage]);
 
   const handleMaterialApprovalSubmitted = () => {
     setSelectedMaterial(null);
@@ -75,5 +88,7 @@ export const useMaterialApprovals = (activeNav: string) => {
     materialKpi,
     loadingMaterialKpi,
     handleMaterialApprovalSubmitted,
+    materialPage,
+    setMaterialPage,
   };
 };

@@ -535,6 +535,9 @@ const BuyerAdminDash: React.FC = () => {
   const [materialKpi, setMaterialKpi] = useState<MaterialApprovalKpi | null>(null);
   const [loadingMaterialKpi, setLoadingMaterialKpi] = useState(false);
 
+  const MATERIAL_PAGE_SIZE = 10;
+  const [materialPage, setMaterialPage] = useState(1);
+
   useEffect(() => {
     const handle = setTimeout(() => setMaterialSearchTerm(materialSearchInput), 400);
     return () => clearTimeout(handle);
@@ -543,7 +546,12 @@ const BuyerAdminDash: React.FC = () => {
   const loadMaterialApprovals = () => {
     setLoadingMaterial(true);
     setMaterialError(null);
-    fetchPendingMaterialApprovals({ status: materialStatusFilter, searchTerm: materialSearchTerm })
+    fetchPendingMaterialApprovals({
+      status: materialStatusFilter,
+      searchTerm: materialSearchTerm,
+      index: (materialPage - 1) * MATERIAL_PAGE_SIZE,
+      limit: MATERIAL_PAGE_SIZE,
+    })
       .then(setMaterialRecords)
       .catch((err: any) => {
         setMaterialError(err.message || "Failed to load material approvals.");
@@ -569,8 +577,13 @@ const BuyerAdminDash: React.FC = () => {
 
   useEffect(() => {
     if (activeNav !== "material") return;
-    loadMaterialApprovals();
+    setMaterialPage(1);
   }, [activeNav, materialStatusFilter, materialSearchTerm]);
+
+  useEffect(() => {
+    if (activeNav !== "material") return;
+    loadMaterialApprovals();
+  }, [activeNav, materialStatusFilter, materialSearchTerm, materialPage]);
 
   const handleMaterialApprovalSubmitted = () => {
     setSelectedMaterial(null);
@@ -1000,6 +1013,9 @@ const BuyerAdminDash: React.FC = () => {
                   searchInput={materialSearchInput}
                   onSearchInputChange={setMaterialSearchInput}
                   onSearchSubmit={() => setMaterialSearchTerm(materialSearchInput)}
+                  page={materialPage}
+                  pageSize={MATERIAL_PAGE_SIZE}
+                  onPageChange={setMaterialPage}
                 />
               )
             ) : activeNav === "contract" ? (

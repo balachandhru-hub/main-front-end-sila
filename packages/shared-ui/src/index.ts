@@ -12,6 +12,7 @@ export * from './components/PageHeader';
 export * from './components/EmptyState';
 export * from './components/Pagination';
 export * from './components/Skeleton';
+export * from './components/Table';
 export * from './components/KpiCard';
 export * from './components/KpiStrip';
 export * from './components/Charts';

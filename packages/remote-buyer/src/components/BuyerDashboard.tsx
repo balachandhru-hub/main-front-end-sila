@@ -13,7 +13,7 @@ import { BUYER_NAV_PATHS, buildHeaderNavItems } from "./dashboard/navConfig";
 import type { MatchCard, RfqPageView } from "./dashboard/types";
 import { logoutBuyer, getBuyerProfile, fetchBuyerDashboardAnalytics, createBuyerChatApi } from "../api/Buyerapi";
 import { createRfqApi } from "../api/createRfqApi";
-import { CONTRACT_PAGE_SIZE } from "../constants";
+import { CONTRACT_PAGE_SIZE, MATERIAL_PAGE_SIZE } from "../constants";
 import { useBuyerRfqs } from "../hooks/useBuyerRfqs";
 import { useAllRfqs } from "../hooks/useAllRfqs";
 import { useRfqDetail } from "../hooks/useRfqDetail";
@@ -121,6 +121,8 @@ const BuyersDashboard: React.FC = () => {
     materialKpi,
     loadingMaterialKpi,
     handleMaterialApprovalSubmitted,
+    materialPage,
+    setMaterialPage,
   } = useMaterialApprovals(activeNav);
 
   const {
@@ -247,6 +249,9 @@ const BuyersDashboard: React.FC = () => {
                   searchInput={materialSearchInput}
                   onSearchInputChange={setMaterialSearchInput}
                   onSearchSubmit={() => setMaterialSearchTerm(materialSearchInput)}
+                  page={materialPage}
+                  pageSize={MATERIAL_PAGE_SIZE}
+                  onPageChange={setMaterialPage}
                 />
               )
             ) : activeNav === "contract" ? (
