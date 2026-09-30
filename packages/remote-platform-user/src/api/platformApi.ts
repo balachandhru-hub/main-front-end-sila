@@ -680,6 +680,8 @@ export interface BuyerRfqContractRefDto {
   contractId: string;
   contractNumber: string;
   supplierId: string;
+  status?: string;
+  approvalUsers?: BuyerContractApprovalUserStatusDto[];
 }
 
 export interface BuyerContractApprovalFlowDto {
@@ -752,7 +754,7 @@ export const createBuyerContract = async (
   payload: CreateBuyerContractPayload
 ): Promise<StatusUpdateResponseDto | AssetErrorDto> => {
   try {
-    const response = await platformInstance.post('/api/v1/buyer/contract', payload);
+    const response = await platformInstance.post('/api/v1/buyer/predefined-contract', payload);
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 401) {
