@@ -680,6 +680,8 @@ export interface BuyerRfqContractRefDto {
   contractId: string;
   contractNumber: string;
   supplierId: string;
+  status?: string;
+  approvalUsers?: BuyerContractApprovalUserStatusDto[];
 }
 
 export interface BuyerContractApprovalFlowDto {
@@ -752,7 +754,7 @@ export const createBuyerContract = async (
   payload: CreateBuyerContractPayload
 ): Promise<StatusUpdateResponseDto | AssetErrorDto> => {
   try {
-    const response = await platformInstance.post('/api/v1/buyer/contract', payload);
+    const response = await platformInstance.post('/api/v1/buyer/predefined-contract', payload);
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 401) {
@@ -858,7 +860,7 @@ export const fetchBuyerContracts = async (
   limit = 10
 ): Promise<BuyerContractDto[] | AssetErrorDto> => {
   try {
-    const response = await platformInstance.get('/api/v1/buyer/contract', { params: { index, limit } });
+    const response = await platformInstance.get('/api/v1/buyer/predefined-contract', { params: { index, limit } });
     return Array.isArray(response.data) ? response.data : [];
   } catch (error: any) {
     if (error.response?.status === 401) {
@@ -889,7 +891,7 @@ export const fetchBuyerContractById = async (
   contractId: string
 ): Promise<BuyerContractDto | AssetErrorDto> => {
   try {
-    const response = await platformInstance.get(`/api/v1/buyer/contract/${contractId}`);
+    const response = await platformInstance.get(`/api/v1/buyer/predefined-contract/${contractId}`);
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 401) {
@@ -929,7 +931,7 @@ export const submitBuyerContractApprovalAction = async (
   payload: BuyerContractApprovalActionPayload
 ): Promise<StatusUpdateResponseDto | AssetErrorDto> => {
   try {
-    const response = await platformInstance.put(`/api/v1/buyer/contract/approval/${contractId}`, payload);
+    const response = await platformInstance.put(`/api/v1/buyer/predefined-contract/approval/${contractId}`, payload);
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 401) {

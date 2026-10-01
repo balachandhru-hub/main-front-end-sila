@@ -30,14 +30,14 @@ import { getOrganizationUsersForRfq } from "../api/networkAdminApi";
 import { logoutPlatformUser } from "../api/platformApi";
 import { BuyerAnalytics, ChatPanel, CreateRFQ, StatusBadge, toastService, useAsyncData, useRouteNav, type ChatCounterpartyRef, type CreateRFQApi, type RouteNavPaths } from "@vosox/shared-ui";
 import UserTemplate from "./UserTemplate";
+import ContractTemplate from "./ContractTemplate";
 import ApprovalManagement from "./ApprovalManagement/ApprovalManagement";
 import { ToastContainer } from "@vosox/shared-ui";
 import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
 // import QuotationSummaryTable from "../../../remote-buyer/src/components/QuotationSummaryTable";
 import QuotationComparisonCard from "./QuotationComparisonCard";
 import ItemMasterCatalog from "../../../remote-buyer/src/components/ItemMasterCatalog";
-import type { PendingMaterialApproval, MaterialApprovalKpi } from "./Material/materialApi";
-import { fetchPendingMaterialApprovals, fetchMaterialApprovalKpi } from "./Material/materialApi";
+import type { PendingMaterialApproval } from "./Material/materialApi";
 import MaterialTable from "./Material/MaterialTable";
 import MaterialApprovalDetail from "./Material/MaterialApprovalDetail";
 import type { ContractRecord } from "./Contract/contractApi";
@@ -270,6 +270,7 @@ const BUYER_ADMIN_NAV_PATHS: RouteNavPaths = {
   product: "product-catalog",
   userList: "users",
   template: "templates",
+  contractTemplate: "contract-templates",
   approvalManagement: "approval-management",
   material: "material-approvals",
   contract: "contract-approvals",
@@ -289,6 +290,7 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
     label: "Configuration",
     subItems: [
       { key: "template", label: "Templates" },
+      { key: "contractTemplate", label: "Contract Templates" },
       { key: "approvalManagement", label: "Approval Management" }
     ]
   },
@@ -519,61 +521,15 @@ const BuyerAdminDash: React.FC = () => {
 
   const currentUserId = currentUser?.userId || currentUser?.id || null;
 
-  const [materialRecords, setMaterialRecords] = useState<PendingMaterialApproval[]>([]);
-  const [loadingMaterial, setLoadingMaterial] = useState(false);
-  const [materialError, setMaterialError] = useState<string | null>(null);
   const [selectedMaterial, setSelectedMaterial] = useState<PendingMaterialApproval | null>(null);
 
-  const [materialStatusFilter, setMaterialStatusFilter] = useState("");
-  // materialSearchTerm is the debounced value that drives the API call.
-  const [materialSearchInput, setMaterialSearchInput] = useState("");
-  const [materialSearchTerm, setMaterialSearchTerm] = useState("");
-
-  const [materialKpi, setMaterialKpi] = useState<MaterialApprovalKpi | null>(null);
-  const [loadingMaterialKpi, setLoadingMaterialKpi] = useState(false);
-
-  useEffect(() => {
-    const handle = setTimeout(() => setMaterialSearchTerm(materialSearchInput), 400);
-    return () => clearTimeout(handle);
-  }, [materialSearchInput]);
-
-  const loadMaterialApprovals = () => {
-    setLoadingMaterial(true);
-    setMaterialError(null);
-    fetchPendingMaterialApprovals({ status: materialStatusFilter, searchTerm: materialSearchTerm })
-      .then(setMaterialRecords)
-      .catch((err: any) => {
-        setMaterialError(err.message || "Failed to load material approvals.");
-        setMaterialRecords([]);
-      })
-      .finally(() => setLoadingMaterial(false));
-  };
-
-  // Loaded independently so search/status changes don't refetch KPI.
-  const loadMaterialKpi = () => {
-    setLoadingMaterialKpi(true);
-    fetchMaterialApprovalKpi()
-      .then(setMaterialKpi)
-      .catch((err: any) => toastService.error(err.message || "Failed to load approval summary counts."))
-      .finally(() => setLoadingMaterialKpi(false));
-  };
-
   useEffect(() => {
     if (activeNav !== "material") return;
     setSelectedMaterial(null);
-    loadMaterialKpi();
   }, [activeNav]);
 
-  useEffect(() => {
-    if (activeNav !== "material") return;
-    loadMaterialApprovals();
-  }, [activeNav, materialStatusFilter, materialSearchTerm]);
-
-  const handleMaterialApprovalSubmitted = () => {
-    setSelectedMaterial(null);
-    loadMaterialApprovals();
-    loadMaterialKpi();
-  };
+  // MaterialTable reloads its own data when it remounts after the detail view closes.
+  const handleMaterialApprovalSubmitted = () => setSelectedMaterial(null);
 
   const CONTRACT_PAGE_SIZE = 10;
   const [contractRecords, setContractRecords] = useState<ContractRecord[]>([]);
@@ -972,6 +928,8 @@ const BuyerAdminDash: React.FC = () => {
                   <UserTemplate templates={templates} />
                 )}
               </div>
+            ) : activeNav === "contractTemplate" ? (
+              <ContractTemplate />
             ) : activeNav === "approvalManagement" ? (
               <ApprovalManagement />
             ) : activeNav === "material" ? (
@@ -983,19 +941,7 @@ const BuyerAdminDash: React.FC = () => {
                   onApprovalSubmitted={handleMaterialApprovalSubmitted}
                 />
               ) : (
-                <MaterialTable
-                  records={materialRecords}
-                  loading={loadingMaterial}
-                  error={materialError}
-                  onRowClick={setSelectedMaterial}
-                  kpi={materialKpi}
-                  loadingKpi={loadingMaterialKpi}
-                  statusFilter={materialStatusFilter}
-                  onStatusFilterChange={setMaterialStatusFilter}
-                  searchInput={materialSearchInput}
-                  onSearchInputChange={setMaterialSearchInput}
-                  onSearchSubmit={() => setMaterialSearchTerm(materialSearchInput)}
-                />
+                <MaterialTable onRowClick={setSelectedMaterial} />
               )
             ) : activeNav === "contract" ? (
               selectedContract ? (

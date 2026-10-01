@@ -19,6 +19,8 @@ import {
     ItemMasterUploadModal,
     type ItemMasterUploadModalApi,
     SearchInput,
+    ChevronLeftIcon,
+    ChevronRightIcon,
 } from "@vosox/shared-ui";
 import { FaPlus, FaUpload } from "react-icons/fa";
 import "./ItemMasterCatalog.css";
@@ -42,18 +44,6 @@ const DETAIL_FIELDS: { key: keyof ItemMasterDetailDto; label: string }[] = [
     { key: "subUnit", label: "Sub Unit" },
     { key: "microUnit", label: "Micro Unit" },
 ];
-
-const IconChevronLeft = () => (
-    <svg className="back-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="15 18 9 12 15 6" />
-    </svg>
-);
-
-const IconChevronRight = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <polyline points="9 18 15 12 9 6" />
-  </svg>
-);
 
 const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, organizationId, onClose }) => {
     const [itemMasters, setItemMasters] = useState<ItemMasterDto[]>([]);
@@ -171,7 +161,7 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, organiza
                             title="Go back to list"
                             aria-label="Go back"
                         >
-                            <IconChevronLeft />
+                            <ChevronLeftIcon className="back-icon" width={undefined} height={undefined} />
                         </button>
 
                         <div className="detail-header-title">
@@ -295,7 +285,7 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, organiza
                                     onClick={handleItemMasterPrevPage}
                                     disabled={itemMasterPage <= 1 || loading}
                                   >
-                                  <IconChevronLeft />
+                                  <ChevronLeftIcon className="back-icon" width={undefined} height={undefined} />
                                   </button>
 
                                   <span className="imc-pagination-number">
@@ -308,7 +298,7 @@ const ItemMasterCatalog: React.FC<ItemMasterCatalogProps> = ({ buyerId, organiza
                                      onClick={handleItemMasterNextPage}
                                      disabled={!itemMasterHasMore || loading}
                                    >
-                                   <IconChevronRight />
+                                   <ChevronRightIcon />
                                    </button>
                                  </div>
                        </>

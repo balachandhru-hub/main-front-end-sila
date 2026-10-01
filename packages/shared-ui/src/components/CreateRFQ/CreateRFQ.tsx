@@ -910,6 +910,10 @@ if (Array.isArray(data)) {
                 deliveryTargetDate: deliveryTargetDate ? new Date(deliveryTargetDate).toISOString() : "",
                 budget: Number(totalBudget) || 0,
                 addLotOption: lotOption,
+                segmentId: segmentCode,
+                segmentTitle,
+                familyId: familyCode,
+                familyTitle,
                 technicalSpecificationDocuments,
                 termsConditionDocuments,
                 questions,
@@ -1822,7 +1826,7 @@ if (Array.isArray(data)) {
                     {(externalSuppliers.length > 0 || hasUnverifiedSelected) && (
                         <div className="bd-onboarding-box">
                             <div className="bd-onboarding-header">
-                                <FaShieldAlt aria-hidden="true" /> Supplier Onboarding Required
+                                <FaShieldAlt aria-hidden="true" /> Supplier Verification
                             </div>
                             <p className="bd-onboarding-sub">
                                 Some selected vendors are unverified. They will receive an invitation to register first.

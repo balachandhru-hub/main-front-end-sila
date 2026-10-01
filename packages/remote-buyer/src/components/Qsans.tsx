@@ -1,30 +1,7 @@
 import React, { useState } from "react";
 import "./Qsans.css";
 import { downloadBuyerAsset } from "../api/Buyerapi";
-import { EmptyState, Loader } from "@vosox/shared-ui";
-
-/* ---------------------------------- Icons ---------------------------------- */
-
-const IconClose = () => (
-    <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="18" y1="6" x2="6" y2="18" />
-        <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-);
-
-const IconFile = () => (
-    <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <path d="M14 2v6h6" />
-        <path d="M8 13h8M8 17h8M8 9h2" />
-    </svg>
-);
-
-const IconChevronLeft = () => (
-    <svg aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="15 18 9 12 15 6" />
-    </svg>
-);
+import { EmptyState, Loader, ChevronLeftIcon, CloseIcon, FileTextIcon } from "@vosox/shared-ui";
 
 /* ---------------------------------- Types ---------------------------------- */
 
@@ -167,7 +144,7 @@ const QsAns: React.FC<QsAnsProps> = ({ rfq, onBack, loading = false, error = nul
         <div className="qsans-page">
             <div className="qsans-header">
                 <span className="qsans-badge">
-                    <IconFile /> RFQ Question Answers
+                    <FileTextIcon /> RFQ Question Answers
                 </span>
                 <button
                     type="button"
@@ -175,7 +152,7 @@ const QsAns: React.FC<QsAnsProps> = ({ rfq, onBack, loading = false, error = nul
                     onClick={() => (viewingAttachment ? closeAttachmentViewer() : onBack())}
                     aria-label="Close"
                 >
-                    <IconClose />
+                    <CloseIcon />
                 </button>
                 <h2 className="qsans-title">
                     {loading ? "Loading Q&A..." : rfq?.title || "RFQ Question Answers"}
@@ -194,7 +171,7 @@ const QsAns: React.FC<QsAnsProps> = ({ rfq, onBack, loading = false, error = nul
                     <div className="qsans-attachment-viewer">
                         <div className="qsans-attachment-toolbar">
                             <button type="button" className="qsans-btn qsans-btn-outline" onClick={closeAttachmentViewer}>
-                                <IconChevronLeft /> Back
+                                <ChevronLeftIcon size={14} /> Back
                             </button>
                             <span className="qsans-attachment-name" title={viewingAttachment.fileName}>{viewingAttachment.fileName}</span>
                             <span className="qsans-attachment-spacer" aria-hidden="true" />
@@ -278,7 +255,7 @@ const QsAns: React.FC<QsAnsProps> = ({ rfq, onBack, loading = false, error = nul
                                                                     <span className="qsans-qa-answer">
                                                                         {match?.attachment && (
                                                                             <span className="qsans-qa-answer-icon" aria-hidden="true">
-                                                                                <IconFile />
+                                                                                <FileTextIcon />
                                                                             </span>
                                                                         )}
                                                                         <span className="qsans-qa-answer-text">{display}</span>

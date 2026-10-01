@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import readXlsxFile from 'read-excel-file/browser';
+import type { Sheet } from 'read-excel-file/browser';
 import { EmptyState, Loader, toastService } from '@vosox/shared-ui';
 import type {
   PendingMaterialApproval,
@@ -11,6 +13,7 @@ import {
   MATERIAL_APPROVAL_STATUS,
 } from './materialApi';
 import MaterialApprovalCard from './MaterialApprovalCard';
+import { ExcelSheetGrid, loadMaterialAssetFile, saveLoadedAssetFile } from './MaterialAssetFile';
 import { MaterialStatusBadge } from './MaterialTable';
 import './MaterialApproval.css';
 
@@ -50,6 +53,13 @@ const MaterialApprovalDetail: React.FC<MaterialApprovalDetailProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [sheets, setSheets] = useState<Sheet[]>([]);
+  const [loadingItems, setLoadingItems] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  // Bulk approvals have no material code/info; they're identified by an uploaded Excel file.
+  const bulkAsset = detail?.asset ?? material.asset;
+  const isBulk = material.uploadType === 'EXCEL' || !!bulkAsset;
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +82,33 @@ const MaterialApprovalDetail: React.FC<MaterialApprovalDetailProps> = ({
 
     return () => { cancelled = true; };
   }, [material.predefinedMaterialId]);
+
+  useEffect(() => {
+    setSheets([]);
+    if (!bulkAsset) return;
+    let cancelled = false;
+    setLoadingItems(true);
+    loadMaterialAssetFile(bulkAsset, 'Unable to load the uploaded items.')
+      .then(async (file) => {
+        if (!file) return;
+        URL.revokeObjectURL(file.url);
+        const parsed = await readXlsxFile(file.blob);
+        if (!cancelled) setSheets(parsed);
+      })
+      .catch(() => toastService.error('Unable to read the uploaded Excel file.'))
+      .finally(() => {
+        if (!cancelled) setLoadingItems(false);
+      });
+    return () => { cancelled = true; };
+  }, [bulkAsset?.id]);
+
+  const handleDownload = async () => {
+    if (!bulkAsset) return;
+    setDownloading(true);
+    const file = await loadMaterialAssetFile(bulkAsset, 'Unable to download document.');
+    setDownloading(false);
+    if (file) saveLoadedAssetFile(file);
+  };
 
   const handleDecision = async (action: 'APPROVE' | 'REJECT', comment: string) => {
     if (submitting) return;
@@ -107,16 +144,22 @@ const MaterialApprovalDetail: React.FC<MaterialApprovalDetailProps> = ({
           <IconBack />
         </button>
         <div className="matap-detail-heading">
-          <span className="sila-ref matap-detail-ref-badge">{material.materialCode}</span>
+          {!isBulk && <span className="sila-ref matap-detail-ref-badge">{material.materialCode}</span>}
           <div className="matap-detail-title-row">
-            <h2 className="matap-detail-title">{material.description || 'Material Approval'}</h2>
+            <h2 className="matap-detail-title">
+              {isBulk
+                ? detail?.title || material.title || 'Bulk Material Approval'
+                : material.description || material.title || 'Material Approval'}
+            </h2>
             {detail && <MaterialStatusBadge value={detail.status} />}
           </div>
-          <div className="matap-detail-meta">
-            <span>{material.productType}</span>
-            <span className="matap-detail-dot" aria-hidden="true">•</span>
-            <span>{material.materialGroup}</span>
-          </div>
+          {!isBulk && (
+            <div className="matap-detail-meta">
+              <span>{material.productType}</span>
+              <span className="matap-detail-dot" aria-hidden="true">•</span>
+              <span>{material.materialGroup}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -127,6 +170,30 @@ const MaterialApprovalDetail: React.FC<MaterialApprovalDetailProps> = ({
           <EmptyState variant="error" title="Couldn't load this approval" description={error} />
         ) : detail ? (
           <div className="matap-detail-stack">
+            {isBulk ? (
+              <section>
+                <div className="matap-items-header">
+                  <h3 className="matap-section-title">Items</h3>
+                  {bulkAsset && (
+                    <button
+                      type="button"
+                      className="sila-btn sila-btn--secondary sila-btn--sm"
+                      disabled={downloading}
+                      onClick={() => void handleDownload()}
+                    >
+                      {downloading ? 'Downloading…' : 'Download'}
+                    </button>
+                  )}
+                </div>
+                {loadingItems ? (
+                  <Loader size={24} message="Loading items..." />
+                ) : sheets.length > 0 ? (
+                  <ExcelSheetGrid sheets={sheets} />
+                ) : (
+                  <EmptyState title="No items to display." />
+                )}
+              </section>
+            ) : (
             <section>
               <h3 className="matap-section-title">Material Information</h3>
               <dl className="matap-info-grid">
@@ -140,6 +207,7 @@ const MaterialApprovalDetail: React.FC<MaterialApprovalDetailProps> = ({
                 <InfoField label="Status" value={detail.status ? <MaterialStatusBadge value={detail.status} /> : null} />
               </dl>
             </section>
+            )}
 
             <section>
               <h3 className="matap-section-title">
