@@ -1560,7 +1560,6 @@ button.bad-stat-card:focus-visible {
     }
 
     .bad-match-actions {
-        flex-direction: column;
         width: 100%;
     }
 

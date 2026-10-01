@@ -32,13 +32,16 @@
   flex: 1;
   display: flex;
   justify-content: center;
-  padding: var(--sila-page-padding-y) var(--sila-page-padding-x);
 }
 
 .put-content-wrapper {
   width: 100%;
   max-width: var(--sila-content-max-width);
   min-width: 0;
+  max-width: 75rem;
+  margin: 0 auto;
+  padding: var(--sila-page-padding-y) var(--sila-page-padding-x);
+  box-sizing: border-box;
 }
 
 /* ─── Page header ─── */
