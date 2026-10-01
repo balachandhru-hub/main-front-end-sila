@@ -126,7 +126,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
                       onClick={() => onRowClick(record)}
                       onKeyDown={(e) => { if (e.key === 'Enter') onRowClick(record); }}
                     >
-                      <td className="ctr-sno sila-num">{idx + 1}</td>
+                      <td className="ctr-sno sila-num">{(page - 1) * 10 + idx + 1}</td>
                       <td><span className="bad-code-badge sila-ref">{record.contractNumber}</span></td>
                       <td className="ctr-title-cell">{record.contractName}</td>
                       <td className="ctr-rfq-cell">
