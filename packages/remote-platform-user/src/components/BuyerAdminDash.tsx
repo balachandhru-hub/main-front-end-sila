@@ -37,6 +37,8 @@ import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
 // import QuotationSummaryTable from "../../../remote-buyer/src/components/QuotationSummaryTable";
 import QuotationComparisonCard from "./QuotationComparisonCard";
 import ItemMasterCatalog from "../../../remote-buyer/src/components/ItemMasterCatalog";
+import BuyerErpConfiguration from "../../../remote-buyer/src/components/erp/BuyerErpConfiguration";
+import WishlistSection from "../../../remote-buyer/src/components/wishlist/WishlistSection";
 import type { PendingMaterialApproval } from "./Material/materialApi";
 import MaterialTable from "./Material/MaterialTable";
 import MaterialApprovalDetail from "./Material/MaterialApprovalDetail";
@@ -276,10 +278,14 @@ const BUYER_ADMIN_NAV_PATHS: RouteNavPaths = {
   contract: "contract-approvals",
   materialService: "material-service",
   companyProfile: "company-profile",
+  wishlist: "wishlist",
+  wishlistApprovals: "wishlist-approvals",
+  purchaseOrderApi: "purchase-order-api",
 };
 
 const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number; subItems?: NavSubEntry[]; chevronIcon?: React.ReactNode }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
+  { key: "wishlist", icon: <NavIconFilePlus />, label: "Wishlist" },
   { key: "invitations", icon: <IconMail />, label: "Invitations" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog" },
@@ -291,7 +297,8 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
     subItems: [
       { key: "template", label: "Templates" },
       { key: "contractTemplate", label: "Contract Templates" },
-      { key: "approvalManagement", label: "Approval Management" }
+      { key: "approvalManagement", label: "Approval Management" },
+      { key: "purchaseOrderApi", label: "Purchase Order API" },
     ]
   },
   {
@@ -304,7 +311,8 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
         label: "Approval",
         items: [
           { key: "material", label: "Material" },
-          { key: "contract", label: "Contract" }
+          { key: "contract", label: "Contract" },
+          { key: "wishlistApprovals", label: "Wishlist" },
         ]
       },
       { key: "materialService", label: "Material & Service" }
@@ -932,6 +940,12 @@ const BuyerAdminDash: React.FC = () => {
               <ContractTemplate />
             ) : activeNav === "approvalManagement" ? (
               <ApprovalManagement />
+            ) : activeNav === "purchaseOrderApi" ? (
+              <BuyerErpConfiguration />
+            ) : activeNav === "wishlist" ? (
+              <WishlistSection buyerId={buyerId || ""} currentUserId={currentUserId} mode="manage" />
+            ) : activeNav === "wishlistApprovals" ? (
+              <WishlistSection buyerId={buyerId || ""} currentUserId={currentUserId} mode="approve" />
             ) : activeNav === "material" ? (
               selectedMaterial ? (
                 <MaterialApprovalDetail

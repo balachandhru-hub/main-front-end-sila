@@ -3,13 +3,15 @@ import { EmptyState, Loader, PageHeader, Pagination, toastService } from "@vosox
 import { getWishlist, getWishlists, type WishlistDetail, type WishlistListItem } from "../../api/wishlistApi";
 import WishlistDetailView from "./WishlistDetail";
 import WishlistForm from "./WishlistForm";
-import { statusBadgeClass, statusLabel } from "./wishlistStatus";
+import { isMyApprovalTurn, statusBadgeClass, statusLabel } from "./wishlistStatus";
 
 const PAGE_SIZE = 20;
 
 interface WishlistSectionProps {
   buyerId: string;
   currentUserId: string | null;
+  /** manage: create and resubmit. approve: inbox of wishlists waiting for this user. */
+  mode?: "manage" | "approve";
 }
 
 type View =
@@ -25,7 +27,7 @@ const formatDate = (value?: string | null): string => {
   return date.toLocaleDateString();
 };
 
-const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserId }) => {
+const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserId, mode = "manage" }) => {
   const [view, setView] = useState<View>({ name: "list" });
   const [rows, setRows] = useState<WishlistListItem[]>([]);
   const [page, setPage] = useState(1);
@@ -37,6 +39,34 @@ const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserI
     setLoading(true);
     setError(null);
     try {
+      if (mode === "approve") {
+        const pending: WishlistListItem[] = [];
+        for (let index = 0; index < 10; index += 1) {
+          const batch = await getWishlists(index * 50, 50);
+          pending.push(...batch.filter((row) => row.status === "PENDING_APPROVAL"));
+          if (batch.length < 50) break;
+        }
+        const details = await Promise.all(pending.map((row) => getWishlist(row.id).catch(() => null)));
+        const mine = details.filter(
+          (detail): detail is WishlistDetail => detail != null && isMyApprovalTurn(detail, currentUserId),
+        );
+        setRows(mine.map((detail) => ({
+          id: detail.id,
+          wishlistName: detail.wishlistName,
+          outletName: detail.outletName,
+          createdBy: detail.createdBy,
+          dateCreated: detail.dateCreated,
+          status: detail.status,
+          approvalName: detail.approvalName,
+          buyerErpDocumentNumber: detail.buyerErpDocumentNumber,
+          supplierErpDocumentNumber: detail.supplierErpDocumentNumber,
+          lastError: detail.lastError,
+        })));
+        setHasNext(false);
+        setPage(1);
+        return;
+      }
+
       const data = await getWishlists((nextPage - 1) * PAGE_SIZE, PAGE_SIZE + 1);
       setHasNext(data.length > PAGE_SIZE);
       setRows(data.slice(0, PAGE_SIZE));
@@ -48,11 +78,11 @@ const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserI
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentUserId, mode]);
 
   useEffect(() => {
-    if (view.name === "list") loadPage(page);
-  }, [view.name, loadPage, page]);
+    if (view.name === "list") loadPage(mode === "approve" ? 1 : page);
+  }, [view.name, loadPage, page, mode]);
 
   const openWishlist = async (id: string) => {
     setLoading(true);
@@ -104,6 +134,7 @@ const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserI
         wishlist={view.wishlist}
         currentUserId={currentUserId}
         onBack={() => setView({ name: "list" })}
+        allowEdit={mode === "manage"}
         onEdit={() => setView({ name: "edit", wishlist: view.wishlist })}
         onChanged={() => refreshOpen(view.wishlist.id)}
       />
@@ -114,13 +145,15 @@ const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserI
     <>
       <PageHeader
         className="pud-page-header"
-        title="Wishlists"
-        description="Organization wishlists start approval on create. The last approval sends the purchase order to the saved PO_CREATE API."
-        actions={(
+        title={mode === "approve" ? "Wishlist approvals" : "Wishlists"}
+        description={mode === "approve"
+          ? "Wishlists waiting for your approval. The last approval sends the purchase order to the saved PO_CREATE API."
+          : "Organization wishlists start approval on create. The last approval sends the purchase order to the saved PO_CREATE API."}
+        actions={mode === "manage" ? (
           <button type="button" className="sila-btn sila-btn--primary" onClick={() => setView({ name: "create" })}>
             New wishlist
           </button>
-        )}
+        ) : undefined}
       />
       <section className="sila-card">
         {loading ? (
@@ -128,7 +161,12 @@ const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserI
         ) : error && rows.length === 0 ? (
           <EmptyState variant="error" title="Couldn't load wishlists" description={error} />
         ) : rows.length === 0 ? (
-          <EmptyState title="No wishlists yet" description="Create a wishlist to start approval and send a purchase order." />
+          <EmptyState
+            title={mode === "approve" ? "Nothing is waiting for you" : "No wishlists yet"}
+            description={mode === "approve"
+              ? "When you are the next approver on a wishlist, it shows up here."
+              : "Create a wishlist to start approval and send a purchase order."}
+          />
         ) : (
           <>
             <div className="sila-table-wrap">
@@ -168,13 +206,15 @@ const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserI
                 </tbody>
               </table>
             </div>
-            <Pagination
-              page={page}
-              hasNext={hasNext}
-              onPrevious={() => setPage((current) => Math.max(1, current - 1))}
-              onNext={() => setPage((current) => current + 1)}
-              disabled={loading}
-            />
+            {mode === "manage" && (
+              <Pagination
+                page={page}
+                hasNext={hasNext}
+                onPrevious={() => setPage((current) => Math.max(1, current - 1))}
+                onNext={() => setPage((current) => current + 1)}
+                disabled={loading}
+              />
+            )}
           </>
         )}
       </section>

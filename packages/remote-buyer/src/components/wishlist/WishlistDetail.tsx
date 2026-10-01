@@ -9,6 +9,7 @@ interface WishlistDetailProps {
   onBack: () => void;
   onChanged: () => void;
   onEdit: () => void;
+  allowEdit?: boolean;
 }
 
 const formatDate = (value?: string | null): string => {
@@ -24,6 +25,7 @@ const WishlistDetailView: React.FC<WishlistDetailProps> = ({
   onBack,
   onChanged,
   onEdit,
+  allowEdit = true,
 }) => {
   const [comment, setComment] = useState("");
   const [deciding, setDeciding] = useState(false);
@@ -58,7 +60,7 @@ const WishlistDetailView: React.FC<WishlistDetailProps> = ({
         meta={<span className={statusBadgeClass(wishlist.status)}>{statusLabel(wishlist.status)}</span>}
         onBack={onBack}
         backLabel="Back to wishlists"
-        actions={wishlist.status === "REJECTED" ? (
+        actions={allowEdit && wishlist.status === "REJECTED" ? (
           <button type="button" className="sila-btn sila-btn--secondary" onClick={onEdit}>Edit and resubmit</button>
         ) : undefined}
       />
