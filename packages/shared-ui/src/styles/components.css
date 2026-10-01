@@ -724,7 +724,7 @@ button.sila-kpi:focus-visible { outline: none; box-shadow: var(--sila-focus-ring
 }
 
 .sila-table td {
-  height: 2.75rem;
+  height: 3.25rem;
   padding: var(--sila-space-2) var(--sila-space-4);
   border-bottom: 0.0625rem solid var(--sila-border-subtle);
   vertical-align: middle;
@@ -1325,6 +1325,9 @@ button.sila-kpi:focus-visible { outline: none; box-shadow: var(--sila-focus-ring
 /* ======================================================================== */
 /* Charts                                                                   */
 /* ======================================================================== */
+.sila-chart *:focus {
+  outline: none !important;
+}
 
 .sila-chart-grid {
   display: grid;

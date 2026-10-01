@@ -31,6 +31,18 @@ export function generateContractTemplatePdf(template: ContractTemplateRecord): j
   y += LINE_HEIGHT * 2;
   doc.setTextColor(0);
 
+  if (template.description?.trim()) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    const descLines = doc.splitTextToSize(template.description.trim(), pageWidth - MARGIN * 2) as string[];
+    descLines.forEach((line) => {
+      ensureSpace(LINE_HEIGHT);
+      doc.text(line, MARGIN, y);
+      y += LINE_HEIGHT;
+    });
+    y += LINE_HEIGHT;
+  }
+
   ensureSpace(LINE_HEIGHT * 2);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
