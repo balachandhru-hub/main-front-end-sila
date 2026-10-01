@@ -39,6 +39,7 @@
 /* ---- Create form card ---------------------------------------------- */
 
 .im-form-section {
+  margin-top: var(--sila-space-4);
   margin-bottom: var(--sila-space-4);
   padding: var(--sila-space-5);
   background: var(--sila-surface);

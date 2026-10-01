@@ -366,3 +366,14 @@
     padding: var(--sila-space-4);
   }
 }
+@media(max-width:27rem){
+   .imc-header-actions {
+    width: 100%;
+  }
+
+  .imc-btn-primary,
+  .imc-btn-secondary {
+    min-width: 11.75rem;
+    justify-content: center;
+  }
+}

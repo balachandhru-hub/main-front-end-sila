@@ -4,7 +4,7 @@
 
 .profile-page {
   width: 100%;
-  max-width: 60rem;
+  max-width: 90rem;
   font-family: var(--sila-font);
   color: var(--sila-text);
 }
@@ -59,6 +59,7 @@
 /* ---- Section card ---------------------------------------------------- */
 .profile-section-card {
   overflow: hidden;
+  margin-top: var(--sila-space-4);
 }
 
 .profile-section-header {

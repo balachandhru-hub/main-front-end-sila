@@ -455,7 +455,6 @@ button.sila-kpi:focus-visible { outline: none; box-shadow: var(--sila-focus-ring
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--sila-space-3) var(--sila-space-4);
-  padding-bottom: var(--sila-space-5);
 }
 
 .sila-page-header-main {

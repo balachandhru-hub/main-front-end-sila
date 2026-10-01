@@ -75,19 +75,30 @@
 /* ---- RFQ details --------------------------------------------------------- */
 
 .sila-meta-grid.sqs-details-grid {
-  grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
-}
-
-.sqs-details-grid dd {
-  margin: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .sqs-details-wide {
-  grid-column: span 2;
+  grid-column: auto;
 }
 
 .sqs-details-full {
   grid-column: 1 / -1;
+}
+
+@media (max-width: 48rem) {
+  .sila-meta-grid.sqs-details-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sila-meta-grid.sqs-details-grid .sqs-details-wide {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 30rem) {
+  .sila-meta-grid.sqs-details-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .sqs-description {
