@@ -414,12 +414,25 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
     lineItems.forEach((item: any) => {
       const itemId = item.id || item.itemId || item._id;
 
-      // In supplier mode (or single-supplier contract view), include all line items quoted by the supplier
+      // Supplier mode, or a single-supplier contract view: an RFQ's line items can still be split-awarded
+      // across several suppliers even when only one supplier's contract is open here, so only the items
+      // actually awarded to that supplier belong in it - not every line item on the RFQ. Only filters when the
+      // item itself carries an isAwarded flag (as the RFQ's own supplier/buyer rfq-by-id items do); an RFQ with
+      // no per-item award data at all falls through to "include everything" below, same as before, and the
+      // "ensure every supplier has line items" pass further down restores the full list if filtering still
+      // leaves this supplier with none.
       if (isSupplier || awardedSupplierIds.length === 1) {
         const targetSid = awardedSupplierIds[0] || supplierId;
         if (targetSid) {
           if (!map[targetSid]) map[targetSid] = [];
-          map[targetSid].push(itemId);
+          if (typeof item.isAwarded === "boolean") {
+            const resolvedTargetSid = resolveSupplierId(targetSid);
+            const isAwardedToTarget =
+              item.isAwarded === true && (!item.awardedSupplierId || item.awardedSupplierId === resolvedTargetSid);
+            if (isAwardedToTarget) map[targetSid].push(itemId);
+          } else {
+            map[targetSid].push(itemId);
+          }
           return;
         }
       }
@@ -520,6 +533,11 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const [signerDesignationInput, setSignerDesignationInput] = useState("");
   const [declarationChecked, setDeclarationChecked] = useState(true);
   const [drawnSignatureData, setDrawnSignatureData] = useState<string | null>(null);
+  // Signing this party's copy inside the modal, either by drawing a signature or uploading an already-signed
+  // document - both apply the same way (see confirmApplyESign / handleUploadSignedContract) so they live as one
+  // choice in the modal rather than a second "Upload Signed Contract" button next to "E-Sign Contract".
+  const [eSignMethod, setESignMethod] = useState<"draw" | "upload">("draw");
+  const [signedContractFile, setSignedContractFile] = useState<File | null>(null);
 
   // Supplier Terms & Conditions Document Upload State
   const [supplierTcFile, setSupplierTcFile] = useState<File | null>(null);
@@ -1537,6 +1555,8 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
   const openESignModal = (id: string) => {
     setESignModalContractId(id);
     setDrawnSignatureData(null);
+    setESignMethod("draw");
+    setSignedContractFile(null);
     setSignerNameInput(
       isSupplier
         ? supplierName || getSupplierName(id) || "Supplier Representative"
@@ -2788,20 +2808,6 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 Contract Signing
               </div>
 
-              {/* Hidden File Input for Upload Signed Contract */}
-              <input
-                type="file"
-                id="signed-contract-upload-input"
-                className="contract-hidden-input"
-                accept=".pdf,.png,.jpg,.doc,.docx"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    handleUploadSignedContract(activeContractId, file.name, file);
-                  }
-                }}
-              />
-
               <div className="contract-sign-status-row">
                 <div>
                   <div className="contract-sign-label">
@@ -2841,15 +2847,10 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 </div>
               )}
 
-              {isSupplier && !supplierSignBlockedByPendingTcApproval && !supplierSignBlockedByBuyerNotSigned && supplierSignBlockedByPendingApproval && (
-                <div className="contract-upload-help">
-                  Signing is disabled until all contract approvers have approved.
-                </div>
-              )}
-
-              {/* Contract's approval chain, from the buyer's rfq-by-id (contracts[].approvalUsers) - visible to
-                  both roles so either side can see who still needs to approve before the supplier can sign. */}
-              {activeApprovalUsers.length > 0 && renderApprovalChain()}
+              {/* Contract's approval chain, from the buyer's rfq-by-id (contracts[].approvalUsers) - buyer-only.
+                  It's the buyer's internal approval workflow; the supplier just sees signing become available
+                  once it's done, with no visibility into who's on the chain or that it's still pending. */}
+              {!isSupplier && activeApprovalUsers.length > 0 && renderApprovalChain()}
 
               {/* Buyer Signed Badge & Signature Box */}
               {activeContract.buyerSigned && activeContract.buyerSignDetails && (
@@ -2911,52 +2912,27 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
                 </div>
               )}
 
-              {/* Action Buttons */}
+              {/* Action Buttons - opens the E-Sign modal, which offers drawing or uploading a signature (see
+                  the eSignMethod choice inside it) rather than a separate "Upload Signed Contract" button. */}
               <div className="contract-btn-group contract-btn-group--wrap">
                 {isSupplier ? (
-                  <>
-                    <Button
-                      variant={activeContract.supplierSigned ? "success" : "primary"}
-                      size="sm"
-                      onClick={() => openESignModal(activeContractId)}
-                      disabled={activeContract.supplierSigned || supplierSignBlocked}
-                    >
-                      {activeContract.supplierSigned ? "✓ Supplier Signed" : "E-Sign Contract"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const input = document.getElementById("signed-contract-upload-input");
-                        if (input) input.click();
-                      }}
-                      disabled={activeContract.supplierSigned || supplierSignBlocked}
-                    >
-                      Upload Signed Contract
-                    </Button>
-                  </>
+                  <Button
+                    variant={activeContract.supplierSigned ? "success" : "primary"}
+                    size="sm"
+                    onClick={() => openESignModal(activeContractId)}
+                    disabled={activeContract.supplierSigned || supplierSignBlocked}
+                  >
+                    {activeContract.supplierSigned ? "✓ Supplier Signed" : "E-Sign Contract"}
+                  </Button>
                 ) : (
-                  <>
-                    <Button
-                      variant={activeContract.buyerSigned ? "success" : "primary"}
-                      size="sm"
-                      onClick={() => openESignModal(activeContractId)}
-                      disabled={activeContract.buyerSigned}
-                    >
-                      {activeContract.buyerSigned ? "✓ Buyer Signed" : "E-Sign Contract"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const input = document.getElementById("signed-contract-upload-input");
-                        if (input) input.click();
-                      }}
-                      disabled={activeContract.buyerSigned}
-                    >
-                      Upload Signed Contract
-                    </Button>
-                  </>
+                  <Button
+                    variant={activeContract.buyerSigned ? "success" : "primary"}
+                    size="sm"
+                    onClick={() => openESignModal(activeContractId)}
+                    disabled={activeContract.buyerSigned}
+                  >
+                    {activeContract.buyerSigned ? "✓ Buyer Signed" : "E-Sign Contract"}
+                  </Button>
                 )}
               </div>
             </div>
@@ -3085,13 +3061,59 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
               E-Sign Contract ({isSupplier ? "Supplier" : "Buyer"})
             </div>
             <div className="contract-esign-subtitle">
-              Draw your signature in the box below to sign this contract.
+              Draw your signature below, or upload an already-signed copy of the contract instead.
             </div>
 
-            {/* Signature Drawing Pad Canvas */}
-            <div className="contract-esign-pad">
-              <SignaturePad onDraw={setDrawnSignatureData} />
+            {/* Draw vs. upload - both apply this party's signature the same way (confirmApplyESign /
+                handleUploadSignedContract), so this replaces a separate "Upload Signed Contract" button. */}
+            <div className="contract-radio-group contract-radio-group--esign">
+              <label className="contract-radio-label">
+                <input
+                  type="radio"
+                  name={`eSignMethod_${eSignModalContractId}`}
+                  value="draw"
+                  checked={eSignMethod === "draw"}
+                  onChange={() => setESignMethod("draw")}
+                />
+                Draw Signature
+              </label>
+              <label className="contract-radio-label">
+                <input
+                  type="radio"
+                  name={`eSignMethod_${eSignModalContractId}`}
+                  value="upload"
+                  checked={eSignMethod === "upload"}
+                  onChange={() => setESignMethod("upload")}
+                />
+                Upload Signed Document
+              </label>
             </div>
+
+            {eSignMethod === "draw" ? (
+              <div className="contract-esign-pad">
+                <SignaturePad onDraw={setDrawnSignatureData} />
+              </div>
+            ) : (
+              <div className="contract-dashed-box contract-dashed-box--modal">
+                <div className="contract-upload-title">Upload Signed Document</div>
+                <div className="contract-upload-help">
+                  Attach a scanned or exported copy of the contract bearing your signature (.pdf, .png, .jpg, .doc, .docx).
+                </div>
+                <div className="contract-upload-row">
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.doc,.docx"
+                    onChange={(e) => setSignedContractFile(e.target.files?.[0] || null)}
+                    className="contract-file-input"
+                  />
+                </div>
+                {signedContractFile && (
+                  <div className="contract-selected-file">
+                    📄 Selected file: {signedContractFile.name} ({(signedContractFile.size / 1024).toFixed(1)} KB)
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Declaration Checkbox */}
             <label className="contract-declaration">
@@ -3106,21 +3128,32 @@ export const ContractCreationView: React.FC<ContractCreationViewProps> = ({
 
             {/* Actions */}
             <div className="contract-modal-actions contract-modal-actions--flush">
-              <button
-                type="button"
-                onClick={() => setESignModalContractId(null)}
-                className="contract-btn contract-btn--outline contract-btn--modal"
-              >
+              <Button variant="outline" size="sm" onClick={() => setESignModalContractId(null)}>
                 Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => confirmApplyESign(eSignModalContractId)}
-                disabled={!declarationChecked || !drawnSignatureData}
-                className="contract-btn contract-btn--primary contract-btn--cta"
-              >
-                Confirm &amp; Apply E-Signature
-              </button>
+              </Button>
+              {eSignMethod === "draw" ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => confirmApplyESign(eSignModalContractId)}
+                  disabled={!declarationChecked || !drawnSignatureData}
+                >
+                  Confirm &amp; Apply E-Signature
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    if (!signedContractFile) return;
+                    handleUploadSignedContract(eSignModalContractId, signedContractFile.name, signedContractFile);
+                    setESignModalContractId(null);
+                  }}
+                  disabled={!declarationChecked || !signedContractFile}
+                >
+                  Confirm &amp; Upload Signature
+                </Button>
+              )}
             </div>
           </div>
         </div>

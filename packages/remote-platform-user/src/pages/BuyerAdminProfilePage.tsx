@@ -6,6 +6,7 @@ import { isErrorResponse } from '@vosox/shared-ui';
 import { updatePersonDetail } from '../api/networkAdminApi';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
 import Header from '../components/Header';
+import { getPersonDetail } from '../../../remote-buyer/src/api/Buyerapi';
 
 const BuyerAdminProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -28,7 +29,13 @@ const BuyerAdminProfilePage: React.FC = () => {
     if (isErrorResponse(result)) {
       setError(result.message || 'Failed to update profile.');
     } else {
-      setPersonDetail(result);
+      const updateProfile = await getPersonDetail();
+      if (isErrorResponse(updateProfile)){
+         setError(updateProfile.message || 'Failed to fetch update profile.');
+      }
+      else{
+      setPersonDetail(updateProfile);
+      }
     }
 
     setSaving(false);

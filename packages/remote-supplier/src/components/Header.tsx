@@ -37,7 +37,7 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
       key: 'companyProfile',
       label: 'Company Profile',
       icon: <AccountMenuIcons.Building />,
-      onSelect: () => (onNavClick ? onNavClick('companyProfile') : navigate('/profile')),
+      onSelect: () => (onNavClick ? onNavClick('companyProfile') : navigate('/company-profile')),
     },
     { key: 'editProfile', label: 'Edit Profile', icon: <AccountMenuIcons.User />, onSelect: () => navigate('/profile') },
     { key: 'resetPassword', label: 'Reset Password', icon: <AccountMenuIcons.Lock />, onSelect: () => undefined },
