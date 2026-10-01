@@ -19,9 +19,6 @@ export interface HeaderProps {
 /** Roles that have a personal profile page (at /profile). */
 const ROLES_WITH_PROFILE: UserRole[] = ['BUYER_ADMINISTRATOR', 'SUPPLIER_ADMINISTRATOR', 'BUYER_NETWORK_ADMIN', 'SUPPLIER_NETWORK_ADMIN'];
 
-/** Roles whose dashboard has a Company Profile section (at /company-profile). */
-const ROLES_WITH_COMPANY_PROFILE: UserRole[] = ['BUYER_ADMINISTRATOR', 'SUPPLIER_ADMINISTRATOR'];
-
 /** Admin portal chrome: shared AppShell wired to the admin session and role routes. */
 const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogout, children }) => {
   const navigate = useNavigate();
@@ -30,8 +27,6 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
   const role = currentUser?.userRole;
 
   const goToProfile = () => navigate(role && ROLES_WITH_PROFILE.includes(role) ? '/profile' : '/dashboard');
-  const goToCompanyProfile = () =>
-    role && ROLES_WITH_COMPANY_PROFILE.includes(role) ? navigate('/company-profile') : goToProfile();
 
   const handleLogout = () => {
     if (onLogout) {
@@ -59,7 +54,7 @@ const Header: React.FC<HeaderProps> = ({ navItems, activeNav, onNavClick, onLogo
       key: 'companyProfile',
       label: 'Company Profile',
       icon: <AccountMenuIcons.Building />,
-      onSelect: () => (onNavClick ? onNavClick('companyProfile') : goToCompanyProfile()),
+      onSelect: () => (onNavClick ? onNavClick('companyProfile') : goToProfile()),
     },
     { key: 'editProfile', label: 'Edit Profile', icon: <AccountMenuIcons.User />, onSelect: goToProfile },
     { key: 'resetPassword', label: 'Reset Password', icon: <AccountMenuIcons.Lock />, onSelect: () => undefined },

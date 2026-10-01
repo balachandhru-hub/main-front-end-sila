@@ -76,7 +76,7 @@ export const SupplierAnalytics: React.FC<SupplierAnalyticsProps> = ({ state, onV
               { key: 'quoted', label: 'Quoted' },
               { key: 'won', label: 'Won' },
             ]}
-            formatCategory={(month) => formatMonth(month)}
+            formatCategory={(month, index) => formatMonth(month, index === 0)}
           />
         </ChartCard>
 

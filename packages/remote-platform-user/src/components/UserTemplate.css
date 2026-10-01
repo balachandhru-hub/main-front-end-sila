@@ -32,8 +32,6 @@
 .ut-header-content {
   flex: 1;
   min-width: 12rem;
-  display: flex;
-  gap: 0.75rem;
 }
 
 .ut-back-btn {
@@ -71,20 +69,17 @@
 }
 
 .ut-table .ut-col-modified {
-  width: 30%;
+  width: 20%;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  color: var(--sila-text-muted);
+  color: var(--sila-text-secondary);
 }
 
 .ut-table .ut-col-action {
-  text-align: left;
+  text-align: right;
   white-space: nowrap;
 }
 
-.ut-btn-view{
-  padding-left: 0;
-}
 .ut-template-name-wrapper {
   display: flex;
   flex-direction: column;

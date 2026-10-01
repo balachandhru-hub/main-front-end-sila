@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ProfileView } from '@vosox/shared-ui';
 import type { PersonDetail, PersonDetailUpdate } from '@vosox/shared-ui';
 import { isErrorResponse } from '@vosox/shared-ui';
-import { getPersonDetail, updatePersonDetail } from '../api/networkAdminApi';
+import { updatePersonDetail } from '../api/networkAdminApi';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
 import Header from '../components/Header';
 
@@ -25,18 +25,12 @@ const NetworkAdminProfilePage: React.FC = () => {
     setError(null);
 
     const result = await updatePersonDetail(updates);
-    
-        if (isErrorResponse(result)) {
-          setError(result.message || 'Failed to update profile.');
-        } else {
-          const updateProfile = await getPersonDetail();
-          if (isErrorResponse(updateProfile)){
-             setError(updateProfile.message || 'Failed to fetch update profile.');
-          }
-          else{
-          setPersonDetail(updateProfile);
-          }
-        }
+
+    if (isErrorResponse(result)) {
+      setError(result.message || 'Failed to update profile.');
+    } else {
+      setPersonDetail(result);
+    }
 
     setSaving(false);
   };

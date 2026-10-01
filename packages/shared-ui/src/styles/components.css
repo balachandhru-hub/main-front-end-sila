@@ -455,6 +455,7 @@ button.sila-kpi:focus-visible { outline: none; box-shadow: var(--sila-focus-ring
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--sila-space-3) var(--sila-space-4);
+  padding-bottom: var(--sila-space-5);
 }
 
 .sila-page-header-main {
@@ -723,7 +724,7 @@ button.sila-kpi:focus-visible { outline: none; box-shadow: var(--sila-focus-ring
 }
 
 .sila-table td {
-  height: 3.25rem;
+  height: 2.75rem;
   padding: var(--sila-space-2) var(--sila-space-4);
   border-bottom: 0.0625rem solid var(--sila-border-subtle);
   vertical-align: middle;
@@ -1324,9 +1325,6 @@ button.sila-kpi:focus-visible { outline: none; box-shadow: var(--sila-focus-ring
 /* ======================================================================== */
 /* Charts                                                                   */
 /* ======================================================================== */
-.sila-chart *:focus {
-  outline: none !important;
-}
 
 .sila-chart-grid {
   display: grid;

@@ -74,7 +74,7 @@ export const BuyerAnalytics: React.FC<BuyerAnalyticsProps> = ({ state, onViewRfq
               { key: 'created', label: 'Created' },
               { key: 'awarded', label: 'Awarded' },
             ]}
-            formatCategory={(month) => formatMonth(month)}
+            formatCategory={(month, index) => formatMonth(month, index === 0)}
           />
         </ChartCard>
 

@@ -6,7 +6,6 @@ import { isErrorResponse } from '@vosox/shared-ui';
 import { updatePersonDetail } from '../api/networkAdminApi';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
 import Header from '../components/Header';
-import { getPersonDetail } from '../../../remote-supplier/src/api/supplierApi';
 
 const SupplierAdminProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -25,18 +24,12 @@ const SupplierAdminProfilePage: React.FC = () => {
     setError(null);
 
     const result = await updatePersonDetail(updates);
-    
-        if (isErrorResponse(result)) {
-          setError(result.message || 'Failed to update profile.');
-        } else {
-          const updateProfile = await getPersonDetail();
-          if (isErrorResponse(updateProfile)){
-             setError(updateProfile.message || 'Failed to fetch update profile.');
-          }
-          else{
-          setPersonDetail(updateProfile);
-          }
-        }
+
+    if (isErrorResponse(result)) {
+      setError(result.message || 'Failed to update profile.');
+    } else {
+      setPersonDetail(result);
+    }
 
     setSaving(false);
   };

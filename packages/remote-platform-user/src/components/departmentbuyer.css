@@ -37,7 +37,7 @@
 /* ---- Settings list: one card, divided rows --------------------------- */
 
 .dept-settings-list {
-  margin-top: var(--sila-space-4);
+  margin: 0;
   padding: 0;
   list-style: none;
   background: var(--sila-surface);

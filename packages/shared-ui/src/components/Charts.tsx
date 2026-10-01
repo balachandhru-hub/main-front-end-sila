@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useState } from 'react';
+import React, { useId } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { toRem } from '../utils/units';
 
@@ -9,27 +9,13 @@ import { toRem } from '../utils/units';
 
 /* ------------------------------------------------------------------ Formatting */
 
-/** "2026-04" → "Apr". */
-export const formatMonth = (month: string): string => {
+/** "2026-04" → "Apr" (with the year on January and on the first point). */
+export const formatMonth = (month: string, withYear = false): string => {
   const [year, m] = month.split('-').map(Number);
   if (!year || !m) return month;
   const date = new Date(year, m - 1, 1);
-  return date.toLocaleString(undefined, { month: 'short' });
-};
-
-/** Below the desktop layout (same breakpoint as the nav drawer) month labels no longer fit side by side. */
-const COMPACT_QUERY = '(max-width: 63.9375rem)';
-
-const useCompactViewport = (): boolean => {
-  const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.matchMedia(COMPACT_QUERY).matches);
-  useEffect(() => {
-    const query = window.matchMedia(COMPACT_QUERY);
-    const onChange = (event: MediaQueryListEvent) => setCompact(event.matches);
-    setCompact(query.matches);
-    query.addEventListener('change', onChange);
-    return () => query.removeEventListener('change', onChange);
-  }, []);
-  return compact;
+  const name = date.toLocaleString(undefined, { month: 'short' });
+  return withYear || m === 1 ? `${name} ’${String(year).slice(2)}` : name;
 };
 
 const defaultFormat = (value: number) => value.toLocaleString();
@@ -176,8 +162,6 @@ export const GroupedColumnChart: React.FC<GroupedColumnChartProps> = ({
   noteFor,
   height = 260,
 }) => {
-  /* Category labels read vertically (bottom to top) on tablet and mobile. */
-  const verticalLabels = useCompactViewport();
   const totals = series.map((s) => data.reduce((sum, row) => sum + Number(row[s.key] ?? 0), 0));
   const summary = series.map((s, i) => `${s.label} ${totals[i]}`).join(', ');
   const labelled = data.map((row, index) => ({ ...row, __label: formatCategory(String(row[categoryKey]), index) }));
@@ -197,15 +181,7 @@ export const GroupedColumnChart: React.FC<GroupedColumnChartProps> = ({
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={labelled} margin={{ top: 8, right: 4, bottom: 0, left: 0 }} barCategoryGap="22%" barGap={2}>
             <CartesianGrid vertical={false} className="sila-chart-grid-line" />
-            <XAxis
-              dataKey="__label"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              interval={0}
-              className="sila-chart-axis"
-              {...(verticalLabels && { angle: -90, textAnchor: 'end', height: 56, tick: { verticalAnchor: 'middle' } })}
-            />
+            <XAxis dataKey="__label" tickLine={false} axisLine={false} tickMargin={8} interval={0} className="sila-chart-axis" />
             <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={40} className="sila-chart-axis" domain={[0, (max: number) => Math.max(max, 4)]} />
             <Tooltip
               cursor={{ className: 'sila-chart-cursor' }}

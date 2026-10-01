@@ -92,7 +92,6 @@
   align-items: center;
   padding-bottom: var(--sila-space-4);
   color: var(--sila-danger-strong);
-  margin: var(--sila-space-4) 0;
 }
 
 .dcl-error-icon {
@@ -159,7 +158,6 @@
 /* ---- Table card ------------------------------------------------------ */
 
 .dcl-table-section {
-  margin-top: var(--sila-space-4);
   background: var(--sila-surface);
   border: 0.0625rem solid var(--sila-border);
   border-radius: var(--sila-radius-md);

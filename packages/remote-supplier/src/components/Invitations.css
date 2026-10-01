@@ -7,9 +7,8 @@
   min-width: 0;
 }
 
-.inv-page>.sila-page-header.inv-page-header {
+.inv-page > .sila-page-header.inv-page-header {
   margin-bottom: 0;
-  padding-bottom: 0;
 }
 
 /* ---- Toolbar: tabs + search --------------------------------------------- */
@@ -354,18 +353,5 @@
   .inv-search-wrapper {
     flex-basis: auto;
     padding-bottom: var(--sila-space-3);
-  }
-}
-
-@media (max-width:30rem) {
-  .inv-tabs {
-    width: 100%;
-    overflow-x: scroll;
-    overflow-y: hidden;
-    scrollbar-width: none;
-  }
-
-  .inv-search-wrapper {
-    width: 100%;
   }
 }

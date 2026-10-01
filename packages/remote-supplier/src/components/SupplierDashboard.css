@@ -20,9 +20,8 @@
   gap: var(--sila-space-4);
 }
 
-.pud-content>.sila-page-header.pud-page-header {
+.pud-content > .sila-page-header.pud-page-header {
   margin-bottom: 0;
-  padding-bottom: 0;
 }
 
 /* Legacy nav classes still used by Catalog's (hidden) nav widget */
@@ -354,8 +353,8 @@
   transition: var(--sila-transition);
 }
 
-.pud-dash-list>li:first-child .pud-rfq-card-item,
-.pud-panel-list>.pud-rfq-card-item:first-child {
+.pud-dash-list > li:first-child .pud-rfq-card-item,
+.pud-panel-list > .pud-rfq-card-item:first-child {
   border-top-color: transparent;
 }
 
@@ -801,7 +800,7 @@
   margin-top: auto;
 }
 
-.pud-match-actions>.sila-btn {
+.pud-match-actions > .sila-btn {
   flex: 1;
 }
 
@@ -1349,7 +1348,6 @@
 /* ---------------------------------------------------------------------- */
 
 @media (max-width: 48rem) {
-
   .pud-rfq-row,
   .pud-po-row {
     flex-direction: column;
@@ -1365,7 +1363,7 @@
   }
 
   .pud-match-actions {
-    width: 100%;
+    flex-direction: column;
   }
 
   .pud-modal-overlay {

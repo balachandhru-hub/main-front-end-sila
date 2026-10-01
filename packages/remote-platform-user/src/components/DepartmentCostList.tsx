@@ -23,7 +23,6 @@ import type { DepartmentListItemDto, CostCenterListItemDto } from '../api/platfo
 import { PageHeader, EmptyState, Loader } from '@vosox/shared-ui';
 import { useDepartmentStore } from './useDepartmentStore';
 import './DepartmentCostList.css';
-import { FaArrowLeft } from 'react-icons/fa6';
 
 const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;
 
@@ -208,7 +207,7 @@ export const DepartmentCostList: React.FC = () => {
     };
 
     fetchDepartments();
-  }, [selectedBuyer?.id]);
+  }, [selectedBuyer?.id]); 
 
   const fetchCostCenters = async (deptId: string) => {
     setCostCentersLoading(true);
@@ -387,27 +386,24 @@ export const DepartmentCostList: React.FC = () => {
       <header className="dcl-top-header">
         <img src={sila_logo} alt="SILA" className="dcl-top-logo" />
       </header>
+
       <main className="dcl-content-wrapper">
-        <div className="ut-header-content">
-          <div className="ut-header-back-button">
+        <PageHeader
+          className="dcl-page-title-section"
+          title="Department & Cost Center List"
+          description="Select a department to view and manage cost centers"
+          actions={
             <button
               type="button"
-              className="sila-btn sila-btn--secondary sila-btn--icon sila-btn--sm sila-page-back cp-back-btn"
+              className="dcl-close-btn sila-btn sila-btn--secondary sila-btn--icon"
               onClick={handleClose}
               title="Close"
-              aria-label="Close"
+              aria-label="Close department and cost center list"
             >
-              <FaArrowLeft className="cp-back-btn-icon" aria-hidden="true" />
+              <FaTimes aria-hidden="true" />
             </button>
-          </div>
-          <div className="ut-header-page-title">
-            <PageHeader
-              className="dcl-page-title-section"
-              title="Department & Cost Center List"
-              description="Select a department to view and manage cost centers"
-            />
-          </div>
-        </div>
+          }
+        />
 
         {error && (
           <div className="dcl-error-banner sila-alert sila-alert--danger" role="alert">
@@ -444,8 +440,8 @@ export const DepartmentCostList: React.FC = () => {
                     {!selectedBuyer
                       ? 'Select buyer first'
                       : departmentsLoading
-                        ? 'Loading departments...'
-                        : '-- Choose a Department --'}
+                      ? 'Loading departments...'
+                      : '-- Choose a Department --'}
                   </option>
                   {departments.map((dept) => (
                     <option key={dept.id} value={dept.id}>

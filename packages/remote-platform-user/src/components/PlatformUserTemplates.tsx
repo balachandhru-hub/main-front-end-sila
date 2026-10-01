@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import { FaTimes } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { FaTimes } from 'react-icons/fa';
 import { getAllBuyers } from '../api/platformApi';
 import { EmptyState } from '@vosox/shared-ui';
 import UserTemplate from './UserTemplate';
@@ -9,7 +9,7 @@ import './PlatformUserTemplates.css';
 const sila_logo = `${window.location.protocol}//${window.location.host}/assets/SILA_Logo.png`;
 
 export const PlatformUserTemplates: React.FC = () => {
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const [selectedBuyerId, setSelectedBuyerId] = useState<string | null>(null);
   const [loadingBuyers, setLoadingBuyers] = useState(true);
@@ -44,9 +44,9 @@ export const PlatformUserTemplates: React.FC = () => {
     fetchBuyers();
   }, []);
 
-  // const handleClose = () => {
-  //   navigate('../settings');
-  // };
+  const handleClose = () => {
+    navigate('../settings');
+  };
 
   return (
     <div className="put-page">
@@ -67,7 +67,7 @@ export const PlatformUserTemplates: React.FC = () => {
               </p>
             </div>
 
-            {/* <button
+            <button
               type="button"
               className="put-close-btn sila-btn sila-btn--secondary sila-btn--icon"
               onClick={handleClose}
@@ -75,7 +75,7 @@ export const PlatformUserTemplates: React.FC = () => {
               aria-label="Close"
             >
               <FaTimes aria-hidden="true" />
-            </button> */}
+            </button>
           </div>
 
           <div className="put-template-area">
