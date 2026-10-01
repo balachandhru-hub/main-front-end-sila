@@ -5,6 +5,7 @@
    ========================================================================== */
 
 .plat-main-content {
+  margin-top: var(--sila-space-4);
   width: 100%;
   display: flex;
   flex-direction: column;

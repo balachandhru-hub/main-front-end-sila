@@ -73,6 +73,7 @@ interface ContractTemplateFormData {
   templateName: string;
   segment: DropdownValue | null;
   family: DropdownValue | null;
+  description: string;
   keyTerms: KeyTermEntry[];
   clauses: ContractClauseEntry[];
   customSections: CustomSection[];
@@ -96,6 +97,7 @@ const emptyFormData = (): ContractTemplateFormData => ({
   templateName: '',
   segment: null,
   family: null,
+  description: '',
   keyTerms: defaultKeyTerms(),
   clauses: defaultClauses(),
   customSections: [],
@@ -226,6 +228,7 @@ export default function ContractTemplate() {
       templateName: template.templateName,
       segment: null,
       family: null,
+      description: template.description || '',
       keyTerms: defaultKeyTerms(),
       clauses: defaultClauses(),
       customSections: [],
@@ -470,6 +473,7 @@ export default function ContractTemplate() {
         templateName: formData.templateName.trim(),
         segmentName: editingOriginal?.segmentName ?? formData.segment?.name ?? '',
         familyName: editingOriginal?.familyName ?? formData.family?.name ?? '',
+        description: formData.description.trim(),
         keyTerms: formData.keyTerms.filter((term) => term.label.trim() && term.value.trim()),
         clauses: formData.clauses.filter((clause) => clause.section.trim() && clause.clauseText.trim()),
         customSections: formData.customSections
@@ -796,6 +800,25 @@ export default function ContractTemplate() {
             </div>
           ) : (
             <>
+          <div className="ctpl-section">
+            <h3 className="ctpl-section-title">Description</h3>
+            <p className="ctpl-section-description">
+              A free-text overview of this contract template, printed on the generated document above Key Terms -
+              use this for any longer text that doesn't fit a single Key Terms value.
+            </p>
+            <div className="ctpl-form-group sila-field">
+              <label htmlFor="ctpl-template-description" className="sila-label">Template Description</label>
+              <textarea
+                id="ctpl-template-description"
+                className="sila-textarea"
+                rows={4}
+                placeholder="Describe this contract template..."
+                value={formData.description}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+          </div>
+
           <div className="ctpl-section">
             <h3 className="ctpl-section-title">Key Terms</h3>
 
