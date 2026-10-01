@@ -28,6 +28,8 @@ import MaterialApprovalDetail from "../../../remote-platform-user/src/components
 import ContractTable from "../../../remote-platform-user/src/components/Contract/ContractTable";
 import ContractDetail from "../../../remote-platform-user/src/components/Contract/ContractDetail";
 import ApprovalManagement from "../../../remote-platform-user/src/components/ApprovalManagement/ApprovalManagement.tsx";
+import BuyerErpConfiguration from "./erp/BuyerErpConfiguration";
+import WishlistSection from "./wishlist/WishlistSection";
 import { ChatPanel, CompanyProfile, CreateRFQ, useAsyncData, useRouteNav } from '@vosox/shared-ui';
 
 const BuyersDashboard: React.FC = () => {
@@ -244,6 +246,10 @@ const BuyersDashboard: React.FC = () => {
               )
             ) : activeNav === "approvalManagement" ? (
               <ApprovalManagement canCreate={false}/>
+            ) : activeNav === "purchaseOrderApi" ? (
+              <BuyerErpConfiguration />
+            ) : activeNav === "wishlist" ? (
+              <WishlistSection buyerId={buyerId || ""} currentUserId={currentUserId} />
             ) : rfqPageView === "allRfqs" ? (
               <AllRfqsSection
                 rfqs={allRfqsList}
