@@ -46,13 +46,11 @@ export const BUYER_NAV_PATHS: RouteNavPaths = {
   contract: 'contract-approvals',
   materialService: 'material-service',
   companyProfile: 'company-profile',
-  wishlist: 'wishlist',
-  purchaseOrderApi: 'purchase-order-api',
+  wishlistApprovals: 'wishlist-approvals',
 };
 
 const navItems: BuyerNavItem[] = [
   { key: "dashboard", icon: <HomeIcon />, label: "Dashboard" },
-  { key: "wishlist", icon: <FileTextIcon />, label: "Wishlist" },
   { key: "createRFQ", icon: <FilePlusIcon />, label: "Create RFQ" },
   { key: "product", icon: <FileCheckIcon />, label: "Product Catalog" },
   { key: "models", icon: <LayoutGridIcon />, label: "Models" },
@@ -64,7 +62,6 @@ const navItems: BuyerNavItem[] = [
       { key: "template", label: "Templates" },
       { key: "contractTemplate", label: "Contract Templates" },
       { key: "approvalManagement", label: "Approval Management" },
-      { key: "purchaseOrderApi", label: "Purchase Order API" },
     ]
   },
   {
@@ -77,6 +74,7 @@ const navItems: BuyerNavItem[] = [
         items: [
           { key: "material", label: "Material" },
           { key: "contract", label: "Contract" },
+          { key: "wishlistApprovals", label: "Wishlist" },
         ],
       },
       { key: "materialService", label: "Material & Service" },

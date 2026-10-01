@@ -18,6 +18,17 @@ const LABELS: Record<string, string> = {
 
 export const statusLabel = (status: string): string => LABELS[status] ?? status;
 
+export const isMyApprovalTurn = (
+  wishlist: { status: string; approvalSteps: { userId: string; order: number; status: string }[] },
+  userId: string | null,
+): boolean => {
+  if (!userId || wishlist.status !== "PENDING_APPROVAL") return false;
+  const steps = [...wishlist.approvalSteps].sort((left, right) => left.order - right.order);
+  const mine = steps.find((step) => step.userId === userId && step.status === "PENDING");
+  if (!mine) return false;
+  return steps.filter((step) => step.order < mine.order).every((step) => step.status === "APPROVE");
+};
+
 export const statusBadgeClass = (status: string): string => {
   if (status === "REJECTED" || status === "REJECT" || status === "ERP_FAILED" || status === "SUPPLIER_PO_FAILED") {
     return "sila-badge sila-badge--danger";

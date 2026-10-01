@@ -108,7 +108,8 @@ const ApprovalManagement: React.FC<ApprovalManagementProps> = ({ canCreate = tru
     ? flows.filter(
         (flow) =>
           (flow.approvalCode || "").toLowerCase().includes(query) ||
-          (flow.approvalName || "").toLowerCase().includes(query)
+          (flow.approvalName || "").toLowerCase().includes(query) ||
+          (flow.type || "").toLowerCase().includes(query)
       )
     : flows;
 
@@ -172,6 +173,7 @@ const ApprovalManagement: React.FC<ApprovalManagementProps> = ({ canCreate = tru
                 <th className="apl-col-sno sila-num">S.No</th>
                 <th>Approval Code</th>
                 <th>Approval Name</th>
+                <th>Type</th>
                 <th className="apl-col-open" aria-label="Open" />
               </tr>
             </thead>
@@ -192,6 +194,7 @@ const ApprovalManagement: React.FC<ApprovalManagementProps> = ({ canCreate = tru
                       <span className="apl-code sila-ref">{flow.approvalCode || "—"}</span>
                     </td>
                     <td className="apl-name">{flow.approvalName || "—"}</td>
+                    <td>{flow.type || "—"}</td>
                     <td className="apl-open">
                       <FaChevronRight aria-hidden="true" />
                     </td>
