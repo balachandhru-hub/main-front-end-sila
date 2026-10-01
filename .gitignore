@@ -19,3 +19,11 @@ dist-ssr
 *.suo
 *.sw?
 .github
+
+# Local combined stack
+vendor-backend-sila/
+.run-logs/
+packages/**/localhost*.pem
+sila-me/node_modules/
+sila-me/**/node_modules/
+sila-me/**/dist/

@@ -1,0 +1,4 @@
+Id,OrganizationName,OrganizationType,Email,Phone,Country,Status,EmailVerified,AddressLine1,AddressLine2,City,State,PinCode,SNID
+459dcfea-4f81-44af-b07b-0bd5e59a2b96,Chervic,3,NawazSharief@chervic.in,9876543210,India,1,true,No. 12 MG Road,Suite 201,Bengaluru,Karnataka,560001,SN00000000001
+a1111111-1111-4111-8111-111111111111,Five Hotels Buyer,1,buyer.admin@sila.test,971500000001,UAE,1,true,Palm Jumeirah,Building A,Dubai,Dubai,00000,SN00000000002
+a2222222-2222-4222-8222-222222222222,Gulf Foods Supplier,2,supplier.admin@sila.test,971500000002,UAE,1,true,Al Quoz Industrial,Warehouse 4,Dubai,Dubai,00000,SN00000000003

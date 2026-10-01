@@ -1,3 +1,5 @@
+> **Combined local stack:** portal + `main-backend-sila` + sila-me (cloud/mobile). See [`COMBINED_STACK.md`](COMBINED_STACK.md) and [`dev-seeds/TEST_ACCOUNTS.md`](dev-seeds/TEST_ACCOUNTS.md).
+
 # Vosox Portal - Microfrontend Monorepo
 
 Welcome to the **Vosox Portal** codebase. This repository is built as a microfrontend monorepo using React, Vite, TypeScript, and Module Federation. It utilizes **Zustand** for lightweight, persistent authentication state management.

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "SILA Cloud Administration"
+description = "A premium administration control plane for managing customers, access, authentication, approval workflows, ERP integrations, and mobile configuration for SILA Store."
+version = "1.0.0"
+id = "artifacts/sila-cloud"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24949
+
+[services.development]
+run = "pnpm --filter @workspace/sila-cloud run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sila-cloud", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sila-cloud/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24949"
+BASE_PATH = "/"

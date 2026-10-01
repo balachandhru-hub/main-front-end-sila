@@ -1,0 +1,39 @@
+# Local SILA combined stack: SQL Server (portal/.NET) + Postgres (sila-me cloud/mobile API)
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sila-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "SilaDev@Pass123"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sila-mssql-data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "SilaDev@Pass123" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: sila-postgres
+    environment:
+      POSTGRES_USER: sila
+      POSTGRES_PASSWORD: sila
+      POSTGRES_DB: sila
+    ports:
+      - "5432:5432"
+    volumes:
+      - sila-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sila -d sila"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  sila-mssql-data:
+  sila-pg-data:
