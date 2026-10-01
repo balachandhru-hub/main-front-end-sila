@@ -38,6 +38,8 @@ export interface ContractTemplateRecord {
   templateName: string;
   segmentName: string;
   familyName: string;
+  /** Free-text overview of the template, printed under the classification line in the generated PDF. */
+  description?: string;
   keyTerms: KeyTermEntry[];
   clauses: ContractClauseEntry[];
   customSections: CustomSection[];

@@ -10,6 +10,8 @@ export interface KpiStripItem {
   /** Marks the metric as needing action, e.g. "Needs action". */
   attention?: string;
   onClick?: () => void;
+  /** Tints the icon badge in the card layout (`sila-kpi-strip--cards`). */
+  tone?: 'success' | 'warning' | 'danger';
 }
 
 export interface KpiStripProps {
@@ -63,12 +65,14 @@ export const KpiStrip: React.FC<KpiStripProps> = ({ items, label = 'Key metrics'
         </>
       );
 
+      const toneClass = item.tone ? ` sila-kpi-strip-cell--${item.tone}` : '';
+
       return item.onClick ? (
-        <button key={item.key} type="button" className="sila-kpi-strip-cell sila-kpi-strip-cell--action" onClick={item.onClick}>
+        <button key={item.key} type="button" className={`sila-kpi-strip-cell sila-kpi-strip-cell--action${toneClass}`} onClick={item.onClick}>
           {content}
         </button>
       ) : (
-        <div key={item.key} className="sila-kpi-strip-cell">
+        <div key={item.key} className={`sila-kpi-strip-cell${toneClass}`}>
           {content}
         </div>
       );

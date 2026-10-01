@@ -1,17 +1,33 @@
 import platformInstance from '../../api/platformInstance';
 
+/** MANUAL = single material approval, EXCEL = bulk (Excel upload) material approval. */
+export type MaterialUploadType = 'MANUAL' | 'EXCEL';
+
+export interface MaterialBulkAsset {
+  id: string;
+  assetType: string;
+  assetName: string;
+  fileType: string | null;
+  fileName: string;
+}
+
 export interface PendingMaterialApproval {
+  uploadType?: MaterialUploadType;
   predefinedMaterialId: string;
   approvalId: string;
   approvalFlowPredefinedMaterialId: string;
   approvalMappingId: string;
   order: number;
   approvalStatus: string;
-  materialCode: string;
-  productType: string;
-  description: string;
-  materialGroup: string;
   status: string;
+  // MANUAL (single) records
+  materialCode?: string;
+  productType?: string;
+  description?: string;
+  materialGroup?: string;
+  // EXCEL (bulk) records
+  title?: string;
+  asset?: MaterialBulkAsset;
 }
 
 export interface MaterialApprovalUserStatus {
@@ -33,6 +49,9 @@ export interface MaterialApprovalDetail {
   subUnit: string;
   microUnit: string;
   status: string;
+  // EXCEL (bulk) approvals carry a title and the uploaded file instead of material fields.
+  title?: string;
+  asset?: MaterialBulkAsset;
   approvalUsers: MaterialApprovalUserStatus[];
 }
 
@@ -108,13 +127,16 @@ export const formatMaterialStatus = (status: string | null | undefined): string 
 };
 
 export const fetchPendingMaterialApprovals = async (
-  params: { status?: string; searchTerm?: string } = {}
+  params: { type?: MaterialUploadType; status?: string; searchTerm?: string; index?: number; limit?: number } = {}
 ): Promise<PendingMaterialApproval[]> => {
   try {
     const response = await platformInstance.get<PendingMaterialApproval[]>('/api/v1/buyer/item-master/pending-approvals', {
       params: {
+        type: params.type ?? 'MANUAL',
         status: params.status || undefined,
         searchTerm: params.searchTerm?.trim() || undefined,
+        index: params.index,
+        limit: params.limit,
       },
     });
     return Array.isArray(response.data) ? response.data : [];

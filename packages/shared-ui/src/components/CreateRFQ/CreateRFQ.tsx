@@ -1826,7 +1826,7 @@ if (Array.isArray(data)) {
                     {(externalSuppliers.length > 0 || hasUnverifiedSelected) && (
                         <div className="bd-onboarding-box">
                             <div className="bd-onboarding-header">
-                                <FaShieldAlt aria-hidden="true" /> Supplier Onboarding Required
+                                <FaShieldAlt aria-hidden="true" /> Supplier Verification
                             </div>
                             <p className="bd-onboarding-sub">
                                 Some selected vendors are unverified. They will receive an invitation to register first.

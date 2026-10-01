@@ -29,11 +29,11 @@ import {
 import {
   createContractTemplate,
   updateContractTemplate,
+  fetchBuyerAsset,
   type ContractTemplateAttachmentDto,
   type CreateContractTemplatePayload,
 } from '../../../remote-buyer/src/api/Buyerapi';
 import { fetchContractTemplates } from '../api/contractTemplateApi';
-import { fetchBuyerAsset } from '../api/platformApi';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
 import type {
   ClauseType,
@@ -50,6 +50,7 @@ import {
   slugifyTemplateName,
   toPdfDataUrl,
 } from './contractTemplatePdf';
+import { resolveMimeType } from './ContractCreation/contractFormatters';
 
 type CreationMode = 'form' | 'upload';
 
@@ -72,6 +73,7 @@ interface ContractTemplateFormData {
   templateName: string;
   segment: DropdownValue | null;
   family: DropdownValue | null;
+  description: string;
   keyTerms: KeyTermEntry[];
   clauses: ContractClauseEntry[];
   customSections: CustomSection[];
@@ -95,6 +97,7 @@ const emptyFormData = (): ContractTemplateFormData => ({
   templateName: '',
   segment: null,
   family: null,
+  description: '',
   keyTerms: defaultKeyTerms(),
   clauses: defaultClauses(),
   customSections: [],
@@ -225,6 +228,7 @@ export default function ContractTemplate() {
       templateName: template.templateName,
       segment: null,
       family: null,
+      description: template.description || '',
       keyTerms: defaultKeyTerms(),
       clauses: defaultClauses(),
       customSections: [],
@@ -469,6 +473,7 @@ export default function ContractTemplate() {
         templateName: formData.templateName.trim(),
         segmentName: editingOriginal?.segmentName ?? formData.segment?.name ?? '',
         familyName: editingOriginal?.familyName ?? formData.family?.name ?? '',
+        description: formData.description.trim(),
         keyTerms: formData.keyTerms.filter((term) => term.label.trim() && term.value.trim()),
         clauses: formData.clauses.filter((clause) => clause.section.trim() && clause.clauseText.trim()),
         customSections: formData.customSections
@@ -567,9 +572,9 @@ export default function ContractTemplate() {
           toastService.error('message' in asset ? asset.message : 'Failed to load the contract template file');
           return;
         }
-        const contentType = asset.contentType || 'application/pdf';
-        const dataUrl = toPdfDataUrl(asset.fileBytes, contentType);
         const fileName = asset.fileName || template.fileName || `${slugifyTemplateName(template.templateName)}.pdf`;
+        const contentType = resolveMimeType(asset.contentType, fileName);
+        const dataUrl = toPdfDataUrl(asset.fileBytes, contentType);
         setTemplates((prev) => prev.map((t) => (t.id === template.id ? { ...t, fileDataUrl: dataUrl, fileName } : t)));
         downloadDataUrl(dataUrl, fileName);
       } catch (err: any) {
@@ -577,6 +582,13 @@ export default function ContractTemplate() {
       } finally {
         setDownloadingId(null);
       }
+      return;
+    }
+
+    if (template.sourceType === 'uploaded') {
+      // No fileDataUrl and no attachmentId - the record has no reference to its file at all, so there's
+      // nothing to fetch. Surface this instead of silently falling through to an empty generated PDF.
+      toastService.error('This template has no attached file to download.');
       return;
     }
 
@@ -788,6 +800,25 @@ export default function ContractTemplate() {
             </div>
           ) : (
             <>
+          <div className="ctpl-section">
+            <h3 className="ctpl-section-title">Description</h3>
+            <p className="ctpl-section-description">
+              A free-text overview of this contract template, printed on the generated document above Key Terms -
+              use this for any longer text that doesn't fit a single Key Terms value.
+            </p>
+            <div className="ctpl-form-group sila-field">
+              <label htmlFor="ctpl-template-description" className="sila-label">Template Description</label>
+              <textarea
+                id="ctpl-template-description"
+                className="sila-textarea"
+                rows={4}
+                placeholder="Describe this contract template..."
+                value={formData.description}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+          </div>
+
           <div className="ctpl-section">
             <h3 className="ctpl-section-title">Key Terms</h3>
 

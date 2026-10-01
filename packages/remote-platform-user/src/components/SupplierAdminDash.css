@@ -1031,7 +1031,6 @@ button.sad-stat-card:focus-visible {
     }
 
     .sad-match-actions {
-        flex-direction: column;
         width: 100%;
     }
 

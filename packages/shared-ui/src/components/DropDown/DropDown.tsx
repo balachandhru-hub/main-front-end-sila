@@ -49,6 +49,7 @@ interface DropdownCache {
 const Dropdown: FC<DropdownProps> = (props) => {
   const {
     label,
+    hideLabel = false,
     isRequired = false,
     value = null,
     options = [],
@@ -1232,7 +1233,7 @@ const Dropdown: FC<DropdownProps> = (props) => {
       style={style}
     >
      {label && (
-          <label className="sila-dropdown__label">
+          <label className={`sila-dropdown__label${hideLabel ? " sila-visually-hidden" : ""}`}>
             {label}
  
             {isRequired && (

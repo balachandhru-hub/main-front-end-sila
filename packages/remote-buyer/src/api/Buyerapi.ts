@@ -672,15 +672,18 @@ export const createContractTemplate = async (payload: CreateContractTemplatePayl
   }
 };
 
-/** GET response shape isn't in the shared Swagger doc yet, so field names are best-effort (id/contractTemplateId,
- * segmentName/segmentId) - fetchContractTemplates in remote-platform-user maps whichever fields are present. */
+/** Actual GET /api/v1/buyer/contract-template response shape - flat, not nested under "attachment".
+ * segmentTitle currently always comes back null (segment title isn't resolved server-side yet), and there's
+ * no fileBytes/contentType here - only assetId, so the PDF itself is fetched separately via fetchBuyerAsset. */
 export interface ContractTemplateListItemDto {
-  contractTemplateId?: string;
-  id?: string;
+  id: string;
   templateName: string;
   segmentId?: number;
-  segmentName?: string;
-  attachment?: Partial<ContractTemplateAttachmentDto>;
+  segmentTitle?: string | null;
+  buyerId?: string;
+  assetId?: string;
+  fileName?: string;
+  dateCreated?: string;
 }
 
 export const getContractTemplates = async (index = 0, limit = 10): Promise<ContractTemplateListItemDto[]> => {
