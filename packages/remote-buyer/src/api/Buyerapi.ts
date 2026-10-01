@@ -371,6 +371,7 @@ export interface MasterApprovalFlowDto {
   approvalCode: string;
   approvalName: string;
   buyerId: string;
+  type?: string | null;
 }
 
 export interface ItemMasterSimilarityDto {

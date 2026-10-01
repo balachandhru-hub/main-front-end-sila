@@ -46,6 +46,7 @@ export const BUYER_NAV_PATHS: RouteNavPaths = {
   contract: 'contract-approvals',
   materialService: 'material-service',
   companyProfile: 'company-profile',
+  wishlistApprovals: 'wishlist-approvals',
 };
 
 const navItems: BuyerNavItem[] = [
@@ -60,7 +61,7 @@ const navItems: BuyerNavItem[] = [
     subItems: [
       { key: "template", label: "Templates" },
       { key: "contractTemplate", label: "Contract Templates" },
-      { key: "approvalManagement", label: "Approval Management" }
+      { key: "approvalManagement", label: "Approval Management" },
     ]
   },
   {
@@ -73,6 +74,7 @@ const navItems: BuyerNavItem[] = [
         items: [
           { key: "material", label: "Material" },
           { key: "contract", label: "Contract" },
+          { key: "wishlistApprovals", label: "Wishlist" },
         ],
       },
       { key: "materialService", label: "Material & Service" },

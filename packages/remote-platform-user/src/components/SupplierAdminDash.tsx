@@ -5,6 +5,7 @@ import Header from "./Header";
 import UserAdmin from "../UserAdmin";
 import CompanyProfile from "./CompanyProfile/CompanyProfile";
 import Catalog from "../../../remote-supplier/src/components/Catalog";
+import SupplierErpConfiguration from "../../../remote-supplier/src/components/erp/SupplierErpConfiguration";
 import Invitations from "../../../remote-supplier/src/components/Invitations";
 import SupplierRfqQuotationSummary from "../../../remote-supplier/src/components/SupplierRfqQuotationSummary";
 import { useNetworkAdminAuthStore } from "../store/useAuthStore";
@@ -69,6 +70,7 @@ const SUPPLIER_ADMIN_NAV_PATHS: RouteNavPaths = {
   catalogList: "catalog",
   invitations: "invitations",
   companyProfile: "company-profile",
+  purchaseOrderApi: "purchase-order-api",
 };
 
 const headerNavItems: { key: string; icon: React.ReactNode; label: string; badge?: number }[] = [
@@ -77,6 +79,7 @@ const headerNavItems: { key: string; icon: React.ReactNode; label: string; badge
   { key: "rfqs", icon: <NavIconFile />, label: "RFQs" },
   { key: "catalogList", icon: <NavIconCatalog />, label: "Catalog" },
   { key: "invitations", icon: <IconMail />, label: "Invitations" },
+  { key: "purchaseOrderApi", icon: <NavIconCatalog />, label: "Purchase Order API" },
 ];
 
 const VERIFICATION_TOKEN_COOKIE = "vsx_verification_token";
@@ -335,6 +338,8 @@ const SupplierAdminDash: React.FC = () => {
             )
               : activeNav === "userList" ? (
                 <UserAdmin />
+              ) : activeNav === "purchaseOrderApi" ? (
+                <SupplierErpConfiguration />
               ) : activeNav === "companyProfile" ? (
                 <CompanyProfile mode="network-admin" showHeader={false} />
               ) : activeNav === "invitations" ? (

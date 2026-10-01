@@ -72,6 +72,14 @@ const CreateApprovalForm: React.FC<CreateApprovalFormProps> = ({ organizationId,
   const loadTypeOptions = async ({ search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
     try {
       const types = await fetchApprovalTypes();
+      if (!types.some((type) => type.key.toUpperCase() === "WISHLIST")) {
+        types.push({
+          id: "WISHLIST",
+          key: "WISHLIST",
+          type: "APPROVAL_TYPE",
+          description: "Wishlist purchase approval",
+        });
+      }
       const term = search.trim().toLowerCase();
       return {
         options: types

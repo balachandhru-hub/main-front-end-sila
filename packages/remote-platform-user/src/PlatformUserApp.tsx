@@ -25,6 +25,7 @@ const NetworkAdminOnboarding = React.lazy(() => import('./components/NetworkAdmi
 const ItemMaster = React.lazy(() => import('./components/ItemMaster'));
 const SupplierAdminDash = React.lazy(() => import('./components/SupplierAdminDash'));
 const BuyerAdminDash = React.lazy(() => import('./components/BuyerAdminDash'));
+const OutletManagerDash = React.lazy(() => import('./components/OutletManagerDash'));
 const NetworkAdminProfilePage = React.lazy(() => import('./pages/NetworkAdminProfilePage'));
 const PlatformUserTemplates = React.lazy(() => import('./components/PlatformUserTemplates'));
 const BuyerAdminProfilePage = React.lazy(() => import('./pages/BuyerAdminProfilePage'));
@@ -382,6 +383,13 @@ const PlatformUserApp: React.FC = () => {
             <Route path="profile" element={<BuyerAdminProfilePage />} />
             {/* Dashboard sections (/dashboard, /rfqs, /users, …) are resolved inside the dashboard. */}
             <Route path="*" element={<BuyerAdminDash />} />
+          </>
+        );
+
+      case 'OUTLET_MANAGER':
+        return (
+          <>
+            <Route path="*" element={<OutletManagerDash />} />
           </>
         );
 
