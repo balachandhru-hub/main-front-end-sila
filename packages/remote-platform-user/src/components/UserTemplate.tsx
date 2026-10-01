@@ -36,7 +36,6 @@ import {
 import { fetchDropdownReferenceList, type ReferenceListItemDto } from '../../../remote-buyer/src/api/masterdataApi';
 import { useNetworkAdminAuthStore } from '../store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
-import { FaTimes } from 'react-icons/fa';
 import { FaArrowLeft } from 'react-icons/fa6';
 
 interface TemplateQuestion {
