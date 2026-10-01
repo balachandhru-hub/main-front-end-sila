@@ -6,10 +6,28 @@ import ProductResults from "./product/ProductResults";
 import ProductDetailView from "./product/ProductDetailView";
 import PunchOutView from "./product/PunchOutView";
 import { useProductCatalog } from "../hooks/useProductCatalog";
+import { useCartStore } from "../store/useCartStore";
+import type { BuyerCatalogResponse } from "../api/Buyerapi";
+import { toastService } from "@vosox/shared-ui";
+
+interface ProductProps {
+  /** Shows "Add to cart" on products, for roles that manage wishlists. */
+  canAddToCart?: boolean;
+  /** Opens the cart, where the products are added to a wishlist. */
+  onOpenCart?: () => void;
+}
 
 /** Buyer product catalog: filter/search, results grid, product detail and PunchOut preview. */
-const Product: React.FC = () => {
+const Product: React.FC<ProductProps> = ({ canAddToCart = false, onOpenCart }) => {
   const catalog = useProductCatalog();
+  const cartProducts = useCartStore((state) => state.products);
+  const addCartProduct = useCartStore((state) => state.addProduct);
+  const cartCatalogIds = cartProducts.map((item) => item.catalogId);
+
+  const handleAddToCart = (product: BuyerCatalogResponse) => {
+    addCartProduct(product);
+    toastService.success(`${product.catalogName} added to cart.`);
+  };
 
   if (catalog.showPunchOutFullPage && catalog.selectedProduct) {
     return (
@@ -38,15 +56,24 @@ const Product: React.FC = () => {
         onPrevImage={catalog.goToPrevProductImage}
         onNextImage={catalog.goToNextProductImage}
         onPunchOutPreview={catalog.handlePunchOutPreview}
+        onAddToCart={canAddToCart ? handleAddToCart : undefined}
+        inCart={cartCatalogIds.includes(catalog.selectedProduct.catalogId)}
       />
     );
   }
 
   return (
     <div className="pud-product-page">
-      <div className="pud-product-header">
-        <h1 className="pud-title">Product Catalog</h1>
-        <p className="pud-subtitle">Search and filter products by classification</p>
+      <div className="pud-product-header pud-product-header-row">
+        <div>
+          <h1 className="pud-title">Product Catalog</h1>
+          <p className="pud-subtitle">Search and filter products by classification</p>
+        </div>
+        {canAddToCart && onOpenCart && (
+          <button type="button" className="pud-btn pud-btn-message" onClick={onOpenCart}>
+            Cart ({cartProducts.length})
+          </button>
+        )}
       </div>
 
       <ProductFilters
@@ -64,6 +91,7 @@ const Product: React.FC = () => {
         onClassChange={catalog.handleClassChange}
         onCommodityChange={catalog.handleCommodityChange}
         onSearchChange={catalog.handleSearchChange}
+        onSupplierChange={catalog.handleSupplierChange}
         onSearchSubmit={catalog.handleSearchSubmit}
         loadingResults={catalog.loadingResults}
       />
@@ -76,6 +104,8 @@ const Product: React.FC = () => {
         pagedResults={catalog.pagedProductResults}
         productAssetImages={catalog.productAssetImages}
         onOpenDetail={catalog.openProductDetail}
+        onAddToCart={canAddToCart ? handleAddToCart : undefined}
+        cartCatalogIds={cartCatalogIds}
         pageSize={catalog.PRODUCT_PAGE_SIZE}
         page={catalog.productPage}
         totalPages={catalog.productTotalPages}

@@ -1,5 +1,6 @@
 import axios from "axios";
 import axiosInstance from "./axiosInstance";
+import { getMasterApprovalFlows, type MasterApprovalFlowDto } from "./Buyerapi";
 
 export interface Outlet {
   id: string;
@@ -10,6 +11,9 @@ export interface Outlet {
   addressLine1?: string | null;
   city?: string | null;
   country?: string | null;
+  /** Approval flow (type WISHLIST) used by every wishlist of this outlet. */
+  masterApprovalFlowId?: string | null;
+  approvalName?: string | null;
 }
 
 export interface OutletWrite {
@@ -20,6 +24,13 @@ export interface OutletWrite {
   addressLine1?: string | null;
   city?: string | null;
   country?: string | null;
+  masterApprovalFlowId?: string | null;
+}
+
+/** The outlets assigned to one user. */
+export interface OutletUserMapping {
+  userId: string;
+  outletIds: string[];
 }
 
 export interface WishlistItemWrite {
@@ -41,6 +52,8 @@ export interface WishlistWrite {
   deliveryInstruction?: string | null;
   requiredDate?: string | null;
   items: WishlistItemWrite[];
+  /** true keeps the wishlist as an editable draft; false submits it, which freezes it and starts approval. */
+  saveAsDraft: boolean;
 }
 
 export interface WishlistItem {
@@ -57,6 +70,8 @@ export interface WishlistItem {
 
 export interface WishlistApprovalStep {
   userId: string;
+  name?: string | null;
+  email?: string | null;
   order: number;
   status: string;
   comment?: string | null;
@@ -131,6 +146,46 @@ export const createOutlet = async (payload: OutletWrite): Promise<void> => {
   } catch (error: unknown) {
     throw new Error(readError(error, "Could not create the outlet."));
   }
+};
+
+export const updateOutlet = async (outletId: string, payload: OutletWrite): Promise<void> => {
+  try {
+    await axiosInstance.put(`/api/v1/buyer/outlets/${outletId}`, payload);
+  } catch (error: unknown) {
+    throw new Error(readError(error, "Could not update the outlet."));
+  }
+};
+
+export const getOutletUsers = async (): Promise<OutletUserMapping[]> => {
+  try {
+    const response = await axiosInstance.get<OutletUserMapping[]>("/api/v1/buyer/outlets/users");
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: unknown) {
+    throw new Error(readError(error, "Could not load the outlets of each user."));
+  }
+};
+
+/** Replaces the outlets assigned to a user. */
+export const setUserOutlets = async (userId: string, outletIds: string[]): Promise<void> => {
+  try {
+    await axiosInstance.put(`/api/v1/buyer/outlets/users/${userId}`, { outletIds });
+  } catch (error: unknown) {
+    throw new Error(readError(error, "Could not assign the outlets to the user."));
+  }
+};
+
+/** Every approval flow of type WISHLIST of the buyer. */
+export const getWishlistApprovalFlows = async (buyerId: string): Promise<MasterApprovalFlowDto[]> => {
+  const collected: MasterApprovalFlowDto[] = [];
+  const seen = new Set<string>();
+  for (let page = 0; page < 10; page += 1) {
+    const batch = await getMasterApprovalFlows(buyerId, page * 50, 50);
+    const fresh = batch.filter((flow) => !seen.has(flow.id));
+    fresh.forEach((flow) => seen.add(flow.id));
+    collected.push(...fresh);
+    if (batch.length < 50 || fresh.length === 0) break;
+  }
+  return collected.filter((flow) => (flow.type ?? "").toUpperCase() === "WISHLIST");
 };
 
 export const getWishlists = async (index = 0, limit = 20): Promise<WishlistListItem[]> => {

@@ -21,6 +21,21 @@ import { getCountries } from './api/networkAdminApi';
 import { FaPlus, FaTimes, FaUsers } from 'react-icons/fa';
 import './UserAdmin.css';
 import { useNetworkAdminAuthStore } from './store/useAuthStore';
+import { ROLE_ID_MAPPING } from './constants/roleMapping';
+import {
+  getOutlets,
+  getOutletUsers,
+  setUserOutlets,
+  type Outlet,
+  type OutletUserMapping,
+} from '../../remote-buyer/src/api/wishlistApi';
+
+// The kinds of user a buyer administrator can create.
+type BuyerUserType = 'BUYER_USER' | 'OUTLET_MANAGER';
+const BUYER_USER_TYPE_LABELS: Record<BuyerUserType, string> = {
+  BUYER_USER: 'Buyer User',
+  OUTLET_MANAGER: 'Outlet Manager',
+};
 
 // Page size used by the async (paginated) Country Dropdown
 const COUNTRY_PAGE_SIZE = 40;
@@ -86,6 +101,46 @@ const UserAdmin: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<DropdownValue | null>(null);
 
+  // Buyer administrator only: the user type being created and the outlets assigned to the user.
+  const isBuyerAdmin = userRole === 'BUYER_ADMINISTRATOR';
+  const [buyerUserType, setBuyerUserType] = useState<BuyerUserType>('BUYER_USER');
+  const [outlets, setOutlets] = useState<Outlet[]>([]);
+  const [outletMappings, setOutletMappings] = useState<OutletUserMapping[]>([]);
+  const [selectedOutletIds, setSelectedOutletIds] = useState<string[]>([]);
+  const [outletError, setOutletError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isBuyerAdmin) return;
+    let active = true;
+    Promise.all([getOutlets(), getOutletUsers()])
+      .then(([outletRows, mappingRows]) => {
+        if (!active) return;
+        setOutlets(outletRows);
+        setOutletMappings(mappingRows);
+      })
+      .catch((err: unknown) => {
+        if (active) toast.error(err instanceof Error ? err.message : 'Failed to load outlets');
+      });
+    return () => {
+      active = false;
+    };
+  }, [isBuyerAdmin]);
+
+  const outletNamesOf = (userId: string): string => {
+    const outletIds = outletMappings.find((mapping) => mapping.userId === userId)?.outletIds ?? [];
+    return outlets
+      .filter((outlet) => outletIds.includes(outlet.id))
+      .map((outlet) => outlet.outletName)
+      .join(', ');
+  };
+
+  const toggleOutlet = (outletId: string) => {
+    setOutletError(null);
+    setSelectedOutletIds((current) =>
+      current.includes(outletId) ? current.filter((id) => id !== outletId) : [...current, outletId],
+    );
+  };
+
   // ---- Async paginated loader for the Country Dropdown (`index` is an offset: 0, 40, 80, ...) ----
   const loadCountryOptions = async ({ page, search }: DropdownLoadParams): Promise<DropdownLoadResult> => {
     const index = page * COUNTRY_PAGE_SIZE;
@@ -138,13 +193,13 @@ const UserAdmin: React.FC = () => {
   };
 
   const getBusinessUserRoleId = () => {
-    if (userRole === 'BUYER_ADMINISTRATOR') return '5a72f81e-a2c5-4f4a-bd55-6376c3c9ed73';
+    if (userRole === 'BUYER_ADMINISTRATOR') return ROLE_ID_MAPPING[buyerUserType];
     if (userRole === 'SUPPLIER_ADMINISTRATOR') return '937aab61-b505-4e1c-a5a3-cd63e29c6db9';
     return null;
   };
 
   const getUserTypeDisplayName = () => {
-   if (userRole === 'BUYER_ADMINISTRATOR') return 'Buyer User';
+    if (userRole === 'BUYER_ADMINISTRATOR') return BUYER_USER_TYPE_LABELS[buyerUserType];
     if (userRole === 'SUPPLIER_ADMINISTRATOR') return 'Supplier User';
     return 'Business User';
   };
@@ -159,6 +214,9 @@ const UserAdmin: React.FC = () => {
     setFormData(INITIAL_FORM_DATA);
     setFormErrors({});
     setSelectedCountry(null);
+    setBuyerUserType('BUYER_USER');
+    setSelectedOutletIds([]);
+    setOutletError(null);
   };
 
   const clearFieldError = (field: keyof UserFormData) => {
@@ -199,7 +257,11 @@ const UserAdmin: React.FC = () => {
 
     const errors = validateForm();
     setFormErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    // An Outlet Manager works only with the outlets assigned here.
+    const needsOutlets = isBuyerAdmin && buyerUserType === 'OUTLET_MANAGER';
+    const missingOutlets = needsOutlets && selectedOutletIds.length === 0;
+    setOutletError(missingOutlets ? 'Select at least one outlet' : null);
+    if (Object.keys(errors).length > 0 || missingOutlets) return;
 
     setIsLoading(true);
 
@@ -237,9 +299,31 @@ const UserAdmin: React.FC = () => {
           draggable: true,
         });
 
+        // The create call returns the person id; outlets are assigned to the user id.
+        let createdUserId = userId;
+        if (needsOutlets && currentUser?.organizationId) {
+          try {
+            const organizationUsers = await getOrganizationUsers(currentUser.organizationId);
+            const created = organizationUsers.find((user) => user.personId === userId);
+            if (!created) throw new Error('The new user could not be found to assign outlets.');
+            createdUserId = created.userId;
+            await setUserOutlets(createdUserId, selectedOutletIds);
+            setOutletMappings((prev) => [
+              ...prev.filter((mapping) => mapping.userId !== createdUserId),
+              { userId: createdUserId, outletIds: selectedOutletIds },
+            ]);
+          } catch (outletErr: unknown) {
+            toast.error(
+              `The user was created, but the outlets were not assigned: ${
+                outletErr instanceof Error ? outletErr.message : 'unknown error'
+              }`,
+            );
+          }
+        }
+
         const newUser: BusinessUser = {
           personId: userId,
-          userId: userId,
+          userId: createdUserId,
           name: formData.name,
           email: formData.email,
           userName: formData.userName,
@@ -336,6 +420,7 @@ const UserAdmin: React.FC = () => {
                     <th scope="col">Email</th>
                     <th scope="col">Username</th>
                     <th scope="col">User Role</th>
+                    {isBuyerAdmin && <th scope="col">Outlets</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -349,6 +434,7 @@ const UserAdmin: React.FC = () => {
                       <td>
                         <span className="ua-role-badge sila-badge sila-badge--neutral">{user.roleName}</span>
                       </td>
+                      {isBuyerAdmin && <td className="ua-cell-muted">{outletNamesOf(user.userId) || '—'}</td>}
                     </tr>
                   ))}
                 </tbody>
@@ -386,6 +472,51 @@ const UserAdmin: React.FC = () => {
 
             <form className="user-admin-form">
               <div className="user-admin-form-grid">
+                {isBuyerAdmin && (
+                  <div className="user-admin-form-group">
+                    <label className="sila-label" htmlFor="ua-user-type">
+                      User type<span className="sila-required">*</span>
+                    </label>
+                    <select
+                      id="ua-user-type"
+                      className="sila-select"
+                      value={buyerUserType}
+                      onChange={(e) => {
+                        setBuyerUserType(e.target.value as BuyerUserType);
+                        setOutletError(null);
+                      }}
+                    >
+                      <option value="BUYER_USER">{BUYER_USER_TYPE_LABELS.BUYER_USER}</option>
+                      <option value="OUTLET_MANAGER">{BUYER_USER_TYPE_LABELS.OUTLET_MANAGER}</option>
+                    </select>
+                  </div>
+                )}
+
+                {isBuyerAdmin && buyerUserType === 'OUTLET_MANAGER' && (
+                  <fieldset className="user-admin-form-group ua-outlet-options">
+                    <legend className="sila-label">
+                      Outlets<span className="sila-required">*</span>
+                    </legend>
+                    {outlets.length === 0 ? (
+                      <span className="sila-help">
+                        No outlets yet. Create them under Workflow &amp; Configuration → Outlets.
+                      </span>
+                    ) : (
+                      outlets.map((outlet) => (
+                        <label key={outlet.id} className="ua-outlet-option">
+                          <input
+                            type="checkbox"
+                            checked={selectedOutletIds.includes(outlet.id)}
+                            onChange={() => toggleOutlet(outlet.id)}
+                          />
+                          {outlet.outletName}
+                        </label>
+                      ))
+                    )}
+                    {outletError && <span className="sila-error-text">{outletError}</span>}
+                  </fieldset>
+                )}
+
                 <Input
                   id="ua-name"
                   label="Name"

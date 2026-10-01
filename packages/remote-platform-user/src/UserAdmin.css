@@ -389,3 +389,17 @@
     animation: none;
   }
 }
+
+/* Outlets assigned to an Outlet Manager in the create-user dialog */
+.ua-outlet-options {
+  border: 0;
+  padding: 0;
+}
+
+.ua-outlet-option {
+  display: flex;
+  align-items: center;
+  gap: var(--sila-space-2);
+  font-size: var(--sila-text-sm);
+  color: var(--sila-text);
+}

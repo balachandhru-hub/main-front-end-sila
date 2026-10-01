@@ -5,7 +5,12 @@ import type { ModelDto } from '../api/modelApi';
 import { EmptyState, Loader, isErrorResponse } from '@vosox/shared-ui';
 import './Models.css';
 
-const Models: React.FC = () => {
+interface ModelsProps {
+  /** Opens a model inside the application. Returns false when the model has no screens here yet. */
+  onOpenModel?: (model: ModelDto) => boolean;
+}
+
+const Models: React.FC<ModelsProps> = ({ onOpenModel }) => {
   const [models, setModels] = useState<ModelDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +44,7 @@ const Models: React.FC = () => {
   }, []);
 
   const handleOpen = (model: ModelDto) => {
+    if (onOpenModel?.(model)) return;
     window.alert(`"${model.modelName}" is not available to launch yet. Please check back soon.`);
   };
 

@@ -10,6 +10,10 @@ interface ProductResultsProps {
   pagedResults: BuyerCatalogResponse[];
   productAssetImages: Record<string, string>;
   onOpenDetail: (catalogId: string) => void;
+  /** When given, each product shows "Add to cart". */
+  onAddToCart?: (product: BuyerCatalogResponse) => void;
+  /** Catalog ids already in the cart. */
+  cartCatalogIds?: string[];
   pageSize: number;
   page: number;
   totalPages: number;
@@ -26,6 +30,8 @@ const ProductResults: React.FC<ProductResultsProps> = ({
   pagedResults,
   productAssetImages,
   onOpenDetail,
+  onAddToCart,
+  cartCatalogIds = [],
   pageSize,
   page,
   totalPages,
@@ -105,6 +111,23 @@ const ProductResults: React.FC<ProductResultsProps> = ({
                       <span className="pud-catalog-card-uom">{item.unitOfMeasure}</span>
                     )}
                   </div>
+                  {onAddToCart && (
+                    <div className="pud-product-item-action">
+                      <button
+                        type="button"
+                        className="pud-btn pud-btn-outline"
+                        disabled={cartCatalogIds.includes(item.catalogId)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddToCart(item);
+                        }}
+                        // The card itself opens the product on Enter/Space; keep those keys for this button.
+                        onKeyDown={(e) => e.stopPropagation()}
+                      >
+                        {cartCatalogIds.includes(item.catalogId) ? "Added to cart" : "Add to cart"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );

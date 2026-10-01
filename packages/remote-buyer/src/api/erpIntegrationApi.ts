@@ -3,6 +3,19 @@ import axiosInstance from "./axiosInstance";
 
 export const PO_CREATE_PROCESS = "PO_CREATE";
 
+/** An API a buyer organization can configure. Each type holds at most one API, with its own token API. */
+export interface ErpApiType {
+  process: string;
+  label: string;
+}
+
+export const ERP_API_TYPES: ErpApiType[] = [
+  { process: PO_CREATE_PROCESS, label: "Purchase Order" },
+  { process: "MATERIAL", label: "Material" },
+  { process: "CONTRACT", label: "Contract" },
+  { process: "SUPPLIER_ONBOARDING", label: "Supplier Onboarding" },
+];
+
 export const ERP_SYSTEMS = ["SAP S/4", "Ariba"] as const;
 
 export const PAYLOAD_FORMATS = ["JSON", "SOAP", "CXML"] as const;
@@ -87,7 +100,7 @@ export const getBuyerErpIntegrations = async (): Promise<ErpIntegration[]> => {
     const response = await axiosInstance.get<ErpIntegration[]>("/api/v1/buyer/erp-integration");
     return Array.isArray(response.data) ? response.data : [];
   } catch (error: unknown) {
-    throw new Error(readError(error, "Could not load the purchase order API."));
+    throw new Error(readError(error, "Could not load the API configuration."));
   }
 };
 
@@ -95,7 +108,7 @@ export const createBuyerErpIntegration = async (payload: ErpIntegrationWrite): P
   try {
     await axiosInstance.post("/api/v1/buyer/erp-integration", payload);
   } catch (error: unknown) {
-    throw new Error(readError(error, "Could not save the purchase order API."));
+    throw new Error(readError(error, "Could not save the API configuration."));
   }
 };
 
@@ -106,6 +119,6 @@ export const updateBuyerErpIntegration = async (
   try {
     await axiosInstance.put(`/api/v1/buyer/erp-integration/${configurationId}`, payload);
   } catch (error: unknown) {
-    throw new Error(readError(error, "Could not update the purchase order API."));
+    throw new Error(readError(error, "Could not update the API configuration."));
   }
 };

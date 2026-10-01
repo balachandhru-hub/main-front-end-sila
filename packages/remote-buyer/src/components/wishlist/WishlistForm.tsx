@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Loader, PageHeader, toastService } from "@vosox/shared-ui";
-import { getAllItemMasters, getMasterApprovalFlows, type ItemMasterDto, type MasterApprovalFlowDto } from "../../api/Buyerapi";
+import { EmptyState, Loader, PageHeader, toastService } from "@vosox/shared-ui";
 import {
-  createOutlet,
   createWishlist,
   getOutlets,
   updateWishlist,
@@ -10,22 +8,26 @@ import {
   type WishlistDetail,
   type WishlistWrite,
 } from "../../api/wishlistApi";
+import { useCartStore, type CartProduct } from "../../store/useCartStore";
 
+/** One product line. materialId is the Product Catalog id. */
 interface LineDraft {
   key: string;
   materialId: string;
-  materialCode: string;
   materialName: string;
+  supplierName: string;
+  unitOfMeasure: string;
   quantity: string;
-  unitPrice: string;
+  unitPrice: number | null;
   currency: string;
 }
 
 interface WishlistFormProps {
-  buyerId: string;
   wishlist?: WishlistDetail | null;
   onCancel: () => void;
   onSaved: () => void;
+  /** Opens the cart, where products are added to a wishlist. */
+  onOpenCart?: () => void;
 }
 
 const blank = (value: string): string | null => {
@@ -35,72 +37,67 @@ const blank = (value: string): string | null => {
 
 const dateInput = (value?: string | null): string => (value ? value.slice(0, 10) : "");
 
-const newLine = (): LineDraft => ({
-  key: `${Date.now()}-${Math.random()}`,
-  materialId: "",
-  materialCode: "",
-  materialName: "",
-  quantity: "1",
-  unitPrice: "",
-  currency: "",
-});
-
 const linesFromWishlist = (wishlist: WishlistDetail): LineDraft[] =>
   wishlist.items.map((item) => ({
     key: item.id,
     materialId: item.materialId,
-    materialCode: item.materialCode,
     materialName: item.materialName,
+    supplierName: "",
+    unitOfMeasure: item.unitOfMeasure ?? "",
     quantity: String(item.quantity),
-    unitPrice: item.unitPrice == null ? "" : String(item.unitPrice),
+    unitPrice: item.unitPrice ?? null,
     currency: item.currency ?? "",
   }));
 
-const unwrapItems = (result: unknown): ItemMasterDto[] => {
-  if (Array.isArray(result)) return result as ItemMasterDto[];
-  if (result && typeof result === "object") {
-    const record = result as { data?: unknown };
-    if (Array.isArray(record.data)) return record.data as ItemMasterDto[];
-    if (record.data && typeof record.data === "object") {
-      const nested = record.data as { data?: unknown };
-      if (Array.isArray(nested.data)) return nested.data as ItemMasterDto[];
-    }
-  }
-  return [];
+const lineFromProduct = (product: CartProduct): LineDraft => ({
+  key: product.catalogId,
+  materialId: product.catalogId,
+  materialName: product.catalogName,
+  supplierName: product.supplierName,
+  unitOfMeasure: product.unitOfMeasure,
+  quantity: String(product.quantity),
+  unitPrice: product.price > 0 ? product.price : null,
+  currency: product.currency,
+});
+
+/** Saved lines first, then the products handed over from the cart that are not saved yet. */
+const initialLines = (wishlist: WishlistDetail | null | undefined, fromCart: CartProduct[]): LineDraft[] => {
+  const saved = wishlist ? linesFromWishlist(wishlist) : [];
+  const savedIds = new Set(saved.map((line) => line.materialId));
+  return [...saved, ...fromCart.filter((product) => !savedIds.has(product.catalogId)).map(lineFromProduct)];
 };
 
-const WishlistForm: React.FC<WishlistFormProps> = ({ buyerId, wishlist, onCancel, onSaved }) => {
+const WishlistForm: React.FC<WishlistFormProps> = ({ wishlist, onCancel, onSaved, onOpenCart }) => {
+  const cartProducts = useCartStore((state) => state.products);
+  const handoff = useCartStore((state) => state.handoff);
+  const removeCartProducts = useCartStore((state) => state.removeProducts);
+  const clearHandoff = useCartStore((state) => state.clearHandoff);
+
   const [outlets, setOutlets] = useState<Outlet[]>([]);
-  const [flows, setFlows] = useState<MasterApprovalFlowDto[]>([]);
-  const [materials, setMaterials] = useState<ItemMasterDto[]>([]);
-  const [materialQuery, setMaterialQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [outletName, setOutletName] = useState("");
-  const [creatingOutlet, setCreatingOutlet] = useState(false);
 
   const [outletId, setOutletId] = useState(wishlist?.outletId ?? "");
   const [wishlistName, setWishlistName] = useState(wishlist?.wishlistName ?? "");
   const [description, setDescription] = useState(wishlist?.description ?? "");
-  const [supplierName, setSupplierName] = useState(wishlist?.supplierName ?? "");
-  const [approvalFlowId, setApprovalFlowId] = useState(wishlist?.masterApprovalFlowId ?? "");
-  const [currency, setCurrency] = useState(wishlist?.currency ?? "");
   const [deliveryInstruction, setDeliveryInstruction] = useState(wishlist?.deliveryInstruction ?? "");
   const [requiredDate, setRequiredDate] = useState(dateInput(wishlist?.requiredDate));
-  const [lines, setLines] = useState<LineDraft[]>(wishlist ? linesFromWishlist(wishlist) : [newLine()]);
+  const [lines, setLines] = useState<LineDraft[]>(() =>
+    initialLines(
+      wishlist,
+      handoff ? cartProducts.filter((product) => handoff.catalogIds.includes(product.catalogId)) : [],
+    ),
+  );
 
+  // The outlets come back already limited to the ones assigned to the signed-in user.
   useEffect(() => {
     let active = true;
     const load = async () => {
       setLoading(true);
       try {
-        const [outletRows, flowRows] = await Promise.all([
-          getOutlets(),
-          loadWishlistFlows(buyerId),
-        ]);
+        const outletRows = await getOutlets();
         if (!active) return;
         setOutlets(outletRows);
-        setFlows(flowRows);
         if (!wishlist && outletRows[0]) {
           setOutletId((current) => current || outletRows[0].id);
         }
@@ -114,66 +111,14 @@ const WishlistForm: React.FC<WishlistFormProps> = ({ buyerId, wishlist, onCancel
     return () => {
       active = false;
     };
-  }, [buyerId, wishlist]);
+  }, [wishlist]);
 
-  useEffect(() => {
-    if (!buyerId) return;
-    let active = true;
-    const handle = window.setTimeout(async () => {
-      try {
-        const result = await getAllItemMasters(buyerId, 0, 10, materialQuery.trim() || undefined);
-        if (active) setMaterials(unwrapItems(result));
-      } catch {
-        if (active) setMaterials([]);
-      }
-    }, 250);
-    return () => {
-      active = false;
-      window.clearTimeout(handle);
-    };
-  }, [buyerId, materialQuery]);
+  // The approval flow is the one assigned to the outlet.
+  const selectedOutlet = outlets.find((outlet) => outlet.id === outletId);
+  const hasApprovalFlow = Boolean(selectedOutlet?.masterApprovalFlowId);
 
-  const addMaterial = (material: ItemMasterDto) => {
-    setLines((current) => {
-      if (current.some((line) => line.materialId === material.id)) return current;
-      const empty = current.find((line) => !line.materialId);
-      const next: LineDraft = {
-        key: empty?.key ?? `${material.id}-${Date.now()}`,
-        materialId: material.id,
-        materialCode: material.materialCode,
-        materialName: material.description,
-        quantity: empty?.quantity || "1",
-        unitPrice: empty?.unitPrice ?? "",
-        currency: empty?.currency || currency,
-      };
-      if (empty) return current.map((line) => (line.key === empty.key ? next : line));
-      return [...current, next];
-    });
-  };
-
-  const handleCreateOutlet = async () => {
-    if (!outletName.trim()) {
-      toastService.error("Enter an outlet name.");
-      return;
-    }
-    setCreatingOutlet(true);
-    try {
-      await createOutlet({ outletName: outletName.trim() });
-      const outletRows = await getOutlets();
-      setOutlets(outletRows);
-      const created = outletRows.find((outlet) => outlet.outletName === outletName.trim());
-      if (created) setOutletId(created.id);
-      setOutletName("");
-      toastService.success("Outlet created.");
-    } catch (err: unknown) {
-      toastService.error(err instanceof Error ? err.message : "Could not create the outlet.");
-    } finally {
-      setCreatingOutlet(false);
-    }
-  };
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  // A draft stays editable; submitting freezes the wishlist and starts approval.
+  const save = async (saveAsDraft: boolean) => {
     if (!outletId) {
       toastService.error("Select an outlet.");
       return;
@@ -182,35 +127,36 @@ const WishlistForm: React.FC<WishlistFormProps> = ({ buyerId, wishlist, onCancel
       toastService.error("Enter a wishlist name.");
       return;
     }
-    if (!approvalFlowId) {
-      toastService.error("Select a wishlist approval flow.");
+    if (!saveAsDraft && !hasApprovalFlow) {
+      toastService.error("This outlet has no approval flow. Ask your buyer administrator to assign one.");
       return;
     }
-    const items = lines.filter((line) => line.materialId);
-    if (items.length === 0) {
-      toastService.error("Add at least one material.");
+    if (lines.length === 0) {
+      toastService.error("Add at least one product from the cart.");
       return;
     }
-    if (items.some((line) => Number(line.quantity) <= 0)) {
-      toastService.error("Enter a quantity greater than zero for every material.");
+    if (lines.some((line) => !(Number(line.quantity) > 0))) {
+      toastService.error("Enter a quantity greater than zero for every product.");
       return;
     }
 
+    // Name, unit, price and currency of each product are read from the Product Catalog by the server.
+    // A wishlist can mix suppliers and currencies, so it has no supplier or currency of its own.
+    // The approval flow is taken from the outlet by the server.
     const payload: WishlistWrite = {
       outletId,
       wishlistName: wishlistName.trim(),
       description: blank(description),
-      supplierName: blank(supplierName),
-      supplierOrganizationId: wishlist?.supplierOrganizationId ?? null,
-      masterApprovalFlowId: approvalFlowId,
-      currency: blank(currency),
+      supplierName: null,
+      supplierOrganizationId: null,
+      masterApprovalFlowId: null,
+      saveAsDraft,
+      currency: null,
       deliveryInstruction: blank(deliveryInstruction),
       requiredDate: requiredDate || null,
-      items: items.map((line) => ({
+      items: lines.map((line) => ({
         materialId: line.materialId,
         quantity: Number(line.quantity),
-        unitPrice: line.unitPrice.trim() ? Number(line.unitPrice) : null,
-        currency: blank(line.currency) ?? blank(currency),
         requiredDate: requiredDate || null,
       })),
     };
@@ -219,17 +165,29 @@ const WishlistForm: React.FC<WishlistFormProps> = ({ buyerId, wishlist, onCancel
     try {
       if (wishlist) {
         await updateWishlist(wishlist.id, payload);
-        toastService.success("Wishlist sent for approval again.");
       } else {
         await createWishlist(payload);
-        toastService.success("Wishlist created and sent for approval.");
       }
+      toastService.success(saveAsDraft ? "Wishlist saved as draft." : "Wishlist submitted for approval.");
+      // The products that came from the cart are now in the wishlist.
+      if (handoff) removeCartProducts(lines.map((line) => line.materialId));
+      clearHandoff();
       onSaved();
     } catch (err: unknown) {
       toastService.error(err instanceof Error ? err.message : "Could not save the wishlist.");
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    save(false);
+  };
+
+  const handleCancel = () => {
+    clearHandoff();
+    onCancel();
   };
 
   if (loading) return <Loader size={24} message="Loading wishlist..." />;
@@ -239,8 +197,7 @@ const WishlistForm: React.FC<WishlistFormProps> = ({ buyerId, wishlist, onCancel
       <PageHeader
         className="pud-page-header"
         title={wishlist ? "Update wishlist" : "New wishlist"}
-        description="Creating a wishlist copies the approval users and starts approval. A rejected wishlist can be sent again."
-        onBack={onCancel}
+        onBack={handleCancel}
         backLabel="Back to wishlists"
       />
       <form className="sila-card" onSubmit={handleSubmit}>
@@ -260,34 +217,14 @@ const WishlistForm: React.FC<WishlistFormProps> = ({ buyerId, wishlist, onCancel
               </select>
             </div>
             <div className="sila-field">
-              <label className="sila-label" htmlFor="wishlist-new-outlet">New outlet</label>
-              <input id="wishlist-new-outlet" className="sila-input" value={outletName} onChange={(event) => setOutletName(event.target.value)} placeholder="Outlet name" />
-            </div>
-            <div className="sila-field">
-              <span className="sila-label"> </span>
-              <button type="button" className="sila-btn sila-btn--secondary" onClick={handleCreateOutlet} disabled={creatingOutlet}>
-                {creatingOutlet ? "Creating..." : "Add outlet"}
-              </button>
-            </div>
-            <div className="sila-field">
-              <label className="sila-label" htmlFor="wishlist-flow">Approval flow<span className="sila-required">*</span></label>
-              <select id="wishlist-flow" className="sila-select" value={approvalFlowId ?? ""} onChange={(event) => setApprovalFlowId(event.target.value)}>
-                <option value="">Select a WISHLIST flow</option>
-                {flows.map((flow) => (
-                  <option key={flow.id} value={flow.id}>{flow.approvalName || flow.approvalCode}</option>
-                ))}
-              </select>
-              {flows.length === 0 && (
-                <span className="sila-help">Create an approval configuration of type WISHLIST first.</span>
-              )}
-            </div>
-            <div className="sila-field">
-              <label className="sila-label" htmlFor="wishlist-supplier">Supplier</label>
-              <input id="wishlist-supplier" className="sila-input" value={supplierName} onChange={(event) => setSupplierName(event.target.value)} />
-            </div>
-            <div className="sila-field">
-              <label className="sila-label" htmlFor="wishlist-currency">Currency</label>
-              <input id="wishlist-currency" className="sila-input" value={currency} onChange={(event) => setCurrency(event.target.value)} />
+              <label className="sila-label" htmlFor="wishlist-flow">Approval flow</label>
+              <input
+                id="wishlist-flow"
+                className="sila-input"
+                value={selectedOutlet?.approvalName || (selectedOutlet ? "Not assigned to this outlet" : "")}
+                readOnly
+                disabled
+              />
             </div>
             <div className="sila-field">
               <label className="sila-label" htmlFor="wishlist-date">Required date</label>
@@ -303,29 +240,55 @@ const WishlistForm: React.FC<WishlistFormProps> = ({ buyerId, wishlist, onCancel
             </div>
           </div>
 
-          <h2 className="sila-card-title">Materials</h2>
-          <div className="sila-field">
-            <label className="sila-label" htmlFor="wishlist-material-search">Catalog search</label>
-            <input id="wishlist-material-search" className="sila-input" value={materialQuery} onChange={(event) => setMaterialQuery(event.target.value)} placeholder="Material code or description" />
-          </div>
-          {materials.length > 0 && (
+          <h2 className="sila-card-title">Products</h2>
+          {lines.length === 0 ? (
+            <EmptyState
+              title="No products yet"
+              description='Select products in the cart and use "Add to wishlist".'
+              action={onOpenCart ? (
+                <button type="button" className="sila-btn sila-btn--secondary" onClick={onOpenCart}>
+                  Open cart
+                </button>
+              ) : undefined}
+            />
+          ) : (
             <div className="sila-table-wrap">
               <table className="sila-table">
                 <thead>
                   <tr>
-                    <th scope="col">Code</th>
-                    <th scope="col">Description</th>
+                    <th scope="col">Product</th>
+                    <th scope="col">Supplier</th>
+                    <th scope="col">Unit</th>
+                    <th scope="col">Unit price</th>
+                    <th scope="col">Quantity</th>
                     <th scope="col"> </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {materials.map((material) => (
-                    <tr key={material.id}>
-                      <td>{material.materialCode}</td>
-                      <td>{material.description}</td>
+                  {lines.map((line) => (
+                    <tr key={line.key}>
+                      <td className="sila-cell-strong">{line.materialName}</td>
+                      <td>{line.supplierName || "—"}</td>
+                      <td>{line.unitOfMeasure || "—"}</td>
+                      <td>{line.unitPrice == null ? "—" : `${line.currency} ${line.unitPrice}`.trim()}</td>
                       <td>
-                        <button type="button" className="sila-btn sila-btn--secondary sila-btn--sm" onClick={() => addMaterial(material)}>
-                          Add
+                        <input
+                          className="sila-input"
+                          type="number"
+                          min="0"
+                          step="any"
+                          aria-label={`Quantity of ${line.materialName}`}
+                          value={line.quantity}
+                          onChange={(event) => setLines((current) => current.map((item) => item.key === line.key ? { ...item, quantity: event.target.value } : item))}
+                        />
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="sila-btn sila-btn--ghost sila-btn--sm"
+                          onClick={() => setLines((current) => current.filter((item) => item.key !== line.key))}
+                        >
+                          Remove
                         </button>
                       </td>
                     </tr>
@@ -334,89 +297,19 @@ const WishlistForm: React.FC<WishlistFormProps> = ({ buyerId, wishlist, onCancel
               </table>
             </div>
           )}
-
-          <div className="sila-table-wrap">
-            <table className="sila-table">
-              <thead>
-                <tr>
-                  <th scope="col">Material</th>
-                  <th scope="col">Quantity</th>
-                  <th scope="col">Unit price</th>
-                  <th scope="col">Currency</th>
-                  <th scope="col"> </th>
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((line) => (
-                  <tr key={line.key}>
-                    <td>{line.materialId ? `${line.materialCode} ${line.materialName}` : "Select a material"}</td>
-                    <td>
-                      <input
-                        className="sila-input"
-                        type="number"
-                        min="0"
-                        step="any"
-                        aria-label="Quantity"
-                        value={line.quantity}
-                        onChange={(event) => setLines((current) => current.map((item) => item.key === line.key ? { ...item, quantity: event.target.value } : item))}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        className="sila-input"
-                        type="number"
-                        min="0"
-                        step="any"
-                        aria-label="Unit price"
-                        value={line.unitPrice}
-                        onChange={(event) => setLines((current) => current.map((item) => item.key === line.key ? { ...item, unitPrice: event.target.value } : item))}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        className="sila-input"
-                        aria-label="Line currency"
-                        value={line.currency}
-                        onChange={(event) => setLines((current) => current.map((item) => item.key === line.key ? { ...item, currency: event.target.value } : item))}
-                      />
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="sila-btn sila-btn--ghost sila-btn--sm"
-                        onClick={() => setLines((current) => current.filter((item) => item.key !== line.key))}
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
         <div className="sila-card-footer">
-          <button type="button" className="sila-btn sila-btn--secondary" onClick={onCancel} disabled={saving}>Cancel</button>
-          <button type="submit" className="sila-btn sila-btn--primary" disabled={saving}>
-            {saving ? "Saving..." : wishlist ? "Send for approval" : "Create wishlist"}
+          <button type="button" className="sila-btn sila-btn--secondary" onClick={handleCancel} disabled={saving}>Cancel</button>
+          <button type="button" className="sila-btn sila-btn--secondary" onClick={() => save(true)} disabled={saving}>
+            Save as draft
+          </button>
+          <button type="submit" className="sila-btn sila-btn--primary" disabled={saving || !hasApprovalFlow}>
+            {saving ? "Saving..." : "Submit for approval"}
           </button>
         </div>
       </form>
     </>
   );
-};
-
-const loadWishlistFlows = async (buyerId: string): Promise<MasterApprovalFlowDto[]> => {
-  const collected: MasterApprovalFlowDto[] = [];
-  const seen = new Set<string>();
-  for (let page = 0; page < 10; page += 1) {
-    const batch = await getMasterApprovalFlows(buyerId, page * 50, 50);
-    const fresh = batch.filter((flow) => !seen.has(flow.id));
-    fresh.forEach((flow) => seen.add(flow.id));
-    collected.push(...fresh);
-    if (batch.length < 50 || fresh.length === 0) break;
-  }
-  return collected.filter((flow) => (flow.type ?? "").toUpperCase() === "WISHLIST");
 };
 
 export default WishlistForm;

@@ -18,6 +18,7 @@ interface ProductFiltersProps {
   onClassChange: (val: DropdownValue | null) => void;
   onCommodityChange: (val: DropdownValue | null) => void;
   onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSupplierChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSearchSubmit: () => void;
   loadingResults: boolean;
 }
@@ -38,6 +39,7 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
   onClassChange,
   onCommodityChange,
   onSearchChange,
+  onSupplierChange,
   onSearchSubmit,
   loadingResults,
 }) => (
@@ -95,6 +97,21 @@ const ProductFilters: React.FC<ProductFiltersProps> = ({
             cacheUniques={[filters.class]}
             value={selectedCommodity}
             onChange={onCommodityChange}
+          />
+        </div>
+
+        <div className="pud-product-filter-field">
+          <label className="pud-product-filter-label" htmlFor="pud-product-supplier">Supplier</label>
+          <input
+            id="pud-product-supplier"
+            type="text"
+            className="pud-product-search-input"
+            placeholder="Supplier name or SNID"
+            value={filters.supplier}
+            onChange={onSupplierChange}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onSearchSubmit();
+            }}
           />
         </div>
       </div>

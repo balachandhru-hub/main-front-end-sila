@@ -835,6 +835,8 @@ export const fetchBuyerCatalog = async (payload: {
   class?: number;
   commodity?: number;
   search?: string;
+  /** Part of a supplier name or of its SNID. */
+  supplier?: string;
   index?: number;
   limit?: number;
 }): Promise<BuyerCatalogResponse[] | ErrorResponseDto> => {
@@ -848,6 +850,7 @@ export const fetchBuyerCatalog = async (payload: {
           class: payload.class || undefined,
           commodity: payload.commodity || undefined,
           search: payload.search || undefined,
+          supplier: payload.supplier || undefined,
           index: payload.index ?? 0,
           limit: payload.limit ?? 20,
         },

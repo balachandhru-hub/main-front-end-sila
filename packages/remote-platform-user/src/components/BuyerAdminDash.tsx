@@ -28,7 +28,7 @@ import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../..
 import { createItemMaster, getMasterApprovalFlows, checkItemMasterSimilarity, uploadItemMasterFile } from "../api/itemmasterapi";
 import { getOrganizationUsersForRfq } from "../api/networkAdminApi";
 import { logoutPlatformUser } from "../api/platformApi";
-import { BuyerAnalytics, ChatPanel, CreateRFQ, StatusBadge, toastService, useAsyncData, useRouteNav, type ChatCounterpartyRef, type CreateRFQApi, type RouteNavPaths } from "@vosox/shared-ui";
+import { BuyerAnalytics, ChatPanel, CreateRFQ, EmptyState, Loader, StatusBadge, toastService, useAsyncData, useRouteNav, type ChatCounterpartyRef, type CreateRFQApi, type RouteNavPaths } from "@vosox/shared-ui";
 import UserTemplate from "./UserTemplate";
 import ContractTemplate from "./ContractTemplate";
 import ApprovalManagement from "./ApprovalManagement/ApprovalManagement";
@@ -37,8 +37,24 @@ import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
 // import QuotationSummaryTable from "../../../remote-buyer/src/components/QuotationSummaryTable";
 import QuotationComparisonCard from "./QuotationComparisonCard";
 import ItemMasterCatalog from "../../../remote-buyer/src/components/ItemMasterCatalog";
-import BuyerErpConfiguration from "../../../remote-buyer/src/components/erp/BuyerErpConfiguration";
+import IntegrationHub from "../../../remote-buyer/src/components/integration/IntegrationHub";
+import Models from "../../../remote-buyer/src/components/Models";
+import type { ModelDto } from "../../../remote-buyer/src/api/modelApi";
 import WishlistSection from "../../../remote-buyer/src/components/wishlist/WishlistSection";
+import CartSection from "../../../remote-buyer/src/components/cart/CartSection";
+import OutletManagement from "../../../remote-buyer/src/components/outlet/OutletManagement";
+import {
+  OPERATIONS_HOME_KEY,
+  OPERATIONS_NAV_PATHS,
+  buildOperationsWorkspaceNav,
+  isOperationsNavKey,
+  renderOperationsWorkspace,
+} from "../../../remote-buyer/src/components/operations/operationsMenu";
+import {
+  OPERATIONS_MODEL_KEY,
+  hasOrganizationModel,
+  useOrganizationModelsStore,
+} from "../../../remote-buyer/src/store/useOrganizationModelsStore";
 import type { PendingMaterialApproval } from "./Material/materialApi";
 import MaterialTable from "./Material/MaterialTable";
 import MaterialApprovalDetail from "./Material/MaterialApprovalDetail";
@@ -280,7 +296,12 @@ const BUYER_ADMIN_NAV_PATHS: RouteNavPaths = {
   companyProfile: "company-profile",
   wishlist: "wishlist",
   wishlistApprovals: "wishlist-approvals",
-  purchaseOrderApi: "purchase-order-api",
+  apiConfiguration: "integration",
+  workflowConfiguration: "workflow-configuration",
+  models: "models",
+  cart: "cart",
+  outlets: "outlets",
+  ...OPERATIONS_NAV_PATHS,
 };
 
 const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number; subItems?: NavSubEntry[]; chevronIcon?: React.ReactNode }[] = [
@@ -289,6 +310,8 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
   { key: "invitations", icon: <IconMail />, label: "Invitations" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog" },
+  { key: "cart", icon: <NavIconFileCheck />, label: "Cart" },
+  { key: "models", icon: <IconFile />, label: "Models" },
   { key: "userList", icon: <NavIconUsers />, label: "User List" },
   {
     key: "configuration",
@@ -298,9 +321,11 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
       { key: "template", label: "Templates" },
       { key: "contractTemplate", label: "Contract Templates" },
       { key: "approvalManagement", label: "Approval Management" },
-      { key: "purchaseOrderApi", label: "Purchase Order API" },
+      { key: "outlets", label: "Outlets" },
     ]
   },
+  { key: "apiConfiguration", icon: <NavIconBuilding />, label: "Integration" },
+  { key: "workflowConfiguration", icon: <NavIconTemplate />, label: "Workflow & Configuration" },
   {
     key: "more",
     icon: <IconMore />,
@@ -409,6 +434,25 @@ const matchCards: MatchCard[] = [
 
 const BuyerAdminDash: React.FC = () => {
   const [activeNav, setActiveNav] = useRouteNav(BUYER_ADMIN_NAV_PATHS, "dashboard");
+
+  // The operations module (invoice capture, goods receipts) shows only when the platform has
+  // assigned its model to this organization.
+  const organizationModels = useOrganizationModelsStore((state) => state.models);
+  const fetchOrganizationModels = useOrganizationModelsStore((state) => state.fetchModels);
+  const organizationModelsLoaded = useOrganizationModelsStore((state) => state.loaded);
+  const hasOperations = hasOrganizationModel(organizationModels, OPERATIONS_MODEL_KEY);
+
+  useEffect(() => {
+    fetchOrganizationModels();
+  }, [fetchOrganizationModels]);
+
+  // The SILA ME workspace has its own menu; "Procurement" in it leads back to this dashboard.
+  const inOperationsWorkspace = isOperationsNavKey(activeNav);
+  const headerNavItems = useMemo(
+    () => (inOperationsWorkspace ? buildOperationsWorkspaceNav("dashboard") : navItems),
+    [inOperationsWorkspace],
+  );
+
   const [loggingOut, setLoggingOut] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<MatchCard | null>(null);
 
@@ -703,6 +747,13 @@ const BuyerAdminDash: React.FC = () => {
     setRfqPageView("dashboard");
   };
 
+  // "Open" on the Models page launches the model's workspace when it has one in this application.
+  const handleOpenModel = (model: ModelDto): boolean => {
+    if (model.key !== OPERATIONS_MODEL_KEY) return false;
+    handleNavClick(OPERATIONS_HOME_KEY);
+    return true;
+  };
+
 
   // const handleBackToDashboard = () => {
   //   setRfqPageView("dashboard");
@@ -908,7 +959,7 @@ const BuyerAdminDash: React.FC = () => {
   };
 
   return (
-    <Header navItems={navItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout}>
+    <Header navItems={headerNavItems} activeNav={activeNav} onNavClick={handleNavClick} onLogout={handleLogout}>
         <ToastContainer />
         <div className="bad-main">
           <div className="bad-content">
@@ -940,10 +991,34 @@ const BuyerAdminDash: React.FC = () => {
               <ContractTemplate />
             ) : activeNav === "approvalManagement" ? (
               <ApprovalManagement />
-            ) : activeNav === "purchaseOrderApi" ? (
-              <BuyerErpConfiguration />
+            ) : inOperationsWorkspace ? (
+              !organizationModelsLoaded ? (
+                <Loader size={24} message="Opening SILA ME..." />
+              ) : hasOperations ? (
+                renderOperationsWorkspace(activeNav, handleNavClick)
+              ) : (
+                <EmptyState
+                  title="SILA ME is not assigned to your organization"
+                  description="Ask the platform administrator to assign the model to your organization."
+                />
+              )
+            ) : activeNav === "models" ? (
+              <Models onOpenModel={handleOpenModel} />
+            ) : activeNav === "workflowConfiguration" ? (
+              <IntegrationHub variant="workflow" hasOperations={hasOperations} />
+            ) : activeNav === "cart" ? (
+              <CartSection onOpenWishlist={() => handleNavClick("wishlist")} onBrowseCatalog={() => handleNavClick("product")} />
+            ) : activeNav === "outlets" ? (
+              <OutletManagement buyerId={buyerId || ""} />
+            ) : activeNav === "apiConfiguration" ? (
+              <IntegrationHub variant="integration" hasOperations={hasOperations} />
             ) : activeNav === "wishlist" ? (
-              <WishlistSection buyerId={buyerId || ""} currentUserId={currentUserId} mode="manage" />
+              <WishlistSection
+                buyerId={buyerId || ""}
+                currentUserId={currentUserId}
+                mode="manage"
+                onOpenCart={() => handleNavClick("cart")}
+              />
             ) : activeNav === "wishlistApprovals" ? (
               <WishlistSection buyerId={buyerId || ""} currentUserId={currentUserId} mode="approve" />
             ) : activeNav === "material" ? (
@@ -981,7 +1056,7 @@ const BuyerAdminDash: React.FC = () => {
             ) : activeNav === "createRFQ" ? (
               <CreateRFQ onNavClick={handleNavClick} onRfqCreated={refreshRfqs} api={createRfqApi} />
             ) : activeNav === "product" ? (
-              <Product />
+              <Product canAddToCart onOpenCart={() => handleNavClick("cart")} />
             ) : rfqPageView === "allRfqs" ? (
               <>
                 <div className="bad-table">

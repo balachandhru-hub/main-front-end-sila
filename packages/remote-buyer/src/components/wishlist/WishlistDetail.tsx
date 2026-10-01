@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { PageHeader, toastService } from "@vosox/shared-ui";
 import { decideWishlist, type WishlistDetail as Wishlist } from "../../api/wishlistApi";
-import { statusBadgeClass, statusLabel } from "./wishlistStatus";
+import { isEditableStatus, statusBadgeClass, statusLabel } from "./wishlistStatus";
 
 interface WishlistDetailProps {
   wishlist: Wishlist;
@@ -10,6 +10,8 @@ interface WishlistDetailProps {
   onChanged: () => void;
   onEdit: () => void;
   allowEdit?: boolean;
+  /** Shows Approve/Reject to the approver whose turn it is. Off in the wishlist view, on in the approval inbox. */
+  allowDecide?: boolean;
 }
 
 const formatDate = (value?: string | null): string => {
@@ -26,16 +28,18 @@ const WishlistDetailView: React.FC<WishlistDetailProps> = ({
   onChanged,
   onEdit,
   allowEdit = true,
+  allowDecide = false,
 }) => {
   const [comment, setComment] = useState("");
   const [deciding, setDeciding] = useState(false);
-  const pendingStep = wishlist.approvalSteps.find(
-    (step) => step.status === "PENDING" && currentUserId && step.userId === currentUserId,
-  );
-  const earlierPending = pendingStep
-    ? wishlist.approvalSteps.some((step) => step.order < pendingStep.order && step.status !== "APPROVE")
-    : false;
-  const canDecide = Boolean(pendingStep) && !earlierPending && wishlist.status === "PENDING_APPROVAL";
+  const steps = [...wishlist.approvalSteps].sort((left, right) => left.order - right.order);
+  const approverLabel = (step: Wishlist["approvalSteps"][number]): string => step.name || step.email || "Unknown user";
+  const isPendingApproval = wishlist.status === "PENDING_APPROVAL";
+  // Approval is sequential: the wishlist waits for the first approver who has not acted yet.
+  const waitingStep = isPendingApproval ? steps.find((step) => step.status === "PENDING") : undefined;
+  const rejectedStep = steps.find((step) => step.status === "REJECT");
+  const isMyTurn = Boolean(waitingStep && currentUserId && waitingStep.userId === currentUserId);
+  const canDecide = allowDecide && isMyTurn;
 
   const decide = async (status: "APPROVE" | "REJECT") => {
     setDeciding(true);
@@ -60,8 +64,10 @@ const WishlistDetailView: React.FC<WishlistDetailProps> = ({
         meta={<span className={statusBadgeClass(wishlist.status)}>{statusLabel(wishlist.status)}</span>}
         onBack={onBack}
         backLabel="Back to wishlists"
-        actions={allowEdit && wishlist.status === "REJECTED" ? (
-          <button type="button" className="sila-btn sila-btn--secondary" onClick={onEdit}>Edit and resubmit</button>
+        actions={allowEdit && isEditableStatus(wishlist.status) ? (
+          <button type="button" className="sila-btn sila-btn--secondary" onClick={onEdit}>
+            {wishlist.status === "REJECTED" ? "Edit and resubmit" : "Edit or submit"}
+          </button>
         ) : undefined}
       />
 
@@ -72,14 +78,18 @@ const WishlistDetailView: React.FC<WishlistDetailProps> = ({
               <span className="sila-label">Approval</span>
               <span>{wishlist.approvalName || "—"}</span>
             </div>
-            <div className="sila-field">
-              <span className="sila-label">Supplier</span>
-              <span>{wishlist.supplierName || "—"}</span>
-            </div>
-            <div className="sila-field">
-              <span className="sila-label">Currency</span>
-              <span>{wishlist.currency || "—"}</span>
-            </div>
+            {waitingStep && (
+              <div className="sila-field">
+                <span className="sila-label">Pending with</span>
+                <span>{approverLabel(waitingStep)} (step {waitingStep.order} of {steps.length})</span>
+              </div>
+            )}
+            {wishlist.status === "REJECTED" && rejectedStep && (
+              <div className="sila-field">
+                <span className="sila-label">Rejected by</span>
+                <span>{approverLabel(rejectedStep)}</span>
+              </div>
+            )}
             <div className="sila-field">
               <span className="sila-label">Required date</span>
               <span>{formatDate(wishlist.requiredDate)}</span>
@@ -112,8 +122,7 @@ const WishlistDetailView: React.FC<WishlistDetailProps> = ({
             <table className="sila-table">
               <thead>
                 <tr>
-                  <th scope="col">Code</th>
-                  <th scope="col">Material</th>
+                  <th scope="col">Product</th>
                   <th scope="col">Quantity</th>
                   <th scope="col">Unit</th>
                   <th scope="col">Unit price</th>
@@ -122,7 +131,6 @@ const WishlistDetailView: React.FC<WishlistDetailProps> = ({
               <tbody>
                 {wishlist.items.map((item) => (
                   <tr key={item.id}>
-                    <td>{item.materialCode}</td>
                     <td>{item.materialName}</td>
                     <td>{item.quantity}</td>
                     <td>{item.unitOfMeasure || "—"}</td>
@@ -133,29 +141,47 @@ const WishlistDetailView: React.FC<WishlistDetailProps> = ({
             </table>
           </div>
 
-          <h2 className="sila-card-title">Approval</h2>
-          <div className="sila-table-wrap">
-            <table className="sila-table">
-              <thead>
-                <tr>
-                  <th scope="col">Order</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Comment</th>
-                  <th scope="col">Acted on</th>
-                </tr>
-              </thead>
-              <tbody>
-                {wishlist.approvalSteps.map((step) => (
-                  <tr key={`${step.order}-${step.userId}`}>
-                    <td>{step.order}</td>
-                    <td>{statusLabel(step.status)}</td>
-                    <td>{step.comment || "—"}</td>
-                    <td>{formatDate(step.actedOn)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {steps.length > 0 && (
+            <>
+              <h2 className="sila-card-title">Approval flow</h2>
+              {!allowDecide && isMyTurn && (
+                <span className="sila-help">
+                  This wishlist is waiting for you. Approve or reject it from More → Approval → Wishlist.
+                </span>
+              )}
+              <div className="sila-table-wrap">
+                <table className="sila-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Step</th>
+                      <th scope="col">Approver</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Comment</th>
+                      <th scope="col">Acted on</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {steps.map((step) => (
+                      <tr key={`${step.order}-${step.userId}`}>
+                        <td>{step.order}</td>
+                        <td>
+                          <span className="sila-cell-strong">{approverLabel(step)}</span>
+                          {step.name && step.email && <div className="sila-help">{step.email}</div>}
+                        </td>
+                        <td>
+                          <span className={statusBadgeClass(step.status)}>
+                            {step === waitingStep ? "Waiting for approval" : statusLabel(step.status)}
+                          </span>
+                        </td>
+                        <td>{step.comment || "—"}</td>
+                        <td>{formatDate(step.actedOn)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
 
           {canDecide && (
             <div className="sila-field sila-field--full">

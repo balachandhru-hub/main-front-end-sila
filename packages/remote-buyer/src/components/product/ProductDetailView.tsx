@@ -15,6 +15,10 @@ interface ProductDetailViewProps {
   onPrevImage: () => void;
   onNextImage: () => void;
   onPunchOutPreview: (url: string) => void;
+  /** When given, the product shows "Add to cart". */
+  onAddToCart?: (product: BuyerCatalogResponse) => void;
+  /** The product is already in the cart. */
+  inCart?: boolean;
 }
 
 /** Full-page detail view for a single catalog product. */
@@ -31,6 +35,8 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   onPrevImage,
   onNextImage,
   onPunchOutPreview,
+  onAddToCart,
+  inCart = false,
 }) => (
   <div className="pud-product-page">
     <div className="pud-catalog-fullview-header">
@@ -129,6 +135,19 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             <span className="pud-catalog-card-uom">per {product.unitOfMeasure}</span>
           )}
         </div>
+
+        {onAddToCart && !loading && !error && (
+          <div className="pud-product-item-action">
+            <button
+              type="button"
+              className="pud-btn pud-btn-message"
+              disabled={inCart}
+              onClick={() => onAddToCart(product)}
+            >
+              {inCart ? "Added to cart" : "Add to cart"}
+            </button>
+          </div>
+        )}
 
         {/* Show classification even if titles are null */}
         {(product.segment || product.family || product.class || product.commodity) && (

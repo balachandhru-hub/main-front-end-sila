@@ -9,7 +9,7 @@ import AllRfqsSection from "./dashboard/AllRfqsSection";
 import DashboardHome from "./dashboard/DashboardHome";
 import QuotationComparisonView from "./dashboard/QuotationComparisonView";
 import SupplierProfileModal from "./dashboard/SupplierProfileModal";
-import { BUYER_NAV_PATHS, buildHeaderNavItems } from "./dashboard/navConfig";
+import { BUYER_NAV_PATHS, OUTLET_MANAGER_ROLE, buildHeaderNavItems } from "./dashboard/navConfig";
 import type { MatchCard, RfqPageView } from "./dashboard/types";
 import { logoutBuyer, getBuyerProfile, fetchBuyerDashboardAnalytics, createBuyerChatApi } from "../api/Buyerapi";
 import { createRfqApi } from "../api/createRfqApi";
@@ -29,7 +29,17 @@ import ContractTable from "../../../remote-platform-user/src/components/Contract
 import ContractDetail from "../../../remote-platform-user/src/components/Contract/ContractDetail";
 import ApprovalManagement from "../../../remote-platform-user/src/components/ApprovalManagement/ApprovalManagement.tsx";
 import WishlistSection from "./wishlist/WishlistSection";
-import { ChatPanel, CompanyProfile, CreateRFQ, useAsyncData, useRouteNav } from '@vosox/shared-ui';
+import IntegrationHub from "./integration/IntegrationHub";
+import CartSection from "./cart/CartSection";
+import {
+  OPERATIONS_HOME_KEY,
+  buildOperationsWorkspaceNav,
+  isOperationsNavKey,
+  renderOperationsWorkspace,
+} from "./operations/operationsMenu";
+import { OPERATIONS_MODEL_KEY, hasOrganizationModel, useOrganizationModelsStore } from "../store/useOrganizationModelsStore";
+import type { ModelDto } from "../api/modelApi";
+import { ChatPanel, CompanyProfile, CreateRFQ, EmptyState, Loader, useAsyncData, useRouteNav } from '@vosox/shared-ui';
 
 const BuyersDashboard: React.FC = () => {
 
@@ -107,6 +117,19 @@ const BuyersDashboard: React.FC = () => {
   const currentUserId = useBuyerAuthStore((state) => state.personDetail?.userId || null);
   const buyerProfile = useBuyerAuthStore((state) => state.personDetail);
   const isLoadingBuyerProfile = useBuyerAuthStore((state) => state.personDetailLoading);
+  // An Outlet Manager is a buyer user who also manages wishlists.
+  const isOutletManager = buyerProfile?.roleName === OUTLET_MANAGER_ROLE;
+
+  // The operations module (invoice capture, goods receipts) shows only when the platform has
+  // assigned its model to this organization.
+  const organizationModels = useOrganizationModelsStore((state) => state.models);
+  const fetchOrganizationModels = useOrganizationModelsStore((state) => state.fetchModels);
+  const organizationModelsLoaded = useOrganizationModelsStore((state) => state.loaded);
+  const hasOperations = hasOrganizationModel(organizationModels, OPERATIONS_MODEL_KEY);
+
+  useEffect(() => {
+    fetchOrganizationModels();
+  }, [fetchOrganizationModels]);
 
   const { selectedMaterial, setSelectedMaterial, handleMaterialApprovalSubmitted } = useMaterialApprovals(activeNav);
 
@@ -142,6 +165,13 @@ const BuyersDashboard: React.FC = () => {
     }
     setActiveNav(key);
     setRfqPageView("dashboard");
+  };
+
+  // "Open" on the Models page launches the model's screens when it has any in this application.
+  const handleOpenModel = (model: ModelDto): boolean => {
+    if (model.key !== OPERATIONS_MODEL_KEY) return false;
+    handleNavClick(OPERATIONS_HOME_KEY);
+    return true;
   };
 
   const handleViewRfqDetailsFullPage = async (rfqId: string) => {
@@ -192,9 +222,13 @@ const BuyersDashboard: React.FC = () => {
     }
   };
 
+  // The SILA ME workspace has its own menu; "Procurement" in it leads back to this dashboard.
+  const inOperationsWorkspace = isOperationsNavKey(activeNav);
   const headerNavItems = useMemo(
-    () => buildHeaderNavItems(rfqPageView, fullPageRfq?.rfqNumber),
-    [rfqPageView, fullPageRfq],
+    () => (inOperationsWorkspace
+      ? buildOperationsWorkspaceNav("dashboard")
+      : buildHeaderNavItems(rfqPageView, fullPageRfq?.rfqNumber, isOutletManager)),
+    [inOperationsWorkspace, rfqPageView, fullPageRfq, isOutletManager],
   );
 
   return (
@@ -204,9 +238,9 @@ const BuyersDashboard: React.FC = () => {
             {activeNav === "createRFQ" ? (
               <CreateRFQ onNavClick={handleNavClick} onRfqCreated={refreshRfqs} api={createRfqApi} />
             ) : activeNav === "product" ? (
-              <Product />
+              <Product canAddToCart={isOutletManager} onOpenCart={() => handleNavClick("cart")} />
             ) : activeNav === "models" ? (
-              <Models />
+              <Models onOpenModel={handleOpenModel} />
             ) : activeNav === "template" ? (
               <UserTemplate />
             ) : activeNav === "contractTemplate" ? (
@@ -244,9 +278,24 @@ const BuyersDashboard: React.FC = () => {
                 />
               )
             ) : activeNav === "approvalManagement" ? (
-              <ApprovalManagement canCreate />
+              // An Outlet Manager only views approval flows; the buyer administrator creates them.
+              <ApprovalManagement canCreate={!isOutletManager} />
             ) : activeNav === "wishlistApprovals" ? (
               <WishlistSection buyerId={buyerId || ""} currentUserId={currentUserId} mode="approve" />
+            ) : isOutletManager && activeNav === "wishlist" ? (
+              <WishlistSection
+                buyerId={buyerId || ""}
+                currentUserId={currentUserId}
+                mode="manage"
+                onOpenCart={() => handleNavClick("cart")}
+              />
+            ) : isOutletManager && activeNav === "cart" ? (
+              <CartSection onOpenWishlist={() => handleNavClick("wishlist")} onBrowseCatalog={() => handleNavClick("product")} />
+            ) : isOutletManager && activeNav === "apiConfiguration" ? (
+              // The buyer administrator connects and configures the APIs; an Outlet Manager only views them.
+              <IntegrationHub variant="integration" readOnly hasOperations={hasOperations} />
+            ) : isOutletManager && activeNav === "workflowConfiguration" ? (
+              <IntegrationHub variant="workflow" readOnly hasOperations={hasOperations} />
             ) : rfqPageView === "allRfqs" ? (
               <AllRfqsSection
                 rfqs={allRfqsList}
@@ -282,6 +331,17 @@ const BuyersDashboard: React.FC = () => {
                 error={fullPageRfqError && !fullPageRfq ? fullPageRfqError : null}
                 onBack={handleBackToRfqDetail}
               />
+            ) : inOperationsWorkspace ? (
+              !organizationModelsLoaded ? (
+                <Loader size={24} message="Opening SILA ME..." />
+              ) : hasOperations ? (
+                renderOperationsWorkspace(activeNav, handleNavClick, { readOnlyIntegrations: true })
+              ) : (
+                <EmptyState
+                  title="SILA ME is not assigned to your organization"
+                  description="Ask the platform administrator to assign the model to your organization."
+                />
+              )
             ) : activeNav === "companyProfile" ? (
               <CompanyProfile
                 mode="network-admin"

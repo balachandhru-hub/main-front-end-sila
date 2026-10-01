@@ -14,6 +14,8 @@ interface ApprovalFlowDetailProps {
   flow: MasterApprovalFlow;
   onBack: () => void;
   onFlowUpdated: (flow: MasterApprovalFlow) => void;
+  /** View only: hides Edit and turns off approver reordering. */
+  readOnly?: boolean;
 }
 
 const IconBack = () => (
@@ -29,7 +31,7 @@ const EditIcon = () => (
   </svg>
 );
 
-const ApprovalFlowDetail: React.FC<ApprovalFlowDetailProps> = ({ flow: initialFlow, onBack, onFlowUpdated }) => {
+const ApprovalFlowDetail: React.FC<ApprovalFlowDetailProps> = ({ flow: initialFlow, onBack, onFlowUpdated, readOnly = false }) => {
   const [flow, setFlow] = useState(initialFlow);
   const [approvers, setApprovers] = useState<ApprovalFlowUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,15 +115,17 @@ const ApprovalFlowDetail: React.FC<ApprovalFlowDetailProps> = ({ flow: initialFl
         <div className="afd-heading">
           <div className="afd-title-edit">
             <h1 className="afd-title">{flow.approvalName || "Approval Flow"}</h1>
-            <button
-              type="button"
-              className="afd-edit-btn sila-btn sila-btn--ghost sila-btn--sm sila-btn--icon"
-              title="Edit Approval Flow"
-              aria-label="Edit Approval Flow"
-              onClick={() => setIsEditing(true)}
-            >
-              <EditIcon />
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                className="afd-edit-btn sila-btn sila-btn--ghost sila-btn--sm sila-btn--icon"
+                title="Edit Approval Flow"
+                aria-label="Edit Approval Flow"
+                onClick={() => setIsEditing(true)}
+              >
+                <EditIcon />
+              </button>
+            )}
           </div>
           <div className="afd-meta">
             <span className="afd-code sila-ref">{flow.approvalCode || "—"}</span>
@@ -138,7 +142,7 @@ const ApprovalFlowDetail: React.FC<ApprovalFlowDetailProps> = ({ flow: initialFl
         steps={steps}
         loading={loading}
         error={error}
-        onReorder={handleReorder}
+        onReorder={readOnly ? undefined : handleReorder}
         disabled={savingOrder}
       />
 

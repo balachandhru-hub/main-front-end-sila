@@ -1,0 +1,141 @@
+/* Receiving / operations screens: only the layout the shared sila- classes do not cover. */
+
+/* A section stacks its page header and cards. */
+.ops-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sila-space-4);
+  min-width: 0;
+}
+
+/* Blocks inside one card body. */
+.ops-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sila-space-4);
+  min-width: 0;
+}
+
+/* Two cards side by side on wide screens, stacked on narrow ones. */
+.ops-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+  gap: var(--sila-space-4);
+  align-items: start;
+}
+
+.ops-inline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sila-space-2);
+}
+
+.ops-inline--end {
+  justify-content: flex-end;
+}
+
+.ops-inline .sila-input,
+.ops-inline .sila-select {
+  width: auto;
+  min-width: 12rem;
+  flex: 1 1 12rem;
+}
+
+/* Checkbox with its label on one line. */
+.ops-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sila-space-2);
+  font-size: var(--sila-text-sm);
+  color: var(--sila-text);
+}
+
+.ops-check-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--sila-space-2) var(--sila-space-4);
+}
+
+.ops-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Inputs placed inside table cells. */
+.ops-cell-input {
+  min-width: 6rem;
+  width: 100%;
+}
+
+.ops-cell-input--wide {
+  min-width: 12rem;
+}
+
+.ops-muted {
+  color: var(--sila-text-muted);
+  font-size: var(--sila-text-sm);
+}
+
+.ops-break {
+  overflow-wrap: anywhere;
+}
+
+/* Stored document preview. */
+.ops-document-frame {
+  width: 100%;
+  height: 36rem;
+  border: 0.0625rem solid var(--sila-border);
+  border-radius: var(--sila-radius);
+  background: var(--sila-surface-subtle);
+}
+
+/* Short lists on the overview. */
+.ops-list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  padding: 0;
+}
+
+.ops-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sila-space-3);
+  padding: var(--sila-space-3) 0;
+  border-bottom: 0.0625rem solid var(--sila-border-subtle);
+}
+
+.ops-list-row:last-child {
+  border-bottom: 0;
+}
+
+/* Schema snapshot: one collapsible block per entity. */
+.ops-entity {
+  border: 0.0625rem solid var(--sila-border);
+  border-radius: var(--sila-radius);
+  background: var(--sila-surface);
+}
+
+.ops-entity > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sila-space-3);
+  padding: var(--sila-space-3) var(--sila-space-4);
+  cursor: pointer;
+  font-size: var(--sila-text-sm);
+  font-weight: var(--sila-weight-semibold);
+  color: var(--sila-text);
+}
+
+.ops-entity[open] > summary {
+  border-bottom: 0.0625rem solid var(--sila-border-subtle);
+}
+
+/* Unit tree: indent by depth, set through --ops-depth on the name. */
+.ops-tree-indent {
+  display: inline-block;
+  padding-left: calc(var(--ops-depth, 0) * var(--sila-space-5));
+}

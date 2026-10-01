@@ -81,9 +81,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
       case ROLE_IDS.PLATFORM_ADMIN:
       case ROLE_IDS.SUPPLIER:
       case ROLE_IDS.BUYER:
-        return '/dashboard';
       case ROLE_IDS.OUTLET_MANAGER:
-        return '/wishlist';
+        return '/dashboard';
       default:
         return null;
     }

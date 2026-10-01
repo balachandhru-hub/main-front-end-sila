@@ -24,6 +24,7 @@ const sortByOrderNumber = (flows: MasterApprovalFlow[]) =>
     .map(({ flow }) => flow);
 
 interface ApprovalManagementProps {
+  /** false = view only: no Create Approval, and an opened flow cannot be edited or reordered. */
   canCreate?: boolean;
 }
 
@@ -97,6 +98,7 @@ const ApprovalManagement: React.FC<ApprovalManagementProps> = ({ canCreate = tru
     return (
       <ApprovalFlowDetail
         flow={selectedFlow}
+        readOnly={!canCreate}
         onBack={() => setSelectedFlow(null)}
         onFlowUpdated={(updated) => setFlows((prev) => prev.map((f) => (f.id === updated.id ? updated : f)))}
       />

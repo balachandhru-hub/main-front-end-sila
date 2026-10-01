@@ -26,6 +26,7 @@ export const useProductCatalog = () => {
     class: "",
     commodity: "",
     search: "",
+    supplier: "",
     index: 0,
     limit: 20,
   });
@@ -75,6 +76,7 @@ export const useProductCatalog = () => {
         class: filterState.class || undefined,
         commodity: filterState.commodity || undefined,
         search: filterState.search || undefined,
+        supplier: filterState.supplier.trim() || undefined,
         index: filterState.index,
         limit: filterState.limit,
       });
@@ -109,6 +111,7 @@ export const useProductCatalog = () => {
       class: "",
       commodity: "",
       search: "",
+      supplier: "",
       index: 0,
       limit: 20,
     });
@@ -290,6 +293,24 @@ export const useProductCatalog = () => {
     }
   };
 
+  // Supplier filter: part of the supplier's name or SNID. Applied on search; clearing it reloads.
+  const handleSupplierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    setFilters((prev) => ({
+      ...prev,
+      supplier: value,
+    }));
+
+    if (value.trim() === "") {
+      fetchProducts({
+        ...filters,
+        supplier: "",
+        index: 0,
+      });
+    }
+  };
+
   const handleSearchSubmit = () => {
     fetchProducts(filters);
   };
@@ -418,6 +439,7 @@ export const useProductCatalog = () => {
     handleClassChange,
     handleCommodityChange,
     handleSearchChange,
+    handleSupplierChange,
     handleSearchSubmit,
     openProductDetail,
     closeProductDetail,

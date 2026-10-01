@@ -3,7 +3,8 @@ import { EmptyState, Loader, PageHeader, Pagination, toastService } from "@vosox
 import { getWishlist, getWishlists, type WishlistDetail, type WishlistListItem } from "../../api/wishlistApi";
 import WishlistDetailView from "./WishlistDetail";
 import WishlistForm from "./WishlistForm";
-import { isMyApprovalTurn, statusBadgeClass, statusLabel } from "./wishlistStatus";
+import { isEditableStatus, isMyApprovalTurn, statusBadgeClass, statusLabel } from "./wishlistStatus";
+import { useCartStore } from "../../store/useCartStore";
 
 const PAGE_SIZE = 20;
 
@@ -12,6 +13,8 @@ interface WishlistSectionProps {
   currentUserId: string | null;
   /** manage: create and resubmit. approve: inbox of wishlists waiting for this user. */
   mode?: "manage" | "approve";
+  /** Opens the cart, where products are added to a wishlist. */
+  onOpenCart?: () => void;
 }
 
 type View =
@@ -27,7 +30,8 @@ const formatDate = (value?: string | null): string => {
   return date.toLocaleDateString();
 };
 
-const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserId, mode = "manage" }) => {
+const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserId, mode = "manage", onOpenCart }) => {
+  const cartCount = useCartStore((state) => state.products.length);
   const [view, setView] = useState<View>({ name: "list" });
   const [rows, setRows] = useState<WishlistListItem[]>([]);
   const [page, setPage] = useState(1);
@@ -84,11 +88,11 @@ const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserI
     if (view.name === "list") loadPage(mode === "approve" ? 1 : page);
   }, [view.name, loadPage, page, mode]);
 
-  const openWishlist = async (id: string) => {
+  const openWishlist = async (id: string, target: "detail" | "edit" = "detail") => {
     setLoading(true);
     try {
       const wishlist = await getWishlist(id);
-      setView({ name: "detail", wishlist });
+      setView(target === "edit" ? { name: "edit", wishlist } : { name: "detail", wishlist });
     } catch (err: unknown) {
       toastService.error(err instanceof Error ? err.message : "Could not load this wishlist.");
     } finally {
@@ -100,6 +104,18 @@ const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserI
     await openWishlist(id);
   };
 
+  // Products handed over from the cart open the form they are meant for: a new wishlist or a draft.
+  useEffect(() => {
+    if (mode !== "manage") return;
+    const handoff = useCartStore.getState().handoff;
+    if (!handoff) return;
+    if (handoff.wishlistId) {
+      openWishlist(handoff.wishlistId, "edit");
+    } else {
+      setView({ name: "create" });
+    }
+  }, [mode]);
+
   if (!buyerId) {
     return <EmptyState title="Buyer profile is still loading" description="The wishlist opens after the buyer profile is available." />;
   }
@@ -107,12 +123,12 @@ const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserI
   if (view.name === "create") {
     return (
       <WishlistForm
-        buyerId={buyerId}
         onCancel={() => setView({ name: "list" })}
         onSaved={() => {
           setPage(1);
           setView({ name: "list" });
         }}
+        onOpenCart={onOpenCart}
       />
     );
   }
@@ -120,10 +136,10 @@ const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserI
   if (view.name === "edit") {
     return (
       <WishlistForm
-        buyerId={buyerId}
         wishlist={view.wishlist}
         onCancel={() => setView({ name: "detail", wishlist: view.wishlist })}
         onSaved={() => refreshOpen(view.wishlist.id)}
+        onOpenCart={onOpenCart}
       />
     );
   }
@@ -135,6 +151,7 @@ const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserI
         currentUserId={currentUserId}
         onBack={() => setView({ name: "list" })}
         allowEdit={mode === "manage"}
+        allowDecide={mode === "approve"}
         onEdit={() => setView({ name: "edit", wishlist: view.wishlist })}
         onChanged={() => refreshOpen(view.wishlist.id)}
       />
@@ -146,12 +163,9 @@ const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserI
       <PageHeader
         className="pud-page-header"
         title={mode === "approve" ? "Wishlist approvals" : "Wishlists"}
-        description={mode === "approve"
-          ? "Wishlists waiting for your approval. The last approval sends the purchase order to the saved PO_CREATE API."
-          : "Organization wishlists start approval on create. The last approval sends the purchase order to the saved PO_CREATE API."}
-        actions={mode === "manage" ? (
-          <button type="button" className="sila-btn sila-btn--primary" onClick={() => setView({ name: "create" })}>
-            New wishlist
+        actions={mode === "manage" && onOpenCart ? (
+          <button type="button" className="sila-btn sila-btn--primary" onClick={onOpenCart}>
+            Cart ({cartCount})
           </button>
         ) : undefined}
       />
@@ -165,7 +179,7 @@ const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserI
             title={mode === "approve" ? "Nothing is waiting for you" : "No wishlists yet"}
             description={mode === "approve"
               ? "When you are the next approver on a wishlist, it shows up here."
-              : "Create a wishlist to start approval and send a purchase order."}
+              : 'Add products to the cart from the Product Catalog, then use "Add to wishlist" in the cart.'}
           />
         ) : (
           <>
@@ -179,6 +193,7 @@ const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserI
                     <th scope="col">Status</th>
                     <th scope="col">Created</th>
                     <th scope="col">Document</th>
+                    <th scope="col">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -201,6 +216,19 @@ const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserI
                       <td><span className={statusBadgeClass(row.status)}>{statusLabel(row.status)}</span></td>
                       <td>{formatDate(row.dateCreated)}</td>
                       <td>{row.buyerErpDocumentNumber || row.lastError || "—"}</td>
+                      {/* The row opens the wishlist on click/Enter; keep those events for the buttons. */}
+                      <td onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                        <div className="sila-btn-group">
+                          <button type="button" className="sila-btn sila-btn--ghost sila-btn--sm" onClick={() => openWishlist(row.id)}>
+                            View
+                          </button>
+                          {mode === "manage" && isEditableStatus(row.status) && (
+                            <button type="button" className="sila-btn sila-btn--secondary sila-btn--sm" onClick={() => openWishlist(row.id, "edit")}>
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

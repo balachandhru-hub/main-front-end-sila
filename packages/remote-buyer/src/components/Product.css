@@ -13,6 +13,15 @@
   padding-bottom: var(--sila-space-5);
 }
 
+/* Title on the left, "Go to wishlist" on the right */
+.pud-product-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sila-space-3);
+}
+
 .pud-product-page .pud-title {
   font-size: var(--sila-text-2xl);
   font-weight: var(--sila-weight-semibold);

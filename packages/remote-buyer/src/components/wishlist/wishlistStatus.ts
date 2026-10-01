@@ -18,6 +18,9 @@ const LABELS: Record<string, string> = {
 
 export const statusLabel = (status: string): string => LABELS[status] ?? status;
 
+/** The server accepts changes only to a draft or a rejected wishlist; any other status is frozen. */
+export const isEditableStatus = (status: string): boolean => status === "DRAFT" || status === "REJECTED";
+
 export const isMyApprovalTurn = (
   wishlist: { status: string; approvalSteps: { userId: string; order: number; status: string }[] },
   userId: string | null,
