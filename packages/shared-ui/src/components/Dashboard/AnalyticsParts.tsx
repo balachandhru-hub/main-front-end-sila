@@ -32,12 +32,15 @@ export const DueIn: React.FC<{ endDate: string }> = ({ endDate }) => {
 export const AnalyticsSkeleton: React.FC = () => (
   <div className="sila-analytics" role="status" aria-live="polite">
     <span className="sila-visually-hidden">Loading dashboard analytics…</span>
-    <div className="sila-kpi-strip">
+    <div className="sila-kpi-strip sila-kpi-strip--cards">
       {Array.from({ length: 6 }, (_, i) => (
         <div key={i} className="sila-kpi-strip-cell">
-          <Skeleton width="60%" height={12} />
-          <Skeleton width="40%" height={26} />
-          <Skeleton width="50%" height={10} />
+          <div className="sila-kpi-strip-head">
+            <Skeleton width={36} height={36} radius="var(--sila-radius-md)" />
+            <Skeleton width="50%" height={12} />
+          </div>
+          <Skeleton width="40%" height={30} />
+          <Skeleton width="55%" height={10} />
         </div>
       ))}
     </div>

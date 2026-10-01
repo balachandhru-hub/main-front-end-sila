@@ -455,7 +455,6 @@ button.sila-kpi:focus-visible { outline: none; box-shadow: var(--sila-focus-ring
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--sila-space-3) var(--sila-space-4);
-  padding-bottom: var(--sila-space-5);
 }
 
 .sila-page-header-main {
@@ -724,7 +723,7 @@ button.sila-kpi:focus-visible { outline: none; box-shadow: var(--sila-focus-ring
 }
 
 .sila-table td {
-  height: 2.75rem;
+  height: 3.25rem;
   padding: var(--sila-space-2) var(--sila-space-4);
   border-bottom: 0.0625rem solid var(--sila-border-subtle);
   vertical-align: middle;
@@ -1275,9 +1274,59 @@ button.sila-kpi:focus-visible { outline: none; box-shadow: var(--sila-focus-ring
   font-weight: var(--sila-weight-semibold);
 }
 
+/* Card variant (buyer dashboard): each metric is its own card with a tinted icon chip. */
+.sila-kpi-strip--cards {
+  gap: var(--sila-space-4);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.sila-kpi-strip--cards .sila-kpi-strip-cell {
+  gap: var(--sila-space-2);
+  padding: var(--sila-space-4) var(--sila-space-5);
+  border: 0.0625rem solid var(--sila-border);
+  border-radius: var(--sila-radius-md);
+  box-shadow: var(--sila-shadow-xs);
+  transition: border-color var(--sila-duration-fast) var(--sila-ease), box-shadow var(--sila-duration-fast) var(--sila-ease);
+}
+
+.sila-kpi-strip--cards .sila-kpi-strip-cell--action:hover {
+  background: var(--sila-surface);
+  border-color: var(--sila-primary-border);
+  box-shadow: var(--sila-shadow-sm);
+}
+
+.sila-kpi-strip--cards .sila-kpi-strip-head {
+  flex-direction: row-reverse;
+  justify-content: space-between;
+}
+
+.sila-kpi-strip--cards .sila-kpi-strip-icon {
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--sila-radius-md);
+  background: var(--sila-primary-soft);
+  color: var(--sila-primary);
+}
+.sila-kpi-strip--cards .sila-kpi-strip-icon svg { width: 1.125rem; height: 1.125rem; }
+
+.sila-kpi-strip--cards .sila-kpi-strip-cell--warning .sila-kpi-strip-icon { background: var(--sila-warning-soft); color: var(--sila-warning); }
+.sila-kpi-strip--cards .sila-kpi-strip-cell--success .sila-kpi-strip-icon { background: var(--sila-success-soft); color: var(--sila-success); }
+.sila-kpi-strip--cards .sila-kpi-strip-cell--danger .sila-kpi-strip-icon { background: var(--sila-danger-soft); color: var(--sila-danger); }
+
+.sila-kpi-strip--cards .sila-kpi-strip-label { font-weight: var(--sila-weight-semibold); }
+
 /* ======================================================================== */
 /* Charts                                                                   */
 /* ======================================================================== */
+.sila-chart *:focus {
+  outline: none !important;
+}
 
 .sila-chart-grid {
   display: grid;

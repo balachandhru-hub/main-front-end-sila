@@ -46,6 +46,7 @@ export const BuyerAnalytics: React.FC<BuyerAnalyticsProps> = ({ state, onViewRfq
 
       <KpiStrip
         label="Sourcing summary"
+        className="sila-kpi-strip--cards"
         items={[
           {
             key: 'live',
@@ -57,8 +58,8 @@ export const BuyerAnalytics: React.FC<BuyerAnalyticsProps> = ({ state, onViewRfq
             onClick: onViewRfqs,
           },
           { key: 'total', label: 'Total RFQs', value: kpis.totalRfqs, icon: Icons.total, caption: 'All time' },
-          { key: 'awaiting', label: 'Awaiting award', value: kpis.awaitingAward, icon: Icons.awaiting, caption: 'Bidding frozen or closed' },
-          { key: 'awarded', label: 'Awarded', value: kpis.awardedRfqs, icon: Icons.award, caption: `${kpis.awardRate}% of closed RFQs` },
+          { key: 'awaiting', label: 'Awaiting award', value: kpis.awaitingAward, icon: Icons.awaiting, tone: 'warning', caption: 'Bidding frozen or closed' },
+          { key: 'awarded', label: 'Awarded', value: kpis.awardedRfqs, icon: Icons.award, tone: 'success', caption: `${kpis.awardRate}% of closed RFQs` },
           { key: 'suppliers', label: 'Suppliers engaged', value: kpis.suppliersEngaged, icon: Icons.suppliers, caption: 'Invited across RFQs' },
           { key: 'contracts', label: 'Contracts', value: kpis.contracts, icon: Icons.contract, caption: `${kpis.activeContracts} active` },
         ]}
@@ -73,7 +74,7 @@ export const BuyerAnalytics: React.FC<BuyerAnalyticsProps> = ({ state, onViewRfq
               { key: 'created', label: 'Created' },
               { key: 'awarded', label: 'Awarded' },
             ]}
-            formatCategory={(month, index) => formatMonth(month, index === 0)}
+            formatCategory={(month) => formatMonth(month)}
           />
         </ChartCard>
 

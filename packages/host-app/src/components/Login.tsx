@@ -98,30 +98,30 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
       await login(username, password);
 
       try {
-       const claims = await getTokenClaims(true);
-if (claims && claims.roleId) {
-  const details = {
-    userId: claims.userId,
-    personId: claims.personId,
-    organizationId: claims.organizationId,
-    roleId: claims.roleId,
-    buyerId: claims.buyerId,
-    supplierId: claims.supplierId,
-    permissions: claims.permissions,
-    organizationType: claims.organizationType,
-  };
+        const claims = await getTokenClaims(true);
+        if (claims && claims.roleId) {
+          const details = {
+            userId: claims.userId,
+            personId: claims.personId,
+            organizationId: claims.organizationId,
+            roleId: claims.roleId,
+            buyerId: claims.buyerId,
+            supplierId: claims.supplierId,
+            permissions: claims.permissions,
+            organizationType: claims.organizationType,
+          };
 
-  const redirectUrl = getRedirectUrl(claims.roleId);
-  if (!redirectUrl) {
-    setError('Unrecognized user role. Please contact support.');
-    return;
-  }
+          const redirectUrl = getRedirectUrl(claims.roleId);
+          if (!redirectUrl) {
+            setError('Unrecognized user role. Please contact support.');
+            return;
+          }
 
-  onLoginSuccess?.(details);
-  navigate(redirectUrl, { replace: true });
-} else {
-  setError('Failed to retrieve user claims. Role ID not found.');
-}
+          onLoginSuccess?.(details);
+          navigate(redirectUrl, { replace: true });
+        } else {
+          setError('Failed to retrieve user claims. Role ID not found.');
+        }
       } catch (claimsError: any) {
         setError(claimsError.message || 'Failed to retrieve user claims.');
       }
@@ -266,7 +266,13 @@ if (claims && claims.roleId) {
                       </span>
                       Remember me
                     </label> */}
-                    <a href="#" className="vx-link" onClick={(e) => e.preventDefault()}>
+                    <a
+                      type="button"
+                      className="vx-link"
+                      onClick={(e) => {
+                        e.preventDefault();
+                      }}
+                    >
                       Forgot Password?
                     </a>
                   </div>

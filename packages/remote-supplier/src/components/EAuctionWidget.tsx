@@ -12,7 +12,7 @@ import {
 import { useOtpVerification, getCookie, deleteCookie, VERIFICATION_TOKEN_COOKIE, VERIFICATION_TOKEN_STORAGE_KEY, OTP_EXPIRY_STORAGE_KEY } from '../hooks/useOtpVerification';
 import { useQuotationExcelSync, type QuoteLineItem } from '../hooks/useQuotationExcelSync';
 import { useBulkApply } from '../hooks/useBulkApply';
-import { useLiveBids, formatEndDateStr } from '../hooks/useLiveBids';
+import { useLiveBids, formatEndDateStr, type LiveAuctionItem } from '../hooks/useLiveBids';
 import LiveBidList from './EAuction/LiveBidList';
 import AuctionTriggerBar from './EAuction/AuctionTriggerBar';
 
@@ -31,6 +31,12 @@ const formatRank = (val: any): string => {
 const IconBoltFilled = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none">
     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </svg>
+);
+
+const IconChevronLeft = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="15 18 9 12 15 6" />
   </svg>
 );
 
@@ -53,10 +59,19 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
     fetchLiveBidsData,
   } = useLiveBids(supplierId, isModalOpen);
 
+  // Small screens only (CSS-driven): show either the RFQ list or the selected RFQ's workspace
+  const [mobileView, setMobileView] = useState<"list" | "detail">("list");
+
+  const handleSelectLot = (lot: LiveAuctionItem) => {
+    setSelectedLot(lot);
+    setMobileView("detail");
+  };
+
   const handleCloseEauctionModal = () => {
     setIsModalOpen(false);
     setCurrentPage(1);
     setSelectedLot(null);
+    setMobileView("list");
   };
 
   // API State for selected RFQ details & existing quotation
@@ -507,12 +522,12 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
             </div>
 
             {/* Main Portal Body */}
-            <div className="eauction-portal-body">
+            <div className={`eauction-portal-body eauction-mobile-${mobileView}`}>
               {/* Left Sidebar: Live RFQ List */}
               <LiveBidList
                 auctions={auctions}
                 selectedLot={selectedLot}
-                onSelectLot={setSelectedLot}
+                onSelectLot={handleSelectLot}
                 loadingApi={loadingApi}
                 currentPage={currentPage}
                 totalAuctions={totalAuctions}
@@ -523,6 +538,14 @@ export const EAuctionWidget: React.FC<EAuctionWidgetProps> = ({ supplierId }) =>
 
               {/* Main Content Workspace */}
               <div className="eauction-main-content">
+                <button
+                  type="button"
+                  className="eauction-back-to-list"
+                  onClick={() => setMobileView("list")}
+                  aria-label="Back to live bids list"
+                >
+                  <IconChevronLeft /> Back
+                </button>
 
                 {/* Split Bottom Workspace */}
                 <div className={`eauction-grid-split${selectedRfqDetails?.addLotOption === false ? ' is-single-column' : ''}`}>

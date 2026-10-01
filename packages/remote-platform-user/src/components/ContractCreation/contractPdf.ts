@@ -58,6 +58,8 @@ export interface ContractPdfInput {
   buyerTcContent: string;
   buyerTermsDocs: RfqAssetAttachment[];
   supplierTermsDocs: RfqAssetAttachment[];
+  /** The RFQ's contract template document(s), merged in alongside the buyer/supplier Terms & Conditions. */
+  contractTemplateDocs?: RfqAssetAttachment[];
   buyerSignDetails: SignDetails | null;
   supplierSignDetails: SignDetails | null;
   /** Preloaded SILA logo as a PNG data URL (jsPDF's addImage needs a data URI, not a plain asset URL). */
@@ -66,6 +68,8 @@ export interface ContractPdfInput {
   buyerTermsExtractedText?: string;
   /** Plain text extracted from supplierTermsDocs' PDF attachment(s). */
   supplierTermsExtractedText?: string;
+  /** Plain text extracted from contractTemplateDocs' PDF attachment(s). */
+  contractTemplateExtractedText?: string;
 }
 
 // Pulls the plain text out of an uploaded Terms & Conditions PDF so the executed-contract cover page can print
@@ -190,8 +194,13 @@ export function buildContractCoverPdfBytes(input: ContractPdfInput): Uint8Array 
     doc.setTextColor(...SILA_TEXT_MUTED_RGB);
     doc.text(`Contract No. ${input.contractNumber}`, textX, 72);
 
-    // "Executed" status pill, top-right.
-    const pillLabel = "EXECUTED";
+    // Status pill, top-right: "EXECUTED" once both parties have signed, "DRAFT" for the pre-signature copy
+    // attached when the contract is first sent for approvals.
+    const isExecuted = Boolean(input.buyerSignDetails && input.supplierSignDetails);
+    const pillLabel = isExecuted ? "EXECUTED" : "DRAFT";
+    const pillFillRgb = isExecuted ? SILA_SUCCESS_SOFT_RGB : SILA_PRIMARY_SOFT_RGB;
+    const pillBorderRgb = isExecuted ? SILA_SUCCESS_BORDER_RGB : SILA_BORDER_RGB;
+    const pillTextRgb = isExecuted ? SILA_SUCCESS_RGB : SILA_PRIMARY_RGB;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8.5);
     const pillTextWidth = doc.getTextWidth(pillLabel);
@@ -199,11 +208,11 @@ export function buildContractCoverPdfBytes(input: ContractPdfInput): Uint8Array 
     const pillHeight = 18;
     const pillX = pageWidth - marginX - pillWidth;
     const pillY = 32;
-    doc.setFillColor(...SILA_SUCCESS_SOFT_RGB);
-    doc.setDrawColor(...SILA_SUCCESS_BORDER_RGB);
+    doc.setFillColor(...pillFillRgb);
+    doc.setDrawColor(...pillBorderRgb);
     doc.setLineWidth(0.75);
     doc.roundedRect(pillX, pillY, pillWidth, pillHeight, 9, 9, "FD");
-    doc.setTextColor(...SILA_SUCCESS_RGB);
+    doc.setTextColor(...pillTextRgb);
     doc.text(pillLabel, pillX + pillWidth / 2, pillY + pillHeight / 2 + 3, { align: "center" });
 
     doc.setDrawColor(...SILA_PRIMARY_RGB);
@@ -421,6 +430,9 @@ export function buildContractCoverPdfBytes(input: ContractPdfInput): Uint8Array 
     y += cardHeight + 22;
   };
 
+  if (input.contractTemplateDocs && input.contractTemplateDocs.length > 0) {
+    writeTcSection("Contract Template", input.contractTemplateDocs, input.contractTemplateExtractedText);
+  }
   writeTcSection("Buyer Terms & Conditions", input.buyerTermsDocs, input.buyerTermsExtractedText, input.buyerTcContent);
   if (input.supplierTermsDocs.length > 0) {
     writeTcSection("Supplier Terms & Conditions", input.supplierTermsDocs, input.supplierTermsExtractedText);
@@ -543,19 +555,28 @@ async function mergeTcPdfPages(target: PDFDocument, docs: RfqAssetAttachment[], 
 }
 
 export async function buildMergedContractPdfBytes(input: ContractPdfInput): Promise<Uint8Array> {
-  const [buyerTermsExtractedText, supplierTermsExtractedText] = await Promise.all([
+  const [buyerTermsExtractedText, supplierTermsExtractedText, contractTemplateExtractedText] = await Promise.all([
     extractTermsDocsText(input.buyerTermsDocs),
     extractTermsDocsText(input.supplierTermsDocs),
+    extractTermsDocsText(input.contractTemplateDocs || []),
   ]);
-  const coverBytes = buildContractCoverPdfBytes({ ...input, buyerTermsExtractedText, supplierTermsExtractedText });
+  const coverBytes = buildContractCoverPdfBytes({
+    ...input,
+    buyerTermsExtractedText,
+    supplierTermsExtractedText,
+    contractTemplateExtractedText,
+  });
   const merged = await PDFDocument.load(coverBytes);
   // Only merge the attachment's own raw pages in when its text couldn't be inlined on the cover page above -
-  // otherwise the same Terms & Conditions would appear twice in the executed contract.
+  // otherwise the same document would appear twice in the merged contract.
   if (!buyerTermsExtractedText) {
     await mergeTcPdfPages(merged, input.buyerTermsDocs, "Buyer Terms & Conditions");
   }
   if (!supplierTermsExtractedText) {
     await mergeTcPdfPages(merged, input.supplierTermsDocs, "Supplier Terms & Conditions");
+  }
+  if (!contractTemplateExtractedText) {
+    await mergeTcPdfPages(merged, input.contractTemplateDocs || [], "Contract Template");
   }
   return merged.save();
 }

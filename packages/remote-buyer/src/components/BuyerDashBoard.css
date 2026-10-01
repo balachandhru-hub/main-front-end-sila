@@ -1615,7 +1615,7 @@ h1.pud-title,
     }
 
     .pud-match-actions {
-        flex-direction: column;
+        width: 100%;
     }
 
     .pud-match-actions .pud-btn {

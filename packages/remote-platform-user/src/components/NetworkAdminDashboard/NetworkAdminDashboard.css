@@ -24,6 +24,7 @@
 /* PageHeader already carries its own spacing; the flex gap handles the rest. */
 .nad-content .nad-content-header {
   margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 /* ---- KPI strip ------------------------------------------------------- */
@@ -106,14 +107,6 @@
   align-items: center;
   justify-content: center;
   min-height: 12.5rem;
-}
-
-.nad-delete-warning {
-  display: block;
-  padding-top: var(--sila-space-2);
-  font-size: var(--sila-text-sm);
-  font-weight: var(--sila-weight-medium);
-  color: var(--sila-danger);
 }
 
 /* ---- User table (UserListTable rendered inside this page) ----------- */
