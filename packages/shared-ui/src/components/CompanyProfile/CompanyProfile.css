@@ -16,7 +16,7 @@
 }
 
 .cp-page-header {
-  margin-bottom: var(--sila-space-5);
+  margin-bottom: var(--sila-space-1);
 }
 
 .cp-page-header-left {
@@ -342,6 +342,7 @@ button.cp-card-title:focus-visible {
   line-height: var(--sila-leading);
   color: var(--sila-text);
   overflow-wrap: anywhere;
+  /* border: 1px solid; */
 }
 
 .cp-field-link {
@@ -693,5 +694,11 @@ a.cp-field-link:hover {
 @media (max-width: 30rem) {
   .cp-sub-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media(max-width: 25rem){
+  .cp-contact-item{
+    font-size: 0.75rem;
   }
 }

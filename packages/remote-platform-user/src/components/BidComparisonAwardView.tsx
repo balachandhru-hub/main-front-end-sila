@@ -281,6 +281,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           quantity: item.quantity || item.qty || 1,
           uom: item.uom || item.unit || 'PCS',
           materialCode: item.materialCode || item.code || '',
+          isAwarded: item.isAwarded,
+          awardedSupplierId: item.awardedSupplierId,
         };
       });
     }
@@ -708,8 +710,8 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
       const itemPrices: Record<string, {
         firstBid: number;
         currentBid: number;
-        firstBreakdown: { discount: number; discountType: string; tax: number; taxType: string; delivery: number; deliveryType: string };
-        currentBreakdown: { discount: number; discountType: string; tax: number; taxType: string; delivery: number; deliveryType: string };
+        firstBreakdown: { discount: number; discountType: string; tax: number; taxType: string; delivery: number; deliveryType: string; subTotal: number | null };
+        currentBreakdown: { discount: number; discountType: string; tax: number; taxType: string; delivery: number; deliveryType: string; subTotal: number | null };
       }> = {};
 
       resolvedItems.forEach((rfqItem: any) => {
@@ -731,6 +733,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
             taxType: (firstQi as any)?.taxType || (effQi as any)?.taxType || 'PERCENTAGE',
             delivery: firstQi?.deliveryCharge ?? (firstQi as any)?.deliveryAmount ?? effQi?.deliveryCharge ?? effQi?.deliveryAmount ?? 0,
             deliveryType: (firstQi as any)?.deliveryType || (effQi as any)?.deliveryType || 'AMOUNT',
+            subTotal: firstQi?.subTotal ?? null,
           },
           currentBreakdown: {
             discount: latestQi?.discount ?? (latestQi as any)?.discountPercentage ?? effQi?.discount ?? effQi?.discountPercentage ?? 0,
@@ -739,6 +742,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
             taxType: (latestQi as any)?.taxType || (effQi as any)?.taxType || 'PERCENTAGE',
             delivery: latestQi?.deliveryCharge ?? (latestQi as any)?.deliveryAmount ?? effQi?.deliveryCharge ?? effQi?.deliveryAmount ?? 0,
             deliveryType: (latestQi as any)?.deliveryType || (effQi as any)?.deliveryType || 'AMOUNT',
+            subTotal: latestQi?.subTotal ?? null,
           },
         };
       });
@@ -1307,7 +1311,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
           const cmpItems = lineItems.map((item: any) => {
             const prices: Record<string, number> = {};
             const ranks: Record<string, string> = {};
-            const breakdown: Record<string, { discount: number; discountType: string; tax: number; taxType: string; delivery: number; deliveryType: string }> = {};
+            const breakdown: Record<string, { discount: number; discountType: string; tax: number; taxType: string; delivery: number; deliveryType: string; subTotal: number | null }> = {};
             const awarded: Record<string, boolean> = {};
             const notAvailable: Record<string, boolean> = {};
             effectiveQuotations.forEach((q: any) => {
@@ -1322,6 +1326,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                 taxType: qi?.taxType || 'PERCENTAGE',
                 delivery: qi?.deliveryCharge ?? qi?.deliveryAmount ?? 0,
                 deliveryType: qi?.deliveryType || 'AMOUNT',
+                subTotal: qi?.subTotal ?? null,
               };
               awarded[suppId] = qi?.isAwarded === true;
               notAvailable[suppId] = qi?.isLineitemAvailable === true;
@@ -1445,6 +1450,12 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                                     <span>{fmtBreakdownPair(bd.delivery, bd.deliveryType, price)}</span>
                                   </div>
                                 )}
+                                {bd.subTotal != null && (
+                                  <div className="bca-cmp-breakdown-row">
+                                    <span>Sub Total</span>
+                                    <span>{fmtINR(bd.subTotal)}</span>
+                                  </div>
+                                )}
                                 {rank && <div className={`bca-cmp-breakdown-rank${rank === 'L1' ? ' bca-cmp-rank-l1' : ''}`}>
                                   Rank {rank} of {cmpSuppliers.length}
                                 </div>}
@@ -1558,7 +1569,7 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                             );
                           }
 
-                          const emptyBreakdown = { discount: 0, discountType: 'PERCENTAGE', tax: 0, taxType: 'PERCENTAGE', delivery: 0, deliveryType: 'AMOUNT' };
+                          const emptyBreakdown = { discount: 0, discountType: 'PERCENTAGE', tax: 0, taxType: 'PERCENTAGE', delivery: 0, deliveryType: 'AMOUNT', subTotal: null };
                           const itemData = s.itemPrices[item.id] || {
                             firstBid: 0,
                             currentBid: 0,
@@ -1610,6 +1621,12 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                                       <span>{fmtBreakdownPair(firstBd.delivery, firstBd.deliveryType, firstPrice)}</span>
                                     </div>
                                   )}
+                                  {firstBd.subTotal != null && (
+                                    <div className="bca-cmp-breakdown-row">
+                                      <span>Sub Total</span>
+                                      <span>{fmtINR(firstBd.subTotal)}</span>
+                                    </div>
+                                  )}
                                 </div>
                               </td>
                               <td className="bca-hist-td bca-hist-current-td">
@@ -1640,6 +1657,12 @@ const BidComparisonAwardView: React.FC<BidComparisonAwardViewProps> = ({
                                     <div className="bca-cmp-breakdown-row">
                                       <span>Delivery</span>
                                       <span>{fmtBreakdownPair(currentBd.delivery, currentBd.deliveryType, currentPrice)}</span>
+                                    </div>
+                                  )}
+                                  {currentBd.subTotal != null && (
+                                    <div className="bca-cmp-breakdown-row">
+                                      <span>Sub Total</span>
+                                      <span>{fmtINR(currentBd.subTotal)}</span>
                                     </div>
                                   )}
                                 </div>
