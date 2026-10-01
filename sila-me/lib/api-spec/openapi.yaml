@@ -1,0 +1,2131 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.2.0
+  description: SILA Cloud shared backend API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - { name: health, description: Health and version operations }
+  - { name: authentication, description: Web and mobile authentication }
+  - { name: users, description: Existing Cloud user administration }
+  - { name: administration, description: Shared organization and access administration }
+  - { name: mobile, description: SILA Store mobile configuration }
+  - { name: ocr, description: Cloud-managed invoice OCR agent configuration }
+  - { name: invoices, description: "Mobile invoice capture, review, and history" }
+  - { name: master-data, description: Tenant-scoped material and supplier master data }
+  - { name: operational, description: Tenant-scoped operational dashboard reads }
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Compatibility health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HealthStatus" }
+  /health:
+    get:
+      operationId: serviceHealth
+      tags: [health]
+      summary: Check API and database health
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ServiceHealth" }
+        "503":
+          description: Database unavailable
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ServiceHealth" }
+  /version:
+    get:
+      operationId: getVersion
+      tags: [health]
+      summary: Return backend service version
+      responses:
+        "200":
+          description: Version
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VersionInfo" }
+  /auth/sign-in:
+    post:
+      operationId: signIn
+      tags: [authentication]
+      summary: Resolve a user role and create a browser session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SignInInput" }
+      responses:
+        "200":
+          description: Authenticated session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSession" }
+        "401":
+          description: Invalid or suspended credentials
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /auth/mobile/login:
+    post:
+      operationId: mobileLogin
+      tags: [authentication]
+      summary: Exchange local credentials for a mobile bearer token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SignInInput" }
+      responses:
+        "200":
+          description: Mobile access token
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MobileLoginResult" }
+        "401":
+          description: Invalid or suspended credentials
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "429":
+          description: Too many login attempts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /auth/session:
+    get:
+      operationId: getSession
+      tags: [authentication]
+      summary: Return the current browser session
+      responses:
+        "200":
+          description: Current session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSession" }
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /auth/sign-out:
+    post:
+      operationId: signOut
+      tags: [authentication]
+      summary: End the current browser session
+      responses:
+        "204": { description: Session ended }
+  /me:
+    get:
+      operationId: getMe
+      tags: [authentication]
+      summary: Return the current normalized identity and scope
+      responses:
+        "200":
+          description: Current identity
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MeResult" }
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List users visible to the authenticated Cloud operator
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/User" }
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "403":
+          description: Insufficient permission
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a user with a supported role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserInput" }
+      responses:
+        "201":
+          description: Created user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400":
+          description: Invalid user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "403":
+          description: Insufficient permission or scope
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "409":
+          description: Duplicate user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /users/{id}:
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Edit a user, role, status, or legacy scope
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserUpdate" }
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400":
+          description: Invalid user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "403":
+          description: Insufficient permission or scope
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "409":
+          description: Duplicate user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /admin/mobile-users:
+    get:
+      operationId: listMobileUsers
+      tags: [administration]
+      summary: List mobile users in the caller organization scope
+      responses:
+        "200":
+          description: Mobile users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MobileAdministrationUser" }
+    post:
+      operationId: createMobileUser
+      tags: [administration]
+      summary: Create a mobile user with explicit organization access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MobileAdministrationUserInput" }
+      responses:
+        "201":
+          description: Mobile user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MobileAdministrationUserCreated" }
+  /admin/mobile-users/{id}:
+    patch:
+      operationId: updateMobileUser
+      tags: [administration]
+      summary: Update mobile user identity, role, access, or status
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MobileAdministrationUserUpdate" }
+      responses:
+        "200":
+          description: Mobile user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MobileAdministrationUser" }
+  /admin/cloud-users:
+    get:
+      operationId: listCloudUsers
+      tags: [administration]
+      summary: List Cloud users
+      responses:
+        "200":
+          description: Cloud users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CloudAdministrationUser" }
+    post:
+      operationId: createCloudUser
+      tags: [administration]
+      summary: Create a Cloud user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CloudAdministrationUserInput" }
+      responses:
+        "201":
+          description: Cloud user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CloudAdministrationUserCreated" }
+  /admin/cloud-users/{id}:
+    patch:
+      operationId: updateCloudUser
+      tags: [administration]
+      summary: Update Cloud user identity, role, or status
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CloudAdministrationUserUpdate" }
+      responses:
+        "200":
+          description: Cloud user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CloudAdministrationUser" }
+  /admin/{domain}-users/{id}/reset-password:
+    post:
+      operationId: resetAdministrationUserPassword
+      tags: [administration]
+      summary: Generate a temporary password and notify an administration user
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema: { type: string, enum: [mobile, cloud] }
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Notification result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationResult" }
+  /admin/{domain}-users/{id}/resend-credentials:
+    post:
+      operationId: resendAdministrationUserCredentials
+      tags: [administration]
+      summary: Generate and resend new credentials
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema: { type: string, enum: [mobile, cloud] }
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Notification result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationResult" }
+  /auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [authentication]
+      summary: Change the current domain user's password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { changed: { type: boolean } }
+                required: [changed]
+  /admin/customers:
+    get:
+      operationId: listCustomers
+      tags: [administration]
+      summary: List customers in the caller scope
+      responses:
+        "200":
+          description: Customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Customer" }
+    post:
+      operationId: createCustomer
+      tags: [administration]
+      summary: Create a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomerInput" }
+      responses:
+        "201":
+          description: Created customer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Customer" }
+        "409":
+          description: Duplicate customer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /admin/customers/{id}:
+    put:
+      operationId: updateCustomer
+      tags: [administration]
+      summary: Update a customer
+      parameters:
+        - $ref: "#/components/parameters/IntegerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomerUpdate" }
+      responses:
+        "200":
+          description: Updated customer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Customer" }
+        "404":
+          description: Customer not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /admin/properties:
+    get:
+      operationId: listProperties
+      tags: [administration]
+      summary: List properties in the caller scope
+      responses:
+        "200":
+          description: Properties
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Property" }
+    post:
+      operationId: createProperty
+      tags: [administration]
+      summary: Create a property
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PropertyInput" }
+      responses:
+        "201":
+          description: Created property
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Property" }
+        "409":
+          description: Duplicate property
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /admin/properties/{id}:
+    put:
+      operationId: updateProperty
+      tags: [administration]
+      summary: Update a property
+      parameters:
+        - $ref: "#/components/parameters/IntegerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PropertyUpdate" }
+      responses:
+        "200":
+          description: Updated property
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Property" }
+        "404":
+          description: Property not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /admin/stores:
+    get:
+      operationId: listStores
+      tags: [administration]
+      summary: List stores in the caller scope
+      responses:
+        "200":
+          description: Stores
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Store" }
+    post:
+      operationId: createStore
+      tags: [administration]
+      summary: Create a store
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StoreInput" }
+      responses:
+        "201":
+          description: Created store
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Store" }
+        "409":
+          description: Duplicate store
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /admin/stores/{id}:
+    put:
+      operationId: updateStore
+      tags: [administration]
+      summary: Update a store
+      parameters:
+        - $ref: "#/components/parameters/IntegerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StoreUpdate" }
+      responses:
+        "200":
+          description: Updated store
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Store" }
+        "404":
+          description: Store not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /admin/roles:
+    get:
+      operationId: listRoles
+      tags: [administration]
+      summary: List assignable roles
+      responses:
+        "200":
+          description: Roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Role" }
+  /admin/permissions:
+    get:
+      operationId: listPermissions
+      tags: [administration]
+      summary: List permissions
+      responses:
+        "200":
+          description: Permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Permission" }
+  /admin/users/{id}/roles:
+    put:
+      operationId: assignUserRoles
+      tags: [administration]
+      summary: Replace a user's role assignments
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserRoleAssignment" }
+      responses:
+        "200":
+          description: Assigned roles
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserAccessResult" }
+        "404":
+          description: User or role not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /admin/users/{id}/access:
+    put:
+      operationId: assignUserAccess
+      tags: [administration]
+      summary: Replace a user's customer, property, and store access
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserAccessAssignment" }
+      responses:
+        "200":
+          description: Assigned access
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserAccessResult" }
+        "404":
+          description: User or scope resource not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "422":
+          description: Invalid hierarchy
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /admin/mobile-config:
+    put:
+      operationId: updateMobileConfiguration
+      tags: [administration]
+      summary: Create or update mobile feature configuration for a scope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MobileConfigurationInput" }
+      responses:
+        "200":
+          description: Effective stored configuration
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MobileConfiguration" }
+        "422":
+          description: Invalid hierarchy
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /admin/ocr-agent:
+    get:
+      operationId: listOcrAgentConfigurations
+      tags: [ocr]
+      summary: List configured invoice OCR agents
+      responses:
+        "200":
+          description: OCR agent configurations visible to the operator
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/OcrAgentConfiguration" }
+        "403":
+          description: Configuration permission required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+    put:
+      operationId: updateOcrAgentConfiguration
+      tags: [ocr]
+      summary: Link or disable a customer invoice OCR agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OcrAgentConfigurationInput" }
+      responses:
+        "200":
+          description: Saved OCR agent configuration
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OcrAgentConfiguration" }
+        "400":
+          description: Invalid OCR agent configuration
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "403":
+          description: Configuration permission or customer scope denied
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /mobile/config:
+    get:
+      operationId: getMobileConfig
+      tags: [mobile]
+      summary: Return effective mobile features for the authenticated scope
+      responses:
+        "200":
+          description: Effective configuration
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MobileConfiguration" }
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "403":
+          description: No customer scope
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /documents/invoices:
+    post:
+      operationId: uploadInvoiceDocument
+      tags: [invoices]
+      summary: Upload an invoice document for server-side processing
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 200 }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/InvoiceUploadInput" }
+      responses:
+        "201":
+          description: Invoice document captured
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InvoiceUploadResponse" }
+        "400":
+          description: Invalid upload or missing idempotency key
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "403":
+          description: Scope, permission, or feature flag denied
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "413":
+          description: File exceeds the configured upload limit
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "415":
+          description: Unsupported invoice file type
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "502":
+          description: SharePoint upload failure
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /invoices/history:
+    get:
+      operationId: listInvoiceHistory
+      tags: [invoices]
+      summary: List invoice documents visible to the authenticated user
+      responses:
+        "200":
+          description: Invoice history
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InvoiceHistoryResponse" }
+  /invoices/{invoiceId}:
+    get:
+      operationId: getInvoice
+      tags: [invoices]
+      summary: Return an invoice and its extracted lines
+      parameters:
+        - { name: invoiceId, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        "200":
+          description: Invoice detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InvoiceDetailResponse" }
+        "404":
+          description: Invoice not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+    put:
+      operationId: reviewInvoice
+      tags: [invoices]
+      summary: Save reviewed or corrected invoice extraction
+      parameters:
+        - { name: invoiceId, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InvoiceReviewInput" }
+      responses:
+        "200":
+          description: Invoice review saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InvoiceStatusResponse" }
+        "404":
+          description: Invoice not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /invoices/{invoiceId}/confirm:
+    post:
+      operationId: confirmInvoice
+      tags: [invoices]
+      summary: Confirm reviewed invoice data
+      parameters:
+        - { name: invoiceId, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        "200":
+          description: Invoice confirmed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InvoiceStatusResponse" }
+        "404":
+          description: Invoice not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /materials/search:
+    get:
+      operationId: searchMaterials
+      tags: [master-data]
+      summary: Search authorized active materials
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: barcode, in: query, schema: { type: string } }
+        - { name: plantCode, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 0, maximum: 100 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200":
+          description: Material search results
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaterialSearchResponse" }
+        "403":
+          description: Insufficient permission
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /materials/by-code/{code}:
+    get:
+      operationId: getMaterialByCode
+      tags: [master-data]
+      summary: Resolve an authorized material code
+      parameters:
+        - { name: code, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Material detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaterialDetail" }
+        "404":
+          description: Material not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "409":
+          description: Code is ambiguous without a plant
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /materials/recognize:
+    get:
+      operationId: recognizeMaterial
+      tags: [master-data]
+      summary: Deterministically recognize a material from supplied clues
+      parameters:
+        - { name: barcode, in: query, schema: { type: string } }
+        - { name: materialCode, in: query, schema: { type: string } }
+        - { name: supplierMaterialCode, in: query, schema: { type: string } }
+        - { name: description, in: query, schema: { type: string } }
+        - { name: alias, in: query, schema: { type: string } }
+        - { name: brand, in: query, schema: { type: string } }
+        - { name: category, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Deterministic recognition result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaterialRecognitionResponse" }
+  /materials/confirm:
+    post:
+      operationId: confirmMaterial
+      tags: [master-data]
+      summary: Confirm a material match and record evidence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MaterialConfirmationInput" }
+      responses:
+        "201":
+          description: Confirmed material
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaterialDetail" }
+  /materials/{id}:
+    get:
+      operationId: getMaterial
+      tags: [master-data]
+      summary: Get an authorized material detail
+      parameters:
+        - { $ref: "#/components/parameters/IntegerId" }
+      responses:
+        "200":
+          description: Material detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaterialDetail" }
+        "404":
+          description: Material not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /admin/materials:
+    post:
+      operationId: createMaterial
+      tags: [administration, master-data]
+      summary: Create a development or provider material
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MaterialInput" }
+      responses:
+        "201":
+          description: Created material
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaterialDetail" }
+        "400":
+          description: Invalid material
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "403":
+          description: Insufficient permission or customer scope
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /admin/materials/{id}:
+    put:
+      operationId: updateMaterial
+      tags: [administration, master-data]
+      summary: Update an authorized material
+      parameters:
+        - { $ref: "#/components/parameters/IntegerId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MaterialUpdate" }
+      responses:
+        "200":
+          description: Updated material
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaterialDetail" }
+  /admin/materials/{materialId}/aliases:
+    post:
+      operationId: createMaterialAlias
+      tags: [administration, master-data]
+      summary: Add a searchable material alias
+      parameters:
+        - { name: materialId, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MaterialAliasInput" }
+      responses:
+        "201":
+          description: Material detail after alias creation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaterialDetail" }
+  /admin/materials/{materialId}/aliases/{aliasId}:
+    delete:
+      operationId: deleteMaterialAlias
+      tags: [administration, master-data]
+      summary: Remove a material alias
+      parameters:
+        - { name: materialId, in: path, required: true, schema: { type: integer } }
+        - { name: aliasId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Material detail after alias deletion
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaterialDetail" }
+  /admin/materials/{materialId}/barcodes:
+    post:
+      operationId: createMaterialBarcode
+      tags: [administration, master-data]
+      summary: Add a material barcode
+      parameters:
+        - { name: materialId, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MaterialBarcodeInput" }
+      responses:
+        "201":
+          description: Material detail after barcode creation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaterialDetail" }
+  /admin/materials/{materialId}/barcodes/{barcodeId}:
+    delete:
+      operationId: deleteMaterialBarcode
+      tags: [administration, master-data]
+      summary: Remove a material barcode
+      parameters:
+        - { name: materialId, in: path, required: true, schema: { type: integer } }
+        - { name: barcodeId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Material detail after barcode deletion
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaterialDetail" }
+  /admin/materials/{materialId}/uom-conversions:
+    post:
+      operationId: upsertMaterialUomConversion
+      tags: [administration, master-data]
+      summary: Create or update a material UOM conversion
+      parameters:
+        - { name: materialId, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MaterialUomConversionInput" }
+      responses:
+        "201":
+          description: Material detail after UOM conversion update
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaterialDetail" }
+  /admin/materials/{materialId}/uom-conversions/{conversionId}:
+    delete:
+      operationId: deleteMaterialUomConversion
+      tags: [administration, master-data]
+      summary: Remove a material UOM conversion
+      parameters:
+        - { name: materialId, in: path, required: true, schema: { type: integer } }
+        - { name: conversionId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Material detail after UOM conversion deletion
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaterialDetail" }
+  /suppliers/search:
+    get:
+      operationId: searchSuppliers
+      tags: [master-data]
+      summary: Search authorized active suppliers
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 0, maximum: 100 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200":
+          description: Supplier search results
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupplierSearchResponse" }
+  /suppliers/by-code/{code}:
+    get:
+      operationId: getSupplierByCode
+      tags: [master-data]
+      summary: Resolve an authorized supplier code
+      parameters:
+        - { name: code, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Supplier detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupplierDetail" }
+  /suppliers/{id}:
+    get:
+      operationId: getSupplier
+      tags: [master-data]
+      summary: Get an authorized supplier detail
+      parameters:
+        - { $ref: "#/components/parameters/IntegerId" }
+      responses:
+        "200":
+          description: Supplier detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupplierDetail" }
+  /admin/suppliers:
+    post:
+      operationId: createSupplier
+      tags: [administration, master-data]
+      summary: Create a development or provider supplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SupplierInput" }
+      responses:
+        "201":
+          description: Created supplier
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupplierDetail" }
+  /admin/suppliers/{id}:
+    put:
+      operationId: updateSupplier
+      tags: [administration, master-data]
+      summary: Update an authorized supplier
+      parameters:
+        - { $ref: "#/components/parameters/IntegerId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SupplierUpdate" }
+      responses:
+        "200":
+          description: Updated supplier
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupplierDetail" }
+  /admin/suppliers/{supplierId}/aliases:
+    post:
+      operationId: createSupplierAlias
+      tags: [administration, master-data]
+      summary: Add a searchable supplier alias
+      parameters:
+        - { name: supplierId, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SupplierAliasInput" }
+      responses:
+        "201":
+          description: Supplier detail after alias creation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupplierDetail" }
+  /admin/suppliers/{supplierId}/aliases/{aliasId}:
+    delete:
+      operationId: deleteSupplierAlias
+      tags: [administration, master-data]
+      summary: Remove a supplier alias
+      parameters:
+        - { name: supplierId, in: path, required: true, schema: { type: integer } }
+        - { name: aliasId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Supplier detail after alias deletion
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupplierDetail" }
+  /admin/supplier-material-mappings:
+    post:
+      operationId: upsertSupplierMaterialMapping
+      tags: [administration, master-data]
+      summary: Create or update a supplier-material mapping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SupplierMaterialMappingInput" }
+      responses:
+        "201":
+          description: Supplier detail after mapping update
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupplierDetail" }
+  /admin/supplier-material-mappings/{id}:
+    put:
+      operationId: updateSupplierMaterialMapping
+      tags: [administration, master-data]
+      summary: Update a supplier-material mapping
+      parameters:
+        - { $ref: "#/components/parameters/IntegerId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SupplierMaterialMappingUpdate" }
+      responses:
+        "200":
+          description: Supplier detail after mapping update
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupplierDetail" }
+  /transactions:
+    get:
+      operationId: listOperationalTransactions
+      tags: [operational]
+      summary: List tenant-scoped transaction dashboard records
+      parameters:
+        - { $ref: "#/components/parameters/CustomerIdQuery" }
+        - { $ref: "#/components/parameters/PropertyIdQuery" }
+        - { $ref: "#/components/parameters/StoreIdQuery" }
+      responses:
+        "200":
+          description: Scoped transaction dashboard records
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationalSurfaceResponse" }
+        "401": { $ref: "#/components/responses/AuthenticationRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+  /approval-monitoring:
+    get:
+      operationId: listApprovalMonitoring
+      tags: [operational]
+      summary: List tenant-scoped approval monitoring records
+      parameters:
+        - { $ref: "#/components/parameters/CustomerIdQuery" }
+        - { $ref: "#/components/parameters/PropertyIdQuery" }
+        - { $ref: "#/components/parameters/StoreIdQuery" }
+      responses:
+        "200":
+          description: Scoped approval monitoring records
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationalSurfaceResponse" }
+        "401": { $ref: "#/components/responses/AuthenticationRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+  /materials:
+    get:
+      operationId: listOperationalMaterials
+      tags: [operational]
+      summary: List tenant-scoped materials dashboard records
+      parameters:
+        - { $ref: "#/components/parameters/CustomerIdQuery" }
+        - { $ref: "#/components/parameters/PropertyIdQuery" }
+        - { $ref: "#/components/parameters/StoreIdQuery" }
+      responses:
+        "200":
+          description: Scoped materials dashboard records
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationalSurfaceResponse" }
+        "401": { $ref: "#/components/responses/AuthenticationRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+  /audit:
+    get:
+      operationId: listOperationalAudit
+      tags: [operational]
+      summary: List tenant-scoped audit records
+      parameters:
+        - { $ref: "#/components/parameters/CustomerIdQuery" }
+        - { $ref: "#/components/parameters/PropertyIdQuery" }
+        - { $ref: "#/components/parameters/StoreIdQuery" }
+      responses:
+        "200":
+          description: Scoped audit records
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationalSurfaceResponse" }
+        "401": { $ref: "#/components/responses/AuthenticationRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+  /erp-errors:
+    get:
+      operationId: listErpErrors
+      tags: [operational]
+      summary: List tenant-scoped ERP error records
+      parameters:
+        - { $ref: "#/components/parameters/CustomerIdQuery" }
+        - { $ref: "#/components/parameters/PropertyIdQuery" }
+        - { $ref: "#/components/parameters/StoreIdQuery" }
+      responses:
+        "200":
+          description: Scoped ERP error records
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationalSurfaceResponse" }
+        "401": { $ref: "#/components/responses/AuthenticationRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+  /integration-monitoring:
+    get:
+      operationId: listIntegrationMonitoring
+      tags: [operational]
+      summary: List tenant-scoped integration monitoring records
+      parameters:
+        - { $ref: "#/components/parameters/CustomerIdQuery" }
+        - { $ref: "#/components/parameters/PropertyIdQuery" }
+        - { $ref: "#/components/parameters/StoreIdQuery" }
+      responses:
+        "200":
+          description: Scoped integration monitoring records
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationalSurfaceResponse" }
+        "401": { $ref: "#/components/responses/AuthenticationRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+  /readiness:
+    get:
+      operationId: listOperationalReadiness
+      tags: [operational]
+      summary: List tenant-scoped readiness records
+      parameters:
+        - { $ref: "#/components/parameters/CustomerIdQuery" }
+        - { $ref: "#/components/parameters/PropertyIdQuery" }
+        - { $ref: "#/components/parameters/StoreIdQuery" }
+      responses:
+        "200":
+          description: Scoped readiness records
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationalSurfaceResponse" }
+        "401": { $ref: "#/components/responses/AuthenticationRequired" }
+        "403": { $ref: "#/components/responses/AccessDenied" }
+components:
+  parameters:
+    CustomerIdQuery:
+      name: customerId
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1 }
+    PropertyIdQuery:
+      name: propertyId
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1 }
+    StoreIdQuery:
+      name: storeId
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1 }
+    IntegerId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+  responses:
+    AuthenticationRequired:
+      description: Not authenticated
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    AccessDenied:
+      description: Insufficient role or organization scope
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+  schemas:
+    OperationalSurfaceResponse:
+      type: object
+      required: [surface, scope, records]
+      properties:
+        surface: { type: string }
+        scope:
+          type: object
+          required: [customerIds, propertyIds, storeIds]
+          properties:
+            customerIds:
+              type: array
+              items: { type: integer }
+            propertyIds:
+              type: array
+              items: { type: integer }
+            storeIds:
+              type: array
+              items: { type: integer }
+        records:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    HealthStatus:
+      type: object
+      properties:
+        status: { type: string }
+      required: [status]
+    ServiceHealth:
+      type: object
+      properties:
+        status: { type: string, enum: [OK, DEGRADED] }
+        database: { type: string, enum: [CONNECTED, UNAVAILABLE] }
+      required: [status, database]
+    VersionInfo:
+      type: object
+      properties:
+        service: { type: string }
+        version: { type: string }
+      required: [service, version]
+    ErrorResponse:
+      type: object
+      properties:
+        error: { type: string }
+        message: { type: string }
+      required: [error]
+    SignInInput:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 1 }
+      required: [email, password]
+    MobileUser:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string, format: email }
+      required: [id, name, email]
+    MobileLoginResult:
+      type: object
+      properties:
+        accessToken: { type: string }
+        tokenType: { type: string, enum: [Bearer] }
+        expiresIn: { type: integer }
+        mustChangePassword: { type: boolean }
+        user: { $ref: "#/components/schemas/MobileUser" }
+      required: [accessToken, tokenType, expiresIn, mustChangePassword, user]
+    ChangePasswordInput:
+      type: object
+      properties:
+        currentPassword: { type: string, minLength: 1 }
+        newPassword: { type: string, minLength: 12 }
+      required: [currentPassword, newPassword]
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        email: { type: string, format: email }
+        name: { type: string }
+        authProvider: { type: string }
+        role: { type: string }
+        customerScope: { type: string }
+        propertyScope: { type: string }
+        storeScope: { type: string }
+        scope: { type: string }
+        lastLoginAt: { type: ["string", "null"], format: date-time }
+        status: { type: string }
+        mustChangePassword: { type: boolean }
+        sharePointLink:
+          oneOf:
+            - $ref: "#/components/schemas/SharePointUserLink"
+            - type: "null"
+      required: [id, code, email, name, authProvider, role, customerScope, propertyScope, storeScope, scope, lastLoginAt, status, mustChangePassword, sharePointLink]
+    AdministrationUserBase:
+      type: object
+      properties:
+        id: { type: integer }
+        legacyUserId: { type: integer }
+        email: { type: string, format: email }
+        displayName: { type: string }
+        status: { type: string, enum: [ACTIVE, SUSPENDED, DEACTIVATED] }
+        roleCodes:
+          type: array
+          items: { type: string }
+        mustChangePassword: { type: boolean }
+        lastLoginAt: { type: ["string", "null"], format: date-time }
+        notificationStatus: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+      required: [id, legacyUserId, email, displayName, status, roleCodes, mustChangePassword, lastLoginAt, notificationStatus, createdAt]
+    MobileAdministrationUser:
+      allOf:
+        - $ref: "#/components/schemas/AdministrationUserBase"
+        - type: object
+          properties:
+            code: { type: string }
+            customer:
+              oneOf:
+                - $ref: "#/components/schemas/Customer"
+                - type: "null"
+            propertyIds:
+              type: array
+              items: { type: integer }
+            storeIds:
+              type: array
+              items: { type: integer }
+          required: [code, customer, propertyIds, storeIds]
+    CloudAdministrationUser:
+      $ref: "#/components/schemas/AdministrationUserBase"
+    MobileAdministrationUserCreated:
+      allOf:
+        - $ref: "#/components/schemas/MobileAdministrationUser"
+        - $ref: "#/components/schemas/NotificationResult"
+    CloudAdministrationUserCreated:
+      allOf:
+        - $ref: "#/components/schemas/CloudAdministrationUser"
+        - $ref: "#/components/schemas/NotificationResult"
+    MobileAdministrationUserInput:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        displayName: { type: string, minLength: 1 }
+        roleCodes: { type: array, minItems: 1, items: { type: string } }
+        customerId: { type: integer }
+        propertyIds: { type: array, minItems: 1, items: { type: integer } }
+        storeIds: { type: array, minItems: 1, items: { type: integer } }
+        temporaryPassword: { type: string, minLength: 12 }
+      required: [email, displayName, roleCodes, customerId, propertyIds, storeIds]
+    MobileAdministrationUserUpdate:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        displayName: { type: string, minLength: 1 }
+        roleCodes: { type: array, minItems: 1, items: { type: string } }
+        customerId: { type: integer }
+        propertyIds: { type: array, minItems: 1, items: { type: integer } }
+        storeIds: { type: array, minItems: 1, items: { type: integer } }
+        temporaryPassword: { type: string, minLength: 12 }
+        status: { type: string, enum: [ACTIVE, SUSPENDED, DEACTIVATED] }
+    CloudAdministrationUserInput:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        displayName: { type: string, minLength: 1 }
+        roleCodes: { type: array, minItems: 1, items: { type: string } }
+        temporaryPassword: { type: string, minLength: 12 }
+      required: [email, displayName, roleCodes]
+    CloudAdministrationUserUpdate:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        displayName: { type: string, minLength: 1 }
+        roleCodes: { type: array, minItems: 1, items: { type: string } }
+        temporaryPassword: { type: string, minLength: 12 }
+        status: { type: string, enum: [ACTIVE, SUSPENDED, DEACTIVATED] }
+    NotificationResult:
+      type: object
+      properties:
+        notification:
+          type: object
+          properties:
+            status: { type: string, enum: [SENT, NOT_CONFIGURED, FAILED] }
+            deliveryId: { type: integer }
+          required: [status, deliveryId]
+      required: [notification]
+    AuthSession:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+        allowedRoutes:
+          type: array
+          items: { type: string }
+      required: [user, allowedRoutes]
+    UserInput:
+      type: object
+      properties:
+        code: { type: string, minLength: 2 }
+        email: { type: string, format: email }
+        name: { type: string, minLength: 1 }
+        authProvider: { type: string }
+        role: { type: string }
+        customerScope: { type: string }
+        propertyScope: { type: string }
+        storeScope: { type: string }
+        password: { type: string, minLength: 1 }
+        sharePointSiteUrl: { type: ["string", "null"], format: uri }
+        sharePointFolderPath: { type: ["string", "null"], minLength: 1 }
+        sharePointFolderUrl: { type: ["string", "null"], format: uri }
+      required: [code, email, name, role, customerScope, propertyScope, storeScope, password]
+    UserUpdate:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        name: { type: string, minLength: 1 }
+        authProvider: { type: string }
+        role: { type: string }
+        customerScope: { type: string }
+        propertyScope: { type: string }
+        storeScope: { type: string }
+        password: { type: string, minLength: 1 }
+        status: { type: string }
+        sharePointSiteUrl: { type: ["string", "null"], format: uri }
+        sharePointFolderPath: { type: ["string", "null"], minLength: 1 }
+        sharePointFolderUrl: { type: ["string", "null"], format: uri }
+      minProperties: 1
+    SharePointUserLink:
+      type: object
+      properties:
+        siteUrl: { type: string, format: uri }
+        folderPath: { type: string }
+        folderUrl: { type: ["string", "null"], format: uri }
+        status: { type: string, enum: [Configured, PendingVerification, AccessDenied] }
+        verificationMessage: { type: ["string", "null"] }
+        lastVerifiedAt: { type: ["string", "null"], format: date-time }
+      required: [siteUrl, folderPath, folderUrl, status, verificationMessage, lastVerifiedAt]
+    Customer:
+      type: object
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        name: { type: string }
+        status: { type: string }
+      required: [id, code, name, status]
+    Property:
+      type: object
+      properties:
+        id: { type: integer }
+        customerId: { type: integer }
+        code: { type: string }
+        name: { type: string }
+        status: { type: string }
+      required: [id, customerId, code, name, status]
+    Store:
+      type: object
+      properties:
+        id: { type: integer }
+        propertyId: { type: integer }
+        code: { type: string }
+        name: { type: string }
+        status: { type: string }
+      required: [id, propertyId, code, name, status]
+    CustomerInput:
+      type: object
+      properties:
+        code: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        status: { type: string, enum: [Active, Inactive] }
+      required: [code, name]
+    CustomerUpdate:
+      type: object
+      properties:
+        code: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        status: { type: string, enum: [Active, Inactive] }
+      minProperties: 1
+    PropertyInput:
+      type: object
+      properties:
+        customerId: { type: integer }
+        code: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        status: { type: string, enum: [Active, Inactive] }
+      required: [customerId, code, name]
+    PropertyUpdate:
+      type: object
+      properties:
+        customerId: { type: integer }
+        code: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        status: { type: string, enum: [Active, Inactive] }
+      minProperties: 1
+    StoreInput:
+      type: object
+      properties:
+        propertyId: { type: integer }
+        code: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        status: { type: string, enum: [Active, Inactive] }
+      required: [propertyId, code, name]
+    StoreUpdate:
+      type: object
+      properties:
+        propertyId: { type: integer }
+        code: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        status: { type: string, enum: [Active, Inactive] }
+      minProperties: 1
+    Role:
+      type: object
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        name: { type: string }
+        status: { type: string }
+      required: [id, code, name, status]
+    Permission:
+      type: object
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        name: { type: string }
+      required: [id, code, name]
+    UserRoleAssignment:
+      type: object
+      properties:
+        roleCodes:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { type: string }
+      required: [roleCodes]
+    UserAccessAssignment:
+      type: object
+      properties:
+        customerIds:
+          type: array
+          uniqueItems: true
+          items: { type: integer }
+        propertyIds:
+          type: array
+          uniqueItems: true
+          items: { type: integer }
+        storeIds:
+          type: array
+          uniqueItems: true
+          items: { type: integer }
+      required: [customerIds, propertyIds, storeIds]
+    UserAccessResult:
+      type: object
+      properties:
+        userId: { type: integer }
+        roles:
+          type: array
+          items: { type: string }
+        customerIds:
+          type: array
+          items: { type: integer }
+        propertyIds:
+          type: array
+          items: { type: integer }
+        storeIds:
+          type: array
+          items: { type: integer }
+      required: [userId, roles, customerIds, propertyIds, storeIds]
+    ScopedCustomer:
+      type: object
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        name: { type: string }
+      required: [id, code, name]
+    ScopedProperty:
+      type: object
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        name: { type: string }
+      required: [id, code, name]
+    ScopedStore:
+      type: object
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        name: { type: string }
+        propertyId: { type: integer }
+      required: [id, code, name, propertyId]
+    MeUser:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string, format: email }
+        status: { type: string, enum: [ACTIVE] }
+      required: [id, name, email, status]
+    MeResult:
+      type: object
+      properties:
+        userType: { type: string, enum: [MOBILE, CLOUD] }
+        user: { $ref: "#/components/schemas/MeUser" }
+        customer:
+          oneOf:
+            - { $ref: "#/components/schemas/ScopedCustomer" }
+            - { type: "null" }
+        properties:
+          type: array
+          items: { $ref: "#/components/schemas/ScopedProperty" }
+        stores:
+          type: array
+          items: { $ref: "#/components/schemas/ScopedStore" }
+        roles:
+          type: array
+          items: { type: string }
+        permissions:
+          type: array
+          items: { type: string }
+      required: [userType, user, customer, properties, stores, roles, permissions]
+    MobileFeatures:
+      type: object
+      properties:
+        receiveGoods: { type: boolean }
+        inventoryCount: { type: boolean }
+        stockTransfer: { type: boolean }
+        goodsIssue: { type: boolean }
+        stockWriteOff: { type: boolean }
+        scanDocument: { type: boolean }
+        approvals: { type: boolean }
+      required: [receiveGoods, inventoryCount, stockTransfer, goodsIssue, stockWriteOff, scanDocument, approvals]
+    MobileConfiguration:
+      type: object
+      properties:
+        configurationVersion: { type: integer }
+        updatedAt: { type: string, format: date-time }
+        features: { $ref: "#/components/schemas/MobileFeatures" }
+      required: [configurationVersion, updatedAt, features]
+    InvoiceUploadResponse:
+      type: object
+      properties:
+        documentId: { type: integer }
+        invoiceId: { type: ["integer", "null"] }
+        uploadStatus: { type: string }
+        processingStatus: { type: string }
+        sharePointStored: { type: boolean }
+        nextAction: { type: string }
+      required: [documentId, invoiceId, uploadStatus, processingStatus, sharePointStored, nextAction]
+    InvoiceUploadInput:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+        propertyId: { type: string }
+        storeId: { type: string }
+      required: [file]
+    InvoiceHistoryRecord:
+      type: object
+      properties:
+        invoiceId: { type: integer }
+        documentId: { type: integer }
+        supplier: { type: ["string", "null"] }
+        invoiceNumber: { type: string }
+        invoiceDate: { type: ["string", "null"], format: date }
+        grossAmount: { type: ["string", "null"] }
+        status: { type: string }
+        uploadStatus: { type: string }
+        uploadedAt: { type: string, format: date-time }
+      required: [invoiceId, documentId, supplier, invoiceNumber, invoiceDate, grossAmount, status, uploadStatus, uploadedAt]
+    InvoiceHistoryResponse:
+      type: object
+      properties:
+        records:
+          type: array
+          items: { $ref: "#/components/schemas/InvoiceHistoryRecord" }
+      required: [records]
+    InvoiceDetailResponse:
+      type: object
+      properties:
+        header: { type: object, additionalProperties: true }
+        lines:
+          type: array
+          items: { type: object, additionalProperties: true }
+        extraction:
+          oneOf:
+            - { type: object, additionalProperties: true }
+            - { type: "null" }
+      required: [header, lines, extraction]
+    InvoiceReviewInput:
+      type: object
+      properties:
+        supplierName: { type: string }
+        invoiceNumber: { type: string }
+        invoiceDate: { type: string, format: date }
+        poNumber: { type: string }
+        currency: { type: string }
+        netAmount: { type: string }
+        taxAmount: { type: string }
+        grossAmount: { type: string }
+        lines:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      required: [invoiceNumber]
+    InvoiceStatusResponse:
+      type: object
+      properties:
+        invoiceId: { type: integer }
+        processingStatus: { type: string }
+        validationStatus: { type: string }
+        confirmedAt: { type: string, format: date-time }
+      required: [invoiceId, processingStatus, validationStatus]
+    MobileConfigurationInput:
+      type: object
+      properties:
+        customerId: { type: integer }
+        propertyId: { type: ["integer", "null"] }
+        storeId: { type: ["integer", "null"] }
+        features: { $ref: "#/components/schemas/MobileFeatures" }
+      required: [customerId, features]
+    OcrAgentConfiguration:
+      type: object
+      properties:
+        id: { type: integer }
+        customerId: { type: integer }
+        customerCode: { type: string }
+        customerName: { type: string }
+        name: { type: string }
+        model: { type: string }
+        status: { type: string, enum: [Active, Disabled] }
+        provider: { type: string, enum: [GEMINI_OCR_AGENT] }
+        updatedAt: { type: string, format: date-time }
+      required: [id, customerId, customerCode, customerName, name, model, status, provider, updatedAt]
+    OcrAgentConfigurationInput:
+      type: object
+      properties:
+        customerId: { type: integer }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        model: { type: string, minLength: 1, maxLength: 120 }
+        enabled: { type: boolean }
+      required: [customerId, name, model, enabled]
+    MaterialInput:
+      type: object
+      properties:
+        customerId: { type: integer }
+        materialCode: { type: string, minLength: 1 }
+        materialDescription: { type: string, minLength: 1 }
+        shortDescription: { type: ["string", "null"] }
+        materialGroup: { type: ["string", "null"] }
+        category: { type: ["string", "null"] }
+        brand: { type: ["string", "null"] }
+        baseUom: { type: string, minLength: 1 }
+        purchaseUom: { type: ["string", "null"] }
+        supplierMaterialCode: { type: ["string", "null"] }
+        manufacturerPartNumber: { type: ["string", "null"] }
+        plantCode: { type: ["string", "null"] }
+        storageLocation: { type: ["string", "null"] }
+        batchManaged: { type: boolean }
+        expiryManaged: { type: boolean }
+        active: { type: boolean }
+        sourceSystem: { type: string }
+        externalId: { type: ["string", "null"] }
+        metadataJson: { type: ["object", "null"], additionalProperties: true }
+      required: [customerId, materialCode, materialDescription, baseUom]
+    MaterialUpdate:
+      allOf:
+        - $ref: "#/components/schemas/MaterialInput"
+      description: Partial material update; omitted fields are preserved.
+    MaterialSummary:
+      allOf:
+        - $ref: "#/components/schemas/MaterialInput"
+        - type: object
+          properties:
+            id: { type: integer }
+            customerCode: { type: string }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+            matchedBy: { type: string }
+          required: [id, customerCode, createdAt, updatedAt]
+    MaterialDetail:
+      allOf:
+        - $ref: "#/components/schemas/MaterialSummary"
+        - type: object
+          properties:
+            aliases: { type: array, items: { $ref: "#/components/schemas/MaterialAlias" } }
+            barcodes: { type: array, items: { $ref: "#/components/schemas/MaterialBarcode" } }
+            uomConversions: { type: array, items: { $ref: "#/components/schemas/MaterialUomConversion" } }
+            supplierMappings: { type: array, items: { $ref: "#/components/schemas/SupplierMaterialMapping" } }
+          required: [aliases, barcodes, uomConversions, supplierMappings]
+    MaterialAliasInput:
+      type: object
+      properties:
+        alias: { type: string, minLength: 1 }
+        aliasType: { type: string, minLength: 1 }
+        active: { type: boolean }
+      required: [alias, aliasType]
+    MaterialAlias:
+      type: object
+      properties:
+        id: { type: integer }
+        materialId: { type: integer }
+        alias: { type: string }
+        aliasType: { type: string }
+        active: { type: boolean }
+      required: [id, materialId, alias, aliasType, active]
+    MaterialBarcodeInput:
+      type: object
+      properties:
+        barcode: { type: string, minLength: 1 }
+        barcodeType: { type: ["string", "null"] }
+        isPrimary: { type: boolean }
+        active: { type: boolean }
+      required: [barcode]
+    MaterialBarcode:
+      type: object
+      properties:
+        id: { type: integer }
+        materialId: { type: integer }
+        barcode: { type: string }
+        barcodeType: { type: ["string", "null"] }
+        isPrimary: { type: boolean }
+        active: { type: boolean }
+      required: [id, materialId, barcode, barcodeType, isPrimary, active]
+    MaterialUomConversionInput:
+      type: object
+      properties:
+        fromUom: { type: string, minLength: 1 }
+        toUom: { type: string, minLength: 1 }
+        conversionFactor: { type: string, minLength: 1 }
+        sourceSystem: { type: string }
+        active: { type: boolean }
+      required: [fromUom, toUom, conversionFactor]
+    MaterialUomConversion:
+      type: object
+      properties:
+        id: { type: integer }
+        materialId: { type: integer }
+        fromUom: { type: string }
+        toUom: { type: string }
+        conversionFactor: { type: string }
+        active: { type: boolean }
+      required: [id, materialId, fromUom, toUom, conversionFactor, active]
+    SupplierMaterialMapping:
+      type: object
+      properties:
+        id: { type: integer }
+        customerId: { type: integer }
+        supplierId: { type: integer }
+        materialId: { type: integer }
+        supplierMaterialCode: { type: ["string", "null"] }
+        supplierDescription: { type: ["string", "null"] }
+        supplierUom: { type: ["string", "null"] }
+        supplierPackSize: { type: ["string", "null"] }
+        active: { type: boolean }
+        sourceSystem: { type: string }
+        supplierCode: { type: string }
+        supplierName: { type: string }
+        materialCode: { type: string }
+        materialDescription: { type: string }
+      required: [id, customerId, supplierId, materialId, supplierMaterialCode, supplierDescription, supplierUom, supplierPackSize, active, sourceSystem]
+    MaterialSearchResponse:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/MaterialSummary" } }
+        count: { type: integer }
+      required: [items, count]
+    MaterialRecognitionResponse:
+      type: object
+      properties:
+        strategy: { type: string }
+        candidates: { type: array, items: { $ref: "#/components/schemas/MaterialSummary" } }
+        recognized:
+          oneOf:
+            - { $ref: "#/components/schemas/MaterialSummary" }
+            - { type: "null" }
+      required: [strategy, candidates, recognized]
+    MaterialConfirmationInput:
+      type: object
+      properties:
+        materialId: { type: integer }
+        clues: { type: object, additionalProperties: true }
+      required: [materialId]
+    SupplierInput:
+      type: object
+      properties:
+        customerId: { type: integer }
+        supplierCode: { type: string, minLength: 1 }
+        supplierName: { type: string, minLength: 1 }
+        legalName: { type: ["string", "null"] }
+        taxRegistrationNumber: { type: ["string", "null"] }
+        countryCode: { type: ["string", "null"] }
+        email: { type: ["string", "null"], format: email }
+        phone: { type: ["string", "null"] }
+        active: { type: boolean }
+        sourceSystem: { type: string }
+        externalId: { type: ["string", "null"] }
+        metadataJson: { type: ["object", "null"], additionalProperties: true }
+      required: [customerId, supplierCode, supplierName]
+    SupplierUpdate:
+      allOf:
+        - $ref: "#/components/schemas/SupplierInput"
+      description: Partial supplier update; omitted fields are preserved.
+    SupplierSummary:
+      allOf:
+        - $ref: "#/components/schemas/SupplierInput"
+        - type: object
+          properties:
+            id: { type: integer }
+            customerCode: { type: string }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+            matchedBy: { type: string }
+          required: [id, customerCode, createdAt, updatedAt]
+    SupplierDetail:
+      allOf:
+        - $ref: "#/components/schemas/SupplierSummary"
+        - type: object
+          properties:
+            aliases: { type: array, items: { $ref: "#/components/schemas/SupplierAlias" } }
+            materialMappings: { type: array, items: { $ref: "#/components/schemas/SupplierMaterialMapping" } }
+          required: [aliases, materialMappings]
+    SupplierAliasInput:
+      type: object
+      properties:
+        alias: { type: string, minLength: 1 }
+        aliasType: { type: string, minLength: 1 }
+        active: { type: boolean }
+      required: [alias, aliasType]
+    SupplierAlias:
+      type: object
+      properties:
+        id: { type: integer }
+        supplierId: { type: integer }
+        alias: { type: string }
+        aliasType: { type: string }
+        active: { type: boolean }
+      required: [id, supplierId, alias, aliasType, active]
+    SupplierSearchResponse:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/SupplierSummary" } }
+        count: { type: integer }
+      required: [items, count]
+    SupplierMaterialMappingInput:
+      type: object
+      properties:
+        customerId: { type: integer }
+        supplierId: { type: integer }
+        materialId: { type: integer }
+        supplierMaterialCode: { type: ["string", "null"] }
+        supplierDescription: { type: ["string", "null"] }
+        supplierUom: { type: ["string", "null"] }
+        supplierPackSize: { type: ["string", "null"] }
+        active: { type: boolean }
+        sourceSystem: { type: string }
+      required: [customerId, supplierId, materialId]
+    SupplierMaterialMappingUpdate:
+      allOf:
+        - $ref: "#/components/schemas/SupplierMaterialMappingInput"
+      description: Partial supplier-material mapping update.

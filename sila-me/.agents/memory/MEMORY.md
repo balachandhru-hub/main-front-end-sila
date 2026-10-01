@@ -1,0 +1,6 @@
+- [SILA Cloud delivery boundary](sila-cloud-delivery-boundary.md) — the first milestone is an interactive frontend with development data; persistence and server-side tenant enforcement follow.
+- [API security test environment](api-security-test-environment.md) — security tests use real HTTP and PostgreSQL; keep fixtures isolated and schema setup idempotent.
+- [Drizzle identity insert schemas](drizzle-identity-insert-schema.md) — generated identity keys are already absent; omitting them again breaks Drizzle Kit schema loading.
+- [Operational dashboard access](operational-dashboard-access.md) — operational surfaces require explicit role policies plus effective tenant scope, not frontend route visibility alone.
+- [Separate auth domains](separate-auth-domains.md) — mobile and Cloud identities are authoritative in separate tables while legacy actor rows preserve existing business foreign keys.
+- [Cloud user administration](cloud-user-administration.md) — enforce role-domain membership in the API and keep credential delivery metadata-only.

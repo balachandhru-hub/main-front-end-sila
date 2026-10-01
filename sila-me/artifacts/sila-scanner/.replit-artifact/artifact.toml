@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/sila-scanner/"
+title = "SILA Scanner"
+description = "A mobile-first enterprise invoice capture app for hospitality teams. Phase 1 provides the SILA-branded mock workflow from sign-in through multi-page invoice review, upload success, pending uploads, history, and settings."
+version = "1.0.0"
+id = "artifacts/sila-scanner"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/sila-scanner/" ]
+localPort = 22088
+
+[services.development]
+run = "pnpm --filter @workspace/sila-scanner run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sila-scanner", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/sila-scanner", "run", "serve" ]
+
+[services.env]
+PORT = "22088"
+BASE_PATH = "/sila-scanner/"
