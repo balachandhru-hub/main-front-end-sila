@@ -28,13 +28,14 @@ import {
   setUserOutlets,
   type Outlet,
   type OutletUserMapping,
-} from '../../remote-buyer/src/api/wishlistApi';
+} from '../../remote-buyer/src/api/outletApi';
 
 // The kinds of user a buyer administrator can create.
-type BuyerUserType = 'BUYER_USER' | 'OUTLET_MANAGER';
+type BuyerUserType = 'BUYER_USER' | 'OUTLET_MANAGER' | 'STORE_MANAGER';
 const BUYER_USER_TYPE_LABELS: Record<BuyerUserType, string> = {
   BUYER_USER: 'Buyer User',
   OUTLET_MANAGER: 'Outlet Manager',
+  STORE_MANAGER: 'Store Manager',
 };
 
 // Page size used by the async (paginated) Country Dropdown
@@ -257,8 +258,8 @@ const UserAdmin: React.FC = () => {
 
     const errors = validateForm();
     setFormErrors(errors);
-    // An Outlet Manager works only with the outlets assigned here.
-    const needsOutlets = isBuyerAdmin && buyerUserType === 'OUTLET_MANAGER';
+    // An Outlet Manager requests for the outlets assigned here; a Store Manager freezes the bucket of their property.
+    const needsOutlets = isBuyerAdmin && buyerUserType !== 'BUYER_USER';
     const missingOutlets = needsOutlets && selectedOutletIds.length === 0;
     setOutletError(missingOutlets ? 'Select at least one outlet' : null);
     if (Object.keys(errors).length > 0 || missingOutlets) return;
@@ -488,11 +489,12 @@ const UserAdmin: React.FC = () => {
                     >
                       <option value="BUYER_USER">{BUYER_USER_TYPE_LABELS.BUYER_USER}</option>
                       <option value="OUTLET_MANAGER">{BUYER_USER_TYPE_LABELS.OUTLET_MANAGER}</option>
+                      <option value="STORE_MANAGER">{BUYER_USER_TYPE_LABELS.STORE_MANAGER}</option>
                     </select>
                   </div>
                 )}
 
-                {isBuyerAdmin && buyerUserType === 'OUTLET_MANAGER' && (
+                {isBuyerAdmin && buyerUserType !== 'BUYER_USER' && (
                   <fieldset className="user-admin-form-group ua-outlet-options">
                     <legend className="sila-label">
                       Outlets<span className="sila-required">*</span>

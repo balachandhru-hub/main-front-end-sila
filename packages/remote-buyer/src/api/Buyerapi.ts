@@ -42,6 +42,10 @@ export interface BuyerCatalogResponse {
   price: number;
   currency: string;
   unitOfMeasure: string;
+  sku?: string | null;
+  /** The supplier's stock of the product. */
+  availableStock?: number | null;
+  discountPercent?: number | null;
   segment: number;
   segmentTitle: string;
   family: number;

@@ -241,6 +241,17 @@ export function useCreateCatalogForm({ onCreated, onClose }: UseCreateCatalogFor
       setCreateCatalogError("PunchOut URL is required when PunchOut is enabled.");
       return;
     }
+    if (catalogForm.availableStock !== "" && Number(catalogForm.availableStock) < 0) {
+      setCreateCatalogError("Available stock cannot be negative.");
+      return;
+    }
+    if (
+      catalogForm.discountPercent !== "" &&
+      (Number(catalogForm.discountPercent) < 0 || Number(catalogForm.discountPercent) > 100)
+    ) {
+      setCreateCatalogError("Discount must be between 0 and 100.");
+      return;
+    }
     if (catalogFiles.length === 0) {
       setCreateCatalogError("Please upload at least one image for this catalog item.");
       return;
@@ -285,6 +296,9 @@ export function useCreateCatalogForm({ onCreated, onClose }: UseCreateCatalogFor
         price: Number(catalogForm.price) || 0,
         currency: catalogForm.currency.trim(),
         unitOfMeasure: catalogForm.unitOfMeasure,
+        sku: catalogForm.sku.trim() || null,
+        availableStock: catalogForm.availableStock === "" ? null : Number(catalogForm.availableStock),
+        discountPercent: catalogForm.discountPercent === "" ? null : Number(catalogForm.discountPercent),
         catalogType: catalogForm.catalogType.trim(),
         segment: Number(catalogForm.segment) || 0,
         segmentTitle: catalogForm.segmentTitle.trim(),

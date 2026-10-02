@@ -7,10 +7,12 @@ import {
   getIntegration,
   getIntegrations,
   getOrganizationUnits,
+  integrationProcessOf,
   pullIntegration,
   setIntegrationActive,
   testIntegration,
   type IntegrationConfiguration,
+  type IntegrationSide,
   type IntegrationTestResult,
   type OrganizationUnit,
 } from "../../api/operationsApi";
@@ -54,16 +56,37 @@ interface OperationsIntegrationsProps {
    * data update, runs, activation and pulls (the Workflow & Configuration screen). Omitted: everything.
    */
   mode?: "connection" | "workflow";
+  /** Whose API types the form offers. */
+  side?: IntegrationSide;
+  /** The organization has the operations module, which adds its API types and the organization units. */
+  hasOperations?: boolean;
+  /** The API type a new integration starts with. */
+  initialProcessType?: string;
+  /** View only: the integration is shown but cannot be changed, tested, activated or pulled. */
+  readOnly?: boolean;
 }
 
 const CONNECTION_TABS: Tab[] = ["configuration", "schema"];
 const WORKFLOW_TABS: Tab[] = ["mapping", "data", "history"];
 
-const OperationsIntegrations: React.FC<OperationsIntegrationsProps> = ({ startWith, onExit, mode }) => {
-  const visibleTabs = TABS.filter((item) =>
-    mode === "connection" ? CONNECTION_TABS.includes(item.key) : mode === "workflow" ? WORKFLOW_TABS.includes(item.key) : true,
-  );
-  const firstTab = visibleTabs[0].key;
+const OperationsIntegrations: React.FC<OperationsIntegrationsProps> = ({
+  startWith,
+  onExit,
+  mode,
+  side = "buyer",
+  hasOperations = true,
+  initialProcessType,
+  readOnly = false,
+}) => {
+  // The tabs of one integration: those of the screen's half that its API type has.
+  const tabsFor = (processType: string): { key: Tab; label: string }[] => {
+    const process = integrationProcessOf(processType);
+    return TABS.filter((item) => {
+      if (item.key === "mapping" && !process.hasMapping) return false;
+      if (item.key === "data" && !process.hasDataUpdate) return false;
+      return mode === "connection" ? CONNECTION_TABS.includes(item.key) : mode === "workflow" ? WORKFLOW_TABS.includes(item.key) : true;
+    });
+  };
   const showConnectionActions = mode !== "workflow";
   const showWorkflowActions = mode !== "connection";
   const [view, setView] = useState<View>(
@@ -77,7 +100,7 @@ const OperationsIntegrations: React.FC<OperationsIntegrationsProps> = ({ startWi
     let active = true;
     getIntegration(startWith.configurationId)
       .then((configuration) => {
-        if (active) setView({ name: "workspace", configuration, tab: firstTab });
+        if (active) setView({ name: "workspace", configuration, tab: tabsFor(configuration.processType)[0].key });
       })
       .catch((err: unknown) => {
         if (!active) return;
@@ -114,14 +137,15 @@ const OperationsIntegrations: React.FC<OperationsIntegrationsProps> = ({ startWi
     if (view.name === "list") load();
   }, [view.name]);
 
-  // Units only feed the optional "organization unit" choice of the form.
+  // Units only feed the optional "organization unit" choice of the form; they belong to the operations module.
   useEffect(() => {
+    if (!hasOperations) return;
     getOrganizationUnits().then(setUnits).catch(() => setUnits([]));
-  }, []);
+  }, [hasOperations]);
 
-  const openWorkspace = (configuration: IntegrationConfiguration, tab: Tab = firstTab) => {
+  const openWorkspace = (configuration: IntegrationConfiguration, tab?: Tab) => {
     setTestResult(null);
-    setView({ name: "workspace", configuration, tab });
+    setView({ name: "workspace", configuration, tab: tab ?? tabsFor(configuration.processType)[0].key });
   };
 
   if (view.name === "opening") {
@@ -134,13 +158,15 @@ const OperationsIntegrations: React.FC<OperationsIntegrationsProps> = ({ startWi
         <PageHeader
           className="pud-page-header"
           title="New integration"
-          description="Saved as a draft. Test the connection before activating it."
           onBack={exit}
           backLabel="Back to integrations"
         />
         <IntegrationConfigForm
           configuration={null}
           units={units}
+          side={side}
+          hasOperations={hasOperations}
+          initialProcessType={initialProcessType}
           onCancel={exit}
           onSaved={(configuration) => openWorkspace(configuration)}
         />
@@ -153,6 +179,11 @@ const OperationsIntegrations: React.FC<OperationsIntegrationsProps> = ({ startWi
     const busy = action !== null;
     const isActive = configuration.status === "ACTIVE";
     const canActivate = configuration.status === "TESTED" || configuration.status === "INACTIVE";
+    const process = integrationProcessOf(configuration.processType);
+    const visibleTabs = tabsFor(configuration.processType);
+    // A check reads the API and validates the mapping without storing anything.
+    const isCheck = process.pull === "check";
+    const pullName = isCheck ? "Check" : "Pull";
 
     const refresh = async (nextTab: Tab = tab) => {
       try {
@@ -198,16 +229,18 @@ const OperationsIntegrations: React.FC<OperationsIntegrationsProps> = ({ startWi
       setAction(fullSync ? "fullSync" : "pull");
       try {
         const run = await pullIntegration(configuration.id, fullSync);
-        const summary = `${run.recordsCreated} created, ${run.recordsUpdated} updated, ${run.recordsFailed} failed.`;
+        const summary = isCheck
+          ? `${run.recordsRead} read, ${run.recordsFailed} failed.`
+          : `${run.recordsCreated} created, ${run.recordsUpdated} updated, ${run.recordsFailed} failed.`;
         if (run.status === "SUCCESS") {
-          toastService.success(`Pull completed: ${summary}`);
+          toastService.success(`${pullName} completed: ${summary}`);
         } else {
-          toastService.warning(`Pull ended as ${statusLabel(run.status).toLowerCase()}: ${summary}`);
+          toastService.warning(`${pullName} ended as ${statusLabel(run.status).toLowerCase()}: ${summary}`);
         }
         setHistoryVersion((current) => current + 1);
         await refresh(visibleTabs.some((item) => item.key === "history") ? "history" : tab);
       } catch (err: unknown) {
-        toastService.error(errorMessage(err, "The pull could not be started."));
+        toastService.error(errorMessage(err, isCheck ? "The check could not be started." : "The pull could not be started."));
       } finally {
         setAction(null);
       }
@@ -222,7 +255,7 @@ const OperationsIntegrations: React.FC<OperationsIntegrationsProps> = ({ startWi
           meta={<span className={statusBadgeClass(configuration.status)}>{statusLabel(configuration.status)}</span>}
           onBack={exit}
           backLabel="Back to integrations"
-          actions={(
+          actions={readOnly ? undefined : (
             <div className="sila-btn-group">
               {showConnectionActions && (
                 <button type="button" className="sila-btn sila-btn--secondary" onClick={handleTest} disabled={busy}>
@@ -234,12 +267,16 @@ const OperationsIntegrations: React.FC<OperationsIntegrationsProps> = ({ startWi
                   <button type="button" className="sila-btn sila-btn--secondary" onClick={handleActivate} disabled={busy || (!isActive && !canActivate)} title={!isActive && !canActivate ? "Run a successful connection test first" : undefined}>
                     {action === "activate" ? "Saving..." : isActive ? "Deactivate" : "Activate"}
                   </button>
-                  <button type="button" className="sila-btn sila-btn--secondary" onClick={() => handlePull(true)} disabled={busy || !isActive || configuration.isRunning}>
-                    {action === "fullSync" ? "Pulling..." : "Full sync"}
-                  </button>
-                  <button type="button" className="sila-btn sila-btn--primary" onClick={() => handlePull(false)} disabled={busy || !isActive || configuration.isRunning}>
-                    {action === "pull" ? "Pulling..." : "Pull changes"}
-                  </button>
+                  {process.pull === "full" && (
+                    <button type="button" className="sila-btn sila-btn--secondary" onClick={() => handlePull(true)} disabled={busy || !isActive || configuration.isRunning}>
+                      {action === "fullSync" ? "Pulling..." : "Full sync"}
+                    </button>
+                  )}
+                  {process.pull !== "none" && (
+                    <button type="button" className="sila-btn sila-btn--primary" onClick={() => handlePull(false)} disabled={busy || !isActive || configuration.isRunning}>
+                      {action === "pull" ? (isCheck ? "Checking..." : "Pulling...") : `${pullName} now`}
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -249,20 +286,33 @@ const OperationsIntegrations: React.FC<OperationsIntegrationsProps> = ({ startWi
         <section className="sila-card">
           <div className="sila-card-body ops-stack">
             <dl className="sila-meta-grid">
+              <div className="sila-meta-item"><dt className="sila-meta-label">System</dt><dd className="sila-meta-value">{configuration.systemName || "—"}</dd></div>
               <div className="sila-meta-item"><dt className="sila-meta-label">Sign-in</dt><dd className="sila-meta-value">{labelOf(INTEGRATION_AUTH_TYPES, configuration.authenticationType)}</dd></div>
               <div className="sila-meta-item"><dt className="sila-meta-label">Credentials</dt><dd className="sila-meta-value">{statusLabel(configuration.credentialStatus)}</dd></div>
               <div className="sila-meta-item"><dt className="sila-meta-label">Last tested</dt><dd className="sila-meta-value">{formatDateTime(configuration.testedAt)}</dd></div>
               <div className="sila-meta-item"><dt className="sila-meta-label">Last attempt</dt><dd className="sila-meta-value">{formatDateTime(configuration.lastAttemptAt)}</dd></div>
               <div className="sila-meta-item"><dt className="sila-meta-label">Last successful run</dt><dd className="sila-meta-value">{formatDateTime(configuration.lastSuccessfulRunAt)}</dd></div>
-              <div className="sila-meta-item"><dt className="sila-meta-label">Next scheduled run</dt><dd className="sila-meta-value">{configuration.scheduleCron ? formatDateTime(configuration.nextRunAt) : "Not scheduled"}</dd></div>
-              <div className="sila-meta-item"><dt className="sila-meta-label">Watermark</dt><dd className="sila-meta-value">{formatDateTime(configuration.lastWatermark)}</dd></div>
+              {process.pull === "full" && (
+                <>
+                  <div className="sila-meta-item"><dt className="sila-meta-label">Next scheduled run</dt><dd className="sila-meta-value">{configuration.scheduleCron ? formatDateTime(configuration.nextRunAt) : "Not scheduled"}</dd></div>
+                  <div className="sila-meta-item"><dt className="sila-meta-label">Watermark</dt><dd className="sila-meta-value">{formatDateTime(configuration.lastWatermark)}</dd></div>
+                </>
+              )}
               <div className="sila-meta-item"><dt className="sila-meta-label">Run state</dt><dd className="sila-meta-value">{configuration.isRunning ? "Running now" : "Idle"}</dd></div>
             </dl>
-            {!isActive && (
+            {process.calledWhen && <span className="sila-help">{process.calledWhen}</span>}
+            {!isActive && !readOnly && (mode === "connection" ? (
               <span className="sila-help">
-                Pulls are available once the integration is active. {canActivate ? "It can be activated now." : "Run a successful connection test to be able to activate it."}
+                {canActivate
+                  ? "The connection is tested. Activate and use this API under Workflow & Configuration."
+                  : "Run a successful connection test. The API can then be used under Workflow & Configuration."}
               </span>
-            )}
+            ) : (
+              <span className="sila-help">
+                {process.pull === "none" ? "" : `${pullName}s are available once the integration is active. `}
+                {canActivate ? "It can be activated now." : "Run a successful connection test under Integration to be able to activate it."}
+              </span>
+            ))}
             {testResult && (
               <div className={`sila-alert ${testResult.success ? "sila-alert--success" : "sila-alert--danger"}`} role="status">
                 <div>
@@ -305,14 +355,17 @@ const OperationsIntegrations: React.FC<OperationsIntegrationsProps> = ({ startWi
             key={configuration.id}
             configuration={configuration}
             units={units}
+            side={side}
+            hasOperations={hasOperations}
+            readOnly={readOnly}
             onCancel={exit}
             onSaved={(saved) => setView({ name: "workspace", configuration: saved, tab: "configuration" })}
           />
         )}
-        {tab === "schema" && <IntegrationSchemaPanel configuration={configuration} />}
-        {tab === "mapping" && <IntegrationMappingEditor configuration={configuration} />}
+        {tab === "schema" && <IntegrationSchemaPanel configuration={configuration} readOnly={readOnly} />}
+        {tab === "mapping" && <IntegrationMappingEditor configuration={configuration} readOnly={readOnly} />}
         {tab === "data" && (
-          <IntegrationDataUpdate configuration={configuration} onImported={() => setHistoryVersion((current) => current + 1)} />
+          <IntegrationDataUpdate configuration={configuration} readOnly={readOnly} onImported={() => setHistoryVersion((current) => current + 1)} />
         )}
         {tab === "history" && <IntegrationHistory configurationId={configuration.id} refreshKey={historyVersion} />}
       </div>
@@ -394,7 +447,9 @@ const OperationsIntegrations: React.FC<OperationsIntegrationsProps> = ({ startWi
                     <td onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
                       <div className="sila-btn-group">
                         <button type="button" className="sila-btn sila-btn--secondary sila-btn--sm" onClick={() => openWorkspace(row)}>Open</button>
-                        <button type="button" className="sila-btn sila-btn--ghost sila-btn--sm" onClick={() => openWorkspace(row, "data")}>Data</button>
+                        {integrationProcessOf(row.processType).hasDataUpdate && (
+                          <button type="button" className="sila-btn sila-btn--ghost sila-btn--sm" onClick={() => openWorkspace(row, "data")}>Data</button>
+                        )}
                         <button type="button" className="sila-btn sila-btn--ghost sila-btn--sm" onClick={() => openWorkspace(row, "history")}>Runs</button>
                       </div>
                     </td>

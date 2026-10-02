@@ -1,87 +1,55 @@
 import React, { useEffect, useState } from "react";
 import { EmptyState, Loader, PageHeader } from "@vosox/shared-ui";
-import { ERP_API_TYPES, getBuyerErpIntegrations, type ErpIntegration } from "../../api/erpIntegrationApi";
 import {
   INTEGRATION_PROCESS_TYPES,
-  INTEGRATION_PROTOCOLS,
   getIntegrations,
+  integrationProcessTypesFor,
   type IntegrationConfiguration,
+  type IntegrationSide,
 } from "../../api/operationsApi";
-import BuyerErpConfiguration from "../erp/BuyerErpConfiguration";
 import OperationsIntegrations from "../operations/OperationsIntegrations";
 import { statusBadgeClass, statusLabel } from "../operations/operationsFormat";
 
 interface IntegrationHubProps {
   /**
-   * "integration": connect APIs — every API in one list, with its URL, sign-in, schema and connection test.
-   * "workflow": use the connected APIs — for each one, how it is called, its field mapping, data update,
-   * runs and activation.
+   * "integration": connect APIs — every API in one list, with its URL, request, sign-in, schema and
+   * connection test. "workflow": use the connected APIs — for each one its field mapping, data update,
+   * runs, activation and pulls.
    */
   variant?: "integration" | "workflow";
+  /** Whose API types are configured here. */
+  side?: IntegrationSide;
   /** View only: APIs can be opened but not created or changed. */
   readOnly?: boolean;
-  /** The organization is licensed for the operations module, which adds the ERP data exchange APIs. */
+  /** The organization is licensed for the operations module, which adds its API types. */
   hasOperations?: boolean;
 }
 
-/** Sentinel for the "New integration" choice that opens the ERP data exchange form. */
-const NEW_DATA_INTEGRATION = "DATA_INTEGRATION";
-
-// Statuses of an ERP data exchange API whose connection test has passed.
+// Statuses of an API whose connection test has passed.
 const CONNECTED_STATUSES = ["TESTED", "ACTIVE", "INACTIVE"];
-
-// One row of the list, whichever service stores the API.
-interface IntegrationRow {
-  key: string;
-  name: string;
-  purpose: string;
-  system: string;
-  target: string;
-  status: string;
-  connected: boolean;
-  open: View;
-}
 
 type View =
   | { name: "list" }
-  | { name: "api"; process: string }
-  | { name: "data"; startWith: "create" | { configurationId: string } };
+  | { name: "create"; processType: string }
+  | { name: "open"; configurationId: string };
 
-const labelOf = (options: { value: string; label: string }[], value: string): string =>
-  options.find((option) => option.value === value)?.label ?? statusLabel(value);
-
-const apiRow = (integration: ErpIntegration): IntegrationRow => ({
-  key: `api-${integration.id}`,
-  name: integration.apiName,
-  purpose: ERP_API_TYPES.find((type) => type.process === integration.process?.toUpperCase())?.label ?? integration.process,
-  system: integration.erpType,
-  target: integration.baseUrl,
-  status: integration.isActive ? "ACTIVE" : "INACTIVE",
-  // These APIs have no connection test; a saved API is usable.
-  connected: true,
-  open: { name: "api", process: integration.process?.toUpperCase() },
-});
-
-const dataRow = (integration: IntegrationConfiguration): IntegrationRow => ({
-  key: `data-${integration.id}`,
-  name: integration.name,
-  purpose: labelOf(INTEGRATION_PROCESS_TYPES, integration.processType),
-  system: labelOf(INTEGRATION_PROTOCOLS, integration.protocol),
-  target: `Entity ${integration.entityCode}`,
-  status: integration.status,
-  connected: CONNECTED_STATUSES.includes(integration.status),
-  open: { name: "data", startWith: { configurationId: integration.id } },
-});
+const purposeOf = (processType: string): string =>
+  INTEGRATION_PROCESS_TYPES.find((type) => type.value === processType)?.label ?? statusLabel(processType);
 
 /**
- * The application's single place for external APIs. Integration connects and tests them; Workflow &
- * Configuration decides how the connected ones are used. Both read the same list.
+ * The application's single place for external APIs, for every API type of the buyer or the supplier.
+ * Integration connects and tests them; Workflow & Configuration decides how the connected ones are
+ * used. Both read the same list and open the same form.
  */
-const IntegrationHub: React.FC<IntegrationHubProps> = ({ variant = "integration", readOnly = false, hasOperations = false }) => {
+const IntegrationHub: React.FC<IntegrationHubProps> = ({
+  variant = "integration",
+  side = "buyer",
+  readOnly = false,
+  hasOperations = false,
+}) => {
   const isWorkflow = variant === "workflow";
   const [view, setView] = useState<View>({ name: "list" });
-  const [rows, setRows] = useState<IntegrationRow[]>([]);
-  const [configuredProcesses, setConfiguredProcesses] = useState<string[]>([]);
+  const [rows, setRows] = useState<IntegrationConfiguration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newType, setNewType] = useState("");
@@ -90,13 +58,7 @@ const IntegrationHub: React.FC<IntegrationHubProps> = ({ variant = "integration"
     setLoading(true);
     setError(null);
     try {
-      const [apiIntegrations, dataIntegrations] = await Promise.all([
-        getBuyerErpIntegrations(),
-        // The ERP data exchange APIs are administered by the buyer administrator only.
-        hasOperations && !readOnly ? getIntegrations() : Promise.resolve<IntegrationConfiguration[]>([]),
-      ]);
-      setConfiguredProcesses(apiIntegrations.map((integration) => integration.process?.toUpperCase()));
-      setRows([...apiIntegrations.map(apiRow), ...dataIntegrations.map(dataRow)]);
+      setRows(await getIntegrations());
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not load the integrations.");
     } finally {
@@ -106,7 +68,7 @@ const IntegrationHub: React.FC<IntegrationHubProps> = ({ variant = "integration"
 
   useEffect(() => {
     if (view.name === "list") load();
-  }, [view.name, hasOperations, variant]);
+  }, [view.name, variant]);
 
   // Leaving one screen for the other starts on its list.
   useEffect(() => {
@@ -115,37 +77,31 @@ const IntegrationHub: React.FC<IntegrationHubProps> = ({ variant = "integration"
 
   const backToList = () => setView({ name: "list" });
 
-  if (view.name === "api") {
-    return (
-      <BuyerErpConfiguration
-        readOnly={readOnly}
-        process={view.process}
-        onExit={backToList}
-        section={isWorkflow ? "request" : "connection"}
-      />
-    );
-  }
-
-  if (view.name === "data") {
+  if (view.name !== "list") {
     return (
       <OperationsIntegrations
-        startWith={view.startWith}
+        startWith={view.name === "create" ? "create" : { configurationId: view.configurationId }}
+        initialProcessType={view.name === "create" ? view.processType : undefined}
         onExit={backToList}
         mode={isWorkflow ? "workflow" : "connection"}
+        side={side}
+        hasOperations={hasOperations}
+        readOnly={readOnly}
       />
     );
   }
 
   // Workflow & Configuration works only with APIs that are connected.
-  const visibleRows = isWorkflow ? rows.filter((row) => row.connected) : rows;
+  const visibleRows = isWorkflow ? rows.filter((row) => CONNECTED_STATUSES.includes(row.status)) : rows;
 
   // Each API type holds one integration, so only the types not configured yet can be added.
-  const availableApiTypes = ERP_API_TYPES.filter((type) => !configuredProcesses.includes(type.process));
-  const canCreate = !isWorkflow && !readOnly && (availableApiTypes.length > 0 || hasOperations);
+  const configuredTypes = rows.map((row) => row.processType);
+  const apiTypes = integrationProcessTypesFor(side, hasOperations).filter((type) => !configuredTypes.includes(type.value));
+  const canCreate = !isWorkflow && !readOnly && apiTypes.length > 0;
 
   const handleCreate = () => {
     if (!newType) return;
-    setView(newType === NEW_DATA_INTEGRATION ? { name: "data", startWith: "create" } : { name: "api", process: newType });
+    setView({ name: "create", processType: newType });
     setNewType("");
   };
 
@@ -158,15 +114,14 @@ const IntegrationHub: React.FC<IntegrationHubProps> = ({ variant = "integration"
           <div className="sila-btn-group">
             <select
               className="sila-select"
-              aria-label="Integration type"
+              aria-label="API type"
               value={newType}
               onChange={(event) => setNewType(event.target.value)}
             >
-              <option value="">Select integration type</option>
-              {availableApiTypes.map((type) => (
-                <option key={type.process} value={type.process}>{type.label}</option>
+              <option value="">Select API type</option>
+              {apiTypes.map((type) => (
+                <option key={type.value} value={type.value}>{type.label}</option>
               ))}
-              {hasOperations && <option value={NEW_DATA_INTEGRATION}>ERP data exchange (orders, suppliers, receipts)</option>}
             </select>
             <button type="button" className="sila-btn sila-btn--primary" onClick={handleCreate} disabled={!newType}>
               New integration
@@ -190,8 +145,8 @@ const IntegrationHub: React.FC<IntegrationHubProps> = ({ variant = "integration"
             description={isWorkflow
               ? "Connect an API under Integration and pass its connection test. It then appears here to be configured."
               : readOnly
-                ? "Your buyer administrator sets up the integrations of the organization."
-                : "Select an integration type and choose New integration."}
+                ? `Your ${side} administrator sets up the integrations of the organization.`
+                : "Select an API type and choose New integration."}
           />
         ) : (
           <div className="sila-table-wrap">
@@ -202,20 +157,26 @@ const IntegrationHub: React.FC<IntegrationHubProps> = ({ variant = "integration"
                   <th scope="col">API</th>
                   <th scope="col">System</th>
                   <th scope="col">Target</th>
+                  <th scope="col">Entity</th>
                   <th scope="col">Status</th>
                   <th scope="col">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleRows.map((row) => (
-                  <tr key={row.key}>
-                    <td className="sila-cell-strong">{row.purpose}</td>
+                  <tr key={row.id}>
+                    <td className="sila-cell-strong">{purposeOf(row.processType)}</td>
                     <td>{row.name}</td>
-                    <td>{row.system || "—"}</td>
-                    <td>{row.target || "—"}</td>
+                    <td>{row.systemName || "—"}</td>
+                    <td>{row.baseUrl || "—"}</td>
+                    <td>{row.entityCode || "—"}</td>
                     <td><span className={statusBadgeClass(row.status)}>{statusLabel(row.status)}</span></td>
                     <td>
-                      <button type="button" className="sila-btn sila-btn--secondary sila-btn--sm" onClick={() => setView(row.open)}>
+                      <button
+                        type="button"
+                        className="sila-btn sila-btn--secondary sila-btn--sm"
+                        onClick={() => setView({ name: "open", configurationId: row.id })}
+                      >
                         {readOnly ? "View" : isWorkflow ? "Configure" : "Open"}
                       </button>
                     </td>

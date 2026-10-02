@@ -18,11 +18,3 @@ export interface MatchCard {
   categoryNote: string;
   destinationNote: string;
 }
-
-export interface POItem {
-  code: string;
-  status: "ACCEPTED" | "DELIVERED";
-  company: string;
-  orderDate: string;
-  amount: string;
-}

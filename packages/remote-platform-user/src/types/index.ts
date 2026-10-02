@@ -6,6 +6,7 @@ export type UserRole =
   | 'BUYER_USER' 
   | 'SUPPLIER_USER'
   | 'OUTLET_MANAGER'
+  | 'STORE_MANAGER'
   | 'PLATFORM_ADMINISTRATOR';
 
 export interface User {

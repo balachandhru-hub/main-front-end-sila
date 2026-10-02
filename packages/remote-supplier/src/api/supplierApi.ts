@@ -11,6 +11,7 @@ import type {
   SupplierContractDto,
   SubmitQuotationPayload,
   CreateSupplierCatalogPayload,
+  UpdateCatalogStockPayload,
   SubmitRfqAnswersPayload,
   CurrencyListResponse,
   SupplierCatalogListItem,
@@ -197,6 +198,40 @@ export const createSupplierCatalog = async (
       statusCode: 500,
       message: 'Unexpected Error',
       description: 'Something went wrong while creating supplier catalog.',
+    };
+  }
+};
+
+export const updateSupplierCatalogStock = async (
+  catalogId: string,
+  payload: UpdateCatalogStockPayload
+): Promise<true | ErrorResponseDto> => {
+  try {
+    await supplierInstance.put(`/api/v1/supplier/catalog/${catalogId}/stock`, payload);
+    return true;
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      (window as any).handleUnauthorized?.();
+      return {
+        statusCode: 401,
+        message: 'Unauthorized',
+        description: 'You are not authorized to access this resource. Please login again.',
+      };
+    }
+
+    if (error.response && error.response.data) {
+      const errData = error.response.data;
+      return {
+        statusCode: errData.statusCode || errData.status_code || error.response.status || 500,
+        message: errData.message || 'Failed to update stock',
+        description: errData.description || errData.title || 'Failed to update stock',
+      };
+    }
+
+    return {
+      statusCode: 500,
+      message: 'Unexpected Error',
+      description: 'Something went wrong while updating the stock.',
     };
   }
 };

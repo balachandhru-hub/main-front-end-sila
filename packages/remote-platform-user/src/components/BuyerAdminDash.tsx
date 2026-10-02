@@ -28,7 +28,7 @@ import { getCountries, getUnits, getCurrencies, fetchReferenceList } from "../..
 import { createItemMaster, getMasterApprovalFlows, checkItemMasterSimilarity, uploadItemMasterFile } from "../api/itemmasterapi";
 import { getOrganizationUsersForRfq } from "../api/networkAdminApi";
 import { logoutPlatformUser } from "../api/platformApi";
-import { BuyerAnalytics, ChatPanel, CreateRFQ, EmptyState, Loader, StatusBadge, toastService, useAsyncData, useRouteNav, type ChatCounterpartyRef, type CreateRFQApi, type RouteNavPaths } from "@vosox/shared-ui";
+import { BuyerAnalytics, ChatPanel, CreateRFQ, EmptyState, Loader, toastService, useAsyncData, useRouteNav, type ChatCounterpartyRef, type CreateRFQApi, type RouteNavPaths } from "@vosox/shared-ui";
 import UserTemplate from "./UserTemplate";
 import ContractTemplate from "./ContractTemplate";
 import ApprovalManagement from "./ApprovalManagement/ApprovalManagement";
@@ -38,9 +38,11 @@ import AdminQsAns from "../../../remote-buyer/src/components/Qsans";
 import QuotationComparisonCard from "./QuotationComparisonCard";
 import ItemMasterCatalog from "../../../remote-buyer/src/components/ItemMasterCatalog";
 import IntegrationHub from "../../../remote-buyer/src/components/integration/IntegrationHub";
+import RecentPurchaseOrderList from "../../../remote-buyer/src/components/dashboard/RecentPurchaseOrderList";
 import Models from "../../../remote-buyer/src/components/Models";
 import type { ModelDto } from "../../../remote-buyer/src/api/modelApi";
 import WishlistSection from "../../../remote-buyer/src/components/wishlist/WishlistSection";
+import WeeklyBucketSection from "../../../remote-buyer/src/components/weeklyBucket/WeeklyBucketSection";
 import CartSection from "../../../remote-buyer/src/components/cart/CartSection";
 import OutletManagement from "../../../remote-buyer/src/components/outlet/OutletManagement";
 import {
@@ -295,7 +297,8 @@ const BUYER_ADMIN_NAV_PATHS: RouteNavPaths = {
   materialService: "material-service",
   companyProfile: "company-profile",
   wishlist: "wishlist",
-  wishlistApprovals: "wishlist-approvals",
+  weeklyBucket: "weekly-bucket",
+  weeklyBucketApprovals: "weekly-bucket-approvals",
   apiConfiguration: "integration",
   workflowConfiguration: "workflow-configuration",
   models: "models",
@@ -307,6 +310,7 @@ const BUYER_ADMIN_NAV_PATHS: RouteNavPaths = {
 const navItems: { key: string; icon: React.ReactNode; label: string; section?: string; badge?: number; subItems?: NavSubEntry[]; chevronIcon?: React.ReactNode }[] = [
   { key: "dashboard", icon: <NavIconHome />, label: "Dashboard" },
   { key: "wishlist", icon: <NavIconFilePlus />, label: "Wishlist" },
+  { key: "weeklyBucket", icon: <NavIconFileCheck />, label: "Weekly Bucket" },
   { key: "invitations", icon: <IconMail />, label: "Invitations" },
   { key: "createRFQ", icon: <NavIconFilePlus />, label: "Create RFQ" },
   { key: "product", icon: <NavIconFileCheck />, label: "Product Catalog" },
@@ -337,27 +341,12 @@ const navItems: { key: string; icon: React.ReactNode; label: string; section?: s
         items: [
           { key: "material", label: "Material" },
           { key: "contract", label: "Contract" },
-          { key: "wishlistApprovals", label: "Wishlist" },
+          { key: "weeklyBucketApprovals", label: "Weekly Bucket" },
         ]
       },
       { key: "materialService", label: "Material & Service" }
     ]
   },
-];
-
-// Placeholder purchase orders: the backend has no purchase-order entity yet.
-interface POItem {
-  code: string;
-  status: "ACCEPTED" | "DELIVERED";
-  company: string;
-  orderDate: string;
-  amount: string;
-}
-
-const poItems: POItem[] = [
-  { code: "PO-2026-90412", status: "ACCEPTED", company: "Meridian Components Ltd.", orderDate: "2026-07-04", amount: "$18,500.00" },
-  { code: "PO-2026-88401", status: "ACCEPTED", company: "Northbridge Supply Co.", orderDate: "2026-05-22", amount: "$4,200.00" },
-  { code: "PO-2026-80214", status: "DELIVERED", company: "Summit Industrial Traders", orderDate: "2026-04-10", amount: "$9,800.00" },
 ];
 
 const matchCards: MatchCard[] = [
@@ -1007,20 +996,23 @@ const BuyerAdminDash: React.FC = () => {
             ) : activeNav === "workflowConfiguration" ? (
               <IntegrationHub variant="workflow" hasOperations={hasOperations} />
             ) : activeNav === "cart" ? (
-              <CartSection onOpenWishlist={() => handleNavClick("wishlist")} onBrowseCatalog={() => handleNavClick("product")} />
+              <CartSection onOpenWeeklyBucket={() => handleNavClick("weeklyBucket")} onBrowseCatalog={() => handleNavClick("product")} />
             ) : activeNav === "outlets" ? (
               <OutletManagement buyerId={buyerId || ""} />
             ) : activeNav === "apiConfiguration" ? (
               <IntegrationHub variant="integration" hasOperations={hasOperations} />
             ) : activeNav === "wishlist" ? (
-              <WishlistSection
+              <WishlistSection onOpenCart={() => handleNavClick("cart")} />
+            ) : activeNav === "weeklyBucket" ? (
+              <WeeklyBucketSection
                 buyerId={buyerId || ""}
                 currentUserId={currentUserId}
-                mode="manage"
+                canReview
+                canMapMaterial
                 onOpenCart={() => handleNavClick("cart")}
               />
-            ) : activeNav === "wishlistApprovals" ? (
-              <WishlistSection buyerId={buyerId || ""} currentUserId={currentUserId} mode="approve" />
+            ) : activeNav === "weeklyBucketApprovals" ? (
+              <WeeklyBucketSection buyerId={buyerId || ""} currentUserId={currentUserId} canReview mode="approve" />
             ) : activeNav === "material" ? (
               selectedMaterial ? (
                 <MaterialApprovalDetail
@@ -1553,28 +1545,10 @@ const BuyerAdminDash: React.FC = () => {
                     <div className="bad-panel-header">
                       <div>
                         <h2 className="bad-panel-title">Recent Purchase Orders</h2>
-                        <div className="bad-panel-subtitle">Buyer orders requiring attention</div>
+                        <div className="bad-panel-subtitle">Orders created in your ERP</div>
                       </div>
-                      <a className="bad-panel-link" href="#" onClick={(e) => e.preventDefault()}>View All →</a>
                     </div>
-                    <div className="bad-panel-list">
-                      {poItems.map((po) => (
-                        <div className="bad-po-row" key={po.code}>
-                          <div className="bad-po-info">
-                            <div className="bad-po-meta">
-                              <span className="bad-po-code sila-ref">{po.code}</span>
-                              <StatusBadge status={po.status} size="sm" />
-                            </div>
-                            <div className="bad-po-company">{po.company}</div>
-                            <div className="bad-po-date"><IconCalendar /> Order Date: {po.orderDate}</div>
-                          </div>
-                          <div className="bad-po-right">
-                            <div className="bad-po-amount">{po.amount}</div>
-                            <a className="bad-po-process" href="#" onClick={(e) => e.preventDefault()}>Process →</a>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <RecentPurchaseOrderList side="buyer" classPrefix="bad" />
                   </section>
 
                 </div>

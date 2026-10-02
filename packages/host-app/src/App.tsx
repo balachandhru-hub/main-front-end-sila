@@ -32,8 +32,8 @@ const RoleApp: React.FC = () => {
     return <Navigate to="/" replace />;
   }
 
-  // An outlet manager is a buyer user with the wishlist screens on top.
-  if (userRole === 'buyer' || userRole === 'buyer-business-user' || userRole === 'outlet-manager') {
+  // An outlet manager is a buyer user with the wishlist screens on top; a store manager is one who freezes the weekly bucket.
+  if (userRole === 'buyer' || userRole === 'buyer-business-user' || userRole === 'outlet-manager' || userRole === 'store-manager') {
     return <BuyerApp />;
   }
   if (userRole === 'supplier' || userRole === 'supplier-business-user') {

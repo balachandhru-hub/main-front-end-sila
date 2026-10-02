@@ -88,6 +88,9 @@ export interface CatalogDetailResponseItem {
   class: number;
   classTitle: string;
   catalogType: string;
+  sku?: string | null;
+  availableStock?: number | null;
+  discountPercent?: number | null;
   asset: CatalogDetailAssetItem[];
   isPunchOut: boolean;
   punchOutUrl: string;
@@ -440,6 +443,9 @@ export interface CatalogDetailDto {
   description: string;
   price: number;
   unitOfMeasure: string;
+  sku?: string | null;
+  availableStock?: number | null;
+  discountPercent?: number | null;
   catalogType: string;
   segment: number;
   segmentTitle: string;
@@ -452,6 +458,12 @@ export interface CatalogDetailDto {
   isPunchOut: boolean;
   punchOutUrl: string;
   assets: CatalogAssetDto[];
+}
+
+export interface UpdateCatalogStockPayload {
+  sku: string;
+  availableStock: number | null;
+  discountPercent: number | null;
 }
 
 export interface CreateSupplierCatalogPayload {

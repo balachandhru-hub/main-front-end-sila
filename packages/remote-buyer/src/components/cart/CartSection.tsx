@@ -1,32 +1,36 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState, FileIcon, PageHeader, isErrorResponse, toastService } from "@vosox/shared-ui";
 import { fetchBuyerAsset } from "../../api/Buyerapi";
-import { getWishlists, type WishlistListItem } from "../../api/wishlistApi";
+import type { CatalogQuantity } from "../../api/personalWishlistApi";
 import { useCartStore } from "../../store/useCartStore";
-import { isEditableStatus } from "../wishlist/wishlistStatus";
+import AddToBucketDialog from "./AddToBucketDialog";
+import AddToWishlistDialog from "./AddToWishlistDialog";
+import { formatDiscount, formatNumber, formatPrice } from "./lineFormat";
 import "./CartSection.css";
 
 interface CartSectionProps {
-  /** Opens the wishlist section, which picks up the products handed over from the cart. */
-  onOpenWishlist: () => void;
+  /** Opens the weekly bucket the selected products were added to. */
+  onOpenWeeklyBucket: () => void;
   /** Opens the Product Catalog, where products are added to the cart. */
   onBrowseCatalog: () => void;
 }
 
-const NEW_WISHLIST = "";
+/** The dialog keeps its own copy of the lines: they leave the cart as soon as they are added. */
+interface CartDialog {
+  target: "wishlist" | "bucket";
+  items: CatalogQuantity[];
+}
 
-/** Cart: products added from the Product Catalog, which the user moves into a wishlist. */
-const CartSection: React.FC<CartSectionProps> = ({ onOpenWishlist, onBrowseCatalog }) => {
+/** Cart: products added from the Product Catalog, which the user moves to a personal wishlist or the weekly bucket. */
+const CartSection: React.FC<CartSectionProps> = ({ onOpenWeeklyBucket, onBrowseCatalog }) => {
   const products = useCartStore((state) => state.products);
   const removeProducts = useCartStore((state) => state.removeProducts);
   const setQuantity = useCartStore((state) => state.setQuantity);
-  const startWishlist = useCartStore((state) => state.startWishlist);
 
   const [supplier, setSupplier] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [images, setImages] = useState<Record<string, string>>({});
-  const [draftWishlists, setDraftWishlists] = useState<WishlistListItem[]>([]);
-  const [targetWishlistId, setTargetWishlistId] = useState(NEW_WISHLIST);
+  const [dialog, setDialog] = useState<CartDialog | null>(null);
 
   const suppliers = useMemo(
     () => Array.from(new Set(products.map((product) => product.supplierName).filter(Boolean))).sort(),
@@ -60,21 +64,6 @@ const CartSection: React.FC<CartSectionProps> = ({ onOpenWishlist, onBrowseCatal
     };
   }, [products]);
 
-  // Draft wishlists the selected products can be added to.
-  useEffect(() => {
-    let active = true;
-    getWishlists(0, 50)
-      .then((rows) => {
-        if (active) setDraftWishlists(rows.filter((row) => isEditableStatus(row.status)));
-      })
-      .catch(() => {
-        // "New wishlist" stays available when the drafts cannot be loaded.
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const toggleProduct = (catalogId: string) => {
     setSelectedIds((current) =>
       current.includes(catalogId) ? current.filter((id) => id !== catalogId) : [...current, catalogId],
@@ -95,18 +84,27 @@ const CartSection: React.FC<CartSectionProps> = ({ onOpenWishlist, onBrowseCatal
     setSelectedIds((current) => current.filter((id) => !catalogIds.includes(id)));
   };
 
-  const handleAddToWishlist = () => {
-    if (selectedVisibleIds.length === 0) {
+  const openDialog = (target: CartDialog["target"]) => {
+    const selected = products.filter((product) => selectedVisibleIds.includes(product.catalogId));
+    if (selected.length === 0) {
       toastService.error("Select at least one product.");
       return;
     }
-    const selected = products.filter((product) => selectedVisibleIds.includes(product.catalogId));
     if (selected.some((product) => !(product.quantity > 0))) {
       toastService.error("Enter a quantity greater than zero for every selected product.");
       return;
     }
-    startWishlist({ wishlistId: targetWishlistId || null, catalogIds: selectedVisibleIds });
-    onOpenWishlist();
+    setDialog({
+      target,
+      items: selected.map((product) => ({ catalogId: product.catalogId, quantity: product.quantity })),
+    });
+  };
+
+  const closeDialog = useCallback(() => setDialog(null), []);
+
+  // The lines that were added leave the cart.
+  const handleAdded = () => {
+    if (dialog) handleRemove(dialog.items.map((item) => item.catalogId));
   };
 
   return (
@@ -145,17 +143,21 @@ const CartSection: React.FC<CartSectionProps> = ({ onOpenWishlist, onBrowseCatal
                   </select>
                 </div>
                 <div className="cart-toolbar-group">
-                  <div className="sila-field">
-                    <label className="sila-label" htmlFor="cart-target">Add to</label>
-                    <select id="cart-target" className="sila-select" value={targetWishlistId} onChange={(event) => setTargetWishlistId(event.target.value)}>
-                      <option value={NEW_WISHLIST}>New wishlist</option>
-                      {draftWishlists.map((wishlist) => (
-                        <option key={wishlist.id} value={wishlist.id}>{wishlist.wishlistName}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <button type="button" className="sila-btn sila-btn--primary" onClick={handleAddToWishlist} disabled={selectedVisibleIds.length === 0}>
-                    Add to wishlist ({selectedVisibleIds.length})
+                  <button
+                    type="button"
+                    className="sila-btn sila-btn--secondary"
+                    onClick={() => openDialog("wishlist")}
+                    disabled={selectedVisibleIds.length === 0}
+                  >
+                    Add to Personal Wishlist ({selectedVisibleIds.length})
+                  </button>
+                  <button
+                    type="button"
+                    className="sila-btn sila-btn--primary"
+                    onClick={() => openDialog("bucket")}
+                    disabled={selectedVisibleIds.length === 0}
+                  >
+                    Add to Weekly Bucket ({selectedVisibleIds.length})
                   </button>
                 </div>
               </div>
@@ -169,11 +171,14 @@ const CartSection: React.FC<CartSectionProps> = ({ onOpenWishlist, onBrowseCatal
                     </th>
                     <th scope="col">Image</th>
                     <th scope="col">Product</th>
+                    <th scope="col">SKU</th>
                     <th scope="col">Supplier</th>
                     <th scope="col">Unit</th>
-                    <th scope="col">Unit price</th>
+                    <th scope="col">Price</th>
+                    <th scope="col">Discount</th>
+                    <th scope="col">Supplier stock</th>
                     <th scope="col">Quantity</th>
-                    <th scope="col"> </th>
+                    <th scope="col"><span className="sila-visually-hidden">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -195,9 +200,12 @@ const CartSection: React.FC<CartSectionProps> = ({ onOpenWishlist, onBrowseCatal
                           </div>
                         </td>
                         <td className="sila-cell-strong">{product.catalogName}</td>
+                        <td>{product.sku || "—"}</td>
                         <td>{product.supplierName || "—"}</td>
                         <td>{product.unitOfMeasure || "—"}</td>
-                        <td>{product.price > 0 ? `${product.currency} ${product.price}`.trim() : "—"}</td>
+                        <td>{formatPrice(product.price, product.currency)}</td>
+                        <td>{formatDiscount(product.discountPercent)}</td>
+                        <td>{formatNumber(product.availableStock)}</td>
                         <td>
                           <input
                             className="sila-input cart-qty"
@@ -223,6 +231,25 @@ const CartSection: React.FC<CartSectionProps> = ({ onOpenWishlist, onBrowseCatal
           </>
         )}
       </section>
+
+      {dialog?.target === "wishlist" && (
+        <AddToWishlistDialog
+          items={dialog.items}
+          onClose={closeDialog}
+          onAdded={() => {
+            handleAdded();
+            closeDialog();
+          }}
+        />
+      )}
+      {dialog?.target === "bucket" && (
+        <AddToBucketDialog
+          items={dialog.items}
+          onClose={closeDialog}
+          onAdded={handleAdded}
+          onOpenWeeklyBucket={onOpenWeeklyBucket}
+        />
+      )}
     </>
   );
 };

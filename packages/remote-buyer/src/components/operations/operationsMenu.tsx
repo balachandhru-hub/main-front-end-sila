@@ -41,6 +41,10 @@ export const OPERATIONS_HOME_KEY = "opsOverview";
 
 /** Workflow & configuration of the connected APIs, inside the workspace. */
 const OPERATIONS_WORKFLOW_KEY = "opsWorkflow";
+const OPERATIONS_INTEGRATIONS_KEY = "opsIntegrations";
+
+/** The integration screens, which only the buyer administrator gets. */
+const INTEGRATION_KEYS = [OPERATIONS_INTEGRATIONS_KEY, OPERATIONS_WORKFLOW_KEY];
 
 const soon = (slug: string, label: string, description: string): WorkspaceLeaf => ({
   key: `opsSoon-${slug}`,
@@ -126,7 +130,7 @@ const WORKSPACE_GROUPS: WorkspaceGroup[] = [
       { key: "opsUnits", label: "Properties & units" },
       { key: "opsExtractionSettings", label: "Document extraction" },
       { key: "opsDocumentStorage", label: "Document storage" },
-      { key: "opsIntegrations", label: "Integrations" },
+      { key: OPERATIONS_INTEGRATIONS_KEY, label: "Integrations" },
       { key: OPERATIONS_WORKFLOW_KEY, label: "Workflow & configuration" },
       soon("audit", "Audit", "Trace important changes across the operating model."),
     ],
@@ -153,20 +157,22 @@ export const isOperationsNavKey = (key: string): boolean => key in OPERATIONS_NA
  * Header menu while the workspace is open. `exitKey` is the host dashboard's nav key to go back to
  * the procurement application.
  */
-export const buildOperationsWorkspaceNav = (exitKey: string) => [
+export const buildOperationsWorkspaceNav = (exitKey: string, options: WorkspaceOptions = {}) => [
   { key: exitKey, icon: <ArrowLeftIcon />, label: "Procurement" },
   { key: OPERATIONS_HOME_KEY, icon: <HomeIcon />, label: "Dashboard" },
   ...WORKSPACE_GROUPS.map((group) => ({
     key: group.key,
     icon: group.icon,
     label: group.label,
-    subItems: group.items.map((item) => ({ key: item.key, label: item.label })),
+    subItems: group.items
+      .filter((item) => options.withIntegrations !== false || !INTEGRATION_KEYS.includes(item.key))
+      .map((item) => ({ key: item.key, label: item.label })),
   })),
 ];
 
 interface WorkspaceOptions {
-  /** The signed-in role only views integrations (not the buyer administrator). */
-  readOnlyIntegrations?: boolean;
+  /** False for every role but the buyer administrator: the integration screens are not offered. */
+  withIntegrations?: boolean;
 }
 
 /** The screen of a workspace nav key. */
@@ -177,11 +183,18 @@ export const renderOperationsWorkspace = (
 ): React.ReactNode => {
   // The application has one Integration screen and one Workflow & Configuration screen;
   // the workspace opens the same ones.
-  if (key === "opsIntegrations") {
-    return <IntegrationHub variant="integration" hasOperations readOnly={options.readOnlyIntegrations} />;
+  if (INTEGRATION_KEYS.includes(key) && options.withIntegrations === false) {
+    return (
+      <section className="sila-card">
+        <EmptyState title="Integrations are set up by your buyer administrator" />
+      </section>
+    );
+  }
+  if (key === OPERATIONS_INTEGRATIONS_KEY) {
+    return <IntegrationHub variant="integration" hasOperations />;
   }
   if (key === OPERATIONS_WORKFLOW_KEY) {
-    return <IntegrationHub variant="workflow" hasOperations readOnly={options.readOnlyIntegrations} />;
+    return <IntegrationHub variant="workflow" hasOperations />;
   }
 
   const leaf = WORKSPACE_LEAVES.find((item) => item.key === key);

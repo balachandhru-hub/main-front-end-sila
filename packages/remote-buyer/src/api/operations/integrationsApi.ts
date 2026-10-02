@@ -1,16 +1,60 @@
 import axiosInstance from "../axiosInstance";
 import { OPERATIONS_BASE, cleanParams, fetchBlob, postForBlob, readError } from "./http";
 
-export const INTEGRATION_PROCESS_TYPES: { value: string; label: string }[] = [
-  { value: "GET_PO", label: "Get purchase orders" },
-  { value: "GET_SUPPLIER", label: "Get suppliers" },
-  { value: "POST_PO", label: "Post purchase orders" },
-  { value: "GET_GRN", label: "Get goods receipts" },
-  { value: "POST_GRN", label: "Post goods receipts" },
-  { value: "GET_INVOICE", label: "Get invoices" },
-  { value: "POST_INVOICE", label: "Post invoices" },
-  { value: "GET_STOCK", label: "Get stock" },
+/** Which organization configures an API type. */
+export type IntegrationSide = "buyer" | "supplier";
+
+/** "full": pull on demand, with a full sync. "check": read and validate only, nothing is stored. "none": no pull. */
+export type IntegrationPullMode = "full" | "check" | "none";
+
+export interface IntegrationProcessType {
+  value: string;
+  label: string;
+  side: IntegrationSide;
+  /** The API type has a field mapping. */
+  hasMapping: boolean;
+  pull: IntegrationPullMode;
+  /** The API type has the data update (spreadsheet import/export) tab. */
+  hasDataUpdate: boolean;
+  /** Offered only to an organization with the operations (SILA ME) module. */
+  operationsModule: boolean;
+  /** Push types: when the application calls the API. */
+  calledWhen?: string;
+}
+
+/** Every API type. The options and the tabs/actions of an integration are derived from this table. */
+export const INTEGRATION_PROCESS_TYPES: IntegrationProcessType[] = [
+  { value: "POST_PO", label: "Purchase order (create in ERP)", side: "buyer", hasMapping: false, pull: "none", hasDataUpdate: false, operationsModule: false, calledWhen: "Called when a weekly bucket is fully approved." },
+  { value: "GET_STOCK", label: "Material stock (stock in hand)", side: "buyer", hasMapping: true, pull: "check", hasDataUpdate: false, operationsModule: false },
+  { value: "GET_MATERIAL", label: "Material master", side: "buyer", hasMapping: false, pull: "none", hasDataUpdate: false, operationsModule: false },
+  { value: "GET_CONTRACT", label: "Contract", side: "buyer", hasMapping: false, pull: "none", hasDataUpdate: false, operationsModule: false },
+  { value: "POST_SUPPLIER", label: "Supplier onboarding", side: "buyer", hasMapping: false, pull: "none", hasDataUpdate: false, operationsModule: false, calledWhen: "Not called by the application yet." },
+  { value: "GET_PO", label: "Purchase orders (import)", side: "buyer", hasMapping: true, pull: "full", hasDataUpdate: true, operationsModule: true },
+  { value: "GET_SUPPLIER", label: "Suppliers (import)", side: "buyer", hasMapping: true, pull: "full", hasDataUpdate: true, operationsModule: true },
+  { value: "POST_GRN", label: "Goods receipt (post to ERP)", side: "buyer", hasMapping: false, pull: "none", hasDataUpdate: false, operationsModule: true, calledWhen: "Called when a goods receipt is posted." },
+  { value: "GET_CATALOG", label: "Product catalog", side: "supplier", hasMapping: true, pull: "full", hasDataUpdate: false, operationsModule: false },
+  { value: "GET_CATALOG_STOCK", label: "Product stock", side: "supplier", hasMapping: true, pull: "full", hasDataUpdate: false, operationsModule: false },
+  { value: "POST_SALES_ORDER", label: "Purchase order (receive in ERP)", side: "supplier", hasMapping: false, pull: "none", hasDataUpdate: false, operationsModule: false, calledWhen: "Not called by the application yet." },
 ];
+
+/** Push types send data to the external system; every other type reads from it. */
+export const isPushProcess = (processType: string): boolean => processType.toUpperCase().startsWith("POST_");
+
+/** The API types one side can configure; the operations-module types only with that module. */
+export const integrationProcessTypesFor = (side: IntegrationSide, hasOperations: boolean): IntegrationProcessType[] =>
+  INTEGRATION_PROCESS_TYPES.filter((type) => type.side === side && (hasOperations || !type.operationsModule));
+
+/** The table row of an API type. A type saved before this table existed keeps every tab and action it had. */
+export const integrationProcessOf = (processType: string): IntegrationProcessType =>
+  INTEGRATION_PROCESS_TYPES.find((type) => type.value === processType) ?? {
+    value: processType,
+    label: processType,
+    side: "buyer",
+    hasMapping: true,
+    pull: isPushProcess(processType) ? "none" : "full",
+    hasDataUpdate: true,
+    operationsModule: true,
+  };
 
 export const INTEGRATION_PROTOCOLS: { value: string; label: string }[] = [
   { value: "ODATA_V4", label: "OData V4" },
@@ -20,10 +64,38 @@ export const INTEGRATION_PROTOCOLS: { value: string; label: string }[] = [
 export const INTEGRATION_AUTH_TYPES: { value: string; label: string }[] = [
   { value: "NONE", label: "None" },
   { value: "BASIC", label: "Basic authentication" },
+  { value: "API_KEY", label: "API key" },
   { value: "BEARER_TOKEN", label: "Bearer token" },
   { value: "OAUTH2_CLIENT_CREDENTIALS", label: "OAuth2 client credentials" },
   { value: "CUSTOM_TOKEN_ENDPOINT", label: "Custom token endpoint" },
 ];
+
+export type IntegrationHttpMethod = "GET" | "POST" | "PUT" | "PATCH";
+
+export const INTEGRATION_HTTP_METHODS: IntegrationHttpMethod[] = ["GET", "POST", "PUT", "PATCH"];
+
+export type IntegrationPayloadFormat = "JSON" | "SOAP" | "CXML";
+
+export const INTEGRATION_PAYLOAD_FORMATS: { value: IntegrationPayloadFormat; label: string }[] = [
+  { value: "JSON", label: "JSON" },
+  { value: "SOAP", label: "SOAP" },
+  { value: "CXML", label: "cXML" },
+];
+
+/** Suggestions for the external system name; any other name can be typed. */
+export const INTEGRATION_SYSTEMS: string[] = ["SAP S/4", "Ariba"];
+
+/** Header name used for an API key when none is entered. */
+export const INTEGRATION_DEFAULT_API_KEY_HEADER = "X-API-KEY";
+
+/** Tokens the POST_PO request body template can contain. */
+export const INTEGRATION_PO_BODY_TOKENS: string[] = [
+  "{{weeklyBucketId}}", "{{bucketCode}}", "{{companyCode}}", "{{plant}}", "{{supplierId}}", "{{supplierName}}",
+  "{{buyerDocumentNumber}}", "{{shipTo}}", "{{orderDate}}", "{{currency}}", "{{deliveryInstruction}}", "{{entries}}",
+];
+
+/** Extra request headers cannot carry credentials: the server refuses a name containing one of these words. */
+export const isReservedIntegrationHeader = (name: string): boolean => /authorization|secret|token|key/i.test(name);
 
 export const INTEGRATION_NULL_POLICIES: { value: string; label: string }[] = [
   { value: "IGNORE_NULL", label: "Ignore empty values" },
@@ -39,11 +111,17 @@ export interface IntegrationConfiguration {
   entityCode: string;
   name: string;
   processType: string;
+  systemName?: string | null;
   protocol: string;
   baseUrl: string;
   resourcePath?: string | null;
+  httpMethod?: IntegrationHttpMethod | null;
+  payloadFormat?: IntegrationPayloadFormat | null;
+  requestBody?: string | null;
+  headers?: Record<string, string> | null;
   authenticationType: string;
   username?: string | null;
+  apiKeyHeader?: string | null;
   credentialStatus: string;
   timeoutSeconds: number;
   retryCount: number;
@@ -68,11 +146,18 @@ export interface IntegrationConfigurationWrite {
   entityCode: string;
   organizationUnitId?: string | null;
   processType: string;
+  systemName?: string | null;
   protocol: string;
   baseUrl: string;
   resourcePath?: string | null;
+  httpMethod: IntegrationHttpMethod;
+  payloadFormat: IntegrationPayloadFormat;
+  requestBody?: string | null;
+  headers?: Record<string, string> | null;
   authenticationType: string;
   username?: string | null;
+  apiKeyHeader?: string | null;
+  apiKey?: string | null;
   password?: string | null;
   clientId?: string | null;
   clientSecret?: string | null;
@@ -287,9 +372,12 @@ export const getIntegrationExecutions = async (configurationId?: string): Promis
   }
 };
 
-export const getIntegrationTargetFields = async (): Promise<IntegrationTargetField[]> => {
+/** The mapping targets of one API type; empty for a type without field mapping. */
+export const getIntegrationTargetFields = async (processType: string): Promise<IntegrationTargetField[]> => {
   try {
-    const response = await axiosInstance.get<IntegrationTargetField[]>(`${BASE}/target-fields`);
+    const response = await axiosInstance.get<IntegrationTargetField[]>(`${BASE}/target-fields`, {
+      params: cleanParams({ processType }),
+    });
     return asArray<IntegrationTargetField>(response.data);
   } catch (error: unknown) {
     throw new Error(readError(error, "Could not load the target fields."));

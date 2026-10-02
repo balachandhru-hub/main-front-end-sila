@@ -131,6 +131,48 @@ const CreateCatalogModal: React.FC<CreateCatalogModalProps> = ({ isOpen, form })
                                 />
                             </div>
 
+                            <div className="pud-catalog-form-field">
+                                <label className="pud-catalog-form-label" htmlFor="catalog-sku">SKU</label>
+                                <input
+                                    id="catalog-sku"
+                                    type="text"
+                                    maxLength={100}
+                                    className="pud-catalog-form-input"
+                                    value={catalogForm.sku}
+                                    onChange={(e) => updateCatalogField("sku", e.target.value)}
+                                    placeholder="Supplier SKU"
+                                />
+                            </div>
+
+                            <div className="pud-catalog-form-field">
+                                <label className="pud-catalog-form-label" htmlFor="catalog-available-stock">Available Stock</label>
+                                <input
+                                    id="catalog-available-stock"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    className="pud-catalog-form-input"
+                                    value={catalogForm.availableStock}
+                                    onChange={(e) => updateCatalogField("availableStock", e.target.value)}
+                                    placeholder="0"
+                                />
+                            </div>
+
+                            <div className="pud-catalog-form-field">
+                                <label className="pud-catalog-form-label" htmlFor="catalog-discount">Discount %</label>
+                                <input
+                                    id="catalog-discount"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    className="pud-catalog-form-input"
+                                    value={catalogForm.discountPercent}
+                                    onChange={(e) => updateCatalogField("discountPercent", e.target.value)}
+                                    placeholder="0"
+                                />
+                            </div>
+
                             <div className="pud-catalog-form-field" onKeyDown={preventEnterSubmit}>
                                 <Dropdown
                                     label="Currency"

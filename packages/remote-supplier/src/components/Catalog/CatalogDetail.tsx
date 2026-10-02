@@ -2,6 +2,7 @@ import React from "react";
 import { EmptyState } from "@vosox/shared-ui";
 import type { CatalogDetailResponseItem } from "../../api/supplierApi";
 import { IconChevronLeft, IconChevronRight, IconExternalLink, IconGridLarge } from "./icons";
+import CatalogStockEditor from "./CatalogStockEditor";
 
 interface CatalogDetailProps {
     selectedCatalogItem: CatalogDetailResponseItem;
@@ -220,6 +221,14 @@ const CatalogDetail: React.FC<CatalogDetailProps> = ({
                         >
                             <IconExternalLink /> View Catalog
                         </button>
+                    )}
+
+                    {!selectedCatalogItem.isPunchOut && (
+                        <CatalogStockEditor
+                            key={selectedCatalogItem.catalogId}
+                            catalogItem={selectedCatalogItem}
+                            onSaved={onRetry}
+                        />
                     )}
 
                     {(selectedCatalogItem.segment || selectedCatalogItem.family || selectedCatalogItem.class || selectedCatalogItem.commodity) && (

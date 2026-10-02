@@ -27,6 +27,7 @@ const ROLE_IDS = {
   SUPPLIER_ADMIN: '735bb267-fec0-489f-8249-d3d65b3857ea',
   BUYER_ADMIN: 'c95f5a1b-4aec-4647-9328-895a58193ec4',
   OUTLET_MANAGER: '7c4e1a90-6b2d-4f58-9c31-0e8a5d6f4b21',
+  STORE_MANAGER: 'b054de41-7da1-4b96-a2aa-d8387bfb0ef0',
 } as const;
 
 // const CheckIcon = () => (
@@ -82,6 +83,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onCreateAccount, onCreate
       case ROLE_IDS.SUPPLIER:
       case ROLE_IDS.BUYER:
       case ROLE_IDS.OUTLET_MANAGER:
+      case ROLE_IDS.STORE_MANAGER:
         return '/dashboard';
       default:
         return null;

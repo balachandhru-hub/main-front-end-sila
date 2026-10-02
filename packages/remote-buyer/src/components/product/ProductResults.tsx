@@ -111,6 +111,17 @@ const ProductResults: React.FC<ProductResultsProps> = ({
                       <span className="pud-catalog-card-uom">{item.unitOfMeasure}</span>
                     )}
                   </div>
+                  {(item.sku || item.availableStock != null || (item.discountPercent ?? 0) > 0) && (
+                    <div className="pud-catalog-card-meta">
+                      {item.sku && <span className="pud-catalog-card-uom">SKU: {item.sku}</span>}
+                      {item.availableStock != null && (
+                        <span className="pud-catalog-card-uom">Supplier stock: {item.availableStock}</span>
+                      )}
+                      {(item.discountPercent ?? 0) > 0 && (
+                        <span className="pud-catalog-card-uom">Discount: {item.discountPercent}%</span>
+                      )}
+                    </div>
+                  )}
                   {onAddToCart && (
                     <div className="pud-product-item-action">
                       <button

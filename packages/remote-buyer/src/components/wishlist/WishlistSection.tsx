@@ -1,249 +1,144 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { EmptyState, Loader, PageHeader, Pagination, toastService } from "@vosox/shared-ui";
-import { getWishlist, getWishlists, type WishlistDetail, type WishlistListItem } from "../../api/wishlistApi";
-import WishlistDetailView from "./WishlistDetail";
-import WishlistForm from "./WishlistForm";
-import { isEditableStatus, isMyApprovalTurn, statusBadgeClass, statusLabel } from "./wishlistStatus";
-import { useCartStore } from "../../store/useCartStore";
-
-const PAGE_SIZE = 20;
+import { EmptyState, Loader, PageHeader, toastService } from "@vosox/shared-ui";
+import {
+  createPersonalWishlist,
+  getPersonalWishlists,
+  type PersonalWishlistListItem,
+} from "../../api/personalWishlistApi";
+import { formatDate } from "../cart/lineFormat";
+import PersonalWishlistDetail from "./PersonalWishlistDetail";
 
 interface WishlistSectionProps {
-  buyerId: string;
-  currentUserId: string | null;
-  /** manage: create and resubmit. approve: inbox of wishlists waiting for this user. */
-  mode?: "manage" | "approve";
-  /** Opens the cart, where products are added to a wishlist. */
+  /** Opens the cart, where wishlist items go on their way to the weekly bucket. */
   onOpenCart?: () => void;
 }
 
-type View =
-  | { name: "list" }
-  | { name: "create" }
-  | { name: "detail"; wishlist: WishlistDetail }
-  | { name: "edit"; wishlist: WishlistDetail };
-
-const formatDate = (value?: string | null): string => {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString();
-};
-
-const WishlistSection: React.FC<WishlistSectionProps> = ({ buyerId, currentUserId, mode = "manage", onOpenCart }) => {
-  const cartCount = useCartStore((state) => state.products.length);
-  const [view, setView] = useState<View>({ name: "list" });
-  const [rows, setRows] = useState<WishlistListItem[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasNext, setHasNext] = useState(false);
-  const [loading, setLoading] = useState(false);
+/** Personal wishlists: named lists of catalog products owned by the signed-in user. No approval, no purchasing. */
+const WishlistSection: React.FC<WishlistSectionProps> = ({ onOpenCart }) => {
+  const [rows, setRows] = useState<PersonalWishlistListItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const loadPage = useCallback(async (nextPage: number) => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      if (mode === "approve") {
-        const pending: WishlistListItem[] = [];
-        for (let index = 0; index < 10; index += 1) {
-          const batch = await getWishlists(index * 50, 50);
-          pending.push(...batch.filter((row) => row.status === "PENDING_APPROVAL"));
-          if (batch.length < 50) break;
-        }
-        const details = await Promise.all(pending.map((row) => getWishlist(row.id).catch(() => null)));
-        const mine = details.filter(
-          (detail): detail is WishlistDetail => detail != null && isMyApprovalTurn(detail, currentUserId),
-        );
-        setRows(mine.map((detail) => ({
-          id: detail.id,
-          wishlistName: detail.wishlistName,
-          outletName: detail.outletName,
-          createdBy: detail.createdBy,
-          dateCreated: detail.dateCreated,
-          status: detail.status,
-          approvalName: detail.approvalName,
-          buyerErpDocumentNumber: detail.buyerErpDocumentNumber,
-          supplierErpDocumentNumber: detail.supplierErpDocumentNumber,
-          lastError: detail.lastError,
-        })));
-        setHasNext(false);
-        setPage(1);
-        return;
-      }
-
-      const data = await getWishlists((nextPage - 1) * PAGE_SIZE, PAGE_SIZE + 1);
-      setHasNext(data.length > PAGE_SIZE);
-      setRows(data.slice(0, PAGE_SIZE));
-      setPage(nextPage);
+      setRows(await getPersonalWishlists());
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Could not load wishlists.";
-      setError(message);
-      toastService.error(message);
+      setError(err instanceof Error ? err.message : "Could not load wishlists.");
     } finally {
       setLoading(false);
     }
-  }, [currentUserId, mode]);
+  }, []);
 
   useEffect(() => {
-    if (view.name === "list") loadPage(mode === "approve" ? 1 : page);
-  }, [view.name, loadPage, page, mode]);
+    if (openId === null) load();
+  }, [openId, load]);
 
-  const openWishlist = async (id: string, target: "detail" | "edit" = "detail") => {
-    setLoading(true);
+  const handleCreate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!name.trim()) {
+      toastService.error("Enter a wishlist name.");
+      return;
+    }
+    setSaving(true);
     try {
-      const wishlist = await getWishlist(id);
-      setView(target === "edit" ? { name: "edit", wishlist } : { name: "detail", wishlist });
+      await createPersonalWishlist({ name: name.trim(), description: null, items: [] });
+      toastService.success("Wishlist created.");
+      setCreating(false);
+      setName("");
+      await load();
     } catch (err: unknown) {
-      toastService.error(err instanceof Error ? err.message : "Could not load this wishlist.");
+      toastService.error(err instanceof Error ? err.message : "Could not create the wishlist.");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const refreshOpen = async (id: string) => {
-    await openWishlist(id);
-  };
-
-  // Products handed over from the cart open the form they are meant for: a new wishlist or a draft.
-  useEffect(() => {
-    if (mode !== "manage") return;
-    const handoff = useCartStore.getState().handoff;
-    if (!handoff) return;
-    if (handoff.wishlistId) {
-      openWishlist(handoff.wishlistId, "edit");
-    } else {
-      setView({ name: "create" });
-    }
-  }, [mode]);
-
-  if (!buyerId) {
-    return <EmptyState title="Buyer profile is still loading" description="The wishlist opens after the buyer profile is available." />;
-  }
-
-  if (view.name === "create") {
-    return (
-      <WishlistForm
-        onCancel={() => setView({ name: "list" })}
-        onSaved={() => {
-          setPage(1);
-          setView({ name: "list" });
-        }}
-        onOpenCart={onOpenCart}
-      />
-    );
-  }
-
-  if (view.name === "edit") {
-    return (
-      <WishlistForm
-        wishlist={view.wishlist}
-        onCancel={() => setView({ name: "detail", wishlist: view.wishlist })}
-        onSaved={() => refreshOpen(view.wishlist.id)}
-        onOpenCart={onOpenCart}
-      />
-    );
-  }
-
-  if (view.name === "detail") {
-    return (
-      <WishlistDetailView
-        wishlist={view.wishlist}
-        currentUserId={currentUserId}
-        onBack={() => setView({ name: "list" })}
-        allowEdit={mode === "manage"}
-        allowDecide={mode === "approve"}
-        onEdit={() => setView({ name: "edit", wishlist: view.wishlist })}
-        onChanged={() => refreshOpen(view.wishlist.id)}
-      />
-    );
+  if (openId) {
+    return <PersonalWishlistDetail wishlistId={openId} onBack={() => setOpenId(null)} onOpenCart={onOpenCart} />;
   }
 
   return (
     <>
       <PageHeader
         className="pud-page-header"
-        title={mode === "approve" ? "Wishlist approvals" : "Wishlists"}
-        actions={mode === "manage" && onOpenCart ? (
-          <button type="button" className="sila-btn sila-btn--primary" onClick={onOpenCart}>
-            Cart ({cartCount})
+        title="Wishlists"
+        actions={!creating ? (
+          <button type="button" className="sila-btn sila-btn--primary" onClick={() => setCreating(true)}>
+            New wishlist
           </button>
         ) : undefined}
       />
+
+      {creating && (
+        <form className="sila-card" onSubmit={handleCreate}>
+          <div className="sila-card-body">
+            <div className="sila-form-grid">
+              <div className="sila-field">
+                <label className="sila-label" htmlFor="wishlist-new-name">Name<span className="sila-required">*</span></label>
+                <input
+                  id="wishlist-new-name"
+                  className="sila-input"
+                  value={name}
+                  maxLength={200}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="sila-card-footer">
+            <button type="button" className="sila-btn sila-btn--secondary" onClick={() => setCreating(false)} disabled={saving}>Cancel</button>
+            <button type="submit" className="sila-btn sila-btn--primary" disabled={saving}>
+              {saving ? "Saving..." : "Create wishlist"}
+            </button>
+          </div>
+        </form>
+      )}
+
       <section className="sila-card">
         {loading ? (
           <Loader size={24} message="Loading wishlists..." />
-        ) : error && rows.length === 0 ? (
-          <EmptyState variant="error" title="Couldn't load wishlists" description={error} />
-        ) : rows.length === 0 ? (
+        ) : error ? (
           <EmptyState
-            title={mode === "approve" ? "Nothing is waiting for you" : "No wishlists yet"}
-            description={mode === "approve"
-              ? "When you are the next approver on a wishlist, it shows up here."
-              : 'Add products to the cart from the Product Catalog, then use "Add to wishlist" in the cart.'}
+            variant="error"
+            title="Couldn't load wishlists"
+            description={error}
+            action={<button type="button" className="sila-btn sila-btn--secondary" onClick={load}>Try again</button>}
           />
+        ) : rows.length === 0 ? (
+          <EmptyState title="No wishlists yet" description='Use "New wishlist", or add products to one from the cart.' />
         ) : (
-          <>
-            <div className="sila-table-wrap">
-              <table className="sila-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Name</th>
-                    <th scope="col">Outlet</th>
-                    <th scope="col">Approval</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Created</th>
-                    <th scope="col">Document</th>
-                    <th scope="col">Actions</th>
+          <div className="sila-table-wrap">
+            <table className="sila-table">
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">Items</th>
+                  <th scope="col">Updated</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id}>
+                    <td className="sila-cell-strong">{row.name}</td>
+                    <td>{row.itemCount}</td>
+                    <td>{formatDate(row.dateUpdated || row.dateCreated)}</td>
+                    <td>
+                      <button type="button" className="sila-btn sila-btn--secondary sila-btn--sm" onClick={() => setOpenId(row.id)}>
+                        Open
+                      </button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="sila-row-clickable"
-                      tabIndex={0}
-                      onClick={() => openWishlist(row.id)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          openWishlist(row.id);
-                        }
-                      }}
-                    >
-                      <td className="sila-cell-strong">{row.wishlistName}</td>
-                      <td>{row.outletName || "—"}</td>
-                      <td>{row.approvalName || "—"}</td>
-                      <td><span className={statusBadgeClass(row.status)}>{statusLabel(row.status)}</span></td>
-                      <td>{formatDate(row.dateCreated)}</td>
-                      <td>{row.buyerErpDocumentNumber || row.lastError || "—"}</td>
-                      {/* The row opens the wishlist on click/Enter; keep those events for the buttons. */}
-                      <td onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
-                        <div className="sila-btn-group">
-                          <button type="button" className="sila-btn sila-btn--ghost sila-btn--sm" onClick={() => openWishlist(row.id)}>
-                            View
-                          </button>
-                          {mode === "manage" && isEditableStatus(row.status) && (
-                            <button type="button" className="sila-btn sila-btn--secondary sila-btn--sm" onClick={() => openWishlist(row.id, "edit")}>
-                              Edit
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {mode === "manage" && (
-              <Pagination
-                page={page}
-                hasNext={hasNext}
-                onPrevious={() => setPage((current) => Math.max(1, current - 1))}
-                onNext={() => setPage((current) => current + 1)}
-                disabled={loading}
-              />
-            )}
-          </>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </>

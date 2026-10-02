@@ -9,7 +9,7 @@ import AllRfqsSection from "./dashboard/AllRfqsSection";
 import DashboardHome from "./dashboard/DashboardHome";
 import QuotationComparisonView from "./dashboard/QuotationComparisonView";
 import SupplierProfileModal from "./dashboard/SupplierProfileModal";
-import { BUYER_NAV_PATHS, OUTLET_MANAGER_ROLE, buildHeaderNavItems } from "./dashboard/navConfig";
+import { BUYER_NAV_PATHS, OUTLET_MANAGER_ROLE, STORE_MANAGER_ROLE, buildHeaderNavItems } from "./dashboard/navConfig";
 import type { MatchCard, RfqPageView } from "./dashboard/types";
 import { logoutBuyer, getBuyerProfile, fetchBuyerDashboardAnalytics, createBuyerChatApi } from "../api/Buyerapi";
 import { createRfqApi } from "../api/createRfqApi";
@@ -29,7 +29,7 @@ import ContractTable from "../../../remote-platform-user/src/components/Contract
 import ContractDetail from "../../../remote-platform-user/src/components/Contract/ContractDetail";
 import ApprovalManagement from "../../../remote-platform-user/src/components/ApprovalManagement/ApprovalManagement.tsx";
 import WishlistSection from "./wishlist/WishlistSection";
-import IntegrationHub from "./integration/IntegrationHub";
+import WeeklyBucketSection from "./weeklyBucket/WeeklyBucketSection";
 import CartSection from "./cart/CartSection";
 import {
   OPERATIONS_HOME_KEY,
@@ -117,8 +117,10 @@ const BuyersDashboard: React.FC = () => {
   const currentUserId = useBuyerAuthStore((state) => state.personDetail?.userId || null);
   const buyerProfile = useBuyerAuthStore((state) => state.personDetail);
   const isLoadingBuyerProfile = useBuyerAuthStore((state) => state.personDetailLoading);
-  // An Outlet Manager is a buyer user who also manages wishlists.
+  // An Outlet Manager is a buyer user who also requests products for his outlets (wishlist, weekly bucket).
   const isOutletManager = buyerProfile?.roleName === OUTLET_MANAGER_ROLE;
+  // A Store Manager is a buyer user who reviews and freezes the weekly bucket of a property.
+  const isStoreManager = buyerProfile?.roleName === STORE_MANAGER_ROLE;
 
   // The operations module (invoice capture, goods receipts) shows only when the platform has
   // assigned its model to this organization.
@@ -226,9 +228,9 @@ const BuyersDashboard: React.FC = () => {
   const inOperationsWorkspace = isOperationsNavKey(activeNav);
   const headerNavItems = useMemo(
     () => (inOperationsWorkspace
-      ? buildOperationsWorkspaceNav("dashboard")
-      : buildHeaderNavItems(rfqPageView, fullPageRfq?.rfqNumber, isOutletManager)),
-    [inOperationsWorkspace, rfqPageView, fullPageRfq, isOutletManager],
+      ? buildOperationsWorkspaceNav("dashboard", { withIntegrations: false })
+      : buildHeaderNavItems(rfqPageView, fullPageRfq?.rfqNumber, isOutletManager, isStoreManager)),
+    [inOperationsWorkspace, rfqPageView, fullPageRfq, isOutletManager, isStoreManager],
   );
 
   return (
@@ -280,22 +282,21 @@ const BuyersDashboard: React.FC = () => {
             ) : activeNav === "approvalManagement" ? (
               // An Outlet Manager only views approval flows; the buyer administrator creates them.
               <ApprovalManagement canCreate={!isOutletManager} />
-            ) : activeNav === "wishlistApprovals" ? (
-              <WishlistSection buyerId={buyerId || ""} currentUserId={currentUserId} mode="approve" />
+            ) : activeNav === "weeklyBucketApprovals" ? (
+              <WeeklyBucketSection buyerId={buyerId || ""} currentUserId={currentUserId} canReview={false} mode="approve" />
             ) : isOutletManager && activeNav === "wishlist" ? (
-              <WishlistSection
+              <WishlistSection onOpenCart={() => handleNavClick("cart")} />
+            ) : isOutletManager && activeNav === "weeklyBucket" ? (
+              <WeeklyBucketSection
                 buyerId={buyerId || ""}
                 currentUserId={currentUserId}
-                mode="manage"
+                canReview={false}
                 onOpenCart={() => handleNavClick("cart")}
               />
+            ) : isStoreManager && activeNav === "weeklyBucket" ? (
+              <WeeklyBucketSection buyerId={buyerId || ""} currentUserId={currentUserId} canReview canFreeze />
             ) : isOutletManager && activeNav === "cart" ? (
-              <CartSection onOpenWishlist={() => handleNavClick("wishlist")} onBrowseCatalog={() => handleNavClick("product")} />
-            ) : isOutletManager && activeNav === "apiConfiguration" ? (
-              // The buyer administrator connects and configures the APIs; an Outlet Manager only views them.
-              <IntegrationHub variant="integration" readOnly hasOperations={hasOperations} />
-            ) : isOutletManager && activeNav === "workflowConfiguration" ? (
-              <IntegrationHub variant="workflow" readOnly hasOperations={hasOperations} />
+              <CartSection onOpenWeeklyBucket={() => handleNavClick("weeklyBucket")} onBrowseCatalog={() => handleNavClick("product")} />
             ) : rfqPageView === "allRfqs" ? (
               <AllRfqsSection
                 rfqs={allRfqsList}
@@ -335,7 +336,7 @@ const BuyersDashboard: React.FC = () => {
               !organizationModelsLoaded ? (
                 <Loader size={24} message="Opening SILA ME..." />
               ) : hasOperations ? (
-                renderOperationsWorkspace(activeNav, handleNavClick, { readOnlyIntegrations: true })
+                renderOperationsWorkspace(activeNav, handleNavClick, { withIntegrations: false })
               ) : (
                 <EmptyState
                   title="SILA ME is not assigned to your organization"

@@ -1,11 +1,4 @@
-import type { MatchCard, POItem } from "./types";
-
-// Placeholder purchase orders: the backend has no purchase-order entity yet.
-export const poItems: POItem[] = [
-  { code: "PO-2026-90412", status: "ACCEPTED", company: "Meridian Components Ltd.", orderDate: "2026-07-04", amount: "$18,500.00" },
-  { code: "PO-2026-88401", status: "ACCEPTED", company: "Northbridge Supply Co.", orderDate: "2026-05-22", amount: "$4,200.00" },
-  { code: "PO-2026-80214", status: "DELIVERED", company: "Summit Industrial Traders", orderDate: "2026-04-10", amount: "$9,800.00" },
-];
+import type { MatchCard } from "./types";
 
 export const matchCards: MatchCard[] = [
   {

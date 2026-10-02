@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { getTokenClaims } from '../api/authApi';
 
-export type UserRole = 'buyer' | 'supplier' |'supplier-admin'|'supplier-business-user'| 'platform-user'| 'buyer-admin' | 'buyer-business-user' | 'outlet-manager';
+export type UserRole = 'buyer' | 'supplier' |'supplier-admin'|'supplier-business-user'| 'platform-user'| 'buyer-admin' | 'buyer-business-user' | 'outlet-manager' | 'store-manager';
  
 export const ROLE_MAPPING: Record<string, UserRole> = {
   '937aab61-b505-4e1c-a5a3-cd63e29c6db9': 'supplier',        // SUPPLIER
@@ -12,6 +12,7 @@ export const ROLE_MAPPING: Record<string, UserRole> = {
   '735bb267-fec0-489f-8249-d3d65b3857ea': 'supplier-admin',  // SUPPLIER_ADMIN     
   'c95f5a1b-4aec-4647-9328-895a58193ec4': 'buyer-admin',    // BUYER_ADMIN
   '7c4e1a90-6b2d-4f58-9c31-0e8a5d6f4b21': 'outlet-manager', // OUTLET_MANAGER
+  'b054de41-7da1-4b96-a2aa-d8387bfb0ef0': 'store-manager',  // STORE_MANAGER
 };
 export interface AuthState {
   isLoggedIn: boolean;

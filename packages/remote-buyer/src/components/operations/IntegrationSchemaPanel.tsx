@@ -11,10 +11,12 @@ import "./Operations.css";
 
 interface IntegrationSchemaPanelProps {
   configuration: IntegrationConfiguration;
+  /** View only: the saved snapshot is shown but the schema cannot be read again. */
+  readOnly?: boolean;
 }
 
 /** The last metadata snapshot read from the source system: its entities, keys and properties. */
-const IntegrationSchemaPanel: React.FC<IntegrationSchemaPanelProps> = ({ configuration }) => {
+const IntegrationSchemaPanel: React.FC<IntegrationSchemaPanelProps> = ({ configuration, readOnly = false }) => {
   const [schema, setSchema] = useState<IntegrationSchema | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,9 +66,11 @@ const IntegrationSchemaPanel: React.FC<IntegrationSchemaPanelProps> = ({ configu
     <section className="sila-card">
       <div className="sila-card-header">
         <h2 className="sila-card-title">Schema snapshot</h2>
-        <button type="button" className="sila-btn sila-btn--secondary sila-btn--sm" onClick={handleDiscover} disabled={discovering || loading}>
-          {discovering ? "Reading schema..." : schema ? "Read schema again" : "Read schema"}
-        </button>
+        {!readOnly && (
+          <button type="button" className="sila-btn sila-btn--secondary sila-btn--sm" onClick={handleDiscover} disabled={discovering || loading}>
+            {discovering ? "Reading schema..." : schema ? "Read schema again" : "Read schema"}
+          </button>
+        )}
       </div>
       <div className="sila-card-body ops-stack">
         {configuration.protocol !== "ODATA_V4" && (
@@ -86,7 +90,7 @@ const IntegrationSchemaPanel: React.FC<IntegrationSchemaPanelProps> = ({ configu
         ) : !schema ? (
           <EmptyState
             title="No schema has been read yet"
-            description="Test the connection, then read the schema to see the fields the source system offers."
+            description={readOnly ? undefined : "Test the connection, then read the schema to see the fields the source system offers."}
           />
         ) : (
           <>

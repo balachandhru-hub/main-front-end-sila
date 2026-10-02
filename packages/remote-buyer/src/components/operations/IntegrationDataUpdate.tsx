@@ -21,6 +21,8 @@ interface IntegrationDataUpdateProps {
   configuration: IntegrationConfiguration;
   /** Called after an import was committed, so the run history can reload. */
   onImported: () => void;
+  /** View only: the data can be searched and exported but not imported. */
+  readOnly?: boolean;
 }
 
 interface Column {
@@ -70,7 +72,7 @@ const renderCell = (row: IntegrationDataRow, key: string): React.ReactNode => {
 };
 
 /** Imported data of an integration, with spreadsheet template, export and import (preview, corrections, commit). */
-const IntegrationDataUpdate: React.FC<IntegrationDataUpdateProps> = ({ configuration, onImported }) => {
+const IntegrationDataUpdate: React.FC<IntegrationDataUpdateProps> = ({ configuration, onImported, readOnly = false }) => {
   const [kind, setKind] = useState<IntegrationImportKind>(
     configuration.processType.includes("SUPPLIER") ? "SUPPLIERS" : "PURCHASE_ORDERS",
   );
@@ -223,9 +225,11 @@ const IntegrationDataUpdate: React.FC<IntegrationDataUpdateProps> = ({ configura
             <button type="button" className="sila-btn sila-btn--secondary sila-btn--sm" onClick={handleExport} disabled={busy !== null || loading}>
               {busy === "export" ? "Exporting..." : "Export"}
             </button>
-            <button type="button" className="sila-btn sila-btn--primary sila-btn--sm" onClick={() => fileInput.current?.click()} disabled={busy !== null}>
-              {busy === "preview" ? "Reading file..." : "Import spreadsheet"}
-            </button>
+            {!readOnly && (
+              <button type="button" className="sila-btn sila-btn--primary sila-btn--sm" onClick={() => fileInput.current?.click()} disabled={busy !== null}>
+                {busy === "preview" ? "Reading file..." : "Import spreadsheet"}
+              </button>
+            )}
           </div>
         </div>
         <div className="sila-card-body ops-stack">

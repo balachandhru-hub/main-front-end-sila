@@ -136,6 +136,18 @@ const ProductDetailView: React.FC<ProductDetailViewProps> = ({
           )}
         </div>
 
+        {(product.sku || product.availableStock != null || (product.discountPercent ?? 0) > 0) && (
+          <div className="pud-catalog-card-meta">
+            {product.sku && <span className="pud-catalog-card-uom">SKU: {product.sku}</span>}
+            {product.availableStock != null && (
+              <span className="pud-catalog-card-uom">Supplier stock: {product.availableStock}</span>
+            )}
+            {(product.discountPercent ?? 0) > 0 && (
+              <span className="pud-catalog-card-uom">Discount: {product.discountPercent}%</span>
+            )}
+          </div>
+        )}
+
         {onAddToCart && !loading && !error && (
           <div className="pud-product-item-action">
             <button

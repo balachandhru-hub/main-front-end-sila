@@ -1,4 +1,4 @@
-/* Cart: supplier filter and wishlist target above the table */
+/* Cart: supplier filter and the two "add to" actions above the table */
 .cart-toolbar {
   display: flex;
   align-items: flex-end;
@@ -40,4 +40,11 @@
 
 .cart-qty {
   width: 6rem;
+}
+
+/* Body of the "Add to Personal Wishlist" / "Add to Weekly Bucket" dialogs */
+.cart-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sila-space-4);
 }

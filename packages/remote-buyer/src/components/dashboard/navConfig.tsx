@@ -4,7 +4,6 @@ import {
   FileCheckIcon,
   FilePlusIcon,
   FileTextIcon,
-  GlobeIcon,
   HomeIcon,
   LayoutGridIcon,
   LayoutTemplateIcon,
@@ -48,23 +47,23 @@ export const BUYER_NAV_PATHS: RouteNavPaths = {
   contract: 'contract-approvals',
   materialService: 'material-service',
   companyProfile: 'company-profile',
-  wishlistApprovals: 'wishlist-approvals',
+  weeklyBucketApprovals: 'weekly-bucket-approvals',
   wishlist: 'wishlist',
+  weeklyBucket: 'weekly-bucket',
   cart: 'cart',
-  apiConfiguration: 'integration',
-  workflowConfiguration: 'workflow-configuration',
   ...OPERATIONS_NAV_PATHS,
 };
 
-/** Role name of the Outlet Manager: a buyer user who also manages wishlists. */
+/** Role name of the Outlet Manager: a buyer user who also requests products for his outlets. */
 export const OUTLET_MANAGER_ROLE = 'OUTLET_MANAGER';
 
-// Outlet Manager extras: catalog -> cart -> wishlist, and the API integration (view only).
+/** Role name of the Store Manager: a buyer user who reviews and freezes the weekly bucket of a property. */
+export const STORE_MANAGER_ROLE = 'STORE_MANAGER';
+
+// Outlet Manager extras: catalog -> cart -> personal wishlist / weekly bucket.
 const wishlistNavItem: BuyerNavItem = { key: "wishlist", icon: <FilePlusIcon />, label: "Wishlist" };
+const weeklyBucketNavItem: BuyerNavItem = { key: "weeklyBucket", icon: <FileTextIcon />, label: "Weekly Bucket" };
 const cartNavItem: BuyerNavItem = { key: "cart", icon: <FileCheckIcon />, label: "Cart" };
-// Integration connects the external APIs; Workflow & Configuration decides how the connected ones are used.
-const integrationNavItem: BuyerNavItem = { key: "apiConfiguration", icon: <GlobeIcon />, label: "Integration" };
-const workflowNavItem: BuyerNavItem = { key: "workflowConfiguration", icon: <LayoutTemplateIcon />, label: "Workflow & Configuration" };
 
 const navItems: BuyerNavItem[] = [
   { key: "dashboard", icon: <HomeIcon />, label: "Dashboard" },
@@ -91,7 +90,7 @@ const navItems: BuyerNavItem[] = [
         items: [
           { key: "material", label: "Material" },
           { key: "contract", label: "Contract" },
-          { key: "wishlistApprovals", label: "Wishlist" },
+          { key: "weeklyBucketApprovals", label: "Weekly Bucket" },
         ],
       },
       { key: "materialService", label: "Material & Service" },
@@ -101,23 +100,28 @@ const navItems: BuyerNavItem[] = [
 
 /**
  * Sidebar items, plus a "View RFQ" entry while an RFQ's detail page is open.
- * An Outlet Manager gets the buyer user's items plus Wishlist, Cart, and (view only) Integration
- * and Workflow & Configuration. The SILA ME workspace is opened from Models and has its own menu.
+ * An Outlet Manager gets the buyer user's items plus Wishlist, Weekly Bucket and Cart.
+ * A Store Manager gets the buyer user's items plus Weekly Bucket.
+ * The SILA ME workspace is opened from Models and has its own menu.
  */
 export const buildHeaderNavItems = (
   rfqPageView: RfqPageView,
   rfqNumber: string | undefined,
   isOutletManager = false,
+  isStoreManager = false,
 ): BuyerNavItem[] => {
   const items = [...navItems.filter((item) => item.key !== "activeRFQs")];
 
   if (isOutletManager) {
-    const configurationIndex = items.findIndex((i) => i.key === "configuration");
-    items.splice(configurationIndex + 1, 0, integrationNavItem, workflowNavItem);
     const productIndex = items.findIndex((i) => i.key === "product");
     items.splice(productIndex + 1, 0, cartNavItem);
     const dashboardIndex = items.findIndex((i) => i.key === "dashboard");
-    items.splice(dashboardIndex + 1, 0, wishlistNavItem);
+    items.splice(dashboardIndex + 1, 0, wishlistNavItem, weeklyBucketNavItem);
+  }
+
+  if (isStoreManager) {
+    const dashboardIndex = items.findIndex((i) => i.key === "dashboard");
+    items.splice(dashboardIndex + 1, 0, weeklyBucketNavItem);
   }
 
   if (rfqPageView === "rfqDetail") {

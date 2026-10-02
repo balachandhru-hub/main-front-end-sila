@@ -72,6 +72,13 @@
   min-width: 12rem;
 }
 
+/* A form body as a fieldset, so a view-only form disables every control at once; it draws nothing itself. */
+.ops-fieldset {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+}
+
 .ops-muted {
   color: var(--sila-text-muted);
   font-size: var(--sila-text-sm);
